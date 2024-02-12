@@ -1,0 +1,58 @@
+{
+	"name": "itemlens",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"start": "node build/index.js",
+		"dev": "vite dev --host",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 static/images/providi.svg"
+	},
+	"prisma": {
+		"seed": "tsx prisma/seed.ts"
+	},
+	"devDependencies": {
+		"@faker-js/faker": "^8.0.1",
+		"@sveltejs/adapter-auto": "^3.0.0",
+		"@sveltejs/kit": "^2.0.0",
+		"@sveltejs/vite-plugin-svelte": "^3.0.0",
+		"@tailwindcss/typography": "^0.5.9",
+		"@types/bcrypt": "^5.0.0",
+		"@types/marked": "^6.0.0",
+		"@types/node": "^20.6.0",
+		"@vite-pwa/assets-generator": "^0.2.3",
+		"@vite-pwa/sveltekit": "^0.3.0",
+		"autoprefixer": "^10.4.13",
+		"bcrypt": "^5.1.0",
+		"daisyui": "^4.4.18",
+		"marked": "^11.0.0",
+		"postcss": "^8.4.20",
+		"prisma": "^5.0.0",
+		"slugify": "^1.6.5",
+		"svelte": "^4.0.0",
+		"svelte-check": "^3.0.2",
+		"tailwindcss": "^3.3.2",
+		"ts-node": "^10.9.1",
+		"tslib": "^2.4.1",
+		"tsx": "^4.6.2",
+		"typescript": "^5.2.2",
+		"vite": "^5.0.0"
+	},
+	"type": "module",
+	"dependencies": {
+		"@prisma/client": "^5.0.0",
+		"@vitejs/plugin-basic-ssl": "^1.1.0",
+		"color-namer": "^1.4.0",
+		"colorthief": "^2.4.0",
+		"crop-node": "^2.1.0",
+		"form-data": "^4.0.0",
+		"image-thumbnail": "^1.0.15",
+		"jimp": "^0.22.10",
+		"jsqr": "^1.4.0",
+		"node-fetch": "^3.3.2",
+		"replicate": "^0.25.2"
+	}
+}

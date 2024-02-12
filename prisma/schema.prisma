@@ -1,0 +1,121 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        Int      @id @default(autoincrement())
+    username  String   @unique
+    password  String
+    token     String?  @unique
+    items     Item[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// E.g. "Electronics", "DIY", "Clothes", "Shoes", ...
+// Every class in ML model should be assigned to an inventory
+model Inventory {
+    id          Int      @id @default(autoincrement())
+    name        String
+    description String
+    classes     String[]        // E.g. [ shoes, clothes, *, O, R]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Item {
+    id          Int      @id @default(autoincrement())
+    slug        String
+    amount      Int
+    title       String?
+    description String?
+    // TODO: Inventory _can_ be determined by ML model classification (running on Jetson)
+    inventory   Inventory @relation(fields: [inventoryId], references: [id])
+    inventoryId Int
+    author      User      @relation(fields: [authorId], references: [id])
+    authorId    Int
+
+    photos      Photo[]
+    documents   Document[]
+    tags        Tag[]
+    locations   Container[]
+    attributes  KVP[]           // e.g. width, height, etc
+
+    parent      Item?           // e.g. Jetson SBC can "contain" a WiFi adapter
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}
+
+
+// Be able to tag items that are in use by/on something
+model InUse {
+    id          Int     @id @default(autoincrement())
+    item        Item
+    title       String?     // e.g. By VidensiVision
+    description String?     // e.g. ...mounted in shed to check presence of Ery
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}
+
+
+model Photo {
+    id        Int       @id @default(autoincrement())
+    type      String    @default("item")
+    orgPath   String?
+    cropPath  String?
+    thumbPath String?
+    ocr       String?
+    colors    String[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Document {
+    id        Int       @id @default(autoincrement())
+    type      String?           // E.g. invoice, information, product-page, ...
+    title     String
+    source    String            // AKA url
+    path      String
+    fulltext  String            // AKA extracts
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Container {
+    id              Int         @id @default(autoincrement())
+    parent          Container?
+
+    // Ponder: A or A.001 ??? How fine-grained? How important is it to have a hierarchy?
+    name            String                                          // A or A.001 (Note: sub-containers must be denoted with period)
+    description     String                                          // closet with door
+    location        String?                                         // top of desk (JR)
+    photoPath       String?
+
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+}
+
+model KVP {
+    id     Int    @id @default(autoincrement())
+    key    String
+    value  String
+}
+
+
+model Tag {
+    id    Int    @id @default(autoincrement())
+    name  String @unique
+    slug  String @unique
+    items Item[]
+}

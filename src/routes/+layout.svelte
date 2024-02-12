@@ -1,0 +1,248 @@
+<script lang="ts">
+	import type { SubmitFunction } from "./$types";
+    import { enhance } from "$app/forms";
+    import { page } from "$app/stores";
+    import { onNavigate } from '$app/navigation';
+    import Search from "$lib/components/search.svelte";
+
+    import "../app.css";
+
+    const updateTheme: SubmitFunction = ({ action }) => {
+        const theme = action.searchParams.get('theme');
+
+        if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+    }
+
+    // Check out the virtual:pwa-info documentation to learn more about the virtually exposed module pwa-info.
+    // https://vite-pwa-org.netlify.app/frameworks/#accessing-pwa-info
+    import { onMount } from 'svelte'
+    import { pwaInfo } from 'virtual:pwa-info'
+    
+    onMount(async () => {
+        if (pwaInfo) {
+            const { registerSW } = await import('virtual:pwa-register')
+            registerSW({
+                immediate: true,
+                onRegistered(r) {
+                    // uncomment following code if you want check for updates
+                    r && setInterval(() => {
+                        console.log('Checking for sw update')
+                        r.update()
+                    }, 20000 /* 20s for testing purposes */)
+                    console.log(`SW Registered: ${r}`)
+                },
+                onRegisterError(error) {
+                    console.log('SW registration error', error)
+                }
+            })
+        }
+    })
+
+
+    // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
+    onNavigate((navigation) => {
+        if (!document.startViewTransition) {
+            console.warn("No startViewTransition");
+            return;
+        }
+
+        return new Promise((resolve) => {
+            document.startViewTransition(async () => {
+                resolve();
+                await navigation.complete;
+            });
+        });
+    });    
+    
+    $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
+
+
+    // Testing for more 'live' check of whether we are installed on homescreen or not.
+    // It seems the "proper" way is to have a query param, say "installed" or so as base url
+    // in the manifest.
+    //
+    // That said:
+    // On my iPhone:
+    //  installed: win: 647, scr: 667, full: false (20 pixels less than screen)
+    //             To note here is probably if OS pops up password-vault and similar
+    //             during this check the window height will likely be less.
+    //  in safari: win: 548, scr: 667, full: false (...more)
+    //
+    
+    // let winHeight = window.innerHeight;
+    // let scrHeight = screen.height;
+    // let fullScreen = winHeight === scrHeight;
+    /*
+    <div>
+        Win: {winHeight}
+        Src: {scrHeight}
+        Full: {fullScreen}
+    </div>
+    */
+
+</script>
+
+<svelte:head> 
+ 	{@html webManifest} 
+    
+    <style>
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+        }
+
+        @keyframes fade-out {
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes slide-from-right {
+            from {
+                transform: translateX(30px);
+            }
+        }
+
+        @keyframes slide-to-left {
+            to {
+                transform: translateX(-30px);
+            }
+        }
+
+        :root::view-transition-old(root) {
+            animation: 90ms cubic-bezier(0.4, 0, 1, 1) both fade-out, 300ms cubic-bezier(0.4, 0, 0.2, 1) both slide-to-left;
+        }
+
+        :root::view-transition-new(root) {
+            animation: 210ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in, 300ms cubic-bezier(0.4, 0, 0.2, 1) both
+                    slide-from-right;
+        }
+    </style>
+</svelte:head>
+
+
+<div class="navbar bg-base-100 sticky top-0">
+  <div class="navbar-start">
+    <div class="dropdown">
+      <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
+      </div>
+      <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+        <li>
+          <a>
+            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+            <!-- svelte-ignore a11y-label-has-associated-control -->
+            <i class="bi bi-sun"></i>
+            Theme
+          </a>
+          <form method="post" class="form-control" use:enhance={updateTheme}>
+            <ul class="p-2">
+                <li><button formaction="/?theme=light&redirectTo={$page.url.pathname}">Light</button></li> 
+                <li><button formaction="/?theme=dark&redirectTo={$page.url.pathname}">Dark</button></li> 
+            </ul>
+          </form>
+        </li>
+        <li><a>Item 3</a></li>
+      </ul>
+    </div>
+    
+    <div class="hidden lg:block">
+        <a href="/" class="btn btn-ghost text-xl">itemLens</a>
+    </div>
+  </div>
+
+  <!-- Desktop/tablet -->
+  <div class="navbar-center">
+    <ul class="menu menu-horizontal px-1 hidden lg:flex">
+      <li><a>Item 1</a></li>
+      <li>
+        <details>
+          <summary>Parent</summary>
+          <ul class="p-2">
+            <li><a>Submenu 1</a></li>
+            <li><a>Submenu 2</a></li>
+          </ul>
+        </details>
+      </li>
+      <li><a>Item 3</a></li>
+    </ul>
+    <div class="form-control items-end">
+        <Search />
+    </div>
+  </div>
+
+  <div class="navbar-end">
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+        <div class="w-10 rounded-full">
+          <img alt="Tailwind CSS Navbar component" src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
+        </div>
+      </div>
+      <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+        <li>
+          <a class="between">
+            <i class="bi bi-gear"></i>
+            <span class="btm-nav-label">Profile</span>
+            <span class="badge">New</span>
+          </a>
+        </li>
+
+        {#if $page.data.user}
+            <li>
+                <a href="/settings" title="Settings">
+                    <i class="bi bi-gear"></i>
+                    <span class="btm-nav-label">Settings</span>
+                </a>
+            </li>
+        {/if}
+        <li>
+            {#if !$page.data.user}
+                <a href="/login" title="Sign In">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span class="btm-nav-label">Log in</span>
+                </a>
+            {:else}
+                <form method="POST" action="/logout" use:enhance>
+                    <button type="submit" title="Sign Out">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="p-1 btm-nav-label">Sign out</span>
+                    </button>
+                </form>
+            {/if}
+        </li>
+      </ul>
+    </div>
+
+</div>
+</div>
+
+<main class="container md:w-[800px] px-8 mx-auto my-8">
+    <slot />
+</main>
+
+
+{#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt}}
+  <ReloadPrompt />
+{/await}
+
+<div class="btm-nav">
+  <a class:active={$page.url.pathname==='/'} href="/">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+    <span class="btm-nav-label">Home</span>
+  </a>
+  <a class:active={$page.url.pathname==='???'} href="">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <span class="btm-nav-label">Something</span>
+  </a>
+
+    {#if $page.data.user}
+        <a class:active={$page.url.pathname==='/add'} href="/add" title="Add New Note">
+            <i class="bi bi-plus-circle"></i>
+            <span class="btm-nav-label">Add new</span>
+        </a>
+    {/if}
+
+</div>
