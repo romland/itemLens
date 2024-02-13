@@ -125,6 +125,7 @@
 
 
 <div class="navbar bg-base-100 sticky top-0">
+  <!-- Mobile menu -->
   <div class="navbar-start">
     <div class="dropdown">
       <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
@@ -154,8 +155,8 @@
     </div>
   </div>
 
-  <!-- Desktop/tablet -->
   <div class="navbar-center">
+    <!-- Desktop/tablet menu -->
     <ul class="menu menu-horizontal px-1 hidden lg:flex">
       <li><a>Item 1</a></li>
       <li>
