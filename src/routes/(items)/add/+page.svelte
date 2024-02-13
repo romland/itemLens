@@ -122,7 +122,7 @@ function getScreenOrientation()
 </script>
 
 <svelte:head>
-    <title>Add New Note</title>
+    <title>Add New Item</title>
 </svelte:head>
 
 {#if form?.error}

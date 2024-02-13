@@ -7,7 +7,7 @@ import { getTagIds } from "$lib/server/services";
 import type { Tag } from "@prisma/client";
 
 export const load = (async ({ locals, params }) => {
-    const post = await db.post.findFirst({
+    const item = await db.item.findFirst({
         where: {
             AND: [
                 { author: { id: locals.user.id } },
@@ -17,14 +17,14 @@ export const load = (async ({ locals, params }) => {
         include: { tags: true }
     });
 
-    if (!post) {
+    if (!item) {
         redirect(302, '/');
     }
 
     return {
-        post: {
-            ...post,
-            tagcsv: post.tags.map((tag: Tag, i: number) => i == 0 ? tag.name : ' ' + tag.name)
+        item: {
+            ...item,
+            tagcsv: item.tags.map((tag: Tag, i: number) => i == 0 ? tag.name : ' ' + tag.name)
         }
     };
 }) satisfies PageServerLoad;
@@ -45,14 +45,14 @@ export const actions = {
             });
         }
 
-        const post = await db.post.findUnique({
+        const item = await db.item.findUnique({
             where: {
                 id: Number(params.id)
             }
         });
 
 
-        let filename = post?.photo;
+        let filename = item?.photo;
 
         if (file.size > 0) {
             const date = new Date().toISOString()
@@ -69,19 +69,21 @@ export const actions = {
 
         const ids = await getTagIds(tagcsv);
 
-        await db.post.update({
+        await db.item.update({
             where: { id: Number(params.id) },
             data: {
                 title: title.trim(),
-                photo: filename,
+                // TODO: This structure has changed
+                // photo: filename,
                 slug: slugify(title.toLowerCase()),
-                content: content.trim(),
+                description: content.trim(),
                 tags: {
                     set: [...ids]
                 }
             }
         });
+        console.warn("NOTE: Photo structure changed, this needs to be redone");
 
-        redirect(302, `/${post?.id}/${post?.slug}`);
+        redirect(302, `/${item?.id}/${item?.slug}`);
     }
 } satisfies Actions;

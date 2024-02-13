@@ -43,6 +43,7 @@
 
     // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
     onNavigate((navigation) => {
+        document.title = "foo";
         if (!document.startViewTransition) {
             console.warn("No startViewTransition");
             return;
@@ -240,7 +241,7 @@
   </a>
 
     {#if $page.data.user}
-        <a class:active={$page.url.pathname==='/add'} href="/add" title="Add New Note">
+        <a class:active={$page.url.pathname==='/add'} href="/add" title="Add New Item">
             <i class="bi bi-plus-circle"></i>
             <span class="btm-nav-label">Add new</span>
         </a>

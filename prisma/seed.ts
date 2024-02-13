@@ -81,7 +81,7 @@ async function addItems(user: User) {
                             {
                                 type : "item",
                                 orgPath: "/images/_seed_org.jpg",
-                                cropPath: "/images/_seed_crop.jpg",
+                                cropPath: "/images/_seed_crop.png",
                                 thumbPath: "/images/_seed_thumb.jpg",
                                 // TODO ocr: Refine? Separate table? How will we use it after pre-processing?
                                 ocr: '{"resultcode":200,"message":"Success","data":[[]]}',

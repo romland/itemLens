@@ -6,7 +6,7 @@
 	export let message: string;
 </script>
 
-<button title="Delete Note" class="text-gray-500" on:click={() => dialog.show()}><i class="bi bi-trash"></i></button>
+<button title="Delete Item" class="text-gray-500" on:click={() => dialog.show()}><i class="bi bi-trash"></i></button>
 
 <dialog bind:this={dialog} class="modal">
     <form {action} method="post" class="modal-box" on:submit|preventDefault={() => dialog.close()} use:enhance>

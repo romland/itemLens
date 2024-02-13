@@ -286,20 +286,22 @@ export const actions = {
 
         const ids = await getTagIds(tagcsv);
         
-        const post = await db.post.create({
+        const item = await db.item.create({
             data: {
                 title: title.trim(),
-                photo: filename,
+                // NOTE: Photo structure changed
+                // photo: filename,
                 slug: slugify(title.trim().toLowerCase()),
-                content: content.trim(),
+                description: content.trim(),
                 authorId: locals.user.id,
                 tags: {
                     connect: [...ids]
                 }
             }
         });
+        console.warn("TODO: PHOTO NOT SAVED.")
 
-        redirect(302, `/${post.id}/${post.slug}`);
+        redirect(302, `/${item.id}/${item.slug}`);
     }
 } satisfies Actions;
 

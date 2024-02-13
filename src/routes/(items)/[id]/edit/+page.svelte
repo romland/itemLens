@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-    <title>Edit Note</title>
+    <title>Edit Item</title>
 </svelte:head>
 
 {#if form?.error}
@@ -16,18 +16,18 @@
 {/if}
 
 <form method="post" enctype="multipart/form-data" use:enhance>
-    <input type="hidden" name="id" value="{data.post?.id}">
+    <input type="hidden" name="id" value="{data.item?.id}">
     <div class="mb-3">
-        <input type="text" name="title" placeholder="Title" value="{data.post?.title}" class="input input-bordered w-full">
+        <input type="text" name="title" placeholder="Title" value="{data.item?.title}" class="input input-bordered w-full">
     </div>
     <div class="mb-3">
         <input type="file" name="file" accept="image/jpeg" class="file-input w-full">
     </div>
     <div class="mb-3">
-        <textarea name="content" rows="10" placeholder="Content" class="textarea textarea-bordered w-full">{data.post?.content}</textarea>
+        <textarea name="content" rows="10" placeholder="Content" class="textarea textarea-bordered w-full">{data.item?.content}</textarea>
     </div>
     <div class="mb-3">
-        <input type="text" name="tagcsv" placeholder="Tags" value="{data.post?.tagcsv}" class="input input-bordered w-full">
+        <input type="text" name="tagcsv" placeholder="Tags" value="{data.item?.tagcsv}" class="input input-bordered w-full">
         <div class="mt-1 text-gray-400 text-xs">
             Seperated by comma.
         </div>

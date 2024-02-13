@@ -8,7 +8,7 @@ export const load = (async ({ params, url }) => {
         where: { slug: params.slug }
     });
 
-    const posts = await db.post.findMany({
+    const items = await db.item.findMany({
         take: 10,
         skip: page == 1 ? 0 : (page - 1) * 10,
         orderBy: [{ id: 'desc'}],
@@ -22,7 +22,7 @@ export const load = (async ({ params, url }) => {
     });
 
     const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = posts.length < 10 ? 0 : page + 1;
+    const nextPage = items.length < 10 ? 0 : page + 1;
 
-    return { tag, posts, prevPage, nextPage };
+    return { tag, items, prevPage, nextPage };
 }) satisfies PageServerLoad;

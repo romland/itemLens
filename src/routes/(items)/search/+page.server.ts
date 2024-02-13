@@ -5,11 +5,11 @@ export const load = (async ({ locals, url }) => {
     const q = String(url.searchParams.get('q')).trim();
     const page = Number(url.searchParams.get('page') ?? '1');
 
-    const posts = await db.post.findMany({
+    const items = await db.item.findMany({
         where: {
             OR: [
                 { title: { contains: q }},
-                { content: { contains: q }}
+                { description: { contains: q }}
             ],
             AND: [
                 { authorId: locals.user.id },
@@ -21,7 +21,7 @@ export const load = (async ({ locals, url }) => {
     });
 
     const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = posts.length < 10 ? 0 : page + 1;
+    const nextPage = items.length < 10 ? 0 : page + 1;
 
-    return { q, posts, prevPage, nextPage };
+    return { q, items, prevPage, nextPage };
 }) satisfies PageServerLoad;

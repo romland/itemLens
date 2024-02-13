@@ -4,7 +4,7 @@ import { db } from '$lib/server/database';
 
 export const actions = {
     default: async ({ params }) => {
-        await db.post.delete({
+        await db.item.delete({
             where: {
                 id: Number(params.id)
             }

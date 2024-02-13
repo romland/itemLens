@@ -1,23 +1,25 @@
 <script lang="ts">
     import Alert from "$lib/components/alert.svelte";
-    import type { Post } from "@prisma/client";
+    import type { Item } from "@prisma/client";
     import Delete from "./delete.svelte";
 
-    export let posts: Post[];
+    export let items: Item[];
 </script>
 
-{#if (posts.length == 0)}
+{#if (items.length == 0)}
     <Alert>Empty.</Alert>
 {:else}
     <div class="notes mb-6">
-        {#each posts as post}
+        {#each items as item}
             <div class="note flex justify-between items-baseline border-b border-base-300 pb-2 mb-2">
                 <div class="note-title">
-                    <a href="/{post.id}/{post.slug}">{post.title}</a>
+                    <a href="/{item.id}/{item.slug}">{item.title}</a>
                 </div>
                 <div class="inline-flex gap-3">
-                    <a href="/{post.id}/edit" title="Edit Note" class="text-gray-500"><i class="bi bi-pencil-square"></i></a>
-                    <Delete message='Delete this note: {post.title}?' action='/{post.id}/delete' />
+                    <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <Delete message='Delete this item: {item.title}?' action='/{item.id}/delete' />
                 </div>
             </div>
         {/each}
