@@ -26,7 +26,6 @@ export const load = (async ({ locals, params }) => {
         redirect(302, '/');
     }
 
-    console.log("DEBUG page.server.ts", item);
     return {
         item: {
             ...item,

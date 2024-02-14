@@ -25,7 +25,5 @@ export const load = (async ({ params, url }) => {
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;
 
-    console.log("tag page.server.ts hit");
-
     return { tag, items, prevPage, nextPage };
 }) satisfies PageServerLoad;

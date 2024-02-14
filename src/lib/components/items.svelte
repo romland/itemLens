@@ -4,7 +4,6 @@
     import Delete from "./delete.svelte";
 
     export let items: Item[];
-    console.log("WTF", items);
 </script>
 
 {#if (items.length == 0)}

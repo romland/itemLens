@@ -13,8 +13,6 @@ export const load = (async ({ locals, url }) => {
         include: { "photos" : true, "tags" : true }
     });
 
-    console.log("/ +page.server.ts hit");
-
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;
 

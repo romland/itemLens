@@ -37,6 +37,7 @@ npx prisma db seed
 ```
 
 Create `/static/images` directory.
+Create `/static/images/u` directory.
 
 Sign in with a sample user:
 

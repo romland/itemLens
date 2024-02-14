@@ -1,11 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import slugify from 'slugify';
-import { writeFileSync } from "fs";
+import { writeFileSync, promises as fsPromises } from "fs";
 import { db } from '$lib/server/database';
 import { getTagIds } from "$lib/server/services";
 import { env } from '$env/dynamic/private';
 import UrlDownloader from "$lib/server/urldownloader";
+import type { Photo } from '@prisma/client';
 
 // For background-removal (TODO: Move to use node-fetch instead -- I imported it after all)
 import http from 'http';
@@ -14,33 +15,25 @@ import fs from 'fs';
 // For OCR
 import fetch from 'node-fetch';
 
-// Color extraction
-// import { topColours, topColoursHex } from '@colour-extractor/colour-extractor';
-import path from "path";
-// import ColorThief from 'colorthief';
-import { getPalette } from "$lib/server/colorthief";
-
-// Color names
-import namer from 'color-namer';
-
 // Cropping
 import crop from "crop-node";
 
-// CLIP (at replicate.com)
-import Replicate from "replicate";
-
 // Thumbnails
 import imageThumbnail from 'image-thumbnail';
+import { getTopColorsNamed } from '$lib/server/colors';
+import { classifyImageUsingReplicate } from '$lib/server/classification';
 
+// TODO: split the shit below into functions
+// TODO: For the async tasks below: Create an empty item right away -- then all sub-tasks will do UPDATEs
+// TODO: Client page should update itself as new data comes in (can we use existing websocket for that?)
+// Consider: Is it faster to check with a jetson model if there is a QR code in the picture?
 
 export const actions = {
     default: async ({ locals, request }) => {
         const data = Object.fromEntries(await request.formData());
-
         const title = data.title as string;
-        const content = data.content as string;
+        const description = data.description as string;
         const tagcsv = data.tagcsv as string;
-        const file = data.file as File;
 
         if (title.length == 0) {
             return fail(400, {
@@ -49,26 +42,23 @@ export const actions = {
             });
         }
 
-        let filename = '';
-// TODO: Get new database model in
-// TODO: Create an empty item right away -- then all sub-tasks will do UPDATEs
-// TODO: Client page should update itself as new data comes in (can we use existing websocket for that?)
-// Consider: Is it faster to check with a jetson model if there is a QR code in the picture?
-// Consider: Throw
+        const remoteSite = "https://dev.providi.nl";
+        const diskFolder = "static/images/u";
+        const webFolder = "/images/u";
 
-        console.log("file object: ", file);
-        if (file.size > 0) {
-            const date = new Date().toISOString()
-                .replaceAll('-', '')
-                .replaceAll(':', '')
-                .replace(/T/, '')
-                .replace(/\..+/, '');
+        const photos = await saveAllFormPhotosToDisk(data, diskFolder, webFolder, "file.");
+        console.log("All files saved:", photos);
 
-            filename = date + '-' + slugify(file.name.toLowerCase());
 
-            writeFileSync(`static/images/${filename}`, Buffer.from(await file.arrayBuffer()));
+        if(photos[0].orgPath) {
+          let webFilePath = "";
 
-            const imgUrl = `https://dev.providi.nl/images/${filename}`;
+            //
+            // NOTE: only doing first photo now!
+            //
+            webFilePath = photos[0].orgPath;
+
+            const imgUrl = `${remoteSite}${webFilePath}`;
 
 
             //
@@ -78,7 +68,7 @@ export const actions = {
             // TODO: I have not really found a good use for for running
             //       any model on it yet.
             //
-            jetsonInference(`static/images/${filename}`);
+            jetsonInference(`static${webFilePath}`);
 
             //
             // OCR (scene-text detection) the picture (on Ubuntu WSL)
@@ -92,7 +82,7 @@ export const actions = {
             //
             //curl -s "http://localhost:7000/api/remove?url=http://input.png" -o output.png
             const url = `http://localhost:7000/api/remove?url=${imgUrl}`;
-            const outputFileCropped = `static/images/${filename}_crop.png`;
+            const outputFileCropped = `static${webFilePath}_crop.png`;
             
             http.get(url, (res) => {
               const fileStream = fs.createWriteStream(outputFileCropped);
@@ -125,7 +115,7 @@ export const actions = {
                     let thumbOptions = { width: 256, responseType: 'buffer' , jpegOptions: { force:true, quality:90 } };
                     try {
                         const thumbnail = await imageThumbnail(outputFileCropped, thumbOptions);
-                        fs.writeFile(`static/images/${filename}_thumb.jpg`, thumbnail, async (err) => {
+                        fs.writeFile(`static${webFilePath}_thumb.jpg`, thumbnail, async (err) => {
                             if (err) {
                                 throw err;
                             }
@@ -135,11 +125,11 @@ export const actions = {
                             // Detect QR code (it seems I have better success on thumbnails)
                             // ...and fully download the page at the URL as a 'SinglePage'
                             //
-                            let page = await UrlDownloader.fetchQRCodeDocument(`static/images/${filename}_thumb.jpg`);
+                            let page = await UrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
                             if(page !== null) {
                                 const pageData = JSON.parse(page);
 
-                                fs.writeFile(`static/images/${filename}_thumb.html`, pageData.html, {encoding:"utf8"}, (err) => {
+                                fs.writeFile(`static${webFilePath}_thumb.html`, pageData.html, {encoding:"utf8"}, (err) => {
                                     if (err) {
                                         throw err;
                                     }
@@ -148,7 +138,7 @@ export const actions = {
                                     pageData.html = "";
                                     console.log("pageData", pageData);
 
-                                    console.log(`URL saved successfully as: static/images/${filename}_thumb.html`);
+                                    console.log(`URL saved successfully as: static${webFilePath}_thumb.html`);
                                 });
                             }
 
@@ -159,119 +149,11 @@ export const actions = {
                         console.error(err);
                     }
 
-                    //
-                    // Extract top colors
-                    //
-                    // const img = path.resolve(process.cwd() + "/" + outputFile);
-                    const img = outputFileCropped;
-                    console.log("Extracting colors from", img);
+                    // Synchronous
+                    getTopColorsNamed(outputFileCropped);
 
-                    // ColorThief.getColor(img)
-                    //     .then(color => { console.log("colorThief color:", color) })
-                    //     .catch(err => { console.log(err) })
-                    
-                    // 2nd arg = num colors, 3rd arg = "quality" (step pixels to skip between sampling)
-                    // ColorThief.getPalette(img, 5, 5)
-                    getPalette(img, 5, 1)
-                        .then(palette => { 
-                            const colorNames = [];
-                            console.log("colorThief palette:", palette);
-                            for(let i = 0; i < palette.length; i++) {
-                                const hexCol = rgbToHex(palette[i][0], palette[i][1], palette[i][2]).toUpperCase();
-                                // console.log("hex:", hexCol);
-                                console.log(`<div style='height:100; width:100; background-color: ${hexCol}'></div>`);
-
-                                // color-namer
-                                const colorName = namer(hexCol, { distance:"deltae", pick: ['basic', "pantone"] });
-                                if(colorName.basic[0].distance < 25)
-                                {
-                                    colorNames.push(colorName.basic[0].name.toLowerCase());
-                                }
-                                if(colorName.pantone[0].distance < 25)
-                                {
-                                    colorNames.push(colorName.pantone[0].name.toLowerCase());
-                                }
-                            }
-
-                            console.log("Color names:", [...new Set(colorNames)]);
-                        })
-                        .catch(err => { console.log(err) })
-
-                    //
-                    // Model at replicate
-                    //
-                    /*
-                    try {
-                      console.log("Asking Replicate.com...");
-                      const replicate = new Replicate({
-                          auth: env.REPLICATE_API_TOKEN,
-                      });
-                      const output = await replicate.run(
-                          // CLIP; uses 'model' and 'use_beam_search'
-                          //"rmokady/clip_prefix_caption:9a34a6339872a03f45236f114321fb51fc7aa8269d38ae0ce5334969981e4cd8",
-
-                          // cjwbw/internlm-xcomposer (sadly pretty slow)
-                          // Nvidia A40 (Large) 
-                          // uses:
-                          //  image
-                          //  text
-                          // "cjwbw/internlm-xcomposer:d16df299dbe3454023fcb47ed48dbff052e9b7cdf2837707adff3581edd11e95",
-
-                          // llava-13b (Nvidia A40 (Large))
-                          // uses: prompt, top_p, prompt, max_tokens, temperature
-                          // "yorickvp/llava-13b:e272157381e2a3bf12df3a8edd1f38d1dbd736bbb7437277c8b34175f8fce358",
-
-                          // mplug-owl
-                          // Pretty good, but runs on an A100
-                          // Prompt:
-                          // What type of item does the image contain, e.g. clothing, tool, electronics, home appliance, table, chair, etc.
-                          // "joehoover/mplug-owl:51a43c9d00dfd92276b2511b509fcb3ad82e221f6a9e5806c54e69803e291d6b",
-                          // {
-                          //   input: {
-                          //     img: "https://replicate.delivery/pbxt/Io5RPgJuXv0NrYiefJ6mW7jadKLxebgsaZo0iyGJngHR93cv/fishfeet.webp",
-                          //     seed: -1,
-                          //     debug: false,
-                          //     top_k: 25,
-                          //     top_p: 1,
-                          //     prompt: "I designed these sandals. Can you help me write an advertisement?\n",
-                          //     max_length: 500,
-                          //     temperature: 0.75,
-                          //     penalty_alpha: 0.25,
-                          //     length_penalty: 1,
-                          //     repetition_penalty: 1,
-                          //     no_repeat_ngram_size: 0
-                          //   }
-                          // }                        
-
-
-                          // blip
-                          // Nvidia T4 -- https://replicate.com/pricing
-                          //  image: 
-                          //  task: Allowed values:image_captioning, visual_question_answering, image_text_matching
-                          "salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746",
-                          {
-                              input: {
-                                  // top_p: 1,
-                                  // max_tokens: 1024,
-                                  // temperature: 0.2,
-                                  // prompt: "List details of the picture. Include brands if they can be determined. Be concise and brief.",
-                                  task: "image_captioning",
-                                  question: "describe the type of item depicted, e.g. receipt, invoice, clothing, tool, electronic component, electronic device, chair, table, etc, etc",
-
-                                  // model: "conceptual-captions", //"coco",
-                                  // use_beam_search: true
-                                  // text: "List details of the picture. Include brands if they can be determined. Be concise and brief.",
-                                  // image: `https://dev.providi.nl/images/rem_${filename}.png`,
-                                  image: imgUrl,
-                              }
-                          }
-                      );
-                      console.log("Replicate:", output);
-                    } catch(ex) {
-                      console.log("Error asking replicated: ", ex)
-                      console.error(ex);
-                    }
-                    */
+                    // TODO: Remove await and save promise
+                    await classifyImageUsingReplicate(imgUrl);
 
                 })();
 
@@ -284,32 +166,23 @@ export const actions = {
         }
 
         const ids = await getTagIds(tagcsv);
-        
+
         const item = await db.item.create({
             data: {
                 title: title.trim(),
-                // NOTE: Photo structure changed
-                // photo: filename,
+                photos: { create: photos },
                 slug: slugify(title.trim().toLowerCase()),
-                description: content.trim(),
+                description: description.trim(),
                 authorId: locals.user.id,
                 tags: {
                     connect: [...ids]
                 }
             }
         });
-        console.warn("TODO: PHOTO NOT SAVED.")
 
         redirect(302, `/${item.id}/${item.slug}`);
     }
 } satisfies Actions;
-
-
-const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
-  const hex = x.toString(16)
-  return hex.length === 1 ? '0' + hex : hex
-}).join('')
-
 
 
 // Object categorization/identification (on Jetson)
@@ -328,7 +201,8 @@ async function jetsonInference(imagePath : string)
     const fileContent = fs.readFileSync(imagePath);
 
     const base64Data = Buffer.from(fileContent).toString('base64');
-console.log("jetsonInference debug:", imagePath, fileContent.length, base64Data.length);
+    console.log("jetsonInference debug:", imagePath, fileContent.length, base64Data.length);
+
     // there are quite a few PCB inspectors I have not tried (not listed here)
     // const model = "prueba-1-componentes/1";
     // const model = "komponen-elektronika-skripsi/2";
@@ -390,5 +264,51 @@ async function fetchData(imageUrl : string)
     }
   } catch (error) {
     console.log('OCR Error:', error.message);
+  }
+}
+
+
+async function saveAllFormPhotosToDisk(formData : FormDataEntryValue[], diskPath : string, webPath : string, fieldPrefix : string) : Promise<Photo[]>
+{
+  const photos: Photo[] = [];
+  const filePromises = [];
+  let formFile, i = 0;
+  while ((formFile = formData[`${fieldPrefix}${i}`] as File)) {
+      if (formFile.size > 0) {
+          const date = new Date().toISOString()
+              .replaceAll('-', '')
+              .replaceAll(':', '')
+              .replace(/T/, '')
+              .replace(/\..+/, '');
+  
+          const filename = date + '-' + slugify(formFile.name.toLowerCase());
+  
+          // Start writing the file asynchronously and push the promise to the array
+          filePromises.push(
+              formFile.arrayBuffer().then(buffer => {
+                const filePath = `${diskPath}/${filename}`;
+                return fsPromises.writeFile(filePath, Buffer.from(buffer));
+            })
+          );
+  
+          // @ts-expect-error (missing DB fields that will be filled in)
+          photos.push({
+            type: formData[`${fieldPrefix}.type.${i}`] as string,
+            orgPath: `${webPath}/${filename}`,
+            thumbPath: null,
+            cropPath: null,
+            ocr: null,
+            colors: null,
+          });
+      }
+      i++;
+  }
+
+  try {
+    await Promise.all(filePromises);
+    return photos;
+  } catch (error) {
+    console.error("Error saving files:", error);
+    return [];
   }
 }

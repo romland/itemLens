@@ -62,7 +62,7 @@ model Photo {
   cropPath  String?
   thumbPath String?
   ocr       String?
-  colors    String // NOTE: JSON array
+  colors    String? // NOTE: JSON array
 
   item   Item @relation(fields: [itemId], references: [id])
   itemId Int
