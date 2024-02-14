@@ -16,6 +16,7 @@ export const handle = (async ({ event, resolve }) => {
 	}
 
 	if (session) {
+		console.log("hooks.server.ts: Found session");
 		const user = await db.user.findUnique({
 			where: { token: session },
 			select: { id: true, username: true }
@@ -28,12 +29,16 @@ export const handle = (async ({ event, resolve }) => {
 			}
 		}
 	} else {
+		console.log("hooks.server.ts: No session");
 		if (
 			path == '/' ||
 			/^\/\d/.test(path) ||
 			path.startsWith('/search') ||
 			path.startsWith('/tag')
-		) redirect(303, '/login');
+		) {
+			console.log("hooks.server.ts: Redirecting to login");
+			redirect(303, '/login');
+		}
 	}
 
 	return await resolve(event, {

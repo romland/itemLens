@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
+    import Title from "$lib/components/Title.svelte";
 
     export let data: PageServerData;
 
@@ -12,7 +13,7 @@
 </script>
 
 <svelte:head>
-    <title>{data.item?.title}</title>
+    <Title>{data.item?.title}</Title>
 </svelte:head>
 
 <article style="padding-bottom: 100px;">

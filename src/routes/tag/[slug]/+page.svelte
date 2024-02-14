@@ -2,12 +2,13 @@
     import type { PageServerData } from "./$types";
     import Navigation from "$lib/components/navigation.svelte";
     import Items from "$lib/components/items.svelte";
+    import Title from "$lib/components/Title.svelte";
     
     export let data: PageServerData;
 </script>
 
 <svelte:head>
-    <title>{data.tag?.name}</title>
+    <Title>{data.tag?.name}</Title>
 </svelte:head>
 
 <div class="flex justify-between items-center border-b border-gray-500 pb-2 mb-3">

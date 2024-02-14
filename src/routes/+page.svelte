@@ -3,12 +3,13 @@
     import Navigation from "$lib/components/navigation.svelte";
     import Items from "$lib/components/items.svelte";
     import Search from "$lib/components/search.svelte";
+    import Title from "$lib/components/Title.svelte";
     
     export let data: PageServerData;
 </script>
 
 <svelte:head>
-    <title>itemLens</title>
+    <Title>Home</Title>
 </svelte:head>
 
 <!--

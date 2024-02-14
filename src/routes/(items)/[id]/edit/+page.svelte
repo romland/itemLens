@@ -2,13 +2,14 @@
     import type { ActionData, PageServerData } from "./$types";
     import Alert from "$lib/components/alert.svelte";
     import { enhance } from "$app/forms";
+    import Title from "$lib/components/Title.svelte";
   
     export let data: PageServerData;
     export let form: ActionData;
 </script>
 
 <svelte:head>
-    <title>Edit Item</title>
+    <Title>Edit Item</Title>
 </svelte:head>
 
 {#if form?.error}

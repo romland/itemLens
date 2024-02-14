@@ -3,6 +3,7 @@
     import type { ActionData } from "./$types";
     import { enhance, type SubmitFunction } from '$app/forms';
     import { redirect } from '@sveltejs/kit';
+    import Title from "$lib/components/Title.svelte";
 
     export let form: ActionData;
 
@@ -122,7 +123,7 @@ function getScreenOrientation()
 </script>
 
 <svelte:head>
-    <title>Add New Item</title>
+    <Title>Add New Item</Title>
 </svelte:head>
 
 {#if form?.error}
