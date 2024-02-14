@@ -3,21 +3,6 @@ import { db } from '$lib/server/database';
 import { redirect } from "@sveltejs/kit";
 import { marked } from "marked";
 
-/*
-  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
-  inventoryId Int?
-
-  author   User @relation(fields: [authorId], references: [id])
-  authorId Int
-
-  photos     Photo[]
-  documents  Document[]
-  tags       Tag[]
-  locations  Container[]
-  attributes KVP[] // e.g. width, height, color (should override colors of photo, I guess), etc
-  usage      InUse[]
-*/
-
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
         where: {

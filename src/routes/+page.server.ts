@@ -9,8 +9,11 @@ export const load = (async ({ locals, url }) => {
         where: { author: { id: locals.user.id } },
         take: 10,
         skip: page == 1 ? 0 : (page - 1) * 10,
-        orderBy: [{ id: 'desc' }]
+        orderBy: [{ id: 'desc' }],
+        include: { "photos" : true, "tags" : true }
     });
+
+    console.log("/ +page.server.ts hit");
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;

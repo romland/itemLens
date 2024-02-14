@@ -6,6 +6,20 @@
     import Title from "$lib/components/Title.svelte";
 
     export let form: ActionData;
+    const onSubmit: SubmitFunction = async (data) => {
+        // if(canvasCameraUsed) {
+        //     const blob = await new Promise(resolve => eltCanvas.toBlob(resolve));
+        //     data.formData.set("file", blob, "item.png");
+        // }
+
+        return async (options) => {
+            // after the form submits...
+            console.log("saved:", options);
+            if(options.result?.type === "redirect") {
+                window.location.href = options.result.location;
+            }
+        }
+    }
 </script>
 
 <svelte:head>

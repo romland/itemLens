@@ -88,38 +88,7 @@
 <svelte:head> 
   {@html webManifest} 
   <style>
-      @keyframes fade-in {
-          from {
-              opacity: 0;
-          }
-      }
 
-      @keyframes fade-out {
-          to {
-              opacity: 0;
-          }
-      }
-
-      @keyframes slide-from-right {
-          from {
-              transform: translateX(30px);
-          }
-      }
-
-      @keyframes slide-to-left {
-          to {
-              transform: translateX(-30px);
-          }
-      }
-
-      :root::view-transition-old(root) {
-          animation: 90ms cubic-bezier(0.4, 0, 1, 1) both fade-out, 300ms cubic-bezier(0.4, 0, 0.2, 1) both slide-to-left;
-      }
-
-      :root::view-transition-new(root) {
-          animation: 210ms cubic-bezier(0, 0, 0.2, 1) 90ms both fade-in, 300ms cubic-bezier(0.4, 0, 0.2, 1) both
-                  slide-from-right;
-      }
   </style>
 </svelte:head>
 
@@ -178,7 +147,7 @@
     <div class="dropdown dropdown-end">
       <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
         <div class="w-10 rounded-full">
-          <img alt="Tailwind CSS Navbar component" src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
+          <img alt="Tailwind CSS Navbar component" src="/images/providi.svg" />
         </div>
       </div>
       <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
@@ -215,11 +184,10 @@
         </li>
       </ul>
     </div>
-
+  </div>
 </div>
-</div>
 
-<main class="container md:w-[800px] px-8 mx-auto my-8">
+<main class="container md:w-[800px] px-8 mx-auto my-8" style="padding-bottom: 100px;">
     <slot />
 </main>
 
@@ -238,11 +206,11 @@
     <span class="btm-nav-label">Something</span>
   </a>
 
-    {#if $page.data.user}
-        <a class:active={$page.url.pathname==='/add'} href="/add" title="Add New Item">
-            <i class="bi bi-plus-circle"></i>
-            <span class="btm-nav-label">Add new</span>
-        </a>
-    {/if}
+  {#if $page.data.user}
+      <a class:active={$page.url.pathname==='/add'} href="/add" title="Add new item">
+          <i class="bi bi-plus-circle"></i>
+          <span class="btm-nav-label">Add new</span>
+      </a>
+  {/if}
 
 </div>

@@ -13,7 +13,6 @@ import fs from 'fs';
 
 // For OCR
 import fetch from 'node-fetch';
-import FormData from 'form-data';
 
 // Color extraction
 // import { topColours, topColoursHex } from '@colour-extractor/colour-extractor';
@@ -365,26 +364,7 @@ console.log("jetsonInference debug:", imagePath, fileContent.length, base64Data.
   }
 }
 
-
-const sendFile = async (uri : string, filePath : string) => {
-  const fileStream = fs.createReadStream(filePath);
-
-  const formData = new FormData();
-  formData.append('file', fileStream);
-
-  const response = await fetch(uri, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (response.ok) {
-    console.log('OCR File uploaded successfully!', await response.json());
-  } else {
-    console.error('OCR File upload failed!', response);
-  }
-};
-
-async function fetchData(imageUrl)
+async function fetchData(imageUrl : string)
 {
   const url = 'http://localhost:8000/ocr/predict-by-url';
 //   const formData = new FormData();
