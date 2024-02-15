@@ -6,7 +6,6 @@
     import Title from "$lib/components/Title.svelte";
     
     export let data: PageServerData;
-    console.log("whut", data)
 </script>
 
 <svelte:head>

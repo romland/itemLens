@@ -10,6 +10,24 @@
     if(data.item?.photos?.length > 0) {
         productPhotos = data.item.photos.filter((photo) => { return photo.type === "item" });
     }
+
+    if(typeof window !== 'undefined') {
+        // Periodically check if we have updated data for this page.
+        // I suppose using a MessageChannel or so on the Service Worker 
+        // could be a future improvement? I'd have to read up on that.
+        let fetchDone = true;
+        setInterval(async () => {
+            if(!fetchDone) {
+                return;
+            }
+
+            const res = await fetch(`/api/item?id=${data.item.id}`);
+            const item = await res.json();
+            data.item = item;
+
+            fetchDone = true;
+        }, 1000);   // TODO XXX: once per second is a bit excessive, but fine for now
+    }
 </script>
 
 <svelte:head>

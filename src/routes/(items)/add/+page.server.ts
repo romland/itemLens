@@ -6,7 +6,7 @@ import { db } from '$lib/server/database';
 import { getTagIds } from "$lib/server/services";
 import { env } from '$env/dynamic/private';
 import UrlDownloader from "$lib/server/urldownloader";
-import type { Photo } from '@prisma/client';
+import type { Item, Photo } from '@prisma/client';
 
 // For background-removal (TODO: Move to use node-fetch instead -- I imported it after all)
 import http from 'http';
@@ -49,6 +49,25 @@ export const actions = {
         const photos = await saveAllFormPhotosToDisk(data, diskFolder, webFolder, "file.");
         console.log("All files saved:", photos);
 
+        const ids = await getTagIds(tagcsv);
+        const item = await db.item.create({
+            data: {
+                title: title.trim(),
+                photos: {
+                  create: photos
+                },
+                slug: slugify(title.trim().toLowerCase()),
+                description: description.trim(),
+                authorId: locals.user.id,
+                tags: {
+                    connect: [...ids]
+                }
+            },
+            include: {
+              photos : true,
+            }
+        });
+        console.log("ITEM AFTER SAVE:", item);
 
         if(photos[0].orgPath) {
           let webFilePath = "";
@@ -97,22 +116,37 @@ export const actions = {
                 //
 
                 // Path to an image file to crop
-                const path = process.cwd() + "/" + outputFileCropped;
                 const options = {
                     outputFormat: "png",
                 };
                 // Run the async function and write the result
                 (async () => {
-                    const cropped = await crop(path, options);
+                    const cropped = await crop(outputFileCropped, options);
                     // Write the cropped file
                     writeFileSync(outputFileCropped, cropped);
                     console.log("Wrote cropped file");
+                    
+                    // TODO: It is not guaranteed that the order comes back the same
+                    // as I save them in. We need to iterate over Item's photos and
+                    // deal with them like that (instead of like now, just taking the
+                    // first -- prototype-mode!)
+// WE BLOW UP HERE ATM!
+// TODO: We need to do this now as it gets pretty ugly to update Photos via Item in Prisma (it would be awesome tho!)
+                    item.photos[0].cropPath = outputFileCropped;
+                    update(item.id, item);
 
                     //
                     // Generate thumbnail
                     // (note, thumbnail is a jpg -- for size)
                     //
-                    let thumbOptions = { width: 256, responseType: 'buffer' , jpegOptions: { force:true, quality:90 } };
+                    const thumbOptions = {
+                      width: 256,
+                      responseType: 'buffer',
+                      jpegOptions: {
+                        force:true,
+                        quality:90
+                      }
+                    };
                     try {
                         const thumbnail = await imageThumbnail(outputFileCropped, thumbOptions);
                         fs.writeFile(`static${webFilePath}_thumb.jpg`, thumbnail, async (err) => {
@@ -153,7 +187,8 @@ export const actions = {
                     getTopColorsNamed(outputFileCropped);
 
                     // TODO: Remove await and save promise
-                    await classifyImageUsingReplicate(imgUrl);
+                    console.log("Replicate.com disabled");
+                    // await classifyImageUsingReplicate(imgUrl);
 
                 })();
 
@@ -165,25 +200,17 @@ export const actions = {
 
         }
 
-        const ids = await getTagIds(tagcsv);
-
-        const item = await db.item.create({
-            data: {
-                title: title.trim(),
-                photos: { create: photos },
-                slug: slugify(title.trim().toLowerCase()),
-                description: description.trim(),
-                authorId: locals.user.id,
-                tags: {
-                    connect: [...ids]
-                }
-            }
-        });
-
         redirect(302, `/${item.id}/${item.slug}`);
     }
 } satisfies Actions;
 
+async function update(id : number, data : Item)
+{
+  await db.item.update({
+    where: { id: Number(id) },
+    data : data
+  });
+}
 
 // Object categorization/identification (on Jetson)
 // TODO: Need to find a better model for this (it's a matter of changing the URL)
