@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
+  id       Int     @id @unique @default(autoincrement())
   username String  @unique
   password String
   token    String? @unique
@@ -21,7 +21,7 @@ model User {
 // E.g. "Electronics", "DIY", "Clothes", "Shoes", ...
 // Every class in ML model should be assigned to an inventory
 model Inventory {
-  id          Int    @id @default(autoincrement())
+  id          Int    @id @unique @default(autoincrement())
   name        String
   description String
   classes     String // NOTE: JSON array, E.g. [ shoes, clothes, *, O, R]
@@ -32,7 +32,7 @@ model Inventory {
 }
 
 model Item {
-  id          Int       @id @default(autoincrement())
+  id          Int       @id @unique @default(autoincrement())
   slug        String
   amount      Int?
   title       String?
@@ -56,7 +56,7 @@ model Item {
 }
 
 model Photo {
-  id        Int     @id @default(autoincrement())
+  id        Int     @id @unique @default(autoincrement())
   type      String  @default("item")
   orgPath   String?
   cropPath  String?
@@ -72,7 +72,7 @@ model Photo {
 }
 
 model Document {
-  id       Int     @id @default(autoincrement())
+  id       Int     @id @unique @default(autoincrement())
   type     String? // E.g. invoice, information, product-page, ...
   title    String
   source   String // AKA url
@@ -87,7 +87,7 @@ model Document {
 }
 
 model Container {
-  id       Int         @id @default(autoincrement())
+  id       Int         @id @unique @default(autoincrement())
   parentId Int?        @unique
   parent   Container?  @relation("ParentRelation", fields: [parentId], references: [id])
   children Container[] @relation("ParentRelation")
@@ -106,7 +106,7 @@ model Container {
 }
 
 model KVP {
-  id    Int    @id @default(autoincrement())
+  id    Int    @id @unique @default(autoincrement())
   key   String
   value String
 
@@ -115,7 +115,7 @@ model KVP {
 }
 
 model Tag {
-  id    Int    @id @default(autoincrement())
+  id    Int    @id @unique @default(autoincrement())
   name  String @unique
   slug  String @unique
   items Item[]
@@ -123,7 +123,7 @@ model Tag {
 
 // Be able to tag items that are in use by/on something
 model InUse {
-  id          Int     @id @default(autoincrement())
+  id          Int     @id @unique @default(autoincrement())
   title       String? // e.g. By VidensiVision
   description String? // e.g. ...mounted in shed to check presence of Ery
 
