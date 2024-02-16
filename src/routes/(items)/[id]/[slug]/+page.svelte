@@ -33,13 +33,16 @@
             fetchDone = true;
         }, 1000);   // TODO XXX: once per second is a bit excessive, but fine for now
     }
+
+    console.log(data.item);
 </script>
 
 <svelte:head>
     <Title>{data.item?.title}</Title>
 </svelte:head>
 
-<article style="padding-bottom: 100px;">
+<article style="padding-bottom: 100px;" class="">
+
     <div class="flex justify-between items-center border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold">
             {data.item?.title}
@@ -51,6 +54,7 @@
             <Delete message='Delete this item?' action='/{data.item?.id}/delete' />
         </div>
     </div>
+
 
     <div class="flex justify-center mb-3">
         {#if productPhotos?.length > 0}

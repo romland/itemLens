@@ -104,7 +104,45 @@
         </div>
     </div>
 
-    <h1>TODO: container</h1>
+    <h3>Locations</h3>
+
+    <div class="mb-3 overflow-x-auto">
+        <table class="table">
+            <tbody>
+                <!-- row 1 -->
+                <tr>
+                    <th>
+                        <label>
+                            <input name="locations" value="1" type="checkbox" class="checkbox" />
+                        </label>
+                    </th>
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div class="avatar">
+                                <div class="mask mask-square w-12 h-12">
+                                    <img src="/images/containers/A_crop.png" alt="Container" />
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-bold">A</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        Zemlak, Daniel and Leannon
+                        <br/>
+                        <span class="badge badge-ghost badge-sm">Desktop Support Technician</span>
+                    </td>
+                    <td>Purple</td>
+                    <th>
+                        <button class="btn btn-ghost btn-xs">details</button>
+                    </th>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
 
     <div class="mb-3">
         <input type="text" name="title" value="A default name" placeholder="Title" class="input input-bordered w-full">

@@ -1,4 +1,4 @@
-import { Item, User, Inventory, PrismaClient } from '@prisma/client';
+import { Item, User, Inventory, Container, PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import slugify from 'slugify';
 import bcrypt from 'bcrypt';
@@ -52,8 +52,57 @@ async function addInventories() {
     return inventories;
 }
 
+/*
+model Container {
+  id          Int         @id @unique @default(autoincrement())
+  parentId    Int?        @unique
+  parent      Container?  @relation("ParentRelation", fields: [parentId], references: [id])
+  children    Container[] @relation("ParentRelation")
 
-async function addItems(user: User) {
+  // Ponder: A or A.001 ??? How fine-grained? How important is it to have a hierarchy?
+  name        String @unique    // A or A.001 (Note: sub-containers must be denoted with period)
+  description String            // closet with door
+  location    String?           // top of desk (JR)
+  photoPath   String?
+
+  items       ItemsInContainer[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+*/
+async function addLocations()
+{
+    const container = await prisma.container.create(
+        {
+            data: {
+                name: "A",
+                description: "Blue metal MARS container, 60 trays",
+                location: "Study",
+                photoPath: "/images/containers/A_crop.png"
+            }
+        }
+    );
+console.log(container);
+    // const trays: Container[] = [];
+
+    for(let i = 1; i <= 60; i++) {
+        const trayId = i.toString().padStart(3, '0')
+        await prisma.container.create(
+            {
+                data: {
+                    parentId: container.name,
+                    name: "A " + trayId,
+                    description: "A little tray in a big container",
+                }
+            }
+        )
+    }
+}
+
+
+async function addItems(user: User)
+{
     const tags = ['raspberry pi', 'jetson', 'esp32', 'pico', 'lg', 'samsung', 'nokia'];
 
     const items: Item[] = [];
@@ -76,6 +125,7 @@ async function addItems(user: User) {
                     amount: 1,
                     inventoryId: 1,
                     authorId: user.id,
+                    reason: "Curiosity",
                     photos: {
                         create: [
                             {
@@ -123,14 +173,17 @@ async function addItems(user: User) {
                         })
                     },
                     locations: {
-                        connectOrCreate: {
-                            where: { name : "A" },
-                            create: {
-                                name: "A",
-                                description: "A 001 - A 060, blue metal cabinet with 60 drawers",
-                                location: "Study",
-                                photoPath: "/images/_seed_container.jpg"
-
+                        create: {
+                            container : {
+                                connectOrCreate: {
+                                    where: { name : "A 001" },
+                                    create: {
+                                        name: "A 001",
+                                        description: "A 001 - A 060, blue metal cabinet with 60 trays",
+                                        location: "Study",
+                                        photoPath: "/images/_seed_container.jpg"
+                                    }
+                                },
                             }
                         }
                     },
@@ -170,7 +223,8 @@ async function addItems(user: User) {
 
 async function main() {
     const user = await addUser();
-    const inventories = await addInventories();
+    await addInventories();
+    await addLocations();
     await addItems(user);
 }
 
