@@ -1,7 +1,8 @@
 import Replicate from "replicate";
 import { env } from '$env/dynamic/private';
+import fs from 'fs';
 
-export async function classifyImageUsingReplicate(imgUrl : string)
+export async function classifyImageUsingReplicate(imgUrl : string, callback)
 {
     try {
         const replicate = new Replicate({
@@ -22,9 +23,64 @@ export async function classifyImageUsingReplicate(imgUrl : string)
         );
 
         console.log("Replicate:", output);
-        return output;
+        callback(null, output);
+        // return output;
     } catch(ex) {
         console.log("Error asking replicated: ", ex)
         console.error(ex);
+        callback(ex, null);
     }
+}
+
+// Object classification/categorization/identification (on Jetson)
+//
+// Note: Changing model is a matter of changing the URL -- need Roboflow key to download model, though.
+// there are quite a few PCB inspectors I have not tried (not listed here)
+// Screws:     screw-detection-gqosr/2
+//    const model = "prueba-1-componentes/1";
+//    const model = "komponen-elektronika-skripsi/2";
+//    const model = "pcb-collect/1";
+//    const model = "coco/13";                         // (crashes... too big?)
+//    const model = "resistor-detection-5azes/5";      // this is pretty good in that it's not overfitting (got resistor and breadboard)
+//    const model = "qr-code-oerhe/1";                  // perhaps use for fast detection of whether there is a qr code?
+//    const model = "electronic-components-d6uul/2";   // decent for electronics!
+//    const model = "color-cloth-zecj2/3";    // Triggers swap MADLY. color of cloth
+//    const model = "komponen-ujzon/2" // seems to be a shitload of resistors -- but tested with one, no prediction (could be worth look at again)
+//    const model = "yolov5-fjfmh/2";   // (warning) electronic components (Saw kswapd climb and then unresponsive)
+//
+// Curl: base64 rem_20240201231300-item.png | curl -d @- "http://192.168.178.142:9001/prueba-1-componentes/1?api_key=ROBOFLOW_API_TOKEN"
+export async function jetsonInference(imagePath : string, callback)
+{
+  try {
+    const fileContent = fs.readFileSync(imagePath);
+
+    const base64Data = Buffer.from(fileContent).toString('base64');
+    console.log("jetsonInference debug:", imagePath, fileContent.length, base64Data.length);
+
+    // https://universe.roboflow.com/tc-n4ggt/trash-classification-fvhuk
+    // Model Type: Roboflow 2.0 Multi-label Classification
+    const model = "trash-classification-fvhuk/1"; // Good for getting clothes/shoes or not. (O = organic?, R = plastic?) Why does this return different result when ran locally? ... Would be nice to determine whether something is clothes/shoes or not
+
+    const url = `http://192.168.178.142:9001/${model}?api_key=${env.ROBOFLOW_API_TOKEN}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      body: base64Data,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+
+      console.log('jetsonInference: ', result);
+      callback(null, result);
+    } else {
+      console.log('Upload to Jetson failed!', response.status, await response.text());
+      callback(response.status, null);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    callback(error, null);
+  }
 }

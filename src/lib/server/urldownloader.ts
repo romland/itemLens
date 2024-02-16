@@ -41,7 +41,7 @@ export default class UrlDownloader
         return await UrlDownloader.downloadURL(qrData);
     }
 
-    private static async downloadURL(url : string) : Promise<string|null>
+    static async downloadURL(url : string) : Promise<string|null>
     {
           try {
             const response = await fetch("http://localhost:8001", {
@@ -57,19 +57,18 @@ export default class UrlDownloader
               console.log("URL download result", result.length, "bytes");
               return result;
             } else {
-              console.log('URL download HTTP error:', response.statusText);
+              console.log('URL download HTTP error:', response.statusText, url);
               return null;
             }
 
           } catch (error) {
-            console.log('URL download error:', error.message);
+            console.log('URL download error:', error.message, url);
             return null;
           }
-        
     }
 
 
-    private static isURL(url : string)
+    static isURL(url : string)
     {
         const urlRegExp = /^(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:\/[^\s]*)?$/i;
         return urlRegExp.test(url);

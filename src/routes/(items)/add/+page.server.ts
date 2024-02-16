@@ -4,15 +4,11 @@ import slugify from 'slugify';
 import { writeFileSync, promises as fsPromises } from "fs";
 import { db } from '$lib/server/database';
 import { getTagIds } from "$lib/server/services";
-import { env } from '$env/dynamic/private';
 import UrlDownloader from "$lib/server/urldownloader";
 import type { Item, Photo } from '@prisma/client';
 
-// For background-removal (TODO: Move to use node-fetch instead -- I imported it after all)
-import http from 'http';
 import fs from 'fs';
 
-// For OCR
 import fetch from 'node-fetch';
 
 // Cropping
@@ -21,12 +17,10 @@ import crop from "crop-node";
 // Thumbnails
 import imageThumbnail from 'image-thumbnail';
 import { getTopColorsNamed } from '$lib/server/colors';
-import { classifyImageUsingReplicate } from '$lib/server/classification';
+import { classifyImageUsingReplicate, jetsonInference } from '$lib/server/classification';
+import { getOCRdata } from '$lib/server/ocr';
 
-// TODO: split the shit below into functions
-// TODO: For the async tasks below: Create an empty item right away -- then all sub-tasks will do UPDATEs
-// TODO: Client page should update itself as new data comes in (can we use existing websocket for that?)
-// Consider: Is it faster to check with a jetson model if there is a QR code in the picture?
+// TODO consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
 
 export const actions = {
     default: async ({ locals, request }) => {
@@ -34,6 +28,8 @@ export const actions = {
         const title = data.title as string;
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
+
+        console.log("POST data:", data);
 
         if (title.length == 0) {
             return fail(400, {
@@ -46,15 +42,14 @@ export const actions = {
         const diskFolder = "static/images/u";
         const webFolder = "/images/u";
 
-        const photos = await saveAllFormPhotosToDisk(data, diskFolder, webFolder, "file.");
-        console.log("All files saved:", photos);
+        const productPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "file.");
 
         const ids = await getTagIds(tagcsv);
-        const item = await db.item.create({
+        const item : Item = await db.item.create({
             data: {
                 title: title.trim(),
                 photos: {
-                  create: photos
+                  create: productPhotos
                 },
                 slug: slugify(title.trim().toLowerCase()),
                 description: description.trim(),
@@ -67,248 +62,317 @@ export const actions = {
               photos : true,
             }
         });
-        console.log("ITEM AFTER SAVE:", item);
 
-        if(photos[0].orgPath) {
-          let webFilePath = "";
+        processProductPhotos(item, remoteSite);
 
-            //
-            // NOTE: only doing first photo now!
-            //
-            webFilePath = photos[0].orgPath;
+        //
+        // Download all URLs contained in QR codes (TODO: SECURITY?)
+        //
+        const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "qr.");
+        for(let i = 0; i < qrPhotos.length; i++) {
+          const photo = qrPhotos[i];
 
-            const imgUrl = `${remoteSite}${webFilePath}`;
+          // Process the QR code
+          processPhoto(photo, `${remoteSite}${photo.orgPath}`, item, false, false, (err, pageData) => {
+            if(err) {
+              console.error("Error processing QR code for URL: ", err);
+              return;
+            }
+            console.log("Downloaded explicitly stated URL via QR code:", pageData.url);
+          });
+        }
 
+        //
+        // Download all URLs in the URLs field (TODO: SECURITY?)
+        //
+        const lines = (data.urls as string).split("\n");
+        for(let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if(!UrlDownloader.isURL(line)) {
+            console.log(`not an URL: ${line}`);
+            continue;
+          }
 
-            //
-            // Object categorization (or detection! depending on model!)
-            // performed by the Jetson Nano. 
-            // 
-            // TODO: I have not really found a good use for for running
-            //       any model on it yet.
-            //
-            jetsonInference(`static${webFilePath}`);
+          const str: string|null = await UrlDownloader.downloadURL(line);
+          if(!str) {
+            console.log(`Did not get any result when downloading: ${line}`);
+            return;
+          }
 
-            //
-            // OCR (scene-text detection) the picture (on Ubuntu WSL)
-            // This is PaddleOCR with FastAPI (note: No GPU ... yet):
-            // start container with: romland@Fluffball:~/PaddleOCRFastAPI$ sudo docker compose up -d
-            //
-            fetchData(imgUrl);
+          const pageData = JSON.parse(str);
+          const docFilename = getSafeFilename(`${item.id}-doc`);
 
-            //
-            // Remove background (on Ubuntu WSL: rembg container)
-            //
-            //curl -s "http://localhost:7000/api/remove?url=http://input.png" -o output.png
-            const url = `http://localhost:7000/api/remove?url=${imgUrl}`;
-            const outputFileCropped = `static${webFilePath}_crop.png`;
-            
-            http.get(url, (res) => {
-              const fileStream = fs.createWriteStream(outputFileCropped);
-            
-              res.pipe(fileStream);
-              fileStream.on('finish', async () => {
-                fileStream.close();
-                console.log('Removed background, file downloaded and saved successfully.');
+          fs.writeFileSync(`static${webFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
 
-                //
-                // CROP
-                //
-
-                // Path to an image file to crop
-                const options = {
-                    outputFormat: "png",
-                };
-                // Run the async function and write the result
-                (async () => {
-                    const cropped = await crop(outputFileCropped, options);
-                    // Write the cropped file
-                    writeFileSync(outputFileCropped, cropped);
-                    console.log("Wrote cropped file");
-                    
-                    // TODO: It is not guaranteed that the order comes back the same
-                    // as I save them in. We need to iterate over Item's photos and
-                    // deal with them like that (instead of like now, just taking the
-                    // first -- prototype-mode!)
-// WE BLOW UP HERE ATM!
-// TODO: We need to do this now as it gets pretty ugly to update Photos via Item in Prisma (it would be awesome tho!)
-                    item.photos[0].cropPath = outputFileCropped;
-                    update(item.id, item);
-
-                    //
-                    // Generate thumbnail
-                    // (note, thumbnail is a jpg -- for size)
-                    //
-                    const thumbOptions = {
-                      width: 256,
-                      responseType: 'buffer',
-                      jpegOptions: {
-                        force:true,
-                        quality:90
-                      }
-                    };
-                    try {
-                        const thumbnail = await imageThumbnail(outputFileCropped, thumbOptions);
-                        fs.writeFile(`static${webFilePath}_thumb.jpg`, thumbnail, async (err) => {
-                            if (err) {
-                                throw err;
-                            }
-                            console.log('Thumbnail saved successfully!');
-
-                            //
-                            // Detect QR code (it seems I have better success on thumbnails)
-                            // ...and fully download the page at the URL as a 'SinglePage'
-                            //
-                            let page = await UrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
-                            if(page !== null) {
-                                const pageData = JSON.parse(page);
-
-                                fs.writeFile(`static${webFilePath}_thumb.html`, pageData.html, {encoding:"utf8"}, (err) => {
-                                    if (err) {
-                                        throw err;
-                                    }
-
-                                    // Output for debug ---
-                                    pageData.html = "";
-                                    console.log("pageData", pageData);
-
-                                    console.log(`URL saved successfully as: static${webFilePath}_thumb.html`);
-                                });
-                            }
-
-                        });
-                          
-                    } catch (err) {
-                        console.log("Error generating thumbnail");
-                        console.error(err);
-                    }
-
-                    // Synchronous
-                    getTopColorsNamed(outputFileCropped);
-
-                    // TODO: Remove await and save promise
-                    console.log("Replicate.com disabled");
-                    // await classifyImageUsingReplicate(imgUrl);
-
-                })();
-
-              });
-
-            }).on('error', (err) => {
-              console.error('Remove background: Error downloading file:', err);
+          console.log("Creating document from explicit URL", docFilename);
+          try {
+            await db.document.create({
+              data: {
+                itemId: item.id,
+                type: "uncategorized",
+                title: pageData.title,
+                source: pageData.url,
+                path: `${webFolder}/${docFilename}.html`,
+                extracts: JSON.stringify(pageData.extracts)
+              }
             });
+          } catch (ex) {
+            console.error("Error creating document in DB:", ex);
+          }
 
+          console.log("Downloaded explicitly stated URL:", line);
         }
 
         redirect(302, `/${item.id}/${item.slug}`);
     }
 } satisfies Actions;
 
-async function update(id : number, data : Item)
+
+/**
+ * 
+ * @param item 
+ * @param remoteSite 
+ */
+function processProductPhotos(item : Item, remoteSite: string)
 {
-  await db.item.update({
-    where: { id: Number(id) },
-    data : data
-  });
-}
+  // Deal with each photo
+  for (let i = 0; i < item.photos.length; i++) {
+    const photo = item.photos[i];
 
-// Object categorization/identification (on Jetson)
-// TODO: Need to find a better model for this (it's a matter of changing the URL)
-//
-// NOTE: SECURITY SECRET TODO REMOVE OR INVALIDATE
-//
-// Components: komponen-elektronika-skripsi/2
-// Screws:     screw-detection-gqosr/2
-// PCB comps:  pcb-collect/1
+    if (!photo.orgPath) {
+      continue;
+    }
 
-// base64 rem_20240201231300-item.png | curl -d @- "http://192.168.178.142:9001/prueba-1-componentes/1?api_key=ROBOFLOW_API_TOKEN"
-async function jetsonInference(imagePath : string)
-{
-  try {
-    const fileContent = fs.readFileSync(imagePath);
+    const imgUrl = `${remoteSite}${photo.orgPath}`;
 
-    const base64Data = Buffer.from(fileContent).toString('base64');
-    console.log("jetsonInference debug:", imagePath, fileContent.length, base64Data.length);
+    if (false) {
+      classifyImageUsingReplicate(imgUrl, (err, result) => {
+        if (err) {
+          console.error("Error getting Blip classification", err);
+          return;
+        }
 
-    // there are quite a few PCB inspectors I have not tried (not listed here)
-    // const model = "prueba-1-componentes/1";
-    // const model = "komponen-elektronika-skripsi/2";
-    // const model = "pcb-collect/1";
-    // const model = "coco/13";                         // (crashes... too big?)
-    // const model = "resistor-detection-5azes/5";      // this is pretty good in that it's not overfitting (got resistor and breadboard)
-    // const model = "qr-code-oerhe/1";                  // perhaps use for fast detection of whether there is a qr code?
-    // const model = "electronic-components-d6uul/2";   // decent for electronics!
-    // const model = "color-cloth-zecj2/3";    // Triggers swap MADLY. color of cloth
-    // const model = "komponen-ujzon/2" // seems to be a shitload of resistors -- but tested with one, no prediction (could be worth look at again)
-    // const model = "yolov5-fjfmh/2";   // (warning) electronic components (Saw kswapd climb and then unresponsive)
+        console.log("Updating photo.classTrash in", photo.id);
+        photo.classBlip = JSON.stringify(result);
+        updatePhoto(photo.id, photo);
+      });
+    } else {
+      console.log("Replicate.com disabled (incurs cost)");
+    }
 
-    const model = "trash-classification-fvhuk/1"; // Good for getting clothes/shoes or not. (O = organic?, R = plastic?) Why does this return different result when ran locally? ... Would be nice to determine whether something is clothes/shoes or not
+    jetsonInference(`static${photo.orgPath}`, (err, result) => {
+      if (err) {
+        console.error("Error getting Trash classification", err);
+        return;
+      }
 
-    const url = `http://192.168.178.142:9001/${model}?api_key=${env.ROBOFLOW_API_TOKEN}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      body: base64Data,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
+      console.log("Updating photo.classTrash in", photo.id);
+      photo.classTrash = JSON.stringify(result);
+      updatePhoto(photo.id, photo);
     });
 
-    if (response.ok) {
-      const result = await response.json();
+    getOCRdata(imgUrl, (err, result) => {
+      if (err) {
+        console.error("Error getting OCR data", err);
+        return;
+      }
 
-      console.log('jetsonInference: ', result);
-    } else {
-      console.log('Upload to Jetson failed!', response.status, await response.text());
-    }
-  } catch (error) {
-    console.error('Error:', error);
+      console.log("Updating photo.ocr in", photo.id);
+      photo.ocr = JSON.stringify(result);
+      updatePhoto(photo.id, photo);
+    });
+
+    processPhoto(photo, imgUrl, item, true, true, (err, res) => {
+      if(err) {
+        console.error(`Failed to process photo ${photo.id} in item ${item.id}`, err);
+        return;
+      }
+      console.log("processPhoto returned for item", item.id);
+    });
   }
 }
 
-async function fetchData(imageUrl : string)
+/**
+ * Remove background then:
+ * 1. crop transparent pixels
+ * 2. generate thumbnail
+ * 3. get top named colors
+ * 4. process any QR code; get URL, download URL
+ * 
+ * @param photo 
+ * @param imgUrl 
+ * @param item 
+ */
+function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback)
 {
-  const url = 'http://localhost:8000/ocr/predict-by-url';
-//   const formData = new FormData();
-//   formData.append('imgurl', imageUrl); //`https://dev.providi.nl/images/rem_20240206142014-__.jpg.png`);
-//   formData.append('outtype', 'json');
+  // A lot of things will be done after we have removed background ...
+  const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
+  removeBackground(imgUrl, outputFileNoBkg, async (err, result) => {
+    if (err) {
+      console.log("Error when removing background:", err);
+      return;
+    }
 
-//   console.log("OCR form:", formData);
+    // Note: we are not updating DB with the removed-background ... yet. Crop it first.
+
+    // Crop file
+    const cropOptions = {
+      outputFormat: "png",
+    };
+    const cropped = await crop(outputFileNoBkg, cropOptions);
+    try {
+      writeFileSync(outputFileNoBkg, cropped);
+    } catch (ex) {
+      console.log("Error writing cropped file:", ex);
+      callback("Error writing cropped file", null)
+      return;
+    }
+
+    console.log("Updating photo.cropPath in", photo.id);
+    photo.cropPath = `${photo.orgPath}_crop.png`;
+    if(updateDB) {
+      updatePhoto(photo.id, photo);
+    }
+
+    // Create thumbnail
+    const thumbOptions = {
+      width: 256,
+      responseType: 'buffer',
+      jpegOptions: {
+        force: true,
+        quality: 90
+      }
+    };
+
+    try {
+      const thumbnail = await imageThumbnail(outputFileNoBkg, thumbOptions);
+      fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
+      console.log("Updating photo.thumbPath in", photo.id);
+      photo.thumbPath = `${photo.orgPath}_thumb.jpg`;
+      if(updateDB) {
+        updatePhoto(photo.id, photo);
+      }
+    } catch(ex) {
+      console.error("Error generating thumbnail", ex);
+      callback("Error generating thumbnail", null)
+      return;
+    }
+
+    if(getColors) {
+      // Get top colors of no-backgrounded-image
+      getTopColorsNamed(outputFileNoBkg, (err, result) => {
+        if (err) {
+          console.log("Error getting top colors:", err);
+          callback("Error getting colors", null)
+          return;
+        }
+        console.log("Updating photo.colors in", photo.id);
+        photo.colors = JSON.stringify(result);
+        if(updateDB) {
+          updatePhoto(photo.id, photo);
+        }
+      });
+    }
+
+    // Download any URL in QR codes in the photo (done on thumbnails)
+    await processQRcodeThenDownload(photo.orgPath, photo, item, (err, res) => {
+      if (err) {
+        console.log("Error getting top colors:", err);
+        callback("Error getting colors", null)
+        return;
+      }
+
+      callback(null, res)
+    });
+  });
+
+  // Nothing to return...
+}
+
+async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item, callback)
+{
+  // TODO: Ugh, pass in the filename for this:
+  let page = await UrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
+  if(page !== null) {
+    const pageData = JSON.parse(page);
+
+    fs.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" }, async (err) => {
+      if (err) {
+        console.log("Error saving SinglePage", err);
+        callback("Error saving SinglePage", null);
+        return;
+      }
+
+      console.log("Creating document from QR code in", photo.id);
+      try {
+        const doc = await db.document.create({
+          data: {
+            itemId: item.id,
+            type: "uncategorized",
+            title: pageData.title,
+            source: pageData.url,
+            path: `${webFilePath}_thumb.html`,
+            extracts: JSON.stringify(pageData.extracts)
+          }
+        });
+      } catch (ex) {
+        console.error("Error creating document in DB:", ex);
+        callback("Error creating document in DB", null);
+        return;
+      }
+      callback(null, pageData);
+      
+    });
+  } else {
+    callback("QR code not found", null);
+  }
+}
+
+async function updatePhoto(id : number, data : Photo)
+{
+  try {
+    await db.photo.update({
+      where: { id: Number(id) },
+      data : data
+    });
+  } catch(ex) {
+    console.log(`Failed to update Photo ${id} - ${data}:`, ex);
+  }
+}
+
+async function removeBackground(imgUrl, outputFileNoBkg, callback)
+{
+  const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
   
   try {
-    // const response = await fetch(url, {
-    //   method: 'POST',
-    //   body: formData
-    // });
-    const response = await fetch(url + "?imageUrl=" + encodeURIComponent(imageUrl), {
-      method: 'GET',
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      console.log("OCR result", JSON.stringify(result));
+    const response = await fetch(url);
+
+    if (response && response.ok) {
+      const fileStream = fs.createWriteStream(outputFileNoBkg);
+      response.body?.pipe(fileStream);
+      fileStream.on('finish', () => {
+        fileStream.close();
+        console.log('Removed background, file downloaded and saved successfully.');
+        callback(null, `Success: Image saved as ${outputFileNoBkg}`);
+      });
     } else {
-      console.log('OCR Error:', response.statusText, response);
+      callback(`HTTP error! status: ${response.status}`, null);
     }
   } catch (error) {
-    console.log('OCR Error:', error.message);
+    console.error('Error while removing background:', error);
+    callback(error, null);
   }
 }
 
 
-async function saveAllFormPhotosToDisk(formData : FormDataEntryValue[], diskPath : string, webPath : string, fieldPrefix : string) : Promise<Photo[]>
+async function savePhotos(formData: FormDataEntryValue[], diskPath: string, webPath: string, fieldPrefix: string): Promise<Photo[]>
 {
   const photos: Photo[] = [];
   const filePromises = [];
   let formFile, i = 0;
   while ((formFile = formData[`${fieldPrefix}${i}`] as File)) {
       if (formFile.size > 0) {
-          const date = new Date().toISOString()
-              .replaceAll('-', '')
-              .replaceAll(':', '')
-              .replace(/T/, '')
-              .replace(/\..+/, '');
-  
-          const filename = date + '-' + slugify(formFile.name.toLowerCase());
+          const filename = getSafeFilename(formFile.name);
   
           // Start writing the file asynchronously and push the promise to the array
           filePromises.push(
@@ -339,3 +403,16 @@ async function saveAllFormPhotosToDisk(formData : FormDataEntryValue[], diskPath
     return [];
   }
 }
+
+
+function getSafeFilename(filename: string): string
+{
+  const date = new Date().toISOString()
+    .replaceAll('-', '')
+    .replaceAll(':', '')
+    .replace(/T/, '')
+    .replace(/\..+/, '');
+
+  return date + '-' + slugify(filename.toLowerCase());
+}
+

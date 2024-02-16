@@ -9,14 +9,10 @@
 
     export let form: ActionData;
     const onSubmit: SubmitFunction = async (data) => {
-        // if(canvasCameraUsed) {
-        //     const blob = await new Promise(resolve => eltCanvas.toBlob(resolve));
-        //     data.formData.set("file", blob, "item.png");
-        // }
         saving = true;
 
         return async (options) => {
-            // after the form submits...
+            // After the form submits...
             saving = false;
             console.log("saved:", options);
             if(options.result?.type === "redirect") {
@@ -25,10 +21,9 @@
         }
     }
     
-    var fileCounter = 1;
-    function photoUploadChanged(ev)
+    var productPhotoFileCounter = 1;
+    function productPhotoUploadChanged(ev)
     {
-        console.log("Photo upload changed:", ev);
         if(ev.target.value) {
             // Take parent of file-select, clone it and make a new element
             // for further file-uploads. One could argue that one should use
@@ -39,15 +34,15 @@
             const newInput = newParent.getElementsByTagName("input")[0];
 
             // Modify the new file-select
-            newInput.name = "file." + fileCounter;
+            newInput.name = "file." + productPhotoFileCounter;
             newInput.value = "";
 
             // Make sure new file-select also calls in here when changed
-            newInput.addEventListener("change", photoUploadChanged);
+            newInput.addEventListener("change", productPhotoUploadChanged);
 
             // Modify new filetype-select
             newParent.querySelector("select").selectedIndex = 0;
-            newParent.querySelector("select").name = `filetype.${fileCounter}`;
+            newParent.querySelector("select").name = `filetype.${productPhotoFileCounter}`;
 
             // Modify new checkbox to say not being uploaded
             newParent.querySelector("input[type=checkbox]").checked = "";
@@ -58,9 +53,32 @@
             // Insert the new element after the previous
             container.insertAdjacentElement("afterend", newParent);
 
-            fileCounter++;
+            productPhotoFileCounter++;
         }
     }
+
+    var qrPhotoFileCounter = 1;
+    function qrPhotoUploadChanged(ev)
+    {
+        if(ev.target.value) {
+            const orgElt = ev.target;
+            const newInput = orgElt.cloneNode(true);
+
+            // Modify the new file-select
+            newInput.name = "qr." + qrPhotoFileCounter;
+            newInput.value = "";
+
+            // Make sure new file-select also calls in here when changed
+            newInput.addEventListener("change", qrPhotoUploadChanged);
+
+            // Insert the new element after the previous
+            orgElt.insertAdjacentElement("afterend", newInput);
+
+            productPhotoFileCounter++;
+        }
+    }
+
+
 </script>
 
 <svelte:head>
@@ -74,18 +92,19 @@
 <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
     <div>
         <div class="mb-3 flex items-center">
-            <input on:change={photoUploadChanged} type="file" name="file.0" accept="image/*" capture="environment" class="file-input w-1/3">
+            <input on:change={productPhotoUploadChanged} type="file" name="file.0" accept="image/*" capture="environment" class="file-input w-1/3">
             <select name="file.type.0" class="select select-bordered m-1">
-                <option selected disabled>Set picture content</option>
+                <option selected disabled>Select photo content</option>
                 <option>Product</option>
                 <option>Receipt</option>
                 <option>Information</option>
-                <option>QR Code</option>
                 <option>Other</option>
             </select>
             <input type="checkbox" disabled="true" class="checkbox checkbox-lg ml-1 m-1" />
         </div>
     </div>
+
+    <h1>TODO: container</h1>
 
     <div class="mb-3">
         <input type="text" name="title" value="A default name" placeholder="Title" class="input input-bordered w-full">
@@ -95,6 +114,42 @@
         <textarea name="description" rows="5" placeholder="Description" class="textarea textarea-bordered w-full"></textarea>
         <div class="mt-1 text-gray-400 text-xs">
             Markdown can be used.
+        </div>
+    </div>
+
+    <div role="tablist" class="tabs tabs-bordered">
+        <input type="radio" name="my_tabs_1" role="tab" class="tab" aria-label="Using camera" checked/>
+        <div role="tabpanel" class="tab-content p-10">
+            <!-- Insert URLs using camera (QR codes) -->
+            <div class="mb-3">
+                <input on:change={qrPhotoUploadChanged} type="file" name="qr.0" accept="image/*" capture="environment" class="file-input w-full">
+
+                <div class="mt-1 text-gray-400 text-xs">
+                    Add webpages with QR codes, documents will be downloaded, indexed and stored locally
+                </div>
+            </div>
+        </div>
+        <input type="radio" name="my_tabs_1" role="tab" class="tab" aria-label="Using keyboard" />
+        <div role="tabpanel" class="tab-content p-10">
+            <!-- Paste in URLs in textarea -->
+            <div class="mb-3">
+                <textarea name="urls" rows="5" placeholder="URLs to related documents" class="textarea textarea-bordered w-full"></textarea>
+                <div class="mt-1 text-gray-400 text-xs">
+                    One webpage per line, they will be downloaded, indexed and stored locally.
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="mb-3">
+        <div>
+            <input type="text" name="attributeKey[]" value="" placeholder="Attribute" class="input input-bordered w-1/3">
+            <input type="text" name="attributeValue[]" value="" placeholder="Value" class="input input-bordered w-1/3">
+            <button type="button" class="btn ">-</button>
+        </div>
+        <div class="mt-1 text-gray-400 text-xs">
+            Attributes, e.g.: weight = 400g, width = 140mm
         </div>
     </div>
 

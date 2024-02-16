@@ -2,7 +2,7 @@ import { getPalette } from "$lib/server/colorthief";
 import namer from 'color-namer';
 
 // Extract top colors of image
-export function getTopColorsNamed(imagePath : string)
+export function getTopColorsNamed(imagePath : string, callback)
 {
     console.log("Extracting colors from", imagePath);
 
@@ -30,11 +30,11 @@ export function getTopColorsNamed(imagePath : string)
         
         const ret = [...new Set(colorNames)];
         console.log("Color names:", ret);
-        return ret;
+        callback(null, ret);
     })
     .catch(err => {
         console.log(err);
-        return [];
+        console.log(err, null);
     });
 }
 

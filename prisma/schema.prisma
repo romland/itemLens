@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  // https://github.com/prisma/prisma/issues/11789#issuecomment-1900773221
   url      = env("DATABASE_URL")
 }
 
@@ -37,6 +38,7 @@ model Item {
   amount      Int?
   title       String?
   description String?
+  reason      String?
   // TODO: Inventory _can_ be determined by ML model classification (running on Jetson)
   inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   inventoryId Int?
@@ -56,19 +58,22 @@ model Item {
 }
 
 model Photo {
-  id        Int     @id @unique @default(autoincrement())
-  type      String  @default("item")
-  orgPath   String?
-  cropPath  String?
-  thumbPath String?
-  ocr       String?
-  colors    String? // NOTE: JSON array
+  id              Int     @id @unique @default(autoincrement())
+  type            String  @default("item")
+  orgPath         String?
+  cropPath        String?
+  thumbPath       String?
+  ocr             String?
+  colors          String? // NOTE: JSON array
 
-  item   Item @relation(fields: [itemId], references: [id])
-  itemId Int
+  classBlip       String? // NOTE: JSON
+  classTrash      String? // NOTE: JSON
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  item            Item @relation(fields: [itemId], references: [id])
+  itemId          Int
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Document {
