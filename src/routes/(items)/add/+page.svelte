@@ -74,7 +74,7 @@
             // Insert the new element after the previous
             orgElt.insertAdjacentElement("afterend", newInput);
 
-            productPhotoFileCounter++;
+            qrPhotoFileCounter++;
         }
     }
 

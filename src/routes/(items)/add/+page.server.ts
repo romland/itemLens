@@ -69,6 +69,7 @@ export const actions = {
         // Download all URLs contained in QR codes (TODO: SECURITY?)
         //
         const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "qr.");
+
         for(let i = 0; i < qrPhotos.length; i++) {
           const photo = qrPhotos[i];
 
