@@ -9,10 +9,14 @@
 
     const LARGE_CONTAINER_SELECTOR = false;
     const uploadPictureForQRcodes = false;
+    let mobileDeviceMode = false;
+    const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
 
     let saving = false;
-    let scanning = false;
+    let scanningContainers = false;
+    let scanningURLs = false;
     let alerts = [];
+    let addedPhotoFilenames = [];
 
     export let form: ActionData;
     export let data: PageServerData;
@@ -33,7 +37,10 @@
     var productPhotoFileCounter = 1;
     function productPhotoUploadChanged(ev)
     {
-        if(ev.target.value) {
+        if(ev.target.files[0]) {
+            addedPhotoFilenames.push(ev.target.files[0].name);
+            addedPhotoFilenames = addedPhotoFilenames;
+
             // Take parent of file-select, clone it and make a new element
             // for further file-uploads. One could argue that one should use
             // multi-select, but that's not handy when camera is the source of
@@ -44,20 +51,47 @@
 
             // Modify the new file-select
             newInput.name = "file." + productPhotoFileCounter;
+            newInput.id = newInput.name;
             newInput.value = "";
 
-            // Make sure new file-select also calls in here when changed
+            // Add event: Make sure new file-select also calls in here when changed
             newInput.addEventListener("change", productPhotoUploadChanged);
 
+            // Loop through each <li> element and add a click event listener
+            const listItems = newParent.querySelectorAll('li');
+            listItems.forEach((item) => {
+                item.addEventListener('click', (ev) => {
+                    console.log("Click on new");
+                    newParent.querySelector(`input[type='file']`)?.click();
+                    document?.activeElement?.blur();
+                });
+            });
+
+
+/*
+                    {#each photoTypes as type}
+                        <li on:click={ (ev) => {
+                                document?.getElementById('file.0')?.click();
+                                document?.activeElement?.blur();
+                            }}>
+                            <a>{type}</a>
+                        </li>
+                    {/each}
+*/
+            
+
+            // Add event: Make sure the button 'clicks' the (hidden) file-select
+            // newParent.querySelector("select").addEventListener("change", (ev) => {
+            //     newParent.querySelector(`input[type='file']`).click();
+            //     alert("clicked!");
+            // });
+
             // Modify new filetype-select
-            newParent.querySelector("select").selectedIndex = 0;
-            newParent.querySelector("select").name = `filetype.${productPhotoFileCounter}`;
+            // newParent.querySelector("select").selectedIndex = 0;
+            // newParent.querySelector("select").name = `file.type.${productPhotoFileCounter}`;
 
-            // Modify new checkbox to say not being uploaded
-            newParent.querySelector("input[type=checkbox]").checked = "";
-
-            // Indicate that existing file is being uploaded
-            container.querySelector("input[type=checkbox]").checked = "checked"
+            // Hide the original
+            container.classList.add("hidden");
 
             // Insert the new element after the previous
             container.insertAdjacentElement("afterend", newParent);
@@ -108,6 +142,11 @@
         addAlert("success", `Added URL: ${ev.detail}`);
     }
 
+    function scannedContainer(ev, inputEltName)
+    {
+        console.log("scannedContainer:", ev.detail);
+    }
+
     function isValidURL(txt)
     {
         if(isURL(txt)) {
@@ -137,17 +176,41 @@
         <input type="text" name="title" value="" placeholder="Product name" class="input input-bordered w-full">
     </div>
 
-    <div>
-        <div class="mb-3 flex items-center">
-            <input on:change={productPhotoUploadChanged} type="file" name="file.0" accept="image/*" capture="environment" class="file-input w-1/3">
-            <select name="file.type.0" class="select select-bordered m-1">
-                <option selected disabled>Select photo content</option>
-                <option>Product</option>
-                <option>Receipt</option>
-                <option>Information</option>
-                <option>Other</option>
-            </select>
-            <input type="checkbox" disabled="true" class="checkbox checkbox-lg ml-1 m-1" />
+    <div class="mb-3">
+        <textarea name="description" rows="5" placeholder="Product description" class="textarea textarea-bordered w-full"></textarea>
+        <div class="mt-1 text-gray-400 text-xs">
+            Markdown can be used.
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <!-- Note: this element will be cloned and inserted for every photo added -->
+        <div>
+            <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" capture="environment" class="file-input mb-3">
+            <input type="hidden" name="file.type.0" value="">
+
+            <div class="dropdown ">
+                <div tabindex="0" role="button" class="btn-primary btn m-1">Tap to add photo(s) of...</div>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                    {#each photoTypes as type}
+                        <li on:click={ (ev) => {
+                                document?.getElementById('file.0')?.click();
+                                document?.activeElement?.blur();
+                            }}>
+                            <a>{type}</a>
+                        </li>
+                    {/each}
+                </ul>
+            </div>
+        </div>
+
+        <div>
+            {#if addedPhotoFilenames.length > 0}
+                <span>Uploading:</span>
+                {#each addedPhotoFilenames as fn}
+                    <div class="badge badge-neutral">{fn}</div>
+                {/each}
+            {/if}
         </div>
     </div>
 
@@ -201,27 +264,28 @@
         </div>
     {:else}
         <div class="mb-3">
-            <select class="select select-bordered w-full max-w-xs" multiple>
-                <option disabled selected>Select one or more containers</option>
-                {#each data.containers as container}
-                    <option value="{container.name}">{container.name}: {container.description}</option>
-                    {#if container.children.length > 0}
-                        {#each container.children as child}
-                            <option value="{child.name}" class="ml-4">{child.name}</option>
-                        {/each}
-                    {/if}
-                {/each}
-            </select>
+            <!-- Use camera to scan QR codes on containers, results go into a form input -->
+            {#if scanningContainers}
+                <QRreader validator={isValidURL} title="Scan QR-code on container" on:scan={(ev) => { scannedContainer(ev, "containers") } } on:stop={()=>{ scanningContainers=false }}></QRreader>
+            {/if}
+
+            <button class:disabled={scanningContainers} class="btn btn-primary w-1/2 mb-3" type="button" on:click={()=>{scanningContainers=true;}}>Scan container</button>
+
+            <div>
+                <select name="containers" class="select select-bordered w-full max-w-xs" multiple>
+                    <option disabled selected>Select one or more containers</option>
+                    {#each data.containers as container}
+                        <option value="{container.name}">{container.name}: {container.description}</option>
+                        {#if container.children.length > 0}
+                            {#each container.children as child}
+                                <option value="{child.name}" class="ml-4">{child.name}</option>
+                            {/each}
+                        {/if}
+                    {/each}
+                </select>
+            </div>
         </div>
     {/if}
-
-    <div class="mb-3">
-        <textarea name="description" rows="5" placeholder="Product description" class="textarea textarea-bordered w-full"></textarea>
-        <div class="mt-1 text-gray-400 text-xs">
-            Markdown can be used.
-        </div>
-    </div>
-
 
     <div class="mb-3">
         {#if uploadPictureForQRcodes}
@@ -229,26 +293,27 @@
             <input on:change={qrPhotoUploadChanged} type="file" name="qr.0" accept="image/*" capture="environment" class="file-input w-full">
         {:else}
             <!-- Use camera to scan QR codes (client side), results go into a form input -->
-            {#if scanning}
-                <QRreader validator={isValidURL} on:scan={(ev) => { scannedURL(ev, "urls") } } on:stop={()=>{ scanning=false }}></QRreader>
+            {#if scanningURLs}
+                <QRreader validator={isValidURL} title="Scan URL in QR-code" on:scan={(ev) => { scannedURL(ev, "urls") } } on:stop={()=>{ scanningURLs=false }}></QRreader>
             {/if}
 
-            <button class:disabled={scanning} class="btn btn-primary" type="button" on:click={()=>scanning=true}>Scan QR-code</button>
-            <div>
+            <button class:disabled={scanningURLs} class="btn btn-primary w-1/2 mb-3" type="button" on:click={()=>scanningURLs=true}>Scan URL</button>
+
+            <div class:hidden={mobileDeviceMode}>
                 <textarea name="urls" rows="5" placeholder="URLs to related documents" class="textarea textarea-bordered w-full"></textarea>
             </div>
 
         {/if}
         <div class="mt-1 text-gray-400 text-xs">
-            Add URLs with QR codes or paste (one per line). The documents will be downloaded, indexed and stored.
+            Add URLs with QR-codes or paste (one per line). The documents will be downloaded, indexed and stored.
         </div>
     </div>
 
-    <div class="mb-3">
+    <div class:hidden={mobileDeviceMode} class="mb-3">
         <input type="text" name="reason" value="" placeholder="Reason for purchase (project)" class="input input-bordered w-full">
     </div>
 
-    <div class="mb-3">
+    <div class:hidden={mobileDeviceMode} class="mb-3">
         <div>
             <input type="text" name="attributeKey[]" value="" placeholder="Attribute" class="input input-bordered w-1/3">
             <input type="text" name="attributeValue[]" value="" placeholder="Value" class="input input-bordered w-1/3">
@@ -259,7 +324,7 @@
         </div>
     </div>
 
-    <div class="mb-3">
+    <div class:hidden={mobileDeviceMode} class="mb-3">
         <input type="text" name="tagcsv" placeholder="Tags" class="input input-bordered w-full">
         <div class="mt-1 text-gray-400 text-xs">
             Seperated by comma.

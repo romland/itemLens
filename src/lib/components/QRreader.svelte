@@ -8,6 +8,7 @@
     var html5Qrcode;
     const dispatch = createEventDispatcher();
     export let validator = null;
+    export let title = "Scan QR-code"
 
     onMount(init)
 
@@ -26,7 +27,7 @@
         html5Qrcode.start(
             { facingMode: 'environment' },
             {
-                fps: 10,
+                fps: 15,
                 qrbox: { width: 250, height: 200 },
                 showTorchButtonIfSupported: true,
                 // aspectRatio: "1.0",
@@ -94,7 +95,7 @@
     <form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
     </form>
-    <h3 class="font-bold text-lg">Scan QR-code with URL</h3>
+    <h3 class="font-bold text-lg">{title}</h3>
     <main class="py-4">
         {#if showingError !== null}
             <div class="toast toast-top toast-start" style="background-color:black;">
