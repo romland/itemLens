@@ -51,6 +51,7 @@
 		"colorthief": "^2.4.0",
 		"crop-node": "^2.1.0",
 		"form-data": "^4.0.0",
+		"html5-qrcode": "^2.3.8",
 		"image-thumbnail": "^1.0.15",
 		"jimp": "^0.22.10",
 		"jsqr": "^1.4.0",

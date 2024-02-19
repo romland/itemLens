@@ -15,7 +15,7 @@
     }
 
     categorizePhotos();
-    
+
     if(typeof window !== 'undefined') {
         // Periodically check if we have updated data for this page.
         // I suppose using a MessageChannel or so on the Service Worker 

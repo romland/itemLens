@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import slugify from 'slugify';
 import { writeFileSync, promises as fsPromises } from "fs";
 import { db } from '$lib/server/database';
@@ -21,6 +21,43 @@ import { classifyImageUsingReplicate, jetsonInference } from '$lib/server/classi
 import { getOCRdata } from '$lib/server/ocr';
 
 // TODO consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
+// TODO: Investigate how fast inference can run on a beefy RasPi (use OpenCL!)
+
+export const load = (async ({ locals, params }) => {
+  console.log("add/page.server.ts:", locals, params);
+  // TODO: Security -- can be fetched without being logged in now
+  // TODO: only get containers for current inventory type (not sure where to set this yet)
+  const containers = await db.container.findMany({
+      select : {
+        name : true,
+        parentId : true,
+        photoPath : true,
+        description : true,
+        location : true,
+        children : {
+          select : {
+            name : true,
+            parentId : true,
+          }
+        },
+      },
+      where: {
+          AND: [
+              { parentId: null }
+          ]
+      },
+      orderBy: {
+        name : "asc"
+      }
+  });
+
+  return {
+    containers: containers
+  };
+}) satisfies PageServerLoad;
+
+
+// deal with containers, KVPs, reason, ?
 
 export const actions = {
     default: async ({ locals, request }) => {
@@ -66,7 +103,8 @@ export const actions = {
         processProductPhotos(item, remoteSite);
 
         //
-        // Download all URLs contained in QR codes (TODO: SECURITY?)
+        // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
+        // (this is largely obsolete after I started using client-side QR code scanner)
         //
         const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "qr.");
 

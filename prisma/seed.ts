@@ -71,29 +71,27 @@ model Container {
   updatedAt   DateTime @updatedAt
 }
 */
-async function addLocations()
+async function addLocation(name: string, description: string, location: string, trayCount: number, imageWebPath: string, startTray: number = 1)
 {
     const container = await prisma.container.create(
         {
             data: {
-                name: "A",
-                description: "Blue metal MARS container, 60 trays",
-                location: "Study",
-                photoPath: "/images/containers/A_crop.png"
+                name,
+                description,
+                location,
+                photoPath: imageWebPath
             }
         }
     );
-console.log(container);
-    // const trays: Container[] = [];
 
-    for(let i = 1; i <= 60; i++) {
+    for(let i = startTray; i < (trayCount+startTray); i++) {
         const trayId = i.toString().padStart(3, '0')
         await prisma.container.create(
             {
                 data: {
                     parentId: container.name,
-                    name: "A " + trayId,
-                    description: "A little tray in a big container",
+                    name: `${name} ${trayId}`,
+                    description: "",
                 }
             }
         )
@@ -224,7 +222,16 @@ async function addItems(user: User)
 async function main() {
     const user = await addUser();
     await addInventories();
-    await addLocations();
+    await addLocation("A", "Blue metal MARS container, 60 trays", "Study", 60, "/images/containers/A_crop.png", 1);
+    await addLocation("B", "Plastic cabinet", "Study", 16, "/images/containers/B_crop.png", 1);
+    await addLocation("C", "Paper storage container", "Study", 3, "/images/containers/C_crop.png", 1);
+    await addLocation("D", "Paper storage container", "Study", 3, "/images/containers/D_crop.png", 1);
+    await addLocation("E", "IKEA wooden cabinet", "Study", 6, "/images/containers/E_crop.png", 1);
+    await addLocation("F", "Blue metal MARS container, 60 trays", "Study", 60, "/images/containers/F_crop.png", 61);
+
+    await addLocation("Y", "Ordered", "Void", 0, "/images/containers/other_crop.png", 1);
+    await addLocation("Z", "Unsorted", "Void", 0, "/images/containers/other_crop.png", 1);
+
     await addItems(user);
 }
 
