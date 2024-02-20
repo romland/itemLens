@@ -5,7 +5,7 @@ import { writeFileSync, promises as fsPromises } from "fs";
 import { db } from '$lib/server/database';
 import { getTagIds } from "$lib/server/services";
 import UrlDownloader from "$lib/server/urldownloader";
-import type { Item, Photo } from '@prisma/client';
+import type { Item, Photo, KVP, Location } from '@prisma/client';
 
 import fs from 'fs';
 
@@ -35,50 +35,19 @@ I would love to use Mixtral tbh -- but okay, GPT4 will have to do? Need Groq API
 */
 
 
-export const load = (async ({ locals, params }) => {
-  console.log("add/page.server.ts:", locals, params);
-  // TODO: Security -- can be fetched without being logged in now
-  // TODO: only get containers for current inventory type (not sure where to set this yet)
-  const containers = await db.container.findMany({
-      select : {
-        name : true,
-        parentId : true,
-        photoPath : true,
-        description : true,
-        location : true,
-        children : {
-          select : {
-            name : true,
-            parentId : true,
-          }
-        },
-      },
-      where: {
-          AND: [
-              { parentId: null }
-          ]
-      },
-      orderBy: {
-        name : "asc"
-      }
-  });
-
-  return {
-    containers: containers
-  };
-}) satisfies PageServerLoad;
-
-
 // deal with containers, KVPs, reason, ?
 
 export const actions = {
     default: async ({ locals, request }) => {
-        const data = Object.fromEntries(await request.formData());
+        const orgData = await request.formData();
+        const containers = orgData.getAll("containers");
+        const data = Object.fromEntries(orgData);
         const title = data.title as string;
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
         console.log("POST data:", data);
+        console.log("Containers:", containers);
 
         if (title.length == 0) {
             return fail(400, {
@@ -86,20 +55,117 @@ export const actions = {
                 message: '<strong>Title</strong> can not be blank.'
             });
         }
+/*
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+  inventoryId Int?
+  locations  ItemsInContainer[]
+  usage      InUse[]
+*/
 
         const remoteSite = "https://dev.providi.nl";
         const diskFolder = "static/images/u";
         const webFolder = "/images/u";
 
         const productPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "file.");
+        const kvps: KVP[] = formKVPsToDBrows(data);
+        // const locations: Location[] = formLocationsToDBrows(containers);
+
+/*
+                    locations: {
+                        create: {
+                            container : {
+                                connectOrCreate: {
+                                    where: { name : "A 001" },
+                                    create: {
+                                        name: "A 001",
+                                        description: "A 001 - A 060, blue metal cabinet with 60 trays",
+                                        location: "Study",
+                                        photoPath: "/images/_seed_container.jpg"
+                                    }
+                                },
+                            }
+                        }
+                    },
+*/
 
         const ids = await getTagIds(tagcsv);
         const item : Item = await db.item.create({
             data: {
                 title: title.trim(),
+                reason: data.reason as string || "",
+                amount: parseInt(data.amount as string, 10) || null,
                 photos: {
                   create: productPhotos
                 },
+                attributes: {
+                  create: kvps
+                },
+
+
+/*
+                // valid
+                locations: {
+                  create: {
+                    container : {
+                        connect: {
+                            name : "A 001"
+                        },
+                    }
+                  }
+                },
+*/
+/*
+                // valid
+                locations: {
+                  create: [{
+                    container : {
+                        connect: { name : "A 001" },
+                    }
+                  }]
+                },
+*/
+                // invalid
+                locations: {
+                  create: containers.map((cont) => {
+                    return {
+                      container : {
+                          connect: { name : cont },
+                      }
+                    }
+                  })
+                },
+
+/*
+                // invalid
+                locations: {
+                  create: {
+                    container : {
+                        connect: containers.map((name) => { return { name } }),
+                    }
+                  }
+                },
+*/
+/*
+                // invalid
+                locations: 
+                {
+                  create: {
+                    container : {
+                      connectOrCreate: containers.map((cont) => {
+                        return {
+                          where : {
+                            name : cont
+                          },
+                          create : {
+                            name : cont,
+                            description : ""
+                          }
+                        }
+                      })
+                    }
+                  }
+                },
+*/
                 slug: slugify(title.trim().toLowerCase()),
                 description: description.trim(),
                 authorId: locals.user.id,
@@ -455,6 +521,37 @@ async function savePhotos(formData: FormDataEntryValue[], diskPath: string, webP
   }
 }
 
+function formKVPsToDBrows(formData: FormData[])
+{
+  const kvps: KVP[] = [];
+
+  for(const key in formData) {
+    if(key.startsWith("kvpK")) {
+      const index = parseInt(key.split("-")[1], 10);
+      kvps.push({
+        key: formData[key],
+        value: formData[`kvpV-${index}`]
+      })
+    }
+  }
+  return kvps;
+}
+
+function formLocationsToDBrows(containers: string[])
+{
+  const locations: Location[] = [];
+
+  for(let i = 0; i < containers.length; i++) {
+    locations.push({
+      name: containers[i]
+    })
+  }
+
+  return locations;
+}
+
+
+
 
 function getSafeFilename(filename: string): string
 {
@@ -467,3 +564,36 @@ function getSafeFilename(filename: string): string
   return date + '-' + slugify(filename.toLowerCase());
 }
 
+
+export const load = (async ({ locals, params }) => {
+  console.log("add/page.server.ts:", locals, params);
+  // TODO: Security -- can be fetched without being logged in now
+  // TODO: only get containers for current inventory type (not sure where to set this yet)
+  const containers = await db.container.findMany({
+      select : {
+        name : true,
+        parentId : true,
+        photoPath : true,
+        description : true,
+        location : true,
+        children : {
+          select : {
+            name : true,
+            parentId : true,
+          }
+        },
+      },
+      where: {
+          AND: [
+              { parentId: null }
+          ]
+      },
+      orderBy: {
+        name : "asc"
+      }
+  });
+
+  return {
+    containers: containers
+  };
+}) satisfies PageServerLoad;

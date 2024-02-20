@@ -319,8 +319,8 @@ scannedURL({detail:"http://example.com"}, "urls");
             </div>
 
             <div class:hidden={mobileDeviceMode}>
-                <select name="containers" class="select select-bordered w-full max-w-xs" multiple>
-                    <option disabled selected>Select one or more containers</option>
+                <select name="containers" class="select select-bordered w-full max-w-xs" multiple="multiple">
+                    <option disabled>Select one or more containers</option>
                     {#each data.containers as container}
                         <option value="{container.name}">{container.name}: {container.description}</option>
                         {#if container.children.length > 0}
@@ -365,6 +365,10 @@ scannedURL({detail:"http://example.com"}, "urls");
         <div class:hidden={mobileDeviceMode} class="mt-1 text-gray-400 text-xs">
             Add URLs with QR-codes or paste (one per line). The documents will be downloaded, indexed and stored.
         </div>
+    </div>
+
+    <div class:hidden={mobileDeviceMode} class="mb-3">
+        <input type="text" name="amount" value="" placeholder="Number of items" class="input input-bordered w-full">
     </div>
 
     <div class:hidden={mobileDeviceMode} class="mb-3">
