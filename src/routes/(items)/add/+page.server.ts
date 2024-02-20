@@ -27,11 +27,11 @@ import { getOCRdata } from '$lib/server/ocr';
 Alright, let the fun begin!
 
 Get KVPs
+Auto: Invoice->KVPs (use GPT-4?)
+
 Containers (need client-side work too, don't think they get set in the select box yet)
 
-I would love to use Mixtral tbh -- but okay, GPT4 will have to do?
-
-
+I would love to use Mixtral tbh -- but okay, GPT4 will have to do? Need Groq API!
 */
 
 

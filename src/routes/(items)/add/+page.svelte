@@ -11,13 +11,15 @@
     const uploadPictureForQRcodes = false;
     const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
 
-    let mobileDeviceMode = true;
+    // Extended mode (false)
+    let mobileDeviceMode = false;
 
     let saving = false;
     let scanningContainers = false;
     let scanningURLs = false;
     let alerts = [];
     let addedPhotoFilenames = [], addedContainers = [], addedURLs = [];
+    let numKVPs = 1;
 
     export let form: ActionData;
     export let data: PageServerData;
@@ -127,9 +129,9 @@ scannedURL({detail:"http://example.com"}, "urls");
     function scannedURL(ev, inputEltName)
     {
         scanningURLs = false;
-        document.getElementById("eltForm").elements[inputEltName].value += ev.detail + "\n";
 
         if(!addedURLs.includes(ev.detail)) {
+            document.getElementById("eltForm").elements[inputEltName].value += ev.detail + "\n";
             addedURLs.push(ev.detail);
             addedURLs = addedURLs;
         }
@@ -171,6 +173,22 @@ scannedURL({detail:"http://example.com"}, "urls");
         const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
         return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
     }
+
+
+    function addKVP(ev, ix)
+    {
+        numKVPs = numKVPs + 1;
+    }
+
+    function removeKVP(ev, ix)
+    {
+        if(numKVPs > 1) {
+            ev.target.parentNode.remove("kvpK-"+ix);
+            ev.target.parentNode.remove("kvpV-"+ix);
+            numKVPs = numKVPs;
+        }
+    }
+
 </script>
 
 <svelte:head>
@@ -180,6 +198,11 @@ scannedURL({detail:"http://example.com"}, "urls");
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>
 {/if}
+
+
+<div class="flex justify-items mb-3">
+    Extended <input type="checkbox" class="toggle ml-2 mr-2" checked on:change={()=>mobileDeviceMode = !mobileDeviceMode} /> Brief mode
+</div>
 
 <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
     <div class="mb-3">
@@ -349,11 +372,14 @@ scannedURL({detail:"http://example.com"}, "urls");
     </div>
 
     <div class:hidden={mobileDeviceMode} class="mb-3">
-        <div>
-            <input type="text" name="attributeKey[]" value="" placeholder="Attribute" class="input input-bordered w-1/3">
-            <input type="text" name="attributeValue[]" value="" placeholder="Value" class="input input-bordered w-1/3">
-            <button type="button" class="btn ">-</button>
-        </div>
+        {#each {length:numKVPs} as _, i}
+            <div>
+                <input type="text" name="kvpK-{i}" value="" placeholder="Attribute" class="input input-bordered w-1/3 mb-3">
+                <input type="text" name="kvpV-{i}" value="" placeholder="Value" class="input input-bordered w-1/3 mb-3">
+                <button on:click={(ev)=>{ removeKVP(ev, i) }} type="button" class="btn btn-warning">-</button>
+            </div>
+        {/each}
+        <button on:click={addKVP} type="button" class="btn btn-primary">+</button>
         <div class="mt-1 text-gray-400 text-xs">
             Attributes, e.g.: weight = 400g, width = 140mm
         </div>
@@ -367,7 +393,7 @@ scannedURL({detail:"http://example.com"}, "urls");
     </div>
 
     <div class="flex justify-end">
-        <button disabled={saving} type="submit" class="btn btn-primary">{#if saving}<span class="loading loading-infinity loading-lg"></span>{:else}Save{/if}</button>
+        <button disabled={saving} type="submit" class="btn btn-primary">{#if saving}<span class="loading loading-infinity loading-lg"></span>Uploading and saving{:else}Save{/if}</button>
     </div>
 </form>
 
