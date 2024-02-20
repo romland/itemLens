@@ -32,6 +32,8 @@ model Inventory {
   updatedAt DateTime @updatedAt
 }
 
+// TODO: "Item" is _actually_ "Product" or "ItemType". This table actually describe _many_
+//       items, which becomes confusing.
 model Item {
   id          Int       @id @unique @default(autoincrement())
   slug        String
@@ -135,6 +137,7 @@ model Tag {
 }
 
 // Be able to tag items that are in use by/on something
+// TODO: I believe this needs to be redefined to many->many as we can have several individual items
 model InUse {
   id          Int     @id @unique @default(autoincrement())
   title       String? // e.g. By VidensiVision

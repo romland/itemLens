@@ -46,8 +46,7 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
-        console.log("POST data:", data);
-        console.log("Containers:", containers);
+        console.log("formData:", orgData);
 
         if (title.length == 0) {
             return fail(400, {
@@ -56,10 +55,10 @@ export const actions = {
             });
         }
 /*
+TODO fields:
   inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   inventoryId Int?
-  locations  ItemsInContainer[]
-  usage      InUse[]
+  usage      InUse[] 
 */
 
         const remoteSite = "https://dev.providi.nl";
@@ -68,25 +67,6 @@ export const actions = {
 
         const productPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "file.");
         const kvps: KVP[] = formKVPsToDBrows(data);
-        // const locations: Location[] = formLocationsToDBrows(containers);
-
-/*
-                    locations: {
-                        create: {
-                            container : {
-                                connectOrCreate: {
-                                    where: { name : "A 001" },
-                                    create: {
-                                        name: "A 001",
-                                        description: "A 001 - A 060, blue metal cabinet with 60 trays",
-                                        location: "Study",
-                                        photoPath: "/images/_seed_container.jpg"
-                                    }
-                                },
-                            }
-                        }
-                    },
-*/
 
         const ids = await getTagIds(tagcsv);
         const item : Item = await db.item.create({
@@ -100,31 +80,7 @@ export const actions = {
                 attributes: {
                   create: kvps
                 },
-
-
-/*
-                // valid
-                locations: {
-                  create: {
-                    container : {
-                        connect: {
-                            name : "A 001"
-                        },
-                    }
-                  }
-                },
-*/
-/*
-                // valid
-                locations: {
-                  create: [{
-                    container : {
-                        connect: { name : "A 001" },
-                    }
-                  }]
-                },
-*/
-                // invalid
+                // valid (motherfucker)
                 locations: {
                   create: containers.map((cont) => {
                     return {
@@ -134,38 +90,6 @@ export const actions = {
                     }
                   })
                 },
-
-/*
-                // invalid
-                locations: {
-                  create: {
-                    container : {
-                        connect: containers.map((name) => { return { name } }),
-                    }
-                  }
-                },
-*/
-/*
-                // invalid
-                locations: 
-                {
-                  create: {
-                    container : {
-                      connectOrCreate: containers.map((cont) => {
-                        return {
-                          where : {
-                            name : cont
-                          },
-                          create : {
-                            name : cont,
-                            description : ""
-                          }
-                        }
-                      })
-                    }
-                  }
-                },
-*/
                 slug: slugify(title.trim().toLowerCase()),
                 description: description.trim(),
                 authorId: locals.user.id,
@@ -536,22 +460,6 @@ function formKVPsToDBrows(formData: FormData[])
   }
   return kvps;
 }
-
-function formLocationsToDBrows(containers: string[])
-{
-  const locations: Location[] = [];
-
-  for(let i = 0; i < containers.length; i++) {
-    locations.push({
-      name: containers[i]
-    })
-  }
-
-  return locations;
-}
-
-
-
 
 function getSafeFilename(filename: string): string
 {
