@@ -9,14 +9,15 @@
 
     const LARGE_CONTAINER_SELECTOR = false;
     const uploadPictureForQRcodes = false;
-    let mobileDeviceMode = false;
     const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
+
+    let mobileDeviceMode = true;
 
     let saving = false;
     let scanningContainers = false;
     let scanningURLs = false;
     let alerts = [];
-    let addedPhotoFilenames = [];
+    let addedPhotoFilenames = [], addedContainers = [], addedURLs = [];
 
     export let form: ActionData;
     export let data: PageServerData;
@@ -27,7 +28,6 @@
         return async (options) => {
             // After the form submits...
             saving = false;
-            console.log("saved:", options);
             if(options.result?.type === "redirect") {
                 window.location.href = options.result.location;
             }
@@ -37,10 +37,15 @@
     var productPhotoFileCounter = 1;
     function productPhotoUploadChanged(ev)
     {
-        if(ev.target.files[0]) {
-            addedPhotoFilenames.push(ev.target.files[0].name);
-            addedPhotoFilenames = addedPhotoFilenames;
 
+// quick test
+document.getElementById("eltForm").elements["title"].value = "A new product";
+document.getElementById("eltForm").elements["description"].value = "Yada yada";
+scannedContainer({detail:"A 001"}, "containers");
+scannedContainer({detail:"A 003"}, "containers");
+scannedURL({detail:"http://example.com"}, "urls");
+// quick test
+        if(ev.target.files[0]) {
             // Take parent of file-select, clone it and make a new element
             // for further file-uploads. One could argue that one should use
             // multi-select, but that's not handy when camera is the source of
@@ -61,34 +66,11 @@
             const listItems = newParent.querySelectorAll('li');
             listItems.forEach((item) => {
                 item.addEventListener('click', (ev) => {
-                    console.log("Click on new");
                     newParent.querySelector(`input[type='file']`)?.click();
                     document?.activeElement?.blur();
+                    ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']").value = ev.target.text.toLowerCase();
                 });
             });
-
-
-/*
-                    {#each photoTypes as type}
-                        <li on:click={ (ev) => {
-                                document?.getElementById('file.0')?.click();
-                                document?.activeElement?.blur();
-                            }}>
-                            <a>{type}</a>
-                        </li>
-                    {/each}
-*/
-            
-
-            // Add event: Make sure the button 'clicks' the (hidden) file-select
-            // newParent.querySelector("select").addEventListener("change", (ev) => {
-            //     newParent.querySelector(`input[type='file']`).click();
-            //     alert("clicked!");
-            // });
-
-            // Modify new filetype-select
-            // newParent.querySelector("select").selectedIndex = 0;
-            // newParent.querySelector("select").name = `file.type.${productPhotoFileCounter}`;
 
             // Hide the original
             container.classList.add("hidden");
@@ -97,6 +79,13 @@
             container.insertAdjacentElement("afterend", newParent);
 
             productPhotoFileCounter++;
+
+            addedPhotoFilenames.push({
+                type: container.querySelector("input[type='hidden']").value,
+                name: ev.target.files[0].name
+            });
+            addedPhotoFilenames = addedPhotoFilenames;
+            addAlert("success", `Added photo: ${ev.target.files[0].name}`);
         }
     }
 
@@ -137,14 +126,30 @@
 
     function scannedURL(ev, inputEltName)
     {
-        scanning = false;
+        scanningURLs = false;
         document.getElementById("eltForm").elements[inputEltName].value += ev.detail + "\n";
+
+        if(!addedURLs.includes(ev.detail)) {
+            addedURLs.push(ev.detail);
+            addedURLs = addedURLs;
+        }
         addAlert("success", `Added URL: ${ev.detail}`);
     }
 
     function scannedContainer(ev, inputEltName)
     {
-        console.log("scannedContainer:", ev.detail);
+        const elt = document.getElementById("eltForm").elements[inputEltName];
+        const options = Array.from(elt.querySelectorAll('option'));
+
+        const option = options.find(c => c.value === ev.detail);
+
+        if(option.selected === false) {
+            addedContainers.push(ev.detail);
+            addedContainers = addedContainers;
+        }
+
+        option.selected = true;
+        addAlert("success", `Added container: ${ev.detail}`);
     }
 
     function isValidURL(txt)
@@ -161,6 +166,11 @@
         return urlRegExp.test(url);
     }
 
+    function isValidContainer(txt)
+    {
+        const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
+        return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
+    }
 </script>
 
 <svelte:head>
@@ -189,13 +199,16 @@
             <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" capture="environment" class="file-input mb-3">
             <input type="hidden" name="file.type.0" value="">
 
-            <div class="dropdown ">
-                <div tabindex="0" role="button" class="btn-primary btn m-1">Tap to add photo(s) of...</div>
-                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn-primary btn m-1">
+                    Tap to add photo(s) of...
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
                     {#each photoTypes as type}
                         <li on:click={ (ev) => {
                                 document?.getElementById('file.0')?.click();
                                 document?.activeElement?.blur();
+                                ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']").value = ev.target.text.toLowerCase();
                             }}>
                             <a>{type}</a>
                         </li>
@@ -207,8 +220,8 @@
         <div>
             {#if addedPhotoFilenames.length > 0}
                 <span>Uploading:</span>
-                {#each addedPhotoFilenames as fn}
-                    <div class="badge badge-neutral">{fn}</div>
+                {#each addedPhotoFilenames as photo}
+                    <div class="badge badge-neutral">{photo.name} ({photo.type})</div>
                 {/each}
             {/if}
         </div>
@@ -266,12 +279,23 @@
         <div class="mb-3">
             <!-- Use camera to scan QR codes on containers, results go into a form input -->
             {#if scanningContainers}
-                <QRreader validator={isValidURL} title="Scan QR-code on container" on:scan={(ev) => { scannedContainer(ev, "containers") } } on:stop={()=>{ scanningContainers=false }}></QRreader>
+                <QRreader validator={isValidContainer} title="Scan QR-code on container" on:scan={(ev) => { scannedContainer(ev, "containers") } } on:stop={()=>{ scanningContainers=false }}></QRreader>
             {/if}
 
-            <button class:disabled={scanningContainers} class="btn btn-primary w-1/2 mb-3" type="button" on:click={()=>{scanningContainers=true;}}>Scan container</button>
+            <button class:disabled={scanningContainers} class="btn btn-primary" type="button" on:click={()=>{scanningContainers=true;}}>
+                Scan container (QR)
+            </button>
 
-            <div>
+            <div class:hidden={!mobileDeviceMode}>
+                {#if addedPhotoFilenames.length > 0}
+                    <span>Located in:</span>
+                    {#each addedContainers as container}
+                        <div class="badge badge-neutral">{container}</div>
+                    {/each}
+                {/if}
+            </div>
+
+            <div class:hidden={mobileDeviceMode}>
                 <select name="containers" class="select select-bordered w-full max-w-xs" multiple>
                     <option disabled selected>Select one or more containers</option>
                     {#each data.containers as container}
@@ -297,14 +321,25 @@
                 <QRreader validator={isValidURL} title="Scan URL in QR-code" on:scan={(ev) => { scannedURL(ev, "urls") } } on:stop={()=>{ scanningURLs=false }}></QRreader>
             {/if}
 
-            <button class:disabled={scanningURLs} class="btn btn-primary w-1/2 mb-3" type="button" on:click={()=>scanningURLs=true}>Scan URL</button>
+            <button class:disabled={scanningURLs} class="btn btn-primary mb-3" type="button" on:click={()=>scanningURLs=true}>
+                Scan URL (QR)
+            </button>
+
+            <div class:hidden={!mobileDeviceMode}>
+                {#if addedURLs.length > 0}
+                    <span>Fetching:</span>
+                    {#each addedURLs as url}
+                        <div class="badge badge-neutral">{url}</div>
+                    {/each}
+                {/if}
+            </div>
 
             <div class:hidden={mobileDeviceMode}>
                 <textarea name="urls" rows="5" placeholder="URLs to related documents" class="textarea textarea-bordered w-full"></textarea>
             </div>
 
         {/if}
-        <div class="mt-1 text-gray-400 text-xs">
+        <div class:hidden={mobileDeviceMode} class="mt-1 text-gray-400 text-xs">
             Add URLs with QR-codes or paste (one per line). The documents will be downloaded, indexed and stored.
         </div>
     </div>
@@ -337,10 +372,12 @@
 </form>
 
 {#if alerts.length > 0}
-    {#each alerts as alert}
-        <div role="alert" class="alert alert-{alert.status}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{alert.message}</span>
-        </div>
-    {/each}
+    <div style="position: absolute; top: 0; left: 0;" class="w-full">
+        {#each alerts as alert}
+            <div role="alert" class="alert alert-{alert.status} md-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>{alert.message}</span>
+            </div>
+        {/each}
+    </div>
 {/if}

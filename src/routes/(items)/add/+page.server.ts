@@ -23,6 +23,18 @@ import { getOCRdata } from '$lib/server/ocr';
 // TODO consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
 // TODO: Investigate how fast inference can run on a beefy RasPi (use OpenCL!)
 
+/*
+Alright, let the fun begin!
+
+Get KVPs
+Containers (need client-side work too, don't think they get set in the select box yet)
+
+I would love to use Mixtral tbh -- but okay, GPT4 will have to do?
+
+
+*/
+
+
 export const load = (async ({ locals, params }) => {
   console.log("add/page.server.ts:", locals, params);
   // TODO: Security -- can be fetched without being logged in now
