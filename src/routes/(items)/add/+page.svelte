@@ -41,12 +41,13 @@
     {
 
 // quick test
-document.getElementById("eltForm").elements["title"].value = "A new product";
-document.getElementById("eltForm").elements["description"].value = "Yada yada";
-scannedContainer({detail:"A 001"}, "containers");
-scannedContainer({detail:"A 003"}, "containers");
-scannedURL({detail:"http://example.com"}, "urls");
+// document.getElementById("eltForm").elements["title"].value = "A new product";
+// document.getElementById("eltForm").elements["description"].value = "Yada yada";
+// scannedContainer({detail:"A 001"}, "containers");
+// scannedContainer({detail:"A 003"}, "containers");
+// scannedURL({detail:"http://example.com"}, "urls");
 // quick test
+
         if(ev.target.files[0]) {
             // Take parent of file-select, clone it and make a new element
             // for further file-uploads. One could argue that one should use
@@ -67,10 +68,16 @@ scannedURL({detail:"http://example.com"}, "urls");
             // Loop through each <li> element and add a click event listener
             const listItems = newParent.querySelectorAll('li');
             listItems.forEach((item) => {
+                // Make sure we make a copy of the original as it might increase.
+                const prodPhotoId = productPhotoFileCounter;
                 item.addEventListener('click', (ev) => {
                     newParent.querySelector(`input[type='file']`)?.click();
                     document?.activeElement?.blur();
-                    ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']").value = ev.target.text.toLowerCase();
+
+                    // Set name and avalue of the hidden input for type of file (product, receipt, ...)
+                    const photoTypeElt = ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']");
+                    photoTypeElt.name = "file.type." + prodPhotoId;
+                    photoTypeElt.value = ev.target.text.toLowerCase();
                 });
             });
 

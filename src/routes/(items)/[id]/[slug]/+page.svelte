@@ -56,12 +56,34 @@
     </div>
 
 
+    {#if productPhotos?.length > 0}
+        <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box">
+            {#each productPhotos as photo, i}
+                <div id="carousel-item{i}" class="carousel-item w-full">
+                    {#if productPhotos[i].cropPath}
+                        <img src="{productPhotos[i].cropPath}" class="w-full"/>
+                    {:else}
+                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="w-full">
+                    {/if}
+                </div> 
+            {/each}
+        </div>
+
+        <div class="flex justify-center w-full py-2 gap-2">
+            {#each productPhotos as photo, i}
+                <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn btn-xs">
+                    {i+1}
+                </button> 
+            {/each}
+        </div>
+    {/if}
+
     <div class="flex justify-center mb-3">
         {#if productPhotos?.length > 0}
             {#if productPhotos[0].cropPath}
                 <img src="{productPhotos[0].cropPath}" alt="{data.item?.title}">
             {:else}
-            <img src="{productPhotos[0].orgPath}" alt="{data.item?.title}">
+                <img src="{productPhotos[0].orgPath}" alt="{data.item?.title}">
             {/if}
         {/if}
     </div>
@@ -79,4 +101,48 @@
             {/each}
         </div>
     {/if}
+
+
+
+<div class="overflow-x-auto">
+  <table class="table">
+    <!-- head -->
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Job</th>
+        <th>Favorite Color</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- row 1 -->
+      <tr>
+        <td>
+          <div class="flex items-center gap-3">
+            <div class="avatar">
+              <div class="mask mask-squircle w-12 h-12">
+                <img src="/tailwind-css-component-profile-2@56w.png" alt="Avatar Tailwind CSS Component" />
+              </div>
+            </div>
+            <div>
+              <div class="font-bold">Hart Hagerty</div>
+              <div class="text-sm opacity-50">United States</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          Zemlak, Daniel and Leannon
+          <br/>
+          <span class="badge badge-ghost badge-sm">Desktop Support Technician</span>
+        </td>
+        <td>Purple</td>
+        <th>
+          <button class="btn btn-ghost btn-xs">details</button>
+        </th>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
 </article>
