@@ -46,6 +46,7 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
+        console.log("data:", data);
         console.log("formData:", orgData);
 
         if (title.length == 0) {
@@ -413,7 +414,7 @@ async function savePhotos(formData: FormDataEntryValue[], diskPath: string, webP
   let formFile, i = 0;
   while ((formFile = formData[`${fieldPrefix}${i}`] as File)) {
       if (formFile.size > 0) {
-          const filename = getSafeFilename(formFile.name);
+          const filename = getSafeFilename(formFile.name, String(i));
   
           // Start writing the file asynchronously and push the promise to the array
           filePromises.push(
@@ -461,7 +462,7 @@ function formKVPsToDBrows(formData: FormData[])
   return kvps;
 }
 
-function getSafeFilename(filename: string): string
+function getSafeFilename(filename: string, extra: string = ""): string
 {
   const date = new Date().toISOString()
     .replaceAll('-', '')
@@ -469,7 +470,7 @@ function getSafeFilename(filename: string): string
     .replace(/T/, '')
     .replace(/\..+/, '');
 
-  return date + '-' + slugify(filename.toLowerCase());
+  return date + '-' + extra + "-" + slugify(filename.toLowerCase());
 }
 
 
