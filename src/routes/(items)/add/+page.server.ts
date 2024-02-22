@@ -20,22 +20,21 @@ import { getTopColorsNamed } from '$lib/server/colors';
 import { classifyImageUsingReplicate, jetsonInference } from '$lib/server/classification';
 import { getOCRdata } from '$lib/server/ocr';
 
+// Invoice data
+import { extractInvoiceData } from '$lib/server/llm';
+
 // TODO consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
 // TODO: Investigate how fast inference can run on a beefy RasPi (use OpenCL!)
 
 /*
-Alright, let the fun begin!
-
-Get KVPs
-Auto: Invoice->KVPs (use GPT-4?)
-
-Containers (need client-side work too, don't think they get set in the select box yet)
-
-I would love to use Mixtral tbh -- but okay, GPT4 will have to do? Need Groq API!
+TODO fields:
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+  inventoryId Int?
+  usage      InUse[] 
 */
-
-
-// deal with containers, KVPs, reason, ?
+/*
+- TODO: Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching
+*/
 
 export const actions = {
     default: async ({ locals, request }) => {
@@ -55,12 +54,6 @@ export const actions = {
                 message: '<strong>Title</strong> can not be blank.'
             });
         }
-/*
-TODO fields:
-  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
-  inventoryId Int?
-  usage      InUse[] 
-*/
 
         const remoteSite = "https://dev.providi.nl";
         const diskFolder = "static/images/u";
@@ -104,70 +97,113 @@ TODO fields:
         });
 
         processProductPhotos(item, remoteSite);
+        processInvoicePhotos(item, remoteSite);
+        downloadURLs(item, remoteSite, data, diskFolder, webFolder, "qr.");
 
-        //
-        // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
-        // (this is largely obsolete after I started using client-side QR code scanner)
-        //
-        const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, "qr.");
-
-        for(let i = 0; i < qrPhotos.length; i++) {
-          const photo = qrPhotos[i];
-
-          // Process the QR code
-          processPhoto(photo, `${remoteSite}${photo.orgPath}`, item, false, false, (err, pageData) => {
-            if(err) {
-              console.error("Error processing QR code for URL: ", err);
-              return;
-            }
-            console.log("Downloaded explicitly stated URL via QR code:", pageData.url);
-          });
-        }
-
-        //
-        // Download all URLs in the URLs field (TODO: SECURITY?)
-        //
-        const lines = (data.urls as string).split("\n");
-        for(let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if(!UrlDownloader.isURL(line)) {
-            console.log(`not an URL: ${line}`);
-            continue;
-          }
-
-          const str: string|null = await UrlDownloader.downloadURL(line);
-          if(!str) {
-            console.log(`Did not get any result when downloading: ${line}`);
-            return;
-          }
-
-          const pageData = JSON.parse(str);
-          const docFilename = getSafeFilename(`${item.id}-doc`);
-
-          fs.writeFileSync(`static${webFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
-
-          console.log("Creating document from explicit URL", docFilename);
-          try {
-            await db.document.create({
-              data: {
-                itemId: item.id,
-                type: "uncategorized",
-                title: pageData.title,
-                source: pageData.url,
-                path: `${webFolder}/${docFilename}.html`,
-                extracts: JSON.stringify(pageData.extracts)
-              }
-            });
-          } catch (ex) {
-            console.error("Error creating document in DB:", ex);
-          }
-
-          console.log("Downloaded explicitly stated URL:", line);
-        }
 
         redirect(302, `/${item.id}/${item.slug}`);
     }
 } satisfies Actions;
+
+
+
+async function downloadURLs(item: Item, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
+{
+    //
+    // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
+    // (this is largely obsolete after I started using client-side QR code scanner)
+    //
+    const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, formPrefix);
+
+    for(let i = 0; i < qrPhotos.length; i++) {
+      const photo = qrPhotos[i];
+
+      // Process the QR code
+      processPhoto(photo, `${remoteSite}${photo.orgPath}`, item, false, false, (err, pageData) => {
+        if(err) {
+          console.error("Error processing QR code for URL: ", err);
+          return;
+        }
+        console.log("Downloaded explicitly stated URL via QR code:", pageData.url);
+      });
+    }
+
+    //
+    // Download all URLs in the URLs field (TODO: SECURITY?)
+    //
+    const lines = (data.urls as string).split("\n");
+    for(let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if(!UrlDownloader.isURL(line)) {
+        console.log(`not an URL: ${line}`);
+        continue;
+      }
+
+      const str: string|null = await UrlDownloader.downloadURL(line);
+      if(!str) {
+        console.log(`Did not get any result when downloading: ${line}`);
+        return;
+      }
+
+      const pageData = JSON.parse(str);
+      const docFilename = getSafeFilename(`${item.id}-doc`);
+
+      fs.writeFileSync(`static${webFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
+
+      console.log("Creating document from explicit URL", docFilename);
+      try {
+        await db.document.create({
+          data: {
+            itemId: item.id,
+            type: "uncategorized",
+            title: pageData.title,
+            source: pageData.url,
+            path: `${webFolder}/${docFilename}.html`,
+            extracts: JSON.stringify(pageData.extracts)
+          }
+        });
+      } catch (ex) {
+        console.error("Error creating document in DB:", ex);
+      }
+
+      console.log("Downloaded explicitly stated URL:", line);
+    }
+}
+
+function processInvoicePhotos(item : Item, remoteSite: string)
+{
+  for(let i = 0; i < item.photos.length; i++) {
+    const photo = item.photos[i];
+
+    if(photo.type !== "invoice or receipt") {
+      console.log("Skipping non-invoice:", item.id);
+      continue;
+    }
+
+    if(!photo.orgPath) {
+      continue;
+    }
+
+    const imgUrl = `${remoteSite}${photo.orgPath}`;
+
+    getOCRdata(imgUrl, async (err, result) => {
+      if (err) {
+        console.error("Error getting OCR data", err);
+        return;
+      }
+
+      console.log("Updating photo.ocr in", photo.id);
+      photo.ocr = JSON.stringify(result);
+      updatePhoto(photo.id, photo);
+
+      const llmData = await extractInvoiceData(result);
+      console.log("Updating photo.llmAnalysis in", photo.id);
+      photo.llmAnalysis = llmData;
+      updatePhoto(photo.id, photo);
+    });
+
+  }
+}
 
 
 /**
@@ -178,16 +214,21 @@ TODO fields:
 function processProductPhotos(item : Item, remoteSite: string)
 {
   // Deal with each photo
-  for (let i = 0; i < item.photos.length; i++) {
+  for(let i = 0; i < item.photos.length; i++) {
     const photo = item.photos[i];
 
-    if (!photo.orgPath) {
+    if(photo.type !== "product") {
+      console.log("Skipping non-product:", item.id);
+      continue;
+    }
+
+    if(!photo.orgPath) {
       continue;
     }
 
     const imgUrl = `${remoteSite}${photo.orgPath}`;
 
-    if (false) {
+    if(false) {
       classifyImageUsingReplicate(imgUrl, (err, result) => {
         if (err) {
           console.error("Error getting Blip classification", err);
@@ -224,22 +265,32 @@ function processProductPhotos(item : Item, remoteSite: string)
       updatePhoto(photo.id, photo);
     });
 
-    processPhoto(photo, imgUrl, item, true, true, (err, res) => {
+    processPhoto(photo, imgUrl, item, true, true, async (err, res) => {
       if(err) {
         console.error(`Failed to process photo ${photo.id} in item ${item.id}`, err);
         return;
       }
+
+      // Download any URL in QR codes in the photo (done on thumbnails)
+      // REFACTOR: Get rid of this and attempt only on photos of type 'other' or 'information'
+      await processQRcodeThenDownload(photo.orgPath, photo, item, (err, res) => {
+        if (err) {
+          console.log("Error downloading QR file's URL:", err);
+          return;
+        }
+      });
+
       console.log("processPhoto returned for item", item.id);
     });
   }
 }
+
 
 /**
  * Remove background then:
  * 1. crop transparent pixels
  * 2. generate thumbnail
  * 3. get top named colors
- * 4. process any QR code; get URL, download URL
  * 
  * @param photo 
  * @param imgUrl 
@@ -302,7 +353,7 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
 
     if(getColors) {
       // Get top colors of no-backgrounded-image
-      getTopColorsNamed(outputFileNoBkg, (err, result) => {
+      await getTopColorsNamed(outputFileNoBkg, (err, result) => {
         if (err) {
           console.log("Error getting top colors:", err);
           callback("Error getting colors", null)
@@ -316,20 +367,12 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
       });
     }
 
-    // Download any URL in QR codes in the photo (done on thumbnails)
-    await processQRcodeThenDownload(photo.orgPath, photo, item, (err, res) => {
-      if (err) {
-        console.log("Error getting top colors:", err);
-        callback("Error getting colors", null)
-        return;
-      }
-
-      callback(null, res)
-    });
+    callback(null, true);
   });
 
   // Nothing to return...
 }
+
 
 async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item, callback)
 {
@@ -407,34 +450,35 @@ async function removeBackground(imgUrl, outputFileNoBkg, callback)
 }
 
 
-async function savePhotos(formData: FormDataEntryValue[], diskPath: string, webPath: string, fieldPrefix: string): Promise<Photo[]>
+async function savePhotos(formData: any, diskPath: string, webPath: string, fieldPrefix: string): Promise<Photo[]>
 {
   const photos: Photo[] = [];
   const filePromises = [];
   let formFile, i = 0;
   while ((formFile = formData[`${fieldPrefix}${i}`] as File)) {
-      if (formFile.size > 0) {
-          const filename = getSafeFilename(formFile.name, String(i));
-  
-          // Start writing the file asynchronously and push the promise to the array
-          filePromises.push(
-              formFile.arrayBuffer().then(buffer => {
-                const filePath = `${diskPath}/${filename}`;
-                return fsPromises.writeFile(filePath, Buffer.from(buffer));
-            })
-          );
-  
-          // @ts-expect-error (missing DB fields that will be filled in)
-          photos.push({
-            type: formData[`${fieldPrefix}.type.${i}`] as string,
-            orgPath: `${webPath}/${filename}`,
-            thumbPath: null,
-            cropPath: null,
-            ocr: null,
-            colors: null,
-          });
-      }
-      i++;
+    if (formFile.size > 0) {
+        const filename = getSafeFilename(formFile.name, String(i));
+
+        // Start writing the file asynchronously and push the promise to the array
+        filePromises.push(
+            formFile.arrayBuffer().then(buffer => {
+              const filePath = `${diskPath}/${filename}`;
+              return fsPromises.writeFile(filePath, Buffer.from(buffer));
+          })
+        );
+
+        // @ts-expect-error (missing DB fields that will be filled in)
+        photos.push({
+          type: formData[`${fieldPrefix}type.${i}`] as string,
+          orgPath: `${webPath}/${filename}`,
+          thumbPath: null,
+          cropPath: null,
+          llmAnalysis: null,
+          ocr: null,
+          colors: null,
+        });
+    }
+    i++;
   }
 
   try {

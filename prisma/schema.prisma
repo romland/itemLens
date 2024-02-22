@@ -41,27 +41,28 @@ model Item {
   title       String?
   description String?
   reason      String?
-  // TODO: Inventory _can_ be determined by ML model classification (running on Jetson)
+
+  // TODO in app: Inventory _can_ be determined by ML model classification (running on Jetson)
   inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   inventoryId Int?
 
-  author   User @relation(fields: [authorId], references: [id])
-  authorId Int
+  author      User @relation(fields: [authorId], references: [id])
+  authorId    Int
 
-  photos     Photo[]
-  documents  Document[]
-  tags       Tag[]
-  locations  ItemsInContainer[]
-  attributes KVP[] // e.g. width, height, color (should override colors of photo, I guess), etc
-  usage      InUse[]
+  photos      Photo[]
+  documents   Document[]
+  tags        Tag[]
+  locations   ItemsInContainer[]
+  attributes  KVP[] // e.g. width, height, color (should override colors of photo, I guess), etc
+  usage       InUse[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Photo {
   id              Int     @id @unique @default(autoincrement())
-  type            String  @default("item")
+  type            String  @default("product")
   orgPath         String?
   cropPath        String?
   thumbPath       String?
@@ -70,6 +71,7 @@ model Photo {
 
   classBlip       String? // NOTE: JSON
   classTrash      String? // NOTE: JSON
+  llmAnalysis     String? // NOTE: JSON
 
   item            Item @relation(fields: [itemId], references: [id])
   itemId          Int

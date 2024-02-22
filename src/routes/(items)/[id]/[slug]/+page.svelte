@@ -2,6 +2,8 @@
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
     import Title from "$lib/components/Title.svelte";
+    import { refine, refineForLLM } from "$lib/shared/ocrparser";
+
 
     export let data: PageServerData;
 
@@ -34,7 +36,7 @@
         }, 1000);   // TODO XXX: once per second is a bit excessive, but fine for now
     }
 
-    console.log(data.item);
+    console.log("data.item:", data.item);
 </script>
 
 <svelte:head>
@@ -57,13 +59,13 @@
 
 
     {#if productPhotos?.length > 0}
-        <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box">
+        <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
             {#each productPhotos as photo, i}
-                <div id="carousel-item{i}" class="carousel-item w-full">
+                <div id="carousel-item{i}" class="carousel-item w-full justify-center">
                     {#if productPhotos[i].cropPath}
-                        <img src="{productPhotos[i].cropPath}" class="w-full"/>
+                        <img src="{productPhotos[i].cropPath}" class="">
                     {:else}
-                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="w-full">
+                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
                     {/if}
                 </div> 
             {/each}
@@ -77,7 +79,7 @@
             {/each}
         </div>
     {/if}
-
+<!--
     <div class="flex justify-center mb-3">
         {#if productPhotos?.length > 0}
             {#if productPhotos[0].cropPath}
@@ -87,7 +89,7 @@
             {/if}
         {/if}
     </div>
-
+-->
     <div class="content prose max-w-none mb-3">
         {@html data.item?.contentToHtml}
     </div>

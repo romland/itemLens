@@ -12,15 +12,6 @@
 
     <div class="overflow-x-auto">
         <table class="table">
-            <!-- head
-            <thead>
-                <tr>
-                    <th>Pic</th>
-                    <th>Whut</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            -->
             <tbody>
                 
                 {#each items as item}
@@ -30,7 +21,9 @@
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12">
                                         {#if item.photos.length > 0 && item.photos[0].thumbPath}
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{item.photos[0].thumbPath}" alt="{item.name}"/>
+                                            <a href="/{item.id}/{item.slug}">
+                                                <img class="mask mask-squircle object-scale-down h-16 w-16" src="{item.photos[0].thumbPath}" alt="{item.name}"/>
+                                            </a>
                                         {/if}
                                     </div>
                                 </div>
@@ -49,6 +42,12 @@
                             </div>
                         </td>
 
+                        <td class="hidden lg:block">
+                            <div class="">
+                                {item.description}
+                            </div>
+                        </td>
+                        
                         <td class="whitespace-nowrap ">
                             <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500">
                                 <i class="bi bi-pencil-square"></i>
@@ -59,16 +58,6 @@
                 {/each}
                 
             </tbody>
-
-            <!-- foot
-            <tfoot>
-                <tr>
-                    <th>Pic</th>
-                    <th>Whut</th>
-                    <th>Action</th>
-                </tr>
-            </tfoot>
-            -->
             
         </table>
     </div>
