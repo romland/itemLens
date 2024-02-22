@@ -98,6 +98,9 @@ export const actions = {
 
         processProductPhotos(item, remoteSite);
         processInvoicePhotos(item, remoteSite);
+
+        // TODO: photos of: product information and other 
+
         downloadURLs(item, remoteSite, data, diskFolder, webFolder, "qr.");
 
 
@@ -228,7 +231,7 @@ function processProductPhotos(item : Item, remoteSite: string)
 
     const imgUrl = `${remoteSite}${photo.orgPath}`;
 
-    if(false) {
+    if(true) {
       classifyImageUsingReplicate(imgUrl, (err, result) => {
         if (err) {
           console.error("Error getting Blip classification", err);

@@ -14,7 +14,7 @@ export async function extractInvoiceData(ocrData)
         `{ description..., etc }], total: ..., totalIncTaxes, ..., date: ..., invoiceNo: ..., paymentMethod: ... }\n` +
         `If you see obvious typos, correct them. ` + 
         `Make sure numbers are correctly copied. ` +
-        `Do not add products which has description as 'subtotal' or similar things that are not products. ` + 
+        // `Do not add products which has description as 'subtotal' or similar things that are not products. ` + 
         `Be brief and concise. ` +
         `Do not give me code. ` + 
         `Do not give me an explanation. ` + 
@@ -24,8 +24,9 @@ export async function extractInvoiceData(ocrData)
     const refined = refineForLLM(ocrData);
 
     // console.log("llm.ts: refined blocks:", refine(ocrData));
-    console.log("llm.ts: refined blocks:", refined);
+    // console.log("llm.ts: refined blocks:", refined);
 
+    // TODO: ChatGPT 3.5 is trash for this task. I want Groq for it!
     try {
         const chatCompletion = await openai.chat.completions.create({
             messages: [{ role: 'user', content: prompt + "\n\n" + JSON.stringify(refined) }],

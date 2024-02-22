@@ -12,7 +12,7 @@
     const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
 
     // Extended mode (false)
-    let mobileDeviceMode = false;
+    let mobileDeviceMode = true;
 
     let saving = false;
     let scanningContainers = false;
@@ -327,7 +327,7 @@
 
             <div class:hidden={mobileDeviceMode}>
                 <select name="containers" class="select select-bordered w-full max-w-xs" multiple="multiple">
-                    <option disabled>Select one or more containers</option>
+                    <option value="" disabled selected>Select one or more containers</option>
                     {#each data.containers as container}
                         <option value="{container.name}">{container.name}: {container.description}</option>
                         {#if container.children.length > 0}
