@@ -229,8 +229,9 @@ async function main() {
     await addLocation("E", "IKEA wooden cabinet", "Study", 6, "/images/containers/E_crop.png", 1);
     await addLocation("F", "Blue metal MARS container, 60 trays", "Study", 60, "/images/containers/F_crop.png", 61);
 
+    await addLocation("X", "Unsorted", "Void", 0, "/images/containers/other_crop.png", 1);
     await addLocation("Y", "Ordered", "Void", 0, "/images/containers/other_crop.png", 1);
-    await addLocation("Z", "Unsorted", "Void", 0, "/images/containers/other_crop.png", 1);
+    await addLocation("Z", "Wishlist", "Void", 0, "/images/containers/other_crop.png", 1);
 
     await addItems(user);
 }

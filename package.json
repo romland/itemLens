@@ -52,6 +52,7 @@
 		"crop-node": "^2.1.0",
 		"dompurify": "^3.0.9",
 		"form-data": "^4.0.0",
+		"groq-sdk": "^0.3.0",
 		"html5-qrcode": "^2.3.8",
 		"image-thumbnail": "^1.0.15",
 		"jimp": "^0.22.10",

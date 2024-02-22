@@ -8,7 +8,7 @@
     export let data: PageServerData;
     
     var refreshIntervalId = null;
-    let productPhotos, invoicePhotos, otherPhotos;
+    let productPhotos = [], invoicePhotos = [], otherPhotos = [];
     let photoAttributes = [];
     let classTrash = []
     let classBlip = [];
@@ -36,7 +36,7 @@
         classTrash = [];
         classBlip = [];
         
-        for(let i = 0; i < data.item.photos.length; i++) {
+        for(let i = 0; i < data.item.photos?.length; i++) {
             const photo = data.item.photos[i];
             
             if(photo.type === "product") {
@@ -217,6 +217,9 @@
         <div class="title font-bold">
             TODO move
         </div>
+
+        COLORS!
+
         <div class="justify-between items-center">
             {data.item.amount}<br/>
             {data.item.reason}<br/>

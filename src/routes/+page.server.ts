@@ -10,7 +10,15 @@ export const load = (async ({ locals, url }) => {
         take: 10,
         skip: page == 1 ? 0 : (page - 1) * 10,
         orderBy: [{ id: 'desc' }],
-        include: { "photos" : true, "tags" : true }
+        include: {
+            locations: {
+                include: {  
+                    container: true,
+                }
+            },
+            "photos" : true,
+            "tags" : true
+        }
     });
 
     const prevPage = page == 1 ? 0 : page - 1;

@@ -39,6 +39,14 @@
                             </div>
                         </td>
 
+                        <td>
+                            {#each item.locations as loc}
+                                <div class="badge badge-ghost badge-sm">
+                                    <a href="/container/{loc.containerName.replace(" ", "-")}">{loc.containerName}</a>
+                                </div>
+                            {/each}
+                        </td>
+
                         <td width="20%">
                             <a href="/{item.id}/{item.slug}">{item.title}</a>
                             <!--div class="invisible lg:visible"-->

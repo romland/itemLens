@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick }  from 'svelte';
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData } from "./$types";
     import { enhance, type SubmitFunction } from '$app/forms';
@@ -182,9 +183,12 @@
     }
 
 
-    function addKVP(ev, ix)
+    function addKVP(ev)
     {
         numKVPs = numKVPs + 1;
+        setTimeout(() => {
+            document.querySelector('input[name="kvpK-' + (numKVPs-1) + '"]').focus();
+        }, 1);
     }
 
     function removeKVP(ev, ix)
@@ -388,9 +392,13 @@
                 <input type="text" name="kvpK-{i}" value="" placeholder="Attribute" class="input input-bordered w-1/3 mb-3">
                 <input type="text" name="kvpV-{i}" value="" placeholder="Value" class="input input-bordered w-1/3 mb-3">
                 <button on:click={(ev)=>{ removeKVP(ev, i) }} type="button" class="btn btn-warning">-</button>
+                {#if i === numKVPs - 1}
+                    <button on:click={(ev) => {
+                        const newI = addKVP(ev);
+                    }} type="button" class="btn btn-primary">+</button>
+                {/if}
             </div>
         {/each}
-        <button on:click={addKVP} type="button" class="btn btn-primary">+</button>
         <div class="mt-1 text-gray-400 text-xs">
             Attributes, e.g.: weight = 400g, width = 140mm
         </div>

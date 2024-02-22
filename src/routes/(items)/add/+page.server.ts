@@ -549,6 +549,15 @@ export const load = (async ({ locals, params }) => {
       }
   });
 
+  /*
+  console.log("DEBUG ==========================================");
+  const ocrData = JSON.parse(fs.readFileSync(".invoice.json", {encoding:"utf-8"}));
+  console.log(ocrData);
+  const res = await extractInvoiceData(ocrData);
+  console.log("Groq: ", res)
+  console.log("DEBUG ==========================================");
+  */
+
   return {
     containers: containers
   };
