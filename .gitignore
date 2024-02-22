@@ -12,3 +12,4 @@ vite.config.ts.timestamp-*
 /prisma/migrations
 /static/images
 dev-dist
+.invoice.json
