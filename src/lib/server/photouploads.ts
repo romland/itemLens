@@ -363,6 +363,8 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
   // separate logic to handle remote URL downloads
   let remoteFilesPromises = [];
   if(remoteURLlist.trim().length > 0) {
+    remoteURLlist = remoteURLlist.replace("\r\n", "\n");
+
     const externalUrls = remoteURLlist.trim().split('\n');
     remoteFilesPromises = externalUrls.map(async (urlWithType, index) => {
       const [type, url] = urlWithType.split(' ')
