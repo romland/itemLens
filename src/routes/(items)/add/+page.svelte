@@ -12,14 +12,14 @@
     const uploadPictureForQRcodes = false;
     const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
 
-    // Extended mode (false)
-    let mobileDeviceMode = true;
+    // minimalInput = false = more controls (think: larger screen, no camera)
+    let minimalInput = true;
 
     let saving = false;
     let scanningContainers = false;
     let scanningURLs = false;
     let alerts = [];
-    let addedPhotoFilenames = [], addedContainers = [], addedURLs = [];
+    let addedPhotoFilenames = [], addedContainers = [], addedURLs = [], addedImagesToDownload = [];
     let numKVPs = 1;
 
     export let form: ActionData;
@@ -200,10 +200,37 @@
         }
     }
 
+    function addImageToDownload(ev, type)
+    {
+        const downloadImage = window.prompt(`Link to "${type}" image:`);
+
+        if(downloadImage) {
+            document.querySelector("input[name='downloadImages']").value += type.toLowerCase() + " " + downloadImage + "\n";
+            addedImagesToDownload.push({
+                type: type.toLowerCase(),
+                url: downloadImage
+            });
+            // console.log("urls now:", document.querySelector("input[name='downloadImages']").value);
+            addedImagesToDownload = addedImagesToDownload;
+        }
+    }
+
+    if(typeof window !== 'undefined') {
+        const toggleMinimal = () => {
+            if(window.innerWidth > 600) {
+                minimalInput = false;
+            } else {
+                minimalInput = true;
+            }
+        }
+        toggleMinimal();
+        document.addEventListener("resize", toggleMinimal);
+    }
+
 </script>
 
 <svelte:head>
-    <Title>Add new item</Title>
+    <Title>Add new product</Title>
 </svelte:head>
 
 {#if form?.error}
@@ -212,7 +239,7 @@
 
 
 <div class="flex justify-items mb-3">
-    Extended <input type="checkbox" class="toggle ml-2 mr-2" checked on:change={()=>mobileDeviceMode = !mobileDeviceMode} /> Brief mode
+    Extended <input type="checkbox" class="toggle ml-2 mr-2" bind:checked={minimalInput} on:click={()=>minimalInput = !minimalInput} /> Brief mode
 </div>
 
 <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
@@ -227,7 +254,7 @@
         </div>
     </div>
 
-    <div class="mb-3">
+    <div class="flex">
         <!-- Note: this element will be cloned and inserted for every photo added -->
         <div>
             <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" capture="environment" class="file-input mb-3">
@@ -235,11 +262,11 @@
 
             <div class="dropdown">
                 <div tabindex="0" role="button" class="btn-primary btn m-1">
-                    Tap to add photo(s) of...
+                    Add photo of...
                 </div>
                 <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
                     {#each photoTypes as type}
-                        <li on:click={ (ev) => {
+                        <li class="cursor-pointer" on:click={ (ev) => {
                                 document?.getElementById('file.0')?.click();
                                 document?.activeElement?.blur();
                                 ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']").value = ev.target.text.toLowerCase();
@@ -252,14 +279,48 @@
         </div>
 
         <div>
-            {#if addedPhotoFilenames.length > 0}
-                <span>Uploading:</span>
-                {#each addedPhotoFilenames as photo}
-                    <div class="badge badge-neutral">{photo.name} ({photo.type})</div>
-                {/each}
-            {/if}
+            <input type="hidden" name="downloadImages" value="">
+
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn-primary btn m-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                    </svg>
+                    Add image of...
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
+                    {#each photoTypes as type}
+                        <li class="cursor-pointer" on:click={ (ev) => {
+                                document?.activeElement?.blur();
+                                addImageToDownload(ev, type);
+                            }}>
+                            <a>{type}</a>
+                        </li>
+                    {/each}
+                </ul>
+            </div>
+
         </div>
     </div>
+
+    <div class="mb-3">
+        {#if addedPhotoFilenames.length > 0}
+            <span>Uploading: </span>
+            {#each addedPhotoFilenames as photo}
+                <div class="truncate max-w-96 badge badge-neutral">{photo.name} ({photo.type})</div>
+            {/each}
+        {/if}
+
+        <br/>
+
+        {#if addedImagesToDownload.length > 0}
+            <span>Fetching: </span>
+            {#each addedImagesToDownload as img}
+                <div class="truncate max-w-96 badge badge-neutral">{img.url} ({img.type})</div>
+            {/each}
+        {/if}
+    </div>
+
 
     {#if LARGE_CONTAINER_SELECTOR}
         <div class="mb-3" style="max-height: 20vh; overflow-y: scroll;">
@@ -320,7 +381,7 @@
                 Scan container (QR)
             </button>
 
-            <div class:hidden={!mobileDeviceMode}>
+            <div class:hidden={!minimalInput}>
                 {#if addedPhotoFilenames.length > 0}
                     <span>Located in:</span>
                     {#each addedContainers as container}
@@ -329,7 +390,7 @@
                 {/if}
             </div>
 
-            <div class:hidden={mobileDeviceMode}>
+            <div class:hidden={minimalInput}>
                 <select name="containers" class="select select-bordered w-full max-w-xs" multiple="multiple">
                     <option value="" disabled selected>Select one or more containers</option>
                     {#each data.containers as container}
@@ -359,7 +420,7 @@
                 Scan URL (QR)
             </button>
 
-            <div class:hidden={!mobileDeviceMode}>
+            <div class:hidden={!minimalInput}>
                 {#if addedURLs.length > 0}
                     <span>Fetching:</span>
                     {#each addedURLs as url}
@@ -368,25 +429,25 @@
                 {/if}
             </div>
 
-            <div class:hidden={mobileDeviceMode}>
+            <div class:hidden={minimalInput}>
                 <textarea name="urls" rows="5" placeholder="URLs to related documents" class="textarea textarea-bordered w-full"></textarea>
             </div>
 
         {/if}
-        <div class:hidden={mobileDeviceMode} class="mt-1 text-gray-400 text-xs">
+        <div class:hidden={minimalInput} class="mt-1 text-gray-400 text-xs">
             Add URLs with QR-codes or paste (one per line). The documents will be downloaded, indexed and stored.
         </div>
     </div>
 
-    <div class:hidden={mobileDeviceMode} class="mb-3">
+    <div class:hidden={minimalInput} class="mb-3">
         <input type="text" name="amount" value="" placeholder="Number of items" class="input input-bordered w-full">
     </div>
 
-    <div class:hidden={mobileDeviceMode} class="mb-3">
+    <div class:hidden={minimalInput} class="mb-3">
         <input type="text" name="reason" value="" placeholder="Reason for purchase (project)" class="input input-bordered w-full">
     </div>
 
-    <div class:hidden={mobileDeviceMode} class="mb-3">
+    <div class:hidden={minimalInput} class="mb-3">
         {#each {length:numKVPs} as _, i}
             <div>
                 <input type="text" name="kvpK-{i}" value="" placeholder="Attribute" class="input input-bordered w-1/3 mb-3">
@@ -404,7 +465,7 @@
         </div>
     </div>
 
-    <div class:hidden={mobileDeviceMode} class="mb-3">
+    <div class:hidden={minimalInput} class="mb-3">
         <input type="text" name="tagcsv" placeholder="Tags" class="input input-bordered w-full">
         <div class="mt-1 text-gray-400 text-xs">
             Seperated by comma.

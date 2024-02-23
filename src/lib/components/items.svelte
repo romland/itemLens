@@ -41,7 +41,7 @@
 
                         <td>
                             {#each item.locations as loc}
-                                <div class="badge badge-ghost badge-sm">
+                                <div class="badge badge-ghost badge-sm whitespace-nowrap">
                                     <a href="/container/{loc.containerName.replace(" ", "-")}">{loc.containerName}</a>
                                 </div>
                             {/each}

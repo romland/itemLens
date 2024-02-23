@@ -1,7 +1,60 @@
 import Jimp from 'jimp';
 import jsQR from 'jsqr';
+import { downloadQRURLs, getSafeFilename } from './photouploads';
+import fs from 'fs';
 
-export default class UrlDownloader
+export async function downloadAndStoreDocuments(item: Item, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
+{
+    //
+    // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
+    // (this is largely obsolete after I started using client-side QR code scanner)
+    //
+    await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, item);
+
+    //
+    // Download all URLs in the URLs field (TODO: SECURITY?)
+    //
+    const lines = (data.urls as string).split("\n");
+    for(let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if(!QRUrlDownloader.isURL(line)) {
+        console.log(`not an URL: ${line}`);
+        continue;
+      }
+
+      const str: string|null = await QRUrlDownloader.downloadURL(line);
+      if(!str) {
+        console.log(`Did not get any result when downloading: ${line}`);
+        return;
+      }
+
+      const pageData = JSON.parse(str);
+      const docFilename = getSafeFilename(`${item.id}-doc`);
+
+      fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
+
+      console.log("Creating document from explicit URL", docFilename);
+      try {
+        await db.document.create({
+          data: {
+            itemId: item.id,
+            type: "uncategorized",
+            title: pageData.title,
+            source: pageData.url,
+            path: `${webFolder}/${docFilename}.html`,
+            extracts: JSON.stringify(pageData.extracts)
+          }
+        });
+      } catch (ex) {
+        console.error("Error creating document in DB:", ex);
+      }
+
+      console.log("Downloaded explicitly stated URL:", line);
+    }
+}
+
+
+export default class QRUrlDownloader
 {
     static async decodeQR(imageData) : Promise<string|null>
     {
@@ -25,20 +78,20 @@ export default class UrlDownloader
 
     static async fetchQRCodeDocument(imagePath : string) : Promise<string|null>
     {
-        const imageData = await UrlDownloader.getImageData(imagePath);
-        const qrData = await UrlDownloader.decodeQR(imageData);
+        const imageData = await QRUrlDownloader.getImageData(imagePath);
+        const qrData = await QRUrlDownloader.decodeQR(imageData);
         console.log("QR DATA:", qrData);
 
         if(!qrData) {
             return null;
         }
 
-        if(!UrlDownloader.isURL(qrData)) {
+        if(!QRUrlDownloader.isURL(qrData)) {
             console.log("There is a QR code, but it's not an URL. It says:", qrData);
             return null;
         }
 
-        return await UrlDownloader.downloadURL(qrData);
+        return await QRUrlDownloader.downloadURL(qrData);
     }
 
     static async downloadURL(url : string) : Promise<string|null>
@@ -46,7 +99,7 @@ export default class UrlDownloader
           try {
             const response = await fetch("http://localhost:8001", {
               method: 'POST',
-              body: `url=${url}`,
+              body: `url=${encodeURIComponent(url)}`,
               headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
               },
@@ -95,6 +148,6 @@ export default class UrlDownloader
 
     private static async hasQRcode(imageData) : Promise<boolean>
     {
-        return await UrlDownloader.decodeQR(imageData) !== null;
+        return await QRUrlDownloader.decodeQR(imageData) !== null;
     }
 }

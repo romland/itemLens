@@ -1,3 +1,4 @@
+import type { KVP } from '@prisma/client';
 import { db } from '$lib/server/database';
 import slugify from 'slugify';
 
@@ -32,4 +33,20 @@ export const getTagIds = async (tagcsv: string) => {
     }
 
     return ids;
+}
+
+export function formKVPsToDBrows(formData: FormData[])
+{
+  const kvps: KVP[] = [];
+
+  for(const key in formData) {
+    if(key.startsWith("kvpK")) {
+      const index = parseInt(key.split("-")[1], 10);
+      kvps.push({
+        key: formData[key],
+        value: formData[`kvpV-${index}`]
+      })
+    }
+  }
+  return kvps;
 }

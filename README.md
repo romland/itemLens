@@ -60,3 +60,11 @@ On Jetson:
     For object identification:
     ...
 
+# TODO / notes
+- consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
+- Investigate how fast inference can run on a beefy RasPi (use OpenCL!)
+- TODO fields when adding items:
+    inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+    inventoryId Int?
+    usage      InUse[] 
+- Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching
