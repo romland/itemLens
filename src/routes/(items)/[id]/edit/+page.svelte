@@ -25,7 +25,6 @@
 
     // TODO: Is this messing with form-validation messages?
     const onSubmit: SubmitFunction = async (data) => {
-        throw "TODO save";
         saving = true;
 
         return async (options) => {
@@ -43,6 +42,11 @@
         // TODO: Security. Sanitize?
         // markdownHtml = marked.parse(data.item?.description!, {gfm:true,breaks:true});
         markdownHtml = marked.parse(description.value, {gfm:true,breaks:true});
+    }
+
+    function notify(status, ev)
+    {
+        notifications.push({status, message:ev.detail});
     }
 
 
@@ -86,7 +90,7 @@
 
     <div class="mb-3">
         <div role="tablist" class="tabs tabs-lifted">
-            <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="Edit" checked />
+            <input type="radio" name="markdownEditorTab" role="tab" class="tab" aria-label="Edit" checked />
             <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
                 <!-- for live changes: on:input={updateMarkdownPreview} -->
                 <textarea id="description" name="description" rows="5" placeholder="Product description" class="textarea textarea-bordered w-full">{data.item?.description}</textarea>
@@ -95,7 +99,7 @@
                 </div>
             </div>
             
-            <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="Preview" on:click={updateMarkdownPreview}/>
+            <input type="radio" name="markdownEditorTab" role="tab" class="tab" aria-label="Preview" on:click={updateMarkdownPreview}/>
             <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
                 <!-- preview -->
                 <div class="content prose max-w-none mb-3">
@@ -132,16 +136,14 @@
         />
     </div>
 
-    {#if data.item?.documents.length > 0}
-        <RefreshDeleteList
-            values={data.item?.documents}
-            inputName="documents"
-            columns={{
-                "3":{name:"Title",    fieldName:"title", isImage: false},
-                "4":{name:"Filename", fieldName:"path", isLink: true}
-            }}
-        />
-    {/if}
+    <RefreshDeleteList
+        values={data.item?.documents || []}
+        inputName="documents"
+        columns={{
+            "3":{name:"Title",    fieldName:"title", isImage: false},
+            "4":{name:"Filename", fieldName:"path", isLink: true}
+        }}
+    />
 
     <div class="mb-3">
         <input type="text" name="amount" value="{data.item?.amount}" placeholder="Number of items" class="input input-bordered w-full">
@@ -167,9 +169,9 @@
     <div class="flex justify-end">
         <button disabled={saving} type="submit" class="btn btn-primary">
             {#if saving}
-                <span class="loading loading-infinity loading-lg"></span>Uploading and updating
+                <span class="loading loading-infinity loading-lg"></span>Uploading and saving
             {:else}
-                Update
+                Save
             {/if}
         </button>
     </div>

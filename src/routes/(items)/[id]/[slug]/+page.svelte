@@ -125,7 +125,7 @@
         }
     }
     
-    console.log("data.item:", data.item);
+    // console.log("data.item:", data.item);
 </script>
 
 <svelte:head>

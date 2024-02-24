@@ -6,10 +6,12 @@
 
     let numKVPs = 1;
     
+    if(values.length) {
+        numKVPs = values.length;
+    }
+
     onMount(async () => {
         if(typeof window !== 'undefined' && values.length) {
-            numKVPs = values.length + 1;
-            tick();
             for(let i = 0; i < values.length; i++) {
                 document.querySelector(`input[name="kvpK-${i}"]`).value = values[i].key;
                 document.querySelector(`input[name="kvpV-${i}"]`).value = values[i].value;
