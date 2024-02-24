@@ -73,7 +73,7 @@ model Photo {
   classTrash      String? // NOTE: JSON
   llmAnalysis     String? // NOTE: JSON
 
-  item            Item @relation(fields: [itemId], references: [id])
+  item            Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId          Int
 
   createdAt       DateTime @default(now())
@@ -88,7 +88,7 @@ model Document {
   path     String
   extracts String // AKA extracts
 
-  item   Item @relation(fields: [itemId], references: [id])
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int
 
   createdAt DateTime @default(now())
@@ -114,7 +114,7 @@ model Container {
 }
 
 model ItemsInContainer {
-  item          Item          @relation(fields: [itemId], references: [id])
+  item          Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId        Int   
   container     Container     @relation(fields: [containerName], references: [name])
   containerName String
@@ -127,7 +127,7 @@ model KVP {
   key   String
   value String
 
-  item   Item @relation(fields: [itemId], references: [id])
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int
 }
 
@@ -145,7 +145,7 @@ model InUse {
   title       String? // e.g. By VidensiVision
   description String? // e.g. ...mounted in shed to check presence of Ery
 
-  item   Item @relation(fields: [itemId], references: [id])
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int
 
   createdAt DateTime @default(now())
