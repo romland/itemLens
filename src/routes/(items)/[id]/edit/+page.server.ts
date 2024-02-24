@@ -14,18 +14,55 @@ export const load = (async ({ locals, params }) => {
                 { id: Number(params.id) },
             ]
         },
-        include: { tags: true }
+        include: {
+            inventory: true,
+            photos: true,
+            documents: true,
+            tags: true,
+            locations: {
+                include: {  
+                    container: true,
+                }
+            },
+            attributes: true,
+            usage: true,
+        }
     });
 
     if (!item) {
         redirect(302, '/');
     }
 
+    const containers = await db.container.findMany({
+        select : {
+          name : true,
+          parentId : true,
+          photoPath : true,
+          description : true,
+          location : true,
+          children : {
+            select : {
+              name : true,
+              parentId : true,
+            }
+          },
+        },
+        where: {
+            AND: [
+                { parentId: null }
+            ]
+        },
+        orderBy: {
+          name : "asc"
+        }
+    });
+
     return {
         item: {
             ...item,
             tagcsv: item.tags.map((tag: Tag, i: number) => i == 0 ? tag.name : ' ' + tag.name)
-        }
+        },
+        containers
     };
 }) satisfies PageServerLoad;
 
@@ -37,6 +74,16 @@ export const actions = {
         const content = data.content as string;
         const tagcsv = data.tagcsv as string;
         const file = data.file as File;
+
+/*
+TODO:
+- take care of refresh_images = essentially delete it, but then re-add it (orgPath) by running everything over it again,
+  this is when we get happy that we populate other 'tables' (think: attributes) on client-side
+- take care of delete_images
+  Make sure to delete on disk too (or at least move away)
+- delete all containers (to be re-inserted)
+- delete all attributes (to be re-inserted)
+*/
 
         if (title.length == 0) {
             return fail(400, {

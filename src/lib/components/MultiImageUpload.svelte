@@ -1,7 +1,11 @@
 <script>
-    export let photoTypes = ["Other"];
+    import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
+
     import { createEventDispatcher } from 'svelte'
     const dispatch = createEventDispatcher();
+
+    export let photoTypes = ["Other"];
+    export let values = [];
 
     let addedPhotoFilenames = []
     var productPhotoFileCounter = 1;
@@ -60,7 +64,68 @@
             dispatch('success', `Added photo: ${ev.target.files[0].name}`);
         }
     }
+
+    let refreshPhoto = [];
+    function toggleRefreshAllImages(ev)
+    {
+        refreshPhoto = [];
+        if(ev.target.checked) {
+            for(let i = 0; i < values.length; i++) {
+                const photo = values[i]
+                refreshPhoto.push(photo.id);
+            }
+            refreshPhoto = refreshPhoto;
+        }
+    }
+
+    function toggleRefresh(ev)
+    {
+        const photoId = parseInt(ev.target.name.split(".")[1]);
+        if(refreshPhoto.includes(photoId)) {
+            refreshPhoto.splice(refreshPhoto.indexOf(photoId), 1);
+        } else {
+            refreshPhoto.push(photoId);
+        }
+        refreshPhoto = refreshPhoto;
+    }
+
+    let deletePhoto = [];
+    function toggleDeleteAllImages(ev)
+    {
+        deletePhoto = [];
+        if(ev.target.checked) {
+            for(let i = 0; i < values.length; i++) {
+                const photo = values[i]
+                deletePhoto.push(photo.id);
+            }
+            deletePhoto = deletePhoto;
+        }
+    }
+
+    function toggleDelete(ev)
+    {
+        const photoId = parseInt(ev.target.name.split(".")[1]);
+        if(deletePhoto.includes(photoId)) {
+            deletePhoto.splice(deletePhoto.indexOf(photoId), 1);
+        } else {
+            deletePhoto.push(photoId);
+        }
+        deletePhoto = deletePhoto;
+    }
+
 </script>
+
+{#if values.length > 0}
+    <RefreshDeleteList
+        values={values}
+        inputName="images"
+        columns={{
+            "3":{name:"Image",    fieldName:"orgPath", isImage: true},
+            "4":{name:"Filename", fieldName:"orgPath", isLink: true}
+        }}
+    />
+{/if}
+
 
 <div>
     <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" capture="environment" class="file-input mb-3">

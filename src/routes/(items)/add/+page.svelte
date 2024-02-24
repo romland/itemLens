@@ -5,6 +5,7 @@
     import { tick }  from 'svelte';
     import { enhance, type SubmitFunction } from '$app/forms';
     import { redirect } from '@sveltejs/kit';
+    import { photoTypes } from "$lib/shared/constants.ts";
 
     import Alert from "$lib/components/alert.svelte";
     import Title from "$lib/components/Title.svelte";
@@ -18,7 +19,6 @@
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
 
     const LARGE_CONTAINER_SELECTOR = false;
-    const photoTypes = ["Product", "Invoice or receipt", "Information", "Other"];
 
     // minimalInput = false = more controls (think: larger screen, no camera)
     let minimalInput = true;

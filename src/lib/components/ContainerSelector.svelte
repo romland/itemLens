@@ -3,11 +3,23 @@
     import { createEventDispatcher } from 'svelte'
     const dispatch = createEventDispatcher();
 
+    export let values = [];
     export let containers = [];
     export let mini = false;
 
     let scanningContainers = false;
     let addedContainers = [];
+
+    import { onMount } from 'svelte'
+    
+    onMount(async () => {
+        if(typeof window !== 'undefined' && values.length) {
+            for(let i = 0; i < values.length; i++) {
+                console.log("hum:", values[i].containerName);
+                scannedContainer({detail: values[i].containerName}, "containers", false);
+            }
+        }
+    });
 
     function isValidContainer(txt)
     {
@@ -15,12 +27,17 @@
         return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
     }
 
-    function scannedContainer(ev, inputEltName)
+    function scannedContainer(ev, inputEltName, notify = true)
     {
         const elt = document.getElementById("eltForm").elements[inputEltName];
         const options = Array.from(elt.querySelectorAll('option'));
 
         const option = options.find(c => c.value === ev.detail);
+
+        if(!option) {
+            console.warn("Undefined container: ", ev.detail);
+            return
+        }
 
         if(option.selected === false) {
             addedContainers.push(ev.detail);
@@ -28,8 +45,13 @@
         }
 
         option.selected = true;
-        dispatch("success", `Added container: ${ev.detail}`);
+
+        if(notify) {
+            dispatch("success", `Added container: ${ev.detail}`);
+        }
     }
+
+    
 
 </script>
 

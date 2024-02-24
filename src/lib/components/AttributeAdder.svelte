@@ -1,5 +1,22 @@
 <script>
+    import { onMount } from 'svelte'
+    import { tick }  from 'svelte';
+
+    export let values = [];
+
     let numKVPs = 1;
+    
+    onMount(async () => {
+        if(typeof window !== 'undefined' && values.length) {
+            numKVPs = values.length + 1;
+            tick();
+            for(let i = 0; i < values.length; i++) {
+                document.querySelector(`input[name="kvpK-${i}"]`).value = values[i].key;
+                document.querySelector(`input[name="kvpV-${i}"]`).value = values[i].value;
+            }
+        }
+    });
+
 
     function addKVP(ev)
     {
