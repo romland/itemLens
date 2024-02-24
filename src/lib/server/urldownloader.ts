@@ -22,6 +22,22 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
         continue;
       }
 
+      let document;
+      try {
+        document = await db.document.create({
+          data: {
+            itemId: item.id,
+            type: "uncategorized",
+            title: "",
+            source: line,
+            path: "",
+            extracts: "[]"
+          }
+        });
+      } catch (ex) {
+        console.error("Error creating document in DB:", ex);
+      }
+
       const str: string|null = await QRUrlDownloader.downloadURL(line);
       if(!str) {
         console.log(`Did not get any result when downloading: ${line}`);
@@ -35,7 +51,10 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
 
       console.log("Creating document from explicit URL", docFilename);
       try {
-        await db.document.create({
+        await db.document.update({
+          where: {
+            id : document?.id
+          },
           data: {
             itemId: item.id,
             type: "uncategorized",
@@ -46,7 +65,8 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
           }
         });
       } catch (ex) {
-        console.error("Error creating document in DB:", ex);
+        console.error(`Error updating document in DB (${line}):`, ex);
+        continue;
       }
 
       console.log("Downloaded explicitly stated URL:", line);

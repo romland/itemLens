@@ -73,13 +73,13 @@ export const load = (async ({ locals, params }) => {
 
 /*
 TODO:
-- take care of refresh_images = essentially delete it, but then re-add it (orgPath) by running everything over it again,
+x take care of refresh_images = essentially delete it, but then re-add it (orgPath) by running everything over it again,
   this is when we get happy that we populate other 'tables' (think: attributes) on client-side
-- take care of delete_images
+x take care of delete_images
   Make sure to delete on disk too (or at least move away)
 - ditto with delete/refresh_documents
-- delete all containers (to be re-inserted)
-- delete all attributes (to be re-inserted)
+x delete all containers (to be re-inserted)
+x delete all attributes (to be re-inserted)
 */
 export const actions = {
     default: async ({ request, params }) => {
@@ -131,6 +131,7 @@ console.log("formData:", orgData);
 
         // Holds all image IDs that existed before this item (new photos to be created are not here)
         const preExistingPhotoIds = item.photos.map(p=>p.id);
+        const preExistingDocumentIds = item.documents.map(p=>p.id);
 
         // TODO: Wrap this in a Prisma transaction so we don't delete stuff without filling things back in.
         await db.item.update({
@@ -178,99 +179,155 @@ console.log("formData:", orgData);
             },
             include: {
               photos : true,
+              documents : true,
             }
         });
 
         // Store all image IDs belonging to this item, including ones just created.
         const allExistingPhotoIds = item.photos.map(p=>p.id);
+        const allExistingDocumentIds = item.documents.map(p=>p.id);
 
-        // Deal with refreshing and deleting documents and images
-        try {
-            let imagesToDelete = JSON.parse(data.delete_images as string);
-            let imagesToRefresh = JSON.parse(data.refresh_images as string);
-            
-            console.log({imagesToDelete, imagesToRefresh });
+        // Deal with refreshing and deleting documents and images.
+        // Refresh takes presedence over delete (that is, if something is 
+        // both deleted and refreshed, refresh wins)
+        await refreshDeleteImages(data, allExistingPhotoIds, preExistingPhotoIds, item);
+        data.urls += await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
-            // Store the image IDs that were created this post (just now) (difference between before insert and now)
-            const newPhotoIds = [ ...allExistingPhotoIds.filter(elem1 => preExistingPhotoIds.every(elem2 => elem2 != elem1)) ];
-
-            // Remove all photos (from DB result array) that do not need a refresh.
-            // The remaining array will be merged with local variable 'photos'.
-            for(let i = item.photos?.length - 1; i >= 0; i--) {
-                // Don't remove any photos we just created (they are still unprocessed)
-                if(newPhotoIds.includes(item.photos[i].id) === false && imagesToRefresh.includes(item.photos[i].id) === false) {
-                    item.photos.splice(i, 1);
-                } else {
-                    console.log("(Re)fresh photo:", item.photos[i].id);
-                }
-            }
-
-            // Make sure the photos actually belong to this item.
-            if(imagesToDelete.every(item => allExistingPhotoIds.includes(item))) {
-                // Do not remove items that were flagged as both 'refresh' and 'delete'
-                const toActuallyDelete = imagesToDelete.filter( (el) => !imagesToRefresh.includes( el ) );
-
-                console.log("To Actually DELETE:", toActuallyDelete);
-                await db.item.update({
-                    where: {
-                        id: item.id
-                    },
-                    data: {
-                        photos: {
-                            deleteMany: {
-                                id : {
-                                    in: toActuallyDelete
-                                }
-                            }
-                        }
-                    }
-                });
-                console.log("DELETED!");
-            } else {
-                throw "Illegal to delete one or more of images " + JSON.stringify(imagesToDelete);
-            }
-
-            // TODO?: delete files on disk for entities being refreshed
-
-            console.log("Photos we will deal with going forward:", item.photos);
-
-            let docsToDelete = JSON.parse(data.delete_documents as string);
-            let docsToRefresh = JSON.parse(data.refresh_documents as string);
-
-            console.log({docsToDelete, docsToRefresh});
-
-
-
-
-        } catch(ex) {
-            console.error("Failed to deal with deletion/refresh of docs/images", ex);
-        }
-
-        // downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
+        downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
 
         processProductPhotos(item, uploadsRemoteSite);
         processInvoicePhotos(item, uploadsRemoteSite);
         processOtherPhotos(item, uploadsRemoteSite);        
-
-/*
-        await db.item.update({
-            where: { id: Number(params.id) },
-            data: {
-                title: title.trim(),
-                // TODO: This structure has changed
-                // photo: filename,
-                slug: slugify(title.toLowerCase()),
-                description: description.trim(),
-                tags: {
-                    set: [...tagIds]
-                }
-            }
-        });
-        console.warn("NOTE: Photo structure changed, this needs to be redone");
-*/
 
         console.log("=== Done updating ===");
 
         redirect(302, `/${item?.id}/${item?.slug}`);
     }
 } satisfies Actions;
+
+
+async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, allExistingPhotoIds: number[], preExistingPhotoIds: number[], item: Item | null)
+{
+    try {
+        let imagesToDelete = JSON.parse(data.delete_images as string);
+        let imagesToRefresh = JSON.parse(data.refresh_images as string);
+
+        console.log({ imagesToDelete, imagesToRefresh });
+
+        // Store the image IDs that were created this post (just now) (difference between before insert and now)
+        const newPhotoIds = [...allExistingPhotoIds.filter(elem1 => preExistingPhotoIds.every(elem2 => elem2 != elem1))];
+
+        // Remove all photos (from DB result array) that do not need a refresh.
+        for (let i = item.photos?.length - 1; i >= 0; i--) {
+            // Don't remove any photos we just created (they are still unprocessed)
+            if (newPhotoIds.includes(item.photos[i].id) === false && imagesToRefresh.includes(item.photos[i].id) === false) {
+                item.photos.splice(i, 1);
+            } else {
+                console.log("(Re)fresh photo:", item.photos[i].id);
+            }
+        }
+
+        // Make sure the photos actually belong to this item.
+        if (imagesToDelete.every(item => allExistingPhotoIds.includes(item))) {
+            // Do not remove items that were flagged as both 'refresh' and 'delete'
+            const toActuallyDelete = imagesToDelete.filter((el) => !imagesToRefresh.includes(el));
+
+            console.log("Images to Actually DELETE:", toActuallyDelete);
+            await db.item.update({
+                where: {
+                    id: item.id
+                },
+                data: {
+                    photos: {
+                        deleteMany: {
+                            id: {
+                                in: toActuallyDelete
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("DELETED!");
+        } else {
+            throw "Illegal to delete one or more of images " + JSON.stringify(imagesToDelete);
+        }
+
+        // TODO?: delete files on disk for entities being refreshed
+        console.log("Photos we will deal with going forward:", item.photos);
+    } catch (ex) {
+        console.error("Failed to deal with deletion/refresh of images", ex);
+    }
+}
+
+
+async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }, allExistingIds: number[], preExistingIds: number[], item: Item | null)
+{
+    try {
+        let toDelete = JSON.parse(data.delete_documents as string);
+        let toRefresh = JSON.parse(data.refresh_documents as string);
+
+        console.log({ toDelete, toRefresh });
+
+        // Store the document IDs that were created this post (just now) (difference between before insert and now)
+        const newIds = [...allExistingIds.filter(elt1 => preExistingIds.every(elt2 => elt2 != elt1))];
+
+        // Remove all documents (from DB result array) that do not need a refresh.
+        for (let i = item.documents?.length - 1; i >= 0; i--) {
+            // Don't remove any documents we just created (they are still unprocessed)
+            if (newIds.includes(item.documents[i].id) === false && toRefresh.includes(item.documents[i].id) === false) {
+                item.documents.splice(i, 1);
+            } else {
+                console.log("(Re)fresh document:", item.documents[i].id);
+            }
+        }
+
+        // Make sure the documents actually belong to this item.
+        if (toDelete.every(item => allExistingIds.includes(item))) {
+            // NOTE: This behaves differently than images, we will delete refreshed ones too
+            const toActuallyDelete = [ ...toRefresh, ...toDelete ];
+
+            console.log("Documents to Actually DELETE (which includes refresh ones):", toActuallyDelete);
+
+            await db.item.update({
+                where: {
+                    id: item.id
+                },
+                data: {
+                    documents: {
+                        deleteMany: {
+                            id: {
+                                in: toActuallyDelete
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("DELETED!");
+
+        } else {
+            throw "Illegal to delete one or more of documents " + JSON.stringify(toDelete);
+        }
+
+        // TODO?: delete files on disk for entities being refreshed
+
+
+        const refreshUrls = item.documents.map((doc) => {
+            if(toRefresh.includes(doc.id))
+                return /*doc.type + " " +*/ doc.source;
+            }
+        );
+
+        // console.log("Documents we will deal with going forward:", item.documents);
+        console.log("Documents we will deal with going forward:", refreshUrls);
+
+        if(refreshUrls.length > 0) {
+            return refreshUrls.join("\n");
+        }
+
+    } catch (ex) {
+        console.error("Failed to deal with deletion/refresh of documents", ex);
+        return "";
+    }
+}
+
+
