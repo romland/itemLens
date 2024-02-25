@@ -17,8 +17,20 @@ export const load = (async ({ locals, url }) => {
         },
         take: 10,
         skip: page == 1 ? 0 : (page - 1) * 10,
-        orderBy: [{ id: 'desc'}]
+        orderBy: [{ id: 'desc'}],
+        include: {
+            locations: {
+                include: {  
+                    container: true,
+                }
+            },
+            "photos" : true,
+            "tags" : true,
+            "documents": true,      // a bit wasteful as I really only need the count()
+        }
     });
+
+    console.log("search result:", items);
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;
