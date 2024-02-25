@@ -59,18 +59,19 @@
                         </td>
 
                         <td>
-                            <a href="/{item.id}/{item.slug}">{item.title}</a>
-                        </td>
+                            <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
+                        <!-- </td> -->
 {#if !brief}
-                        <td class="hidden lg:block" width="100%">
-                            <div class="" style="overflow: hidden; text-overflow: ellipsis; max-height: 4em;">
+                        <!-- <td> -->
+                        <div class="hidden lg:block">
+                            <div class=";" style="overflow: hidden; text-overflow: ellipsis; max-height: 3em;">
                                 <a href="/{item.id}/{item.slug}">
                                     {item.description}
                                 </a>
                             </div>
 
                             <!--div class="invisible lg:visible"-->
-                            <div class="hidden lg:block">
+                            <div class="hidden lg:block pt-2">
                                 {#each item?.tags as tag}
                                     <div class="badge badge-ghost badge-sm">
                                         <a href="/tag/{tag.slug}">{tag.name}</a>
@@ -89,12 +90,17 @@
                                 </div>
                                 
                             </div>
+                        </div>
+{/if}                        
                         </td>
+{#if !brief}
                         <td class="whitespace-nowrap ">
                             <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+                            <!--
                             <Delete message='Delete this item: {item.title}?' action='/{item.id}/delete' />
+                            -->
                         </td>
 {/if}                        
                     </tr>

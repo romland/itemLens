@@ -2,7 +2,7 @@
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
     import { refine, refineForLLM } from "$lib/shared/ocrparser";
-    import { beforeNavigate } from '$app/navigation'
+    import { afterNavigate, beforeNavigate } from '$app/navigation'
     import { marked } from "marked";
     
     export let data: PageServerData;
@@ -13,7 +13,6 @@
     let classTrash = []
     let classBlip = [];
     
-    
     beforeNavigate(() => {
         {
             if(refreshIntervalId) {
@@ -21,10 +20,16 @@
             }
         }
     });
-    
-    
+
+    // Issue: https://kit.svelte.dev/docs/state-management#component-and-page-state-is-preserved
+    afterNavigate(() => {
+        refineItemData();
+    });
+
     function refineItemData()
     {
+        console.log("refineItemData");
+
         if(data.item?.photos?.length > 0) {
             productPhotos = data.item.photos.filter((photo) => { return photo.type === "product" });
             invoicePhotos = data.item.photos.filter((photo) => { return photo.type === "invoice or receipt" });
@@ -88,8 +93,6 @@
         //  console.log(classTrash, classBlip);
     }
     
-    refineItemData();
-    
     function getClassTrash(photo)
     {
         const cls = JSON.parse(photo.classTrash);
@@ -152,8 +155,7 @@
             <Delete message='Delete this item?' action='/{data.item?.id}/delete' />
         </div>
     </div>
-    
-    
+
     {#if productPhotos?.length > 0}
         <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
             {#each productPhotos as photo, i}
@@ -166,7 +168,6 @@
                 </div> 
             {/each}
         </div>
-        
         <div class="flex justify-center w-full py-2 gap-2">
             {#each productPhotos as photo, i}
                 <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn btn-xs">
@@ -291,20 +292,6 @@
        </div>
     </div>
     
-<!--
-    
-                <input type="radio" name="my_tabs_2" role="tab" class="tab whitespace-nowrap" aria-label="{doc.title.substr(0,32)}" checked={i==1}/>
-                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6 w-full prose prose-sm max-w-none">
-                    {@html alterSummary(doc.summary)}
-                    <br/><br/>
-
-                    <div class="flex justify-starts">
-                        <img width="32" align="top" src="/images/i/document.svg" alt="document"/>
-                        <a href="{doc.path}" target="_blank">{doc.source}</a>
-                    </div>
-                </div>
-
--->
     <div class="border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold">
             Purchase Information
@@ -317,6 +304,5 @@
         </div>
         
     </div>
-    
     
 </article>
