@@ -82,11 +82,12 @@ model Photo {
 
 model Document {
   id       Int     @id @unique @default(autoincrement())
-  type     String? // E.g. invoice, information, product-page, ...
+  type     String?  // E.g. invoice, information, product-page, ...
   title    String
-  source   String // AKA url
+  source   String   // AKA url
   path     String
-  extracts String // AKA extracts
+  extracts String   // AKA extracts
+  summary  String?  // Comes from LLM based on extract
 
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int

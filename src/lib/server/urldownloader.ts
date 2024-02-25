@@ -2,6 +2,7 @@ import Jimp from 'jimp';
 import jsQR from 'jsqr';
 import { downloadQRURLs, getSafeFilename } from './photouploads';
 import fs from 'fs';
+import { summarizeWebpageExtract } from './llm';
 
 export async function downloadAndStoreDocuments(item: Item, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
@@ -67,6 +68,24 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
       } catch (ex) {
         console.error(`Error updating document in DB (${line}):`, ex);
         continue;
+      }
+
+      if(pageData.extracts.length > 0 && pageData.extracts[0].length > 50) {
+        try {
+          const summary = await summarizeWebpageExtract(pageData.extracts[0])
+          await db.document.update({
+            where: {
+              id : document?.id
+            },
+            data: {
+              summary: summary
+            }
+          });
+          console.log("Have summary of webpage:", summary);
+        } catch (ex) {
+          console.error(`Error updating document in DB (${line}):`, ex);
+          continue;
+        }
       }
 
       console.log("Downloaded explicitly stated URL:", line);

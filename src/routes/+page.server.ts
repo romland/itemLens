@@ -17,7 +17,8 @@ export const load = (async ({ locals, url }) => {
                 }
             },
             "photos" : true,
-            "tags" : true
+            "tags" : true,
+            "documents": true,      // a bit wasteful as I really only need the count()
         }
     });
 

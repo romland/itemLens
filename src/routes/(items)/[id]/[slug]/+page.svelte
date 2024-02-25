@@ -4,6 +4,7 @@
     import Title from "$lib/components/Title.svelte";
     import { refine, refineForLLM } from "$lib/shared/ocrparser";
     import { beforeNavigate } from '$app/navigation'
+    import { marked } from "marked";
     
     export let data: PageServerData;
     
@@ -103,6 +104,15 @@
             return cls.replace('"', "").replace("Caption:", "");
         }
         return "";
+    }
+
+    function alterSummary(txt)
+    {
+        if(!txt) return "";
+
+        // TODO: Security. Sanitize?
+        // markdownHtml = marked.parse(data.item?.description!, {gfm:true,breaks:true});
+        return marked.parse(txt, {gfm:true,breaks:true});
     }
     
     if(typeof window !== 'undefined') {
@@ -255,18 +265,49 @@
     </div>
     
     <div class="border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold">
+        <div class="title font-bold  mb-3">
             More information
         </div>
         
-        <div class="justify-between items-center">
-            {#each data.item.documents as doc}
-                {doc.source}
-                {JSON.stringify(doc.extracts)}
+        <div role="tablist" class="tabs  tabs-bordered w-full">
+            {#each data.item.documents as doc,i}
+                <div class="collapse collapse-arrow bg-base-200 mb-1">
+                    <input type="radio" name="my-accordion-2" checked={i===0} />
+                    <div class="collapse-title ">
+                        {doc.title}
+                    </div>
+                    <div class="collapse-content prose prose-sm max-w-none"> 
+                        {@html alterSummary(doc.summary)}
+                        <br/><br/>
+    
+                        <div class="flex justify-starts">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+
+                            <a href="{doc.path}" target="_blank">{doc.source}</a>
+                        </div>
+    
+                    </div>
+                </div>
             {/each}
-        </div>
+       </div>
     </div>
     
+<!--
+    
+                <input type="radio" name="my_tabs_2" role="tab" class="tab whitespace-nowrap" aria-label="{doc.title.substr(0,32)}" checked={i==1}/>
+                <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6 w-full prose prose-sm max-w-none">
+                    {@html alterSummary(doc.summary)}
+                    <br/><br/>
+
+                    <div class="flex justify-starts">
+                        <img width="32" align="top" src="/images/i/document.svg" alt="document"/>
+                        <a href="{doc.path}" target="_blank">{doc.source}</a>
+                    </div>
+                </div>
+
+-->
     <div class="border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold">
             Purchase Information
