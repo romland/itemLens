@@ -4,7 +4,7 @@
     import Delete from "./delete.svelte";
 
     export let items: Item[];
-    export let brief: false;
+    export let brief: boolean = false;
 
     function getFirstProductPhoto(item)
     {

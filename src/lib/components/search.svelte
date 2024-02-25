@@ -34,7 +34,7 @@
     {
         setTimeout(() => {
             resultsAsYouType.classList.remove("dropdown-open");
-        }, 100);
+        }, 50);
     }
 </script>
 
@@ -46,13 +46,13 @@
         </div>
 
         <!-- search as you type -->
-        {#if items?.length > 0}
-            <div id="resultsAsYouType" class="dropdown border-solid dropdown-open">
-                <div class="dropdown-content z-[1] menu p-2 shadow bg-slate-800 rounded-box grow w-96">
+        <div id="resultsAsYouType" class:hidden={items.length === 0} class="dropdown border-solid dropdown-open">
+            <div class="dropdown-content z-[1] menu p-2 shadow bg-slate-800 rounded-box grow w-96">
+                {#if items?.length > 0}
                     <Items items={items} brief={true}/>
-                </div>
+                {/if}
             </div>
-        {/if}
+        </div>
 
     </div>
 </form>
