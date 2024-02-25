@@ -4,6 +4,7 @@
     import Delete from "./delete.svelte";
 
     export let items: Item[];
+    export let brief: false;
 
     function getFirstProductPhoto(item)
     {
@@ -57,10 +58,10 @@
                             {/each}
                         </td>
 
-                        <td width="20%">
+                        <td>
                             <a href="/{item.id}/{item.slug}">{item.title}</a>
                         </td>
-
+{#if !brief}
                         <td class="hidden lg:block" width="100%">
                             <div class="" style="overflow: hidden; text-overflow: ellipsis; max-height: 4em;">
                                 <a href="/{item.id}/{item.slug}">
@@ -88,15 +89,14 @@
                                 </div>
                                 
                             </div>
-
                         </td>
-                        
                         <td class="whitespace-nowrap ">
                             <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                             <Delete message='Delete this item: {item.title}?' action='/{item.id}/delete' />
                         </td>
+{/if}                        
                     </tr>
                 {/each}
                 
