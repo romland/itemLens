@@ -1,1 +1,1 @@
-<title>itemLens: <slot/></title>
+<title><slot/> | itemLens</title>
