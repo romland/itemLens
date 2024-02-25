@@ -191,7 +191,7 @@ console.log("formData:", orgData);
         // Refresh takes presedence over delete (that is, if something is 
         // both deleted and refreshed, refresh wins)
         await refreshDeleteImages(data, allExistingPhotoIds, preExistingPhotoIds, item);
-        data.urls += await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
+        data.urls += "\n" + await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
         downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
 
@@ -309,11 +309,9 @@ async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }
         }
 
         // TODO?: delete files on disk for entities being refreshed
-
-
         const refreshUrls = item.documents.map((doc) => {
-            if(toRefresh.includes(doc.id))
-                return /*doc.type + " " +*/ doc.source;
+                if(toRefresh.includes(doc.id))
+                    return /*doc.type + " " +*/ doc.source;
             }
         );
 
@@ -323,6 +321,8 @@ async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }
         if(refreshUrls.length > 0) {
             return refreshUrls.join("\n");
         }
+
+        return "";
 
     } catch (ex) {
         console.error("Failed to deal with deletion/refresh of documents", ex);

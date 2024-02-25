@@ -23,12 +23,15 @@
 
     // Issue: https://kit.svelte.dev/docs/state-management#component-and-page-state-is-preserved
     afterNavigate(() => {
+        if(refreshIntervalId) {
+            clearInterval(refreshIntervalId);
+        }
         refineItemData();
     });
 
     function refineItemData()
     {
-        console.log("refineItemData");
+        console.log("refineItemData", data.item.id);
 
         if(data.item?.photos?.length > 0) {
             productPhotos = data.item.photos.filter((photo) => { return photo.type === "product" });
@@ -161,7 +164,7 @@
             {#each productPhotos as photo, i}
                 <div id="carousel-item{i}" class="carousel-item w-full justify-center">
                     {#if productPhotos[i].cropPath}
-                        <img src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" class="">
+                        <img src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" class="object-scale-down ">
                     {:else}
                         <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
                     {/if}
@@ -191,11 +194,9 @@
     </div>
     {/if}
     
-    
-    
     <div class="overflow-x-auto">
         Attributes<b3/>
-        <table class="table">
+        <table class="table prose">
             <tbody>
                 {#each data.item.attributes as attrib}
                     <tr>

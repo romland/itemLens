@@ -16,6 +16,7 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
     // Download all URLs in the URLs field (TODO: SECURITY?)
     //
     const lines = (data.urls as string).split("\n");
+
     for(let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if(!QRUrlDownloader.isURL(line)) {
