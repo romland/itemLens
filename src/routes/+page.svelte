@@ -3,14 +3,13 @@
     import Navigation from "$lib/components/navigation.svelte";
     import Items from "$lib/components/items.svelte";
     import Search from "$lib/components/search.svelte";
-    import Title from "$lib/components/Title.svelte";
     
     export let data: PageServerData;
+
+    import pageTitle from '$lib/stores';
+    pageTitle.set(":)");
 </script>
 
-<svelte:head>
-    <Title>Home</Title>
-</svelte:head>
 
 <!--
     <Search />

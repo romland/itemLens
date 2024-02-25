@@ -5,7 +5,6 @@
     import { marked } from "marked";
 
     import Alert from "$lib/components/alert.svelte";
-    import Title from "$lib/components/Title.svelte";
     import QRreader from "$lib/components/QRreader.svelte";
     import MultiImageUpload from "$lib/components/MultiImageUpload.svelte";
     import MultiImageFetcher from "$lib/components/MultiImageFetcher.svelte";
@@ -49,12 +48,9 @@
         notifications.push({status, message:ev.detail});
     }
 
-
+    import pageTitle from '$lib/stores';
+    pageTitle.set("Edit " + data.item?.title);
 </script>
-
-<svelte:head>
-    <Title>Edit Item</Title>
-</svelte:head>
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>

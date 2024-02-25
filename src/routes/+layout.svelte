@@ -41,13 +41,12 @@
     })
 
 
-    // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
-    // https://caniuse.com/view-transitions
-    //
-    // Safari: https://github.com/WebKit/standards-positions/issues/48
-    // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1823896
     onNavigate((navigation) => {
-        document.title = "foo";
+        // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
+        // https://caniuse.com/view-transitions
+        //
+        // Safari: https://github.com/WebKit/standards-positions/issues/48
+        // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1823896
         if (!document.startViewTransition) {
             console.warn("No startViewTransition");
             return;
@@ -87,13 +86,12 @@
     </div>
     */
 
+    import pageTitle from '$lib/stores';
 </script>
 
 <svelte:head> 
   {@html webManifest} 
-  <style>
-
-  </style>
+  <title>{$pageTitle} | itemLens</title>
 </svelte:head>
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">

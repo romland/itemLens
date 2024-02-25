@@ -19,7 +19,16 @@ export const load = (async ({ params, url }) => {
                 }
             }
         },
-        include: { photos: true, tags: true }
+        include: {
+            locations: {
+                include: {  
+                    container: true,
+                }
+            },
+            "photos" : true,
+            "tags" : true,
+            "documents": true,      // a bit wasteful as I really only need the count()
+        }
     });
 
     const prevPage = page == 1 ? 0 : page - 1;

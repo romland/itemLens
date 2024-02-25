@@ -8,7 +8,7 @@
 
     function getFirstProductPhoto(item)
     {
-        for(let i = 0; i < item.photos.length; i++) {
+        for(let i = 0; i < item?.photos?.length; i++) {
             if(item.photos[i].type === "product") {
                 return item.photos[i].thumbPath;
             }
@@ -43,7 +43,7 @@
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12">
                                         <a href="/{item.id}/{item.slug}">
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{getFirstProductPhoto(item)}" alt="{item.name}"/>
+                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{getFirstProductPhoto(item)}" alt="{item?.name}"/>
                                         </a>
                                     </div>
                                 </div>

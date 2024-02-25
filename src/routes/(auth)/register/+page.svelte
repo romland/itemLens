@@ -4,11 +4,11 @@
     import type { ActionData } from "./$types";
 
     export let form: ActionData;
-</script>
 
-<svelte:head>
-    <title>Register New User</title>
-</svelte:head>
+    import pageTitle from '$lib/stores';
+    pageTitle.set("Register");
+
+</script>
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>

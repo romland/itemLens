@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
-    import Title from "$lib/components/Title.svelte";
     import { refine, refineForLLM } from "$lib/shared/ocrparser";
     import { beforeNavigate } from '$app/navigation'
     import { marked } from "marked";
@@ -134,13 +133,11 @@
             }, 2000);   // TODO XXX: once per second is a bit excessive, but fine for now
         }
     }
-    
-    // console.log("data.item:", data.item);
-</script>
 
-<svelte:head>
-    <Title>{data.item?.title}</Title>
-</svelte:head>
+    
+    import pageTitle from '$lib/stores';
+    pageTitle.set(data.item?.title);
+</script>
 
 <article style="padding-bottom: 100px;" class="">
     

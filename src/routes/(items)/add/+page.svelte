@@ -69,11 +69,11 @@
     }
 
 $:  console.log("Form changed:", form);
-</script>
 
-<svelte:head>
-    <Title>Add new product</Title>
-</svelte:head>
+
+    import pageTitle from '$lib/stores';
+    pageTitle.set("Add new product");
+</script>
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>
