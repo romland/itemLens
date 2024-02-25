@@ -8,7 +8,6 @@
     import { photoTypes } from "$lib/shared/constants.ts";
 
     import Alert from "$lib/components/alert.svelte";
-    import Title from "$lib/components/Title.svelte";
     import QRreader from "$lib/components/QRreader.svelte";
     import MultiImageUpload from "$lib/components/MultiImageUpload.svelte";
     import MultiImageFetcher from "$lib/components/MultiImageFetcher.svelte";
