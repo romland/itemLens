@@ -20,7 +20,9 @@ export const load = (async ({ locals, params }) => {
             tags: true,
             locations: {
                 include: {  
-                    container: true,
+                    container: {
+                        include : { parent : true }
+                    },
                 }
             },
             attributes: true,

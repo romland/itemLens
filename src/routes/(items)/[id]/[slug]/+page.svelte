@@ -12,7 +12,8 @@
     let photoAttributes = [];
     let classTrash = []
     let classBlip = [];
-    
+    let currentLightboxImage = null;
+
     beforeNavigate(() => {
         {
             if(refreshIntervalId) {
@@ -145,8 +146,29 @@
     pageTitle.set(data.item?.title);
 </script>
 
+
+<dialog id="lightboxModal" class="modal">
+  <div class="modal-box max-w-none w-8/10">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    <h3 class="font-bold text-lg">
+        Image
+    </h3>
+    <p class="py-4 text-center ">
+        <img src="{currentLightboxImage?.cropPath}" class="object-scale-down h-full w-full"/>
+        <span class="text-xs">
+            Tap x, press ESC key or click outside to close.
+        </span>
+    </p>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
 <article style="padding-bottom: 100px;" class="">
-    
+
     <div class="flex justify-between items-center border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold">
             {data.item?.title}
@@ -164,21 +186,48 @@
             {#each productPhotos as photo, i}
                 <div id="carousel-item{i}" class="carousel-item w-full justify-center">
                     {#if productPhotos[i].cropPath}
-                        <img src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" class="object-scale-down ">
+                        <img on:click={(ev)=>{currentLightboxImage = productPhotos[i]; lightboxModal.showModal()}} src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" class="object-scale-down">
                     {:else}
                         <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
                     {/if}
                 </div> 
             {/each}
         </div>
-        <div class="flex justify-center w-full py-2 gap-2">
+        <div class="flex justify-start w-full py-2 gap-1">
             {#each productPhotos as photo, i}
-                <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn btn-xs">
-                    {i+1}
+                <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
+                    <img class="object-scale-down w-10 h-10" src="{photo.cropPath}"/>
                 </button>
             {/each}
         </div>
     {/if}
+
+
+    <div class="stats shadow">
+        <div class="stat">
+            {#each data.item.locations as loc, i}
+                {#if i === 0}
+                    <div class="stat-figure text-secondary">
+                        {#if loc.container.parent?.photoPath}
+                            <img class="h-16 w-16" src="{loc.container.parent.photoPath}"/>
+                        {:else}
+                            <img class="h-16 w-16" src="/images/containers/{loc.container.parentId}_thumb.jpg"/>
+                        {/if}
+                    </div>
+                    <div class="stat-title">
+                        <span class="text-xs">{loc.container?.parent?.description}</span>
+                    </div>
+                    <div class="stat-value text-secondary">
+                        {loc.containerName}
+                    </div>
+                {:else}
+                    <div class="stat-desc">
+                        <div class="badge badge-ghost">{loc.containerName}</div>
+                    </div>
+                {/if}
+            {/each}
+        </div>
+    </div>
     
     <div class="content prose max-w-none mb-3">
         {@html data.item?.contentToHtml}
@@ -227,16 +276,19 @@
             TODO move
         </div>
 
-        COLORS!
+        {#each data.item.photos as photo}
+            {@const cols=Object.keys(JSON.parse(photo.colors))}
+            {@const names=Object.values(JSON.parse(photo.colors))}
+            {#each cols as col, i}
+                <div class="tooltip m-1 shadow" data-tip="{names[i]}">
+                    <div class="w-10 h-10" style="background-color:{col}"/>
+                </div>
+            {/each}
+        {/each}
 
         <div class="justify-between items-center">
-            {data.item.amount}<br/>
-            {data.item.reason}<br/>
-            
-            {#each data.item.locations as location}
-                {location.containerName}
-                <img src="/images/containers/{location.container.parentId}_thumb.jpg"/>
-            {/each}
+            Amount: {data.item.amount}<br/>
+            Reason: {data.item.reason}<br/>
             <br/>
             
             {#each otherPhotos as photo}
