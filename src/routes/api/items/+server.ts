@@ -11,6 +11,7 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 export async function GET({ url }) {
     const q = String(url.searchParams.get('q')).trim();
     const page = Number(url.searchParams.get('page') ?? '1');
+    const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
 
     const items = await db.item.findMany({
         where: {
@@ -22,8 +23,8 @@ export async function GET({ url }) {
             //     { authorId: locals.user.id },
             // ]
         },
-        take: 10,
-        skip: page == 1 ? 0 : (page - 1) * 10,
+        take: count,
+        skip: page == 1 ? 0 : (page - 1) * count,
         orderBy: [{ id: 'desc'}],
         include: {
             locations: {
@@ -38,7 +39,7 @@ export async function GET({ url }) {
     });
 
     const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = items.length < 10 ? 0 : page + 1;
+    const nextPage = items.length < count ? 0 : page + 1;
 
     return new Response(JSON.stringify({ q, items, prevPage, nextPage }));
 }
