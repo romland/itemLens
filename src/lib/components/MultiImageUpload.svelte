@@ -121,7 +121,7 @@
         inputName="images"
         columns={{
             "3":{name:"Image",    fieldName:"orgPath", isImage: true},
-            "4":{name:"Filename", fieldName:"orgPath", isLink: true}
+            "4":{name:"Filename", fieldName:"orgPath", prefix:"type", isLink: true}
         }}
     />
 {/if}

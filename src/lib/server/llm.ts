@@ -1,4 +1,4 @@
-import { refine, refineForLLM } from "$lib/shared/ocrparser";
+import { refine, refineForLLM, toTextDocument } from "$lib/shared/ocrparser";
 import { env } from '$env/dynamic/private';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
@@ -57,7 +57,7 @@ async function extractInvoiceDataOpenAI(ocrData)
 async function extractInvoiceDataGroq(ocrData)
 {
     const prompt = `From the below JSON structure, extract data from it and put it in this new structure:\n` +
-        '```json'+`{ supplier: ...,  products: [ { description: ..., quantity: ..., price: ..., vat: ... }, ` +
+        '```json'+`{ supplier: ...,  items: [ { description: ..., quantity: ..., price: ..., vat: ... }, ` +
         `{ description..., etc }], total: ..., totalIncTaxes, ..., date: ..., invoiceNo: ..., paymentMethod: ... }` + '```\n' +
         `If you see obvious typos, correct them. ` + 
         `Make sure numbers are correctly copied. ` +
@@ -69,7 +69,8 @@ async function extractInvoiceDataGroq(ocrData)
         `Do not give me an explanation. `
         ;
 
-    const refined = refineForLLM(ocrData);
+    // const refined = refineForLLM(ocrData);
+    const refined = toTextDocument(ocrData);
 
     try {
         const chatCompletion = await groq.chat.completions.create({

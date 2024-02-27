@@ -7,14 +7,6 @@
 
     import "../app.css";
 
-    const updateTheme: SubmitFunction = ({ action }) => {
-        const theme = action.searchParams.get('theme');
-
-        if (theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-        }
-    }
-
     // Check out the virtual:pwa-info documentation to learn more about the virtually exposed module pwa-info.
     // https://vite-pwa-org.netlify.app/frameworks/#accessing-pwa-info
     import { onMount } from 'svelte'
@@ -96,37 +88,20 @@
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
   <!-- Mobile menu -->
-  <div class="navbar-start ">
-    <div class="dropdown">
-      <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
-      </div>
-      <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-        <li>
-          <a>
-            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-            <!-- svelte-ignore a11y-label-has-associated-control -->
-            <i class="bi bi-sun"></i>
-            Theme
-          </a>
-          <form method="post" class="form-control" use:enhance={updateTheme}>
-            <ul class="p-2">
-                <li><button formaction="/?theme=light&redirectTo={$page.url.pathname}">Light</button></li> 
-                <li><button formaction="/?theme=dark&redirectTo={$page.url.pathname}">Dark</button></li> 
-            </ul>
-          </form>
-        </li>
-        <li><a>Item 3</a></li>
-      </ul>
-    </div>
-    
+  <div class="navbar-start pl-3">
+    <button on:click={()=>history.back()} class="pt-1">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+      </svg>
+    </button>
+
     <div class="hidden lg:block">
         <a href="/" class="btn btn-ghost text-xl">itemLens</a>
     </div>
   </div>
 
   <div class="navbar-center">
-    <!-- Desktop/tablet menu -->
+    <!-- Extra Desktop/tablet menu -->
     <ul class="menu menu-horizontal px-1 hidden lg:flex">
       <li><a>Item 1</a></li>
       <li>
@@ -140,6 +115,8 @@
       </li>
       <li><a>Item 3</a></li>
     </ul>
+
+    <!-- search; all screens -->
     <div class="form-control items-end">
         <Search />
     </div>
@@ -147,12 +124,12 @@
 
   <div class="navbar-end">
     <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-        <div class="w-10 rounded-full">
-          <img alt="Tailwind CSS Navbar component" src="/images/providi.svg" />
+      <div tabindex="0" role="button" class="btn btn-ghost ">
+        <div class="w-10 ">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
         </div>
       </div>
-      <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+      <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content  bg-slate-800 rounded-box w-52">
         <li>
           <a class="between">
             <i class="bi bi-gear"></i>

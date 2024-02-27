@@ -22,7 +22,7 @@ function refineOCRdBlocks(blocks)
   const refinedBlocks = [];
   for(let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    refinedBlocks.push({
+    const b = {
       box: {
         leftTop : { 
           x: block[0][0][0],
@@ -47,12 +47,17 @@ function refineOCRdBlocks(blocks)
       },
       text: block[1][0],
       confidence: block[1][1],
-      fontSize: normalizedHeights[i]
-    });
+      fontSize: normalizedHeights[i].toFixed(4)
+    };
+
+    b.box.width = b.box.rightTop.x - b.box.leftTop.x;
+    b.avgCharWidth = (b.box.width / b.text.length).toFixed(2);
+    
+    refinedBlocks.push(b);    
   }
 
-  assignLineToBlocks(refinedBlocks);
-  assignColumnToBlocks(refinedBlocks);
+  // assignLineToBlocks(refinedBlocks);
+  // assignColumnToBlocks(refinedBlocks);
   
   // console.log(refinedBlocks);
   // console.log("min", smallest, "max", biggest, "avg", getAverage(heights), "med", getMedian(heights), "mod", getMode(heights), "norm", normalized);
@@ -98,9 +103,11 @@ function minimizeBlocksForLLM(refinedBlocks, normalizedHeights)
     if(block.fontSize < (modeHeight-0.2) || block.fontSize > (modeHeight+0.2) || block.confidence < 0.85) {
       continue
     }
-    delete block.estimatedCell;
-    delete block.confidence;
+    // delete block.estimatedCell;
+    // delete block.confidence;
     delete block.fontSize;
+    delete block.box.width;
+    delete block.box.height;
     keptBlocks.push(block);
   }
 
@@ -243,3 +250,31 @@ function getMode(numbers: number[])
   return Object.keys(frequencyMap).filter(num => frequencyMap[num] === maxFrequency).map(Number)[0];
 }
 
+export function toTextDocument(ocr)
+{
+  let boxes = refine(ocr);
+  // We will assume that the 'boxes' array contains the box objects.
+  boxes.sort((box1, box2) => box1.box.leftTop.y - box2.box.leftTop.y);  
+  // Sort top to bottom.
+
+  let linesCount = 60; // This is just an example. Adjust this number.
+  let totalHeight = 2480; 
+  let lineHeight = totalHeight / linesCount;  
+
+  let lines = Array(linesCount).fill(" "); 
+
+  boxes.forEach((box) => {  
+    let line = Math.floor(box.box.leftTop.y / lineHeight);  
+    // Calculate which line this box belongs to.
+    let spaces = Math.floor(box.box.leftTop.x / 100);  
+    // Creating spaces (horizontally moving the text).
+
+    lines[line] += " ".repeat(spaces) + box.text;  
+    // Add spaces and then the text to the line.
+  });
+
+  let result = lines.join("\n");
+
+  console.log("Text invoice:", result);
+  return result;
+}

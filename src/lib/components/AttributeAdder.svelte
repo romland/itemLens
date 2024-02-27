@@ -44,7 +44,7 @@
         }
     }
 
-    function pasteHTML(pasted)
+    function pasteHTML(pasted, valueCellIndex = 1)
     {
         const pastedKVPs = [];
 
@@ -65,6 +65,23 @@
             tr = [...tr, ...tables[i].querySelectorAll("tr")]
         }
 
+        if(tr.length > 0) {
+            const cellCount = tr[0].querySelectorAll("td,th").length;
+
+            if(cellCount > 2) {
+                // TODO: Replace this with a more HTML-y solution which show what is in which column.
+                const promptRes = prompt(`There are more than two columns.\n\nSelect which column contains the value (2-${cellCount}).\nDefault is taking second column (2).`);
+                valueCellIndex = parseInt(promptRes, 10);
+                if((""+valueCellIndex) !== promptRes) {
+                    console.warn("Invalid column index, taking default: 1 (second column)");
+                    valueCellIndex = 1;
+                } else {
+                    // reduce one (since we asked for +1 (first col is key))
+                    valueCellIndex--;
+                }
+            }
+        }
+
         for(let i = 0; i < tr.length; i++) {
             const td = tr[i].querySelectorAll("td,th");
 
@@ -77,7 +94,7 @@
             // TODO: We probably need to remove pointless stuff here like tooltips,
             // Like at e.g. tweakers.net: https://tweakers.net/pricewatch/1562568/raspberry-pi-4-model-b-8gb-ram/specificaties/
             let keyCell = td[0].innerText || "";
-            const valueCell = td[1].innerText || "";
+            const valueCell = td[valueCellIndex].innerText || "";
 
             // Remove last character if it's a :
             if(keyCell.length > 0 && keyCell.endsWith(":")) {

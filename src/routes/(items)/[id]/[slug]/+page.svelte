@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
-    import { refine, refineForLLM } from "$lib/shared/ocrparser";
+    import { toTextDocument, refine, refineForLLM } from "$lib/shared/ocrparser";
     import { afterNavigate, beforeNavigate } from '$app/navigation'
     import { marked } from "marked";
     
@@ -137,35 +137,26 @@
                 data.item = item;
                 refineItemData();
                 fetchDone = true;
-            }, 2000);   // TODO XXX: once per second is a bit excessive, but fine for now
+            }, 5000);   // TODO XXX: once per second is a bit excessive, but fine for now
         }
     }
 
+    let done = false;
+$:  if(!done && invoicePhotos.length > 0) {
+        const p = invoicePhotos[0];
+        const end = p.llmAnalysis.lastIndexOf("}");
+        const start = p.llmAnalysis.indexOf("{");
+        const json = p.llmAnalysis.slice(start, end + 1);
+        console.log(json);
+        console.log(
+            JSON.parse(json)
+        );
+
+    }
     
     import pageTitle from '$lib/stores';
     pageTitle.set(data.item?.title);
 </script>
-
-
-<dialog id="lightboxModal" class="modal">
-  <div class="modal-box max-w-none w-8/10">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-    </form>
-    <h3 class="font-bold text-lg">
-        Image
-    </h3>
-    <p class="py-4 text-center ">
-        <img src="{currentLightboxImage?.cropPath}" class="object-scale-down h-full w-full"/>
-        <span class="text-xs">
-            Tap x, press ESC key or click outside to close.
-        </span>
-    </p>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
 
 <article style="padding-bottom: 100px;" class="">
 
@@ -181,157 +172,169 @@
         </div>
     </div>
 
-    {#if productPhotos?.length > 0}
-        <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
-            {#each productPhotos as photo, i}
-                <div id="carousel-item{i}" class="carousel-item w-full justify-center">
-                    {#if productPhotos[i].cropPath}
-                        <img on:click={(ev)=>{currentLightboxImage = productPhotos[i]; lightboxModal.showModal()}} src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" class="object-scale-down">
-                    {:else}
-                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
-                    {/if}
-                </div> 
-            {/each}
+    <!-- flex flex-row -->
+    <div class="flex flex-col md:flex-row w-full space-x-4">
+        <div class="basis-4/5 pl-2">
+            {#if productPhotos?.length > 0}
+                <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
+                    {#each productPhotos as photo, i}
+                        <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in">
+                            {#if productPhotos[i].cropPath}
+                                <img 
+                                    on:click={(ev)=>{currentLightboxImage = productPhotos[i]; lightboxModal.showModal()}} 
+                                    src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" 
+                                    class="object-scale-down">
+                            {:else}
+                                <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
+                            {/if}
+                        </div> 
+                    {/each}
+                </div>
+                <div class="flex justify-start w-full py-2 gap-1">
+                    {#each productPhotos as photo, i}
+                        <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
+                            <img class="object-scale-down w-10 h-10" src="{photo.cropPath}"/>
+                        </button>
+                    {/each}
+                </div>
+            {/if}
         </div>
-        <div class="flex justify-start w-full py-2 gap-1">
-            {#each productPhotos as photo, i}
-                <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
-                    <img class="object-scale-down w-10 h-10" src="{photo.cropPath}"/>
-                </button>
-            {/each}
-        </div>
-    {/if}
 
-
-    <div class="stats shadow">
-        <div class="stat">
-            {#each data.item.locations as loc, i}
-                {#if i === 0}
+        <div class="w-3/5">
+            <div class="stats shadow">
+                <div class="stat">
                     <div class="stat-figure text-secondary">
-                        {#if loc.container.parent?.photoPath}
-                            <img class="h-16 w-16" src="{loc.container.parent.photoPath}"/>
-                        {:else}
-                            <img class="h-16 w-16" src="/images/containers/{loc.container.parentId}_thumb.jpg"/>
-                        {/if}
                     </div>
                     <div class="stat-title">
-                        <span class="text-xs">{loc.container?.parent?.description}</span>
+                        <span class="text-xs">Stock</span>
                     </div>
                     <div class="stat-value text-secondary">
-                        {loc.containerName}
+                        {data.item.amount}
                     </div>
-                {:else}
-                    <div class="stat-desc">
-                        <div class="badge badge-ghost">{loc.containerName}</div>
-                    </div>
-                {/if}
-            {/each}
+                    <div class="stat-desc">&nbsp;</div>
+                </div>
+                <div class="stat">
+                    {#each data.item.locations as loc, i}
+                        {#if i === 0}
+                            <div class="stat-figure text-secondary">
+                                {#if loc.container.parent?.photoPath}
+                                    <img class="h-18" src="{loc.container.parent.photoPath}"/>
+                                {:else}
+                                    <img class="h-18" src="/images/containers/{loc.container.parentId}_thumb.jpg"/>
+                                {/if}
+                            </div>
+                            <div class="stat-title">
+                                <span class="text-xs">{loc.container?.parent?.description}</span>
+                            </div>
+                            <div class="stat-value text-secondary">
+                                {loc.containerName}
+                            </div>
+
+                            {#if data.item.locations.length === 1}
+                                <div class="stat-desc">&nbsp;</div>
+                            {/if}
+                        {:else}
+                            <div class="stat-desc">
+                                <div class="badge badge-ghost">{loc.containerName}</div>
+                            </div>
+                        {/if}
+                    {/each}
+                </div>
+
+            </div>
+
+            {#if data.item.reason}
+                <div class="mb-3 text-sm">
+                    Reason: {data.item.reason}<br/>
+                </div>
+            {/if}
+
+            {#if data.item?.tags}
+                <div class="flex flex-wrap justify-center gap-3">
+                    {#each data.item?.tags as tag}
+                        <div class="badge badge-ghost">
+                            <a href="/tag/{tag.slug}">{tag.name}</a>
+                        </div>
+                    {/each}
+                </div>
+            {/if}
         </div>
     </div>
-    
-    <div class="content prose max-w-none mb-3">
-        {@html data.item?.contentToHtml}
-    </div>
-    
-    {#if data.item?.tags}
-    <div class="flex flex-wrap justify-center gap-3">
-        {#each data.item?.tags as tag}
-            <div class="badge badge-ghost">
-                <a href="/tag/{tag.slug}">{tag.name}</a>
+
+    {#if data.item?.contentToHtml?.length > 0}
+        <div class="content prose max-w-none mb-3">
+            {@html data.item?.contentToHtml}
+        </div>
+    {/if}
+
+    {#if data.item.attributes.length > 0}
+        <div class="title font-bold  mb-3">
+            Attributes
+        </div>
+
+        <div class="flex flex-col md:flex-row w-full">
+
+            <div class="overflow-x-auto">
+                <table class="table content prose max-w-none">
+                    <tbody>
+                        {#each data.item.attributes as attrib}
+                            <tr>
+                                <td>
+                                    {attrib.key}
+                                </td>
+                                <td>
+                                    {attrib.value}
+                                </td>
+                            </tr>
+                        {/each}
+
+                        {#each photoAttributes as attrib}
+                            <tr>
+                                <td>
+                                    {attrib.key}
+                                </td>
+                                <td>
+                                    {attrib.value}
+                                </td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
             </div>
-        {/each}
-    </div>
+        </div>
     {/if}
     
-    <div class="overflow-x-auto">
-        Attributes<b3/>
-        <table class="table prose">
-            <tbody>
-                {#each data.item.attributes as attrib}
-                    <tr>
-                        <td>
-                            {attrib.key}
-                        </td>
-                        <td>
-                            {attrib.value}
-                        </td>
-                    </tr>
-                {/each}
-                {#each photoAttributes as attrib}
-                    <tr>
-                        <td>
-                            {attrib.key}
-                        </td>
-                        <td>
-                            {attrib.value}
-                        </td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    
     <div class="border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold">
-            TODO move
-        </div>
+        {#if otherPhotos.length > 0}
+            <div class="title font-bold  mb-3">
+                More information
+            </div>
 
-        {#each data.item.photos as photo}
-            {@const cols=Object.keys(JSON.parse(photo.colors))}
-            {@const names=Object.values(JSON.parse(photo.colors))}
-            {#each cols as col, i}
-                <div class="tooltip m-1 shadow" data-tip="{names[i]}">
-                    <div class="w-10 h-10" style="background-color:{col}"/>
-                </div>
-            {/each}
-        {/each}
+            <div class="mb-3">
+                {#each otherPhotos as photo}
+                    <img 
+                        on:click={(ev)=>{currentLightboxImage = photo; lightboxModal.showModal()}}
+                        src="{photo.orgPath}"
+                        class="w-32 h-32 cursor-zoom-in">
+                {/each}
+            </div>
+        {/if}
 
-        <div class="justify-between items-center">
-            Amount: {data.item.amount}<br/>
-            Reason: {data.item.reason}<br/>
-            <br/>
-            
-            {#each otherPhotos as photo}
-                <img src="{photo.orgPath}" class="">
-            {/each}
-            <br/>
-            
-            Product page status<br/>
-            <ul class="steps">
-                <li class="step step-primary">
-                    Uploaded information
-                </li>
-                <li class:step-primary={data.item.photos.length > 0 && data.item.photos[data.item.photos.length-1].cropPath} class="step">
-                    Processed photos
-                </li>
-                <li class="step">
-                    Downloaded documents
-                </li>
-                <li class="step">
-                    Processed invoice
-                </li>
-            </ul>
-            
-        </div>
-    </div>
-    
-    <div class="border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold  mb-3">
-            More information
+            Local archive
         </div>
-        
+
         <div role="tablist" class="tabs  tabs-bordered w-full">
             {#each data.item.documents as doc,i}
                 <div class="collapse collapse-arrow bg-base-200 mb-1">
                     <input type="radio" name="my-accordion-2" checked={i===0} />
-                    <div class="collapse-title ">
+                    <div class="collapse-title bg-slate-800">
                         {doc.title}
                     </div>
                     <div class="collapse-content prose prose-sm max-w-none"> 
                         {@html alterSummary(doc.summary)}
-                        <br/><br/>
     
-                        <div class="flex justify-starts">
+                        <div class="flex justify-starts mt-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                             </svg>
@@ -345,17 +348,89 @@
        </div>
     </div>
     
+    {#if invoicePhotos.length > 0}
+        <div class="border-b border-base-300 pb-3 mb-3">
+            <div class="title font-bold mb-3">
+                Purchase Information
+            </div>
+
+            <div class="justify-between items-center w-full">
+                {#each invoicePhotos as photo}
+                    <img
+                        on:click={(ev)=>{currentLightboxImage = photo; lightboxModal.showModal()}}
+                        src="{photo.orgPath}"
+                        class="h-32 w-32 cursor-zoom-in">
+                {/each}
+            </div>
+        </div>
+    {/if}
+
     <div class="border-b border-base-300 pb-3 mb-3">
         <div class="title font-bold">
-            Purchase Information
+            Colors in product photos
         </div>
-        
-        <div class="justify-between items-center">
-            {#each invoicePhotos as photo}
-                <img src="{photo.orgPath}" class="">
-            {/each}
-        </div>
-        
+        {#each productPhotos as photo}
+            {#if photo.colors?.length > 2}
+                {@const cols=Object.keys(JSON.parse(photo.colors))}
+                {@const names=Object.values(JSON.parse(photo.colors))}
+                {#each cols as col, i}
+                    <div class="tooltip m-1 shadow text-xs items-center text-center p-1" data-tip="{names[i]} ({col})">
+                        <div class="w-10 h-10" style="background-color:{col}">
+                        </div>
+                    </div>
+                {/each}
+            {/if}
+        {/each}
     </div>
-    
+
 </article>
+
+
+<dialog id="lightboxModal" class="modal">
+  <div class="modal-box max-w-none w-8/10">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+
+    {#if currentLightboxImage}
+        <h3 class="font-bold text-lg">
+            {JSON.parse(currentLightboxImage.classBlip)}
+        </h3>
+        <p class="py-4 text-center ">
+            {#if currentLightboxImage.cropPath && currentLightboxImage.type === "product"}
+                <img src="{currentLightboxImage.cropPath}" class="object-scale-down h-full w-full"/>
+            {:else}
+                <img src="{currentLightboxImage.orgPath}" class="object-scale-down h-full w-full"/>
+            {/if}
+            <span class="text-xs">
+                Tap x, press ESC key or click outside to close.
+            </span>
+        </p>
+
+        <span class="text-xs">
+            Type: {currentLightboxImage.type},
+            classification: {JSON.parse(currentLightboxImage.classTrash)?.predicted_classes}
+        </span>
+        <br/>
+        {#if currentLightboxImage.colors?.length > 2}
+            {@const cols=Object.keys(JSON.parse(currentLightboxImage.colors))}
+            {@const colNames=Object.values(JSON.parse(currentLightboxImage.colors))}
+            {#each cols as col, i}
+                <div class="tooltip m-1 shadow text-xs items-center text-center p-1" data-tip="{colNames[i]} ({col})">
+                    <div class="w-10 h-10" style="background-color:{col}">
+                    </div>
+                    <!--{colNames[i]}-->
+                </div>
+            {/each}
+            <br/>
+        {/if}
+        <span class="text-xs">
+            <a href="{currentLightboxImage.orgPath}" target="_blank">Show original</a>
+        </span>
+    {/if}
+
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

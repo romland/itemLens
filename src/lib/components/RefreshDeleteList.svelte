@@ -56,66 +56,77 @@
 
 </script>
 
-<div class="w-full">
-    <input type="hidden" name="delete_{inputName}" value="{JSON.stringify(deleteItem) || '[]'}"/>
-    <input type="hidden" name="refresh_{inputName}" value="{JSON.stringify(refreshItem) || '[]'}"/>
-    
-    <table class="table w-full">
-        <thead>
-            <tr>
-                <th>
-                    <label>
-                        Delete<br/>
-                        <input type="checkbox" class="checkbox" on:change={toggleDeleteAll}/>
-                    </label>
-                </th>
-                <th>
-                    <label>
-                        Refresh<br/>
-                        <input type="checkbox" class="checkbox" on:change={toggleRefreshAll}/>
-                    </label>
-                </th>
-                <th>{columns["3"].name}</th>
-                <th>{columns["4"].name}</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {#each values as item}
+{#if values.length > 0}
+    <div class="w-full">
+        <input type="hidden" name="delete_{inputName}" value="{JSON.stringify(deleteItem) || '[]'}"/>
+        <input type="hidden" name="refresh_{inputName}" value="{JSON.stringify(refreshItem) || '[]'}"/>
+        
+        <table class="table w-full">
+            <thead>
                 <tr>
-                    <td>
+                    <th>
                         <label>
-                            <input type="checkbox" class="checkbox" checked={deleteItem.includes(item.id)} on:change={toggleDelete} name="delete.{item.id}"/>
+                            Delete<br/>
+                            <input type="checkbox" class="checkbox" on:change={toggleDeleteAll}/>
                         </label>
-                    </td>
-                    <td>
+                    </th>
+                    <th>
                         <label>
-                            <input type="checkbox" class="checkbox" checked={refreshItem.includes(item.id)} on:change={toggleRefresh} name="refresh.{item.id}"/>
+                            Refresh<br/>
+                            <input type="checkbox" class="checkbox" on:change={toggleRefreshAll}/>
                         </label>
-                    </td>
-                    <td>
-                        <div class="avatar">
-                            {#if columns["3"]?.isImage}
-                                <div class="mask mask-squircle w-12 h-12">
-                                    <img src="{item[columns["3"].fieldName]}" alt="" />
-                                </div>
-                            {:else}
-                                {item[columns["3"].fieldName]}
-                            {/if}
-                        </div>
-                    </td>
-                    <td>
-                        {#if columns["4"].isLink}
-                            <a href="{item[columns["4"].fieldName]}" target="_blank">
-                                {item[columns["4"].fieldName]}
-                            </a>
-                        {:else}
-                            {item[columns["4"].fieldName]}
-                        {/if}
-                    </td>
+                    </th>
+                    <th>{columns["3"].name}</th>
+                    <th class="invisible lg:visible">{columns["4"].name}</th>
                 </tr>
-            {/each}
-        </tbody>
+            </thead>
 
-    </table>
-</div>
+            <tbody>
+                {#each values as item}
+                    <tr>
+                        <td>
+                            <label>
+                                <input type="checkbox" class="checkbox" checked={deleteItem.includes(item.id)} on:change={toggleDelete} name="delete.{item.id}"/>
+                            </label>
+                        </td>
+                        <td>
+                            <label>
+                                <input type="checkbox" class="checkbox" checked={refreshItem.includes(item.id)} on:change={toggleRefresh} name="refresh.{item.id}"/>
+                            </label>
+                        </td>
+                        <td>
+                            <div class="avatar">
+                                {#if columns["3"]?.isImage}
+                                    <div class="mask mask-squircle w-12 h-12">
+                                        {#if columns["4"].isLink}
+                                            <a href="{item[columns["4"].fieldName]}" target="_blank">
+                                                <img src="{item[columns["3"].fieldName]}" alt="" />
+                                            </a>
+                                        {:else}
+                                            <img src="{item[columns["3"].fieldName]}" alt="" />
+                                        {/if}
+                                    </div>
+                                {:else}
+                                    {item[columns["3"].fieldName]}
+                                {/if}
+                            </div>
+                        </td>
+                        <td class="invisible lg:visible">
+                            {#if columns["4"].prefix}
+                                [{item[columns["4"].prefix]}]
+                            {/if}
+                            {#if columns["4"].isLink}
+                                <a href="{item[columns["4"].fieldName]}" target="_blank">
+                                    {item[columns["4"].fieldName]}
+                                </a>
+                            {:else}
+                                {item[columns["4"].fieldName]}
+                            {/if}
+                        </td>
+                    </tr>
+                {/each}
+            </tbody>
+
+        </table>
+    </div>
+{/if}
