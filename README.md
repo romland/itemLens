@@ -9,7 +9,8 @@ possible (using any device). Most of the effort went into this bit.
 
 ### How to use
 To add a product, grab your phone and take a picture of the product and scan the
-QR-code on the container to place it in.
+QR-code on the container to place it in. (Note: this is the goal. Need better reverse
+image search next.)
 
 That's it.
 
