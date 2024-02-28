@@ -56,12 +56,13 @@ async function extractInvoiceDataOpenAI(ocrData)
 // https://www.npmjs.com/package/groq-sdk
 async function extractInvoiceDataGroq(ocrData)
 {
-    const prompt = `From the below JSON structure, extract data from it and put it in this new structure:\n` +
+    const prompt = `From the document (invoice or receipt) below, extract data and put it in this new structure:\n` +
         '```json'+`{ supplier: ...,  items: [ { description: ..., quantity: ..., price: ..., vat: ... }, ` +
         `{ description..., etc }], total: ..., totalIncTaxes, ..., date: ..., invoiceNo: ..., paymentMethod: ... }` + '```\n' +
         `If you see obvious typos, correct them. ` + 
-        `Make sure numbers are correctly copied. ` +
+        `Make sure numbers are copied verbatim. ` +
         // `Do not add products which has description as 'subtotal' or similar things that are not products. ` + 
+        `If a field cannot be located, set the value to null, e.g.: description: null. ` +
         `Be brief and concise. ` +
         `Do not give me code. ` + 
         `Do not change any numbers. Use them verbatim. ` +
