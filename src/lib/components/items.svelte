@@ -89,6 +89,11 @@
                                     {/if}
 
                                     {#if getFirstProductPhoto(item).classTrash}
+                                        <!--
+                                        This is largely for debug to see if classification is correct and
+                                        whether I can trust it to put things in the right inventory in the
+                                        future.
+                                        -->
                                         Class: {JSON.parse(getFirstProductPhoto(item).classTrash).predicted_classes}
                                     {/if}
                                 </div>
