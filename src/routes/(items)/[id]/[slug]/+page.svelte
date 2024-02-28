@@ -394,7 +394,11 @@ $:  if(!done && invoicePhotos.length > 0) {
 
     {#if currentLightboxImage}
         <h3 class="font-bold text-lg">
-            {JSON.parse(currentLightboxImage.classBlip)}
+            {JSON.parse(currentLightboxImage.classBlip) || data.item.title}
+            <span class="text-xs">
+                <a href="{currentLightboxImage.orgPath}" target="_blank">-- Show original</a>
+            </span>
+    
         </h3>
         <p class="py-4 text-center ">
             {#if currentLightboxImage.cropPath && currentLightboxImage.type === "product"}
@@ -424,9 +428,6 @@ $:  if(!done && invoicePhotos.length > 0) {
             {/each}
             <br/>
         {/if}
-        <span class="text-xs">
-            <a href="{currentLightboxImage.orgPath}" target="_blank">Show original</a>
-        </span>
     {/if}
 
   </div>

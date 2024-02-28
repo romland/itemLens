@@ -85,7 +85,7 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
 
     const imgUrl = `${remoteSite}${photo.orgPath}`;
 
-    if(true) {
+    if(false) {
       classifyImageUsingReplicate(imgUrl, (err, result) => {
         if (err) {
           console.error("Error getting Blip classification", err);
@@ -97,7 +97,7 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
         updatePhoto(photo.id, photo);
       });
     } else {
-      console.log("Replicate.com disabled (incurs cost)");
+      console.log("Replicate.com's Blip classification is disabled (incurs cost)");
     }
 
     jetsonInference(`static${photo.orgPath}`, (err, result) => {
