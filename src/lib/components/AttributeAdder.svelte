@@ -139,41 +139,87 @@
         const lines = str.split("\n");
 
         if(lines.length === 0) {
-            return false;
+            return 0;
         }
 
         let matches = 0;
         for(let i = 0; i < lines.length; i++) {
-            if(regEx.test(lines[i].trim()), lines[i]) {
+            if(regEx.test(lines[i].trim())) {
                 matches++;
+            // } else {
+            //     console.log("no match:", lines[i])
             }
+            regEx.lastIndex = 0;
         }
 
         return matches / lines.length;
     }
 
 
+    /**
+       this format seems ... somewhat common:
+        – = NOT -
+
+        – Clock Speed: 80MHz/160MHz
+        – Flash: 4M bytes
+        – Microcontroller: ESP-8266EX
+        – Operating Voltage: 3.3V
+        – Digital I/O Pins: 11
+        – Analog Input Pins: 1(Max input: 3.2V)
+        – Lengte: 34.2mm
+        – Breedte: 25.6mm
+        – Gewicht: 10g
+    */
     function convertDashKeyColonValueToTable(str)
     {
-/* this format seems ... somewhat common:
-– = NOT -
-
-– Clock Speed: 80MHz/160MHz
-– Flash: 4M bytes
-– Microcontroller: ESP-8266EX
-– Operating Voltage: 3.3V
-– Digital I/O Pins: 11
-– Analog Input Pins: 1(Max input: 3.2V)
-– Lengte: 34.2mm
-– Breedte: 25.6mm
-– Gewicht: 10g
-*/
         str = str.replaceAll("\r\n", "\n");
 
         // Trim first two characters (slice), split by \n and :
         const kvps = str.split('\n').map(item => {
             const [key, ...value] = item.split(':');
-            return { "key":[key.slice(2).trim()], "value":value.join(':').trim() };
+            return {
+                "key":   [key.slice(2).trim()],
+                "value": value.join(':').trim()
+            };
+        });
+        console.log(kvps);
+        return kvps;
+    }
+
+
+    /**
+        Clock Speed: 80MHz/160MHz
+        Flash: 4M bytes
+        Microcontroller: ESP-8266EX
+        Operating Voltage: 3.3V
+        Digital I/O Pins: 11
+        Analog Input Pins: 1(Max input: 3.2V)
+        Lengte: 34.2mm
+        Breedte: 25.6mm
+        Gewicht: 10g
+
+        --- AND ---
+
+        Sensor: Sony IMX219
+        Resolution: 3280 × 2464 (per camera)
+        Lens specifications:
+
+            CMOS size: 1/4inch
+            Focal Length: 2.6mm
+            Angle of View: 83/73/50 degree (diagonal/horizontal/vertical)
+            Distortion: <1%
+            Baseline Length: 60mm
+    */
+    function convertKeyColonValueToTable(str)
+    {
+        str = str.replaceAll("\r\n", "\n");
+
+        const kvps = str.split('\n').map(item => {
+            const [key, ...value] = item.split(':');
+            return {
+                "key":   [key.trim()],
+                "value": value.join(':').trim()
+            };
         });
         console.log(kvps);
         return kvps;
@@ -200,9 +246,12 @@
 
             // Check which format fits this "paste" best.
             let formats = [
-                { func: convertDashKeyColonValueToTable, ratio : isOfTextFormat(pasted, /^[–|\-|\*|#] (.+)[:] (.+)$/) },
+                { func: convertDashKeyColonValueToTable, ratio : isOfTextFormat(pasted, /^[–|\-|*|#] (.+)[:] (.+)$/g) },
+                // Note 'it should not start with' or will always return better than the one above since both will match
+                { func: convertKeyColonValueToTable, ratio : isOfTextFormat(pasted, /^(?![–|\-|\*|#])(.+)[:] (.+)$/g) },
             ];
             formats.sort((a, b) => b.ratio - a.ratio);
+
             if(formats[0].ratio > 0.5) {
                 console.log(`Best matching format (${formats[0].ratio}) is: `, formats[0].func);
 
