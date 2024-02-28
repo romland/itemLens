@@ -1,53 +1,106 @@
-# Sveltekit + PWA + CRUD
-This is a sveltekit2-starter + PWA (@vite-pwa/sveltekit)
+# itemLens
+Inventory management (for at home). There are many like it, but this one is mine.
+
+The primary use is:
+`Do I have that and where the heck is it?` and `Why did I buy it?`
+
+I am no fan of data-entry, so, adding new products/items should be as automated as 
+possible (using any device). Most of the effort went into this bit.
+
+### How to use
+To add a product, grab your phone and take a picture of the product and scan the
+QR-code on the container to place it in.
+
+That's it.
+
+If feeling particularly ambitious on a day, you can also:
+- take a picture of an invoice/receipt (itemLens will use image classification/OCR/LLM to get the juicy bits)
+- add additional photos (using camera or just paste in links)
+- scan QR-codes containing URLs to relevant documents
+- paste in a list of attributes (weight/color/size/etc)
+- add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
+
+### Features
+- Paste-parser for key-value-pairs
+- QR-code reading (server and client)
+- Optical Character Reading (OCR)
+- Image classification (Blip)
+- LLM Summaries (Groq)
+- Invoice/receipt data extraction
+- Download-and-store documents (link-rot no more)
+- Image processing (background removal, thumbnail, etc)
+- Color extraction
+- Multiple inventories (i.e. one for shoes, another for clothes, and yet another for electronics)
+
+### How I use it
+- Which label printer
+- Pictures of containers
+- Firefox QR-code generator for current link
 
 
-## sveltekit-starter
 
-A simple CRUD project using SvelteKit, Prisma, sqlite, Tailwind CSS, and TypeScript with many-to-many relationship example.
+# Third parties
+I really hate it when I have to register for some 3rd party services to try out some software,
+therefore, that is all voluntary. Set the flag `NO_THIRD_PARTY_SERVICES` to `true` in `.env` 
+and you can use it all -- but adding new products will be more work.
 
-Or you can use `degit`:
+### About third party services and incurred costs
+Goal is: No fixed cost / month -- only pay for use
 
+
+# Development
+
+## Stack
+SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript, SingleFile
+
+
+## Installing
+
+### Get it:
 ```bash
 npx degit ronsen/sveltekit-starter sveltekit-starter
 ```
 
-Run these following commands to try locally:
+### Create some directories
+```bash
+mkdir `static/images`
+mkdir `static/images/u`
+```
 
+### Fill in your details in .env
+```bash
+cp .env.example .env
+```
+
+### Run for development:
 ```bash
 cd sveltekit-starter
 npm install
 npm run dev
 ```
 
-```bash
-cp .env.example .env
-```
-
-Migrate the database:
-
+### Database migration:
 ```bash
 npx prisma migrate dev --name init
 ```
 
-Database seeding:
-
+### Database seeding:
 ```bash
 npx prisma db seed
 ```
 
-Create `/static/images` directory.
-Create `/static/images/u` directory.
-
-Sign in with a sample user:
-
+### Use default user:
 ```
 Username: admin
 Password: password
 ```
 
+### Build for production
+```bash
+npm run build
+```
 
-# Run services
+### External services
 Ubuntu WSL:
     For OCR:
     cd ~/doctr/api
@@ -68,3 +121,8 @@ On Jetson:
     inventoryId Int?
     usage      InUse[] 
 - Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching
+
+
+# TODO README:
+Screenshot(s), logo, video(s)
+
