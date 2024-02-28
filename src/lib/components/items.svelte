@@ -10,7 +10,7 @@
     {
         for(let i = 0; i < item?.photos?.length; i++) {
             if(item.photos[i].type === "product") {
-                return item.photos[i].thumbPath;
+                return item.photos[i];
             }
         }
         // TODO: return a default image
@@ -28,7 +28,7 @@
     }
 </script>
 
-{#if (items.length == 0)}
+{#if (!items || items?.length == 0)}
     <Alert>Empty.</Alert>
 {:else}
 
@@ -43,7 +43,7 @@
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12">
                                         <a href="/{item.id}/{item.slug}">
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{getFirstProductPhoto(item)}" alt="{item?.name}"/>
+                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{getFirstProductPhoto(item).thumbPath}" alt="{item?.name}"/>
                                         </a>
                                     </div>
                                 </div>
@@ -87,8 +87,11 @@
                                     {#if !hasSummarizedDocuments(item)}
                                         TODO: Need summary!
                                     {/if}
+
+                                    {#if getFirstProductPhoto(item).classTrash}
+                                        Class: {JSON.parse(getFirstProductPhoto(item).classTrash).predicted_classes}
+                                    {/if}
                                 </div>
-                                
                             </div>
                         </div>
 {/if}                        

@@ -14,4 +14,4 @@
 
 <Items items={data.items} />
 
-<Navigation href="/search?q={data.q}&" prevPage={data.prevPage} nextPage={data.nextPage} />
+<Navigation href="/search?q={encodeURIComponent(data.q)}&" prevPage={data.prevPage} nextPage={data.nextPage} />
