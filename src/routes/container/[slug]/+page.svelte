@@ -22,7 +22,6 @@
         </div>
     </div>
 
-
     <div class="flex flex-col md:flex-row w-full space-x-4">
         <div class="basis-4/5 pl-2">
             <img src="{data.item?.photoPath}" alt="{data.item?.name}" class="">
@@ -40,5 +39,3 @@ Photo: {data.item?.photoPath}
     </div>
     
 </article>
-
-
