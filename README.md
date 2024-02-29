@@ -59,7 +59,7 @@ SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript, SingleFile
 
 ### Get it:
 ```bash
-npx degit ronsen/sveltekit-starter sveltekit-starter
+npx degit romland/itemLens itemLens
 ```
 
 ### Create some directories
