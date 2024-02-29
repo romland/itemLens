@@ -10,6 +10,15 @@ export const load = (async ({ locals, params }) => {
                 // { author: { id: locals.user.id } },
                 { name: params.slug.replace("-", " ") }
             ]
+        },
+        include: {
+            children : {
+                select : {
+                    name : true,
+                    parentId : true,
+                    description : true,
+                }
+            },
         }
     });
 

@@ -52,25 +52,7 @@ async function addInventories() {
     return inventories;
 }
 
-/*
-model Container {
-  id          Int         @id @unique @default(autoincrement())
-  parentId    Int?        @unique
-  parent      Container?  @relation("ParentRelation", fields: [parentId], references: [id])
-  children    Container[] @relation("ParentRelation")
 
-  // Ponder: A or A.001 ??? How fine-grained? How important is it to have a hierarchy?
-  name        String @unique    // A or A.001 (Note: sub-containers must be denoted with period)
-  description String            // closet with door
-  location    String?           // top of desk (JR)
-  photoPath   String?
-
-  items       ItemsInContainer[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-*/
 async function addLocation(name: string, description: string, location: string, trayCount: number, imageWebPath: string, startTray: number = 1)
 {
     const container = await prisma.container.create(

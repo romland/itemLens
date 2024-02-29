@@ -83,6 +83,7 @@ export const actions = {
         });
 
         // TODO: act on numtrays (removing them is futile... perhaps just allow adding for now, can't be arsed to remove)
+        // TODO: We don't touch the number of trays at all for now (since it involves possibly related items). Later. CBA.
 
         redirect(302, `/container/${post?.name}`);
     }

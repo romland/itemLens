@@ -29,7 +29,13 @@
         </div>
     
         <div class="mb-3 text-sm">
-            {JSON.stringify(data.item)}<br/>
+<pre>
+Name: {data.item?.name}
+Number of trays: {data.item?.children?.length}
+Description: {data.item?.description}
+Location: {data.item?.location}
+Photo: {data.item?.photoPath}
+</pre>
         </div>
     </div>
     

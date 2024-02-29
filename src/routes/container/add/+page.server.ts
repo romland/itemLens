@@ -8,23 +8,20 @@ import { getTagIds } from "$lib/server/services";
 export const actions = {
     default: async ({ locals, request }) => {
         const data = Object.fromEntries(await request.formData());
+        const name = data.name as string;
+        const description = data.description as string;
+        const file = data.photoPath as File;
 
-console.log("Add:", data);
-throw "TODO here ... ran out of mojo"
-        const title = data.title as string;
-        const content = data.content as string;
-        const tagcsv = data.tagcsv as string;
-        const file = data.file as File;
-
-        if (title.length == 0) {
+        // TODO: Check so that it's in the right format (one character, basically -- A-Z)
+        if (name.length !== 1) {
             return fail(400, {
                 error: true,
-                message: '<strong>Title</strong> can not be blank.'
+                message: 'Field <strong>Name</strong> must be one character (for now).'
             });
         }
 
-        let filename = '';
-        
+        let filename = null;
+
         if (file.size > 0) {
             const date = new Date().toISOString()
                 .replaceAll('-', '')
@@ -34,24 +31,36 @@ throw "TODO here ... ran out of mojo"
 
             filename = date + '-' + slugify(file.name.toLowerCase());
 
-            writeFileSync(`static/images/${filename}`, Buffer.from(await file.arrayBuffer()));
+            writeFileSync(`static/images/containers/${filename}`, Buffer.from(await file.arrayBuffer()));
+
+            filename = "/images/containers/" + filename;
         }
 
-        const ids = await getTagIds(tagcsv);
-        
-        const post = await db.post.create({
+        const container = await db.container.create({
             data: {
-                title: title.trim(),
-                photo: filename,
-                slug: slugify(title.trim().toLowerCase()),
-                content: content.trim(),
-                authorId: locals.user.id,
-                tags: {
-                    connect: [...ids]
-                }
+                name: name.trim(),
+                photoPath: filename,
+                description: description.trim(),
+                location : data.location?.trim(),
             }
         });
 
-        redirect(302, `/${post.id}/${post.slug}`);
+        const trayCount = Number(data.numtrays);
+        const startTray = Number(data.starttray);
+
+        for(let i = startTray; i < (trayCount + startTray); i++) {
+            const trayId = i.toString().padStart(3, '0')
+            await db.container.create(
+                {
+                    data: {
+                        parentId: container.name,
+                        name: `${name} ${trayId}`,
+                        description: "",
+                    }
+                }
+            )
+        }
+    
+        redirect(302, `/container/${container?.name}`);
     }
 } satisfies Actions;
