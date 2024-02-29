@@ -222,16 +222,20 @@ async function addItems(user: User)
 async function main() {
     const user = await addUser();
     await addInventories();
-    await addLocation("A", "Blue metal MARS container, 60 trays", "Study", 60, "/images/containers/A_crop.png", 1);
+    await addLocation("A", "Blue metal MARS container", "Study", 60, "/images/containers/A_crop.png", 1);
     await addLocation("B", "Plastic cabinet", "Study", 16, "/images/containers/B_crop.png", 1);
     await addLocation("C", "Paper storage container", "Study", 3, "/images/containers/C_crop.png", 1);
     await addLocation("D", "Paper storage container", "Study", 3, "/images/containers/D_crop.png", 1);
     await addLocation("E", "IKEA wooden cabinet", "Study", 6, "/images/containers/E_crop.png", 1);
-    await addLocation("F", "Blue metal MARS container, 60 trays", "Study", 60, "/images/containers/F_crop.png", 61);
+    await addLocation("F", "Blue metal MARS container", "Study", 60, "/images/containers/F_crop.png", 61);
 
-    await addLocation("X", "Unsorted", "Void", 0, "/images/containers/other_crop.png", 1);
-    await addLocation("Y", "Ordered", "Void", 0, "/images/containers/other_crop.png", 1);
-    await addLocation("Z", "Wishlist", "Void", 0, "/images/containers/other_crop.png", 1);
+    await addLocation("Z", "Virtual", "Void", 3, "/images/containers/other_crop.png", 1);
+
+    /* TODO: be able to set names of sub-containers here in the seeds
+    await addLocation("Z 001", "Unsorted", "Void", 0, "/images/containers/other_crop.png", 1);
+    await addLocation("Z 002", "Ordered", "Void", 0, "/images/containers/other_crop.png", 1);
+    await addLocation("Z 003", "Wishlist", "Void", 0, "/images/containers/other_crop.png", 1);
+    */
 
     await addItems(user);
 }

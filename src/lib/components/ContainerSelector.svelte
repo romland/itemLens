@@ -80,7 +80,12 @@
                 <option value="{container.name}">{container.name}: {container.description}</option>
                 {#if container.children.length > 0}
                     {#each container.children as child}
-                        <option value="{child.name}" class="ml-4">{child.name}</option>
+                        <option value="{child.name}" class="ml-4">
+                            {child.name}
+                            {#if child.description}
+                                - {child.description}
+                            {/if}
+                        </option>
                     {/each}
                 {/if}
             {/each}

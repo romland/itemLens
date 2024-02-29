@@ -101,7 +101,7 @@
   </div>
 
   <div class="navbar-center">
-    <!-- Extra Desktop/tablet menu -->
+    <!-- Extra Desktop/tablet menu - - >
     <ul class="menu menu-horizontal px-1 hidden lg:flex">
       <li><a>Item 1</a></li>
       <li>
@@ -115,6 +115,7 @@
       </li>
       <li><a>Item 3</a></li>
     </ul>
+    -->
 
     <!-- search; all screens -->
     <div class="form-control items-end">
@@ -140,12 +141,19 @@
 
         {#if $page.data.user}
             <li>
+                <a href="/container" title="Containers">
+                    <i class="bi bi-gear"></i>
+                    <span class="btm-nav-label">Containers</span>
+                </a>
+            </li>
+            <li>
                 <a href="/settings" title="Settings">
                     <i class="bi bi-gear"></i>
                     <span class="btm-nav-label">Settings</span>
                 </a>
             </li>
         {/if}
+
         <li>
             {#if !$page.data.user}
                 <a href="/login" title="Sign In">

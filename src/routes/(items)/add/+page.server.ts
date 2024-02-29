@@ -109,6 +109,7 @@ export const load = (async ({ locals, params }) => {
           select : {
             name : true,
             parentId : true,
+            description : true,
           }
         },
       },
