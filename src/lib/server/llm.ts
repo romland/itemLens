@@ -117,7 +117,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
             messages: [
                 {
                     role: 'system',
-                    content: 'Please try to provide useful, helpful and actionable answers. If user asks for JSON, give only JSON.'
+                    content: 'Please try to provide useful, helpful and actionable answers. If user asks for JSON, give only JSON, NOTHING else.'
                 },
                 {
                     role: "user",
@@ -146,7 +146,9 @@ Example 2 : "HiLetgo power supply for prototype board PCB Universal Breadboard 5
 */
 export async function getProductFromReverseImageSearch(searchResults)
 {
-    const prompt = `Below is a list of examples of titles of product pages. They all describe the same product. Give me one full name of the product  (get rid of all the fluff that is just sales tactics). Give me the result as JSON like this:
+    const prompt = `Below is a list of examples of titles of product pages. They all describe the same product. 
+Give me one full name of the product (get rid of all the fluff that is just sales tactics). Give me the result 
+as JSON like this (if you cannot find one product, put the explanation for why in a comment field IN the JSON):
 { "productName": ..., "productDescription": ... }`;
 
     try {

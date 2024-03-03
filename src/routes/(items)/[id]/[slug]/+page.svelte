@@ -24,9 +24,9 @@
 
     // Issue: https://kit.svelte.dev/docs/state-management#component-and-page-state-is-preserved
     afterNavigate(() => {
-        if(refreshIntervalId) {
-            clearInterval(refreshIntervalId);
-        }
+        // if(refreshIntervalId) {
+        //     clearInterval(refreshIntervalId);
+        // }
         refineItemData();
     });
 
@@ -137,7 +137,7 @@
                 data.item = item;
                 refineItemData();
                 fetchDone = true;
-            }, 1000);   // TODO XXX: once per second is a bit excessive, but fine for now
+            }, 5000);   // TODO XXX: once per second is a bit excessive, but fine for now
         }
     }
 
