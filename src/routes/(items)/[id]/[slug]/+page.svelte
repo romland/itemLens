@@ -137,7 +137,7 @@
                 data.item = item;
                 refineItemData();
                 fetchDone = true;
-            }, 5000);   // TODO XXX: once per second is a bit excessive, but fine for now
+            }, 1000);   // TODO XXX: once per second is a bit excessive, but fine for now
         }
     }
 
@@ -209,7 +209,9 @@ $:  if(!done && invoicePhotos.length > 0) {
                         <span class="text-xs">Stock</span>
                     </div>
                     <div class="stat-value text-secondary">
-                        {data.item.amount}
+                        {#if data.item.amount !== null}
+                            {data.item.amount}
+                        {/if}
                     </div>
                     <div class="stat-desc">&nbsp;</div>
                 </div>

@@ -138,3 +138,39 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
         return null;
     }
 }
+
+/*
+Input:
+Example 1 : "MB102 Breadboard Power Supply Module 3.3V 5V Solderless Breadboard Voltage Regulator for Arduino Diy Kit"
+Example 2 : "HiLetgo power supply for prototype board PCB Universal Breadboard 5V/3.3V output"
+*/
+export async function getProductFromReverseImageSearch(searchResults)
+{
+    const prompt = `Below is a list of examples of titles of product pages. They all describe the same product. Give me one full name of the product  (get rid of all the fluff that is just sales tactics). Give me the result as JSON like this:
+{ "productName": ..., "productDescription": ... }`;
+
+    try {
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: 'system',
+                    content: 'Please try to provide useful, helpful and actionable answers. If user asks for JSON, give only JSON.'
+                },
+                {
+                    role: "user",
+                    content: prompt + "\n\n" + searchResults,
+                },
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.2,
+            top_p: 0.8,
+            // top K 40
+        });
+
+        console.log("Groq product name result:", chatCompletion);
+        return chatCompletion.choices[0]?.message?.content || "";
+    } catch(ex) {
+        console.error("Error contacting Groq:", ex);
+        return null;
+    }
+}

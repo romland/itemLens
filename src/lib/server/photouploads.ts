@@ -66,7 +66,7 @@ export function processOtherPhotos(item : Item, remoteSite: string)
  * @param item 
  * @param remoteSite 
  */
-export function processProductPhotos(item : Item, remoteSite: string, acceptTypes: string[] = ["product"])
+export function processProductPhotos(item : Item, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback = null)
 {
   // Deal with each photo
   for(let i = 0; i < item.photos.length; i++) {
@@ -128,11 +128,18 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
         return;
       }
 
+      // This is not pretty; it's asynchronous on the other side -- it is used for 'autoFill'.
+      // The only requirement is really that we have a thumbnail available so this is not 
+      // the best place for this. But it works for now. Holy-moly-prototype.
+      if(perPhotoCallback) {
+        perPhotoCallback(null, photo);
+      }
+
       // Download any URL in QR codes in the photo (done on thumbnails)
       // REFACTOR: Get rid of this and attempt only on photos of type 'other' or 'information'
       await processQRcodeThenDownload(photo.orgPath, photo, item, (err, res) => {
         if (err) {
-          console.log("Error downloading QR file's URL:", err);
+          console.log("Did not download (non-)QR file's URL:", err);
           return;
         }
       });
