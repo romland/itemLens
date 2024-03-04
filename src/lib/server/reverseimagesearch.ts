@@ -66,6 +66,7 @@ async function getPageByUrl(url)
     "DNT":                        `1`,
     "Sec-GPC":                    `1`,
     "Connection":                 `keep-alive`,
+    // This is a cookie taken out of a private (Firefox) mode session right after accepting Google's cookie terms.
     "Cookie":                     `SOCS=CAISOAgQEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjQwMjI1LjA4X3AwGgVlbi1HQiACGgYIgPuOrwY; NID=512=sj7-85fWhTPYsYcMroBCh5FK-ogmiv6JWc9Viw2vkenKm5FgGkK-k0Wk2hxRbBVaBervax_reYFtbHZx9LDLGN2txY8xP41vzv3I80Hjlhh74VN-QLmbtXRbtAsVB5plIHSJ5XgM5ru5w7aSYKVcN0GlMgoaYQVV7KOWw3aVwxY`,
     "Upgrade-Insecure-Requests":  `1`,
     "Sec-Fetch-Dest":             `document`,
