@@ -38,8 +38,6 @@ If feeling particularly ambitious on a day, you can also:
 - Pictures of containers
 - Firefox QR-code generator for current link
 
-
-
 # Third parties
 I really hate it when I have to register for some 3rd party services to try out some software,
 therefore, that is all voluntary. Set the flag `NO_THIRD_PARTY_SERVICES` to `true` in `.env` 
@@ -52,7 +50,7 @@ Goal is: No fixed cost / month -- only pay for use
 # Development
 
 ## Stack
-SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript, SingleFile
+SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript
 
 
 ## Installing
@@ -102,6 +100,9 @@ npm run build
 ```
 
 ### External services
+Start the docker containers in Ubuntu VM if they are not running with:
+containers-start.sh
+
 Ubuntu WSL:
     For OCR:
     cd ~/doctr/api
@@ -126,4 +127,3 @@ On Jetson:
 
 # TODO README:
 Screenshot(s), logo, video(s)
-
