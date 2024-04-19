@@ -189,16 +189,16 @@
     <span class="btm-nav-label">Home</span>
   </a>
 
-  <a class:active={$page.url.pathname==='???'} href="">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-    <span class="btm-nav-label">Something</span>
-  </a>
-
   {#if $page.data.user}
       <a class:active={$page.url.pathname==='/add'} href="/add" title="Add new item">
           <i class="bi bi-plus-circle"></i>
           <span class="btm-nav-label">Add new</span>
       </a>
   {/if}
+
+  <a class:active={$page.url.pathname==='???'} href="">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <span class="btm-nav-label">Something</span>
+  </a>
 
 </div>
