@@ -38,8 +38,10 @@ If feeling particularly ambitious on a day, you can also:
 ### Info how I use it
 - TODO: 
     - Which label printer
+    - Which cabinets
     - Pictures of containers
     - Firefox QR-code generator for current link
+    - I use it for electronics/components
     - Which fields I actually fill in
     - How I search for related links
 
