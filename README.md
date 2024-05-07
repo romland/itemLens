@@ -2,10 +2,11 @@
 Inventory management (for at home). There are many like it, but this one is mine.
 
 The primary use is:
-`Do I have that and where the heck is it?` and `Why did I buy it?`
+`Do I have that, where the heck is it?` and `Why did I buy it?`
 
 I am no fan of data-entry, so, adding new products/items should be as automated as 
-possible (using any device). Most of the effort went into this bit.
+possible (using any device). Most of the effort went into this bit using machine learning
+(LLMs, object classification, OCR, etc).
 
 ### How to use
 To add a product, grab your phone and take a picture of the product and scan the
@@ -26,7 +27,7 @@ If feeling particularly ambitious on a day, you can also:
 - QR-code reading (server and client)
 - Optical Character Reading (OCR)
 - Image classification (Blip)
-- LLM Summaries (Groq)
+- LLM Summaries (Llama3, Groq)
 - Invoice/receipt data extraction
 - Download-and-store documents (link-rot no more)
 - Image processing (background removal, thumbnail, etc)
@@ -39,7 +40,7 @@ If feeling particularly ambitious on a day, you can also:
 - Firefox QR-code generator for current link
 
 # Third parties
-I really hate it when I have to register for some 3rd party services to try out some software,
+I really dislike it when I have to register for some 3rd party services to try out some software,
 therefore, that is all voluntary. Set the flag `NO_THIRD_PARTY_SERVICES` to `true` in `.env` 
 and you can use it all -- but adding new products will be more work.
 
@@ -50,7 +51,7 @@ Goal is: No fixed cost / month -- only pay for use
 # Development
 
 ## Stack
-SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript
+SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript, LLMs + various ML models.
 
 
 ## Installing
@@ -116,13 +117,15 @@ On Jetson:
     ...
 
 # TODO / notes
-- consider: Is it faster to check with a model running on Jetson: is there a QR code in the picture?
-- Investigate how fast inference can run on a beefy RasPi (use OpenCL!)
+- consider: Is it faster to do a quick pre-check on the Jetson if there is a QR code in picture?
+- Investigate how fast inference can runs on a recent RasPi (using OpenCL)
 - TODO fields when adding items:
     inventory   Inventory? @relation(fields: [inventoryId], references: [id])
     inventoryId Int?
     usage      InUse[] 
-- Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching
+- Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching,
+  right now we search all.
+- autostart containers if they are not running (if Windows, need to start in WSL)
 
 
 # TODO README:
