@@ -119,6 +119,7 @@ On the Jetson on my desktop:
 - Right now the code very JavaScripty while it should be TypeScripty. A lot of it is still very much a prototype.
 
 # TODO / notes
+- make a multi-"screen" wizard for adding new items on smaller devices (from desktop single screen is good)
 - consider: Is it faster to do a quick pre-check on the Jetson to see if there is a QR code in image?
 - Investigate how fast classification inference can run on a recent RasPi (using OpenCL)
 - TODO fields when adding items:
