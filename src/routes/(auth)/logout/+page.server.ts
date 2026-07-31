@@ -3,11 +3,7 @@ import type { Actions } from './$types';
 
 export const actions = {
     default: async ({ cookies }) => {
-        cookies.set('session', '', {
-            path: '/',
-            expires: new Date(0)
-        });
-
-        redirect(302, '/');
+        cookies.delete('session', { path: '/' });
+        redirect(303, '/');
     }
 } satisfies Actions;

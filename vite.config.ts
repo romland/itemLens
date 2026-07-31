@@ -7,6 +7,15 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 // import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
+	ssr: {
+        external: ['canvas', 'crop-node', 'get-pixels/node-pixels']
+    },
+    
+    // completely exclude them from Vite's pre-bundler:
+    optimizeDeps: {
+        exclude: ['canvas', 'crop-node', 'get-pixels/node-pixels']
+    },
+
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({

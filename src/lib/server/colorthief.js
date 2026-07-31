@@ -1,4 +1,4 @@
-import getPixels from 'get-pixels/node-pixels';
+import getPixels from 'get-pixels/node-pixels.js';
 import quantize from '@lokesh.dhakar/quantize/dist/index.mjs';
 
 function createPixelArray(imgData, pixelCount, quality) {

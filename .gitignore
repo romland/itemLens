@@ -13,3 +13,5 @@ vite.config.ts.timestamp-*
 /static/images
 dev-dist
 .invoice*.json
+cat-files.sh
+prompt.txt

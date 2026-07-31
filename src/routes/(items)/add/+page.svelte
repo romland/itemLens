@@ -55,17 +55,14 @@
         }, 3000)
     }
 
-    if(typeof window !== 'undefined') {
-        const toggleMinimal = () => {
-            if(window.innerWidth > 600) {
-                minimalInput = false;
-            } else {
-                minimalInput = true;
-            }
+    const toggleMinimal = () => {
+        if(typeof window !== 'undefined') {
+            minimalInput = window.innerWidth <= 600;
         }
-        toggleMinimal();
-        document.addEventListener("resize", toggleMinimal);
     }
+    
+    // Call it once on load
+    toggleMinimal();
 
 $:  console.log("Form changed:", form);
 
@@ -73,6 +70,8 @@ $:  console.log("Form changed:", form);
     import pageTitle from '$lib/stores';
     pageTitle.set("Add new product");
 </script>
+
+<svelte:window on:resize={toggleMinimal} />
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>
@@ -108,7 +107,7 @@ $:  console.log("Form changed:", form);
 
     {#if LARGE_CONTAINER_SELECTOR}
         <div class="mb-3" style="max-height: 20vh; overflow-y: scroll;">
-            <LargeContainerSelector containers={data.containers} />
+            <ContainerSelectorLarge containers={data.containers} />
         </div>
     {:else}
         <div class="mb-3">

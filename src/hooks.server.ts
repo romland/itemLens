@@ -2,7 +2,7 @@ import { redirect, type Handle } from "@sveltejs/kit";
 import { db } from "$lib/server/database";
 
 export const handle = (async ({ event, resolve }) => {
-	let theme: string = 'light';
+	let theme: string = 'dark';
 
 	const session = event.cookies.get('session');
 	const newTheme = event.url.searchParams.get('theme');
@@ -16,28 +16,34 @@ export const handle = (async ({ event, resolve }) => {
 	}
 
 	if (session) {
-		const user = await db.user.findUnique({
-			where: { token: session },
-			select: { id: true, username: true }
-		});
+        const user = await db.user.findUnique({
+            where: { token: session },
+            select: { id: true, username: true }
+        });
 
-		if (user) {
-			event.locals.user = {
-				id: user.id,
-				name: user.username
-			}
-		}
-	} else {
-		if (
-			path == '/' ||
-			/^\/\d/.test(path) ||
-			path.startsWith('/search') ||
-			path.startsWith('/container') ||
-			path.startsWith('/tag')
-		) {
-			redirect(303, '/login');
-		}
-	}
+        if (user) {
+            event.locals.user = {
+                id: user.id,
+                name: user.username
+            };
+        } else {
+            // Destroy the invalid cookie so we don't keep querying a dead token
+            event.cookies.delete('session', { path: '/' }); 
+        }
+    } 
+    
+    // Now check authorization independently of the cookie's mere existence
+    if (!event.locals.user) {
+        if (
+            path == '/' ||
+            /^\/\d/.test(path) ||
+            path.startsWith('/search') ||
+            path.startsWith('/container') ||
+            path.startsWith('/tag')
+        ) {
+            redirect(303, '/login');
+        }
+    }
 
 	return await resolve(event, {
 		transformPageChunk: ({ html }) =>
