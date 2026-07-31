@@ -1,106 +1,118 @@
 <script lang="ts">
-    import { onMount } from 'svelte'
+    import { onMount, onDestroy, tick } from 'svelte';
+    import { beforeNavigate } from '$app/navigation';
     import Items from "$lib/components/items.svelte";
-    import { afterNavigate, beforeNavigate } from '$app/navigation'
     
     export let prevPage: number;
     export let nextPage: number;
     export let href: string;
     
-    let loadedPages = [];
+    let loadedPages: any[] = [];
     let reachedEnd = false;
     let loading = false;
-    let observer;
+    let observer: IntersectionObserver;
 
+    // Tie the cache directly to the specific page/search URL
+    $: cacheKey = `nav-cache-${href}`;
+
+    // Fire exactly when the user clicks a link to leave the page
     beforeNavigate(() => {
-        loadedPages = [];
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                loadedPages,
+                nextPage,
+                reachedEnd
+            }));
+        }
     });
 
-    async function query(ev)
-    {
-        const h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
-        const res = await fetch(`${h}c=10&page=${nextPage}`);
-        const data = await res.json();
-        console.log("Fetched page", nextPage);
+    async function query() {
+        let h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
+        const url = `${h}c=10&page=${nextPage}`;
         
-        if(!data || !data.items || data.items.length === 0) {
-            reachedEnd = true;
-            return;
-        }
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if(!data || !data.items || data.items.length === 0) {
+                reachedEnd = true;
+                return;
+            }
 
-        loadedPages.push(data.items);
-        loadedPages = loadedPages;
+            loadedPages = [...loadedPages, data.items];
+        } catch (e) {
+            console.error("Fetch error:", e);
+        }
     }
     
-    async function handleIntersection(event)
-    {
-        const [entries] = event;
+    function handleIntersection(entries: IntersectionObserverEntry[]) {
+        const entry = entries[0];
         
-        if (!entries.isIntersecting) {
-            loading = false;
-            return
-        }
-        
-        if(reachedEnd) {
-            console.log("Reached end");
-            return;
-        }
-
-        if(loading) {
-            return;
-        }
+        if (!entry.isIntersecting) return;
+        if (loading || reachedEnd || nextPage === 0) return;
         
         loading = true;
-        try {
-            await query(event);
+        query().then(() => {
             loading = false;
-            nextPage++;
-        } catch(ex) {
-            console.error(ex);
-            loading = false;
-        }
-    }
-   
-    
-    function setupInfiniteScrollObserver()
-    {
-        let options = {
-            root: null, //document.getElementById('mainScrollArea'),
-            rootMargin: '0px',
-            threshold: [0.1],
-        }
-        
-        // TODO: Disable observer on navigating away? I assume it is needed?
-        observer = new IntersectionObserver(handleIntersection, options)
-        
-        loading = false;
-        try {
-            observer.observe(document.getElementById('postScrollArea'));
-        } catch (error) {
-            console.log("Error setting up IntersectionObserver", error)
-        }
+            if (!reachedEnd) {
+                nextPage++;
+            }
+        });
     }
     
     onMount(async () => {
-        loadedPages = [];
-        if (typeof window !== "undefined") {
-            // Disable this call to have normal pagination instead of infinite scroll
-            setupInfiniteScrollObserver();
+        // 1. Check if we have a saved state for this exact search/page
+        if (typeof sessionStorage !== 'undefined') {
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    loadedPages = parsed.loadedPages;
+                    nextPage = parsed.nextPage;
+                    reachedEnd = parsed.reachedEnd;
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
         }
-    })
 
+        // 2. Wait for Svelte to physically draw the restored items into the DOM.
+        // This is CRUCIAL so the browser has enough page height to restore your scroll position.
+        await tick();
+
+        // 3. Set up the observer
+        const el = document.getElementById('postScrollArea');
+        if (el) {
+            observer = new IntersectionObserver(handleIntersection, {
+                root: null,
+                rootMargin: '100px', // Fetch slightly before they hit the absolute bottom
+                threshold: 0.1
+            });
+            observer.observe(el);
+        }
+    });
+
+    onDestroy(() => {
+        if (observer) observer.disconnect();
+    });
 </script>
 
 {#each loadedPages as page}
     <Items items={page} />
 {/each}
 
-<div id="postScrollArea" class="flex justify-center gap-3">
-    {#if prevPage > 0}
+<div id="postScrollArea" class="flex justify-center gap-3 py-6">
+    {#if prevPage > 0 && loadedPages.length === 0}
         <a href="{href}page={prevPage}" class="btn btn-sm"><i class="bi bi-arrow-left" /></a>
     {/if}
 
-    {#if nextPage > 0}
-        <a href="{href}page={nextPage}" class="btn btn-sm"><i class="bi bi-arrow-right" /></a>
+    {#if nextPage > 0 && !reachedEnd}
+        <a href="{href}page={nextPage}" class="btn btn-sm">
+            {#if loading}
+                <span class="loading loading-spinner loading-sm"></span>
+            {:else}
+                <i class="bi bi-arrow-right" />
+            {/if}
+        </a>
     {/if}
 </div>
