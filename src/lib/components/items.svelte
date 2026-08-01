@@ -2,6 +2,7 @@
     import Alert from "$lib/components/alert.svelte";
     import type { Item } from "@prisma/client";
     import Delete from "./delete.svelte";
+    import { navigating } from '$app/stores';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -14,7 +15,6 @@
                 }
             }
         }
-        // Safely return an object so `.thumbPath` never throws an exception
         return { thumbPath: "/placeholder.png", classTrash: null };
     }
 
@@ -36,7 +36,13 @@
         <table class="table w-full">
             <tbody>
                 {#each items as item}
-                    <tr class="hover">
+                    <!-- 
+                        Check if the URL we are waiting for starts with this item's ID.
+                        This catches clicks on the image, the title, AND the edit button!
+                    -->
+                    {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
+                    
+                    <tr class="hover transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
@@ -53,7 +59,6 @@
                             {#if item.locations}
                                 {#each item.locations as loc}
                                     <div class="badge badge-ghost badge-sm whitespace-nowrap">
-                                        <!-- Note: replace(/ /g, "-") replaces ALL spaces, not just the first one -->
                                         <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
                                     </div>
                                 {/each}
@@ -61,11 +66,16 @@
                         </td>
 
                         <td>
-                            <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
+                            <div class="flex items-center gap-2">
+                                <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
+                                <!-- Show a loading spinner right next to the title while we wait -->
+                                {#if isNavigatingToThis}
+                                    <span class="loading loading-spinner loading-sm text-primary"></span>
+                                {/if}
+                            </div>
                             
                             {#if !brief}
                             <div class="hidden lg:block mt-1">
-                                <!-- Replaced inline style hack with Tailwind's native line-clamp -->
                                 <div class="line-clamp-2 text-sm text-gray-500">
                                     <a href="/{item.id}/{item.slug}">
                                         {item.description}
