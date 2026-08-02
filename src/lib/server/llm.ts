@@ -20,7 +20,6 @@ export async function extractInvoiceData(ocrData)
     // return extractInvoiceDataOpenAI(ocrData);
     return extractInvoiceDataGroq(ocrData);
 }
-//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
 
 // https://www.npmjs.com/package/openai
 async function extractInvoiceDataOpenAI(ocrData)
