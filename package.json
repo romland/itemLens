@@ -9,7 +9,13 @@
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 static/images/providi.svg"
+		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 static/images/providi.svg",
+		"paddleocr:build": "docker compose -f services/docker-compose.yml up -d --build paddleocr",
+		"singlefile:build": "docker compose -f services/docker-compose.yml up -d --build singlefile",
+		"services:build": "docker compose -f services/docker-compose.yml up -d --build",
+		"services:up": "docker compose -f services/docker-compose.yml up -d",
+		"services:down": "docker compose -f services/docker-compose.yml down",
+		"services:logs": "docker compose -f services/docker-compose.yml logs -f"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"

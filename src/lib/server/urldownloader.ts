@@ -20,7 +20,9 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
     for(let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if(!QRUrlDownloader.isURL(line)) {
-        console.log(`not an URL: ${line}`);
+        if(line !== "") {
+          console.log(`not an URL: ${line}`);
+        }
         continue;
       }
 

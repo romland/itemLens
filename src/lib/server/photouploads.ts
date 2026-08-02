@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { writeFileSync, promises as fsPromises } from "fs";
 import fetch from 'node-fetch';
+import FormData from 'form-data';
 
 // Cropping
 import crop from "crop-node";
@@ -291,10 +292,25 @@ async function updatePhoto(id : number, data : Photo)
 
 async function removeBackground(imgUrl, outputFileNoBkg, callback)
 {
-  const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
+  // const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
+  const localPath = outputFileNoBkg.replace(/_crop\.png$/, '');
+  let response;
   
   try {
-    const response = await fetch(url);
+    // const response = await fetch(url);
+    if (fs.existsSync(localPath)) {
+      const form = new FormData();
+      form.append('file', fs.createReadStream(localPath));
+      response = await fetch('http://localhost:7000/api/remove', {
+        method: 'POST',
+        body: form,
+        headers: form.getHeaders()
+      });
+    } else {
+      console.log(`Local file not found for rembg: ${localPath}, falling back to URL: ${imgUrl}`);
+      const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
+      response = await fetch(url);
+    }
 
     if (response && response.ok) {
       const fileStream = fs.createWriteStream(outputFileNoBkg);
@@ -305,6 +321,8 @@ async function removeBackground(imgUrl, outputFileNoBkg, callback)
         callback(null, `Success: Image saved as ${outputFileNoBkg}`);
       });
     } else {
+      const errBody = await response.text();
+      console.error(`RemBG HTTP ${response.status} error:`, errBody);
       callback(`HTTP error! status: ${response.status}`, null);
     }
   } catch (error) {

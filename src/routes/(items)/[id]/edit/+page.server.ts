@@ -264,8 +264,10 @@ async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, a
 async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }, allExistingIds: number[], preExistingIds: number[], item: Item | null)
 {
     try {
-        let toDelete = JSON.parse(data.delete_documents as string);
-        let toRefresh = JSON.parse(data.refresh_documents as string);
+        // let toDelete = JSON.parse(data.delete_documents as string);
+        // let toRefresh = JSON.parse(data.refresh_documents as string);
+        let toDelete = JSON.parse((data.delete_documents as string) || "[]");
+        let toRefresh = JSON.parse((data.refresh_documents as string) || "[]");
 
         console.log({ toDelete, toRefresh });
 

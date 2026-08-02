@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+
+  paddleocrfastapi:
+    container_name: paddleocrfastapi
+    image: paddleocrfastapi:paddlejr
+    environment:
+      - TZ=Europe/Amsterdam
+    ports:
+      - 8000:8000

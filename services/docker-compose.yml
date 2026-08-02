@@ -1,0 +1,29 @@
+services:
+  rembg:
+    container_name: itemlens-rembg
+    image: danielgatis/rembg
+    command: s
+    ports:
+      - "7000:7000"
+    restart: unless-stopped
+
+  paddleocr:
+    container_name: itemlens-paddleocr
+    build: ./paddleocr
+    image: paddleocrfastapi:paddlejr
+    environment:
+      - TZ=Europe/Amsterdam
+    ports:
+      - "8000:8000"
+    volumes:
+      # Map host folder containing the model files to the container's cache path
+      - ./paddleocr/downloads:/root/.paddleocr
+    restart: unless-stopped
+
+  singlefile:
+    container_name: itemlens-singlefile
+    build: ./singlefile
+    command: ./node_modules/nodemon/bin/nodemon.js webserver.js 8001
+    ports:
+      - "8001:8001"
+    restart: unless-stopped

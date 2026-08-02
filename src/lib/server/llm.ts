@@ -93,7 +93,8 @@ async function extractInvoiceDataGroq(ocrData)
             ],
             response_format: {"type": "json_object"},
             // model: "mixtral-8x7b-32768",
-            model: "llama3-70b-8192",
+            // model: "llama3-70b-8192",
+            model: "llama-3.3-70b-versatile",
             temperature: 0.2,
             top_p: 0.8,
             // top K 40
@@ -134,13 +135,14 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
             ],
             response_format: {"type": "json_object"},
             // model: "mixtral-8x7b-32768",
-            model: "llama3-70b-8192",
+            // model: "llama3-70b-8192",
+            model: "llama-3.3-70b-versatile",
             temperature: 0.2,
             top_p: 0.8,
             // top K 40
         });
 
-        console.log("Groq summary result:", chatCompletion);
+        console.log("Groq summary result:", JSON.stringify(chatCompletion, null, 4));
         return chatCompletion.choices[0]?.message?.content || "";
     } catch(ex) {
         console.error("Error contacting Groq:", ex);
@@ -185,7 +187,8 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
             ],
             response_format: {"type": "json_object"},
             // model: "mixtral-8x7b-32768",
-            model: "llama3-70b-8192",
+            // model: "llama3-70b-8192",
+            model: "llama-3.3-70b-versatile",
             temperature: 0.2,
             top_p: 0.8,
             // top K 40
