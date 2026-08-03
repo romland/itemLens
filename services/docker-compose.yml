@@ -26,4 +26,7 @@ services:
     command: ./node_modules/nodemon/bin/nodemon.js webserver.js 8001
     ports:
       - "8001:8001"
+    volumes:
+      - ./singlefile:/opt/app
+      - /opt/app/node_modules
     restart: unless-stopped

@@ -106,7 +106,7 @@ async function extractInvoiceDataGroq(ocrData)
         return null;
     }
 }
-
+/*
 export async function summarizeWebpageExtract(extract)
 {
     const prompt = `Below is an extract of a webpage. Give me a brief view of the important details (it's usually about a product or a guide to do something).
@@ -141,6 +141,49 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
             // top K 40
         });
 
+        console.log("Groq summary prompt:", prompt + "\n\n" + extract);
+        console.log("===========================");
+        console.log("Groq summary result:", JSON.stringify(chatCompletion, null, 4));
+        return chatCompletion.choices[0]?.message?.content || "";
+    } catch(ex) {
+        console.error("Error contacting Groq:", ex);
+        return null;
+    }
+}
+*/
+export async function summarizeWebpageExtract(extract)
+{
+    const prompt = `Below is an extract of a webpage. Give me a brief view of the important details (it's usually about a product or a guide to do something).
+Say what product it is about.
+Leave out:
+- user-generated content such as comments
+- navigation elements
+- sale/stock information
+- reviews
+- never give me JSON, I want plain text
+and other irrelevant (to the product or guide) stuff that you might find on a webpage.`;
+
+    try {
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: 'system',
+                    // Updated system prompt to stop asking for JSON
+                    content: 'You are a helpful assistant. Please provide brief, actionable summaries in plain text.'
+                },
+                {
+                    role: "user",
+                    content: prompt + "\n\n" + extract,
+                },
+            ],
+            // REMOVED: response_format: {"type": "json_object"}
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+            top_p: 0.8,
+        });
+
+        console.log("Groq summary prompt:", prompt + "\n\n" + extract);
+        console.log("===========================");
         console.log("Groq summary result:", JSON.stringify(chatCompletion, null, 4));
         return chatCompletion.choices[0]?.message?.content || "";
     } catch(ex) {

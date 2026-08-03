@@ -73,9 +73,13 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
         continue;
       }
 
-      if(pageData.extracts.length > 0 && pageData.extracts[0].length > 50) {
+      // if(pageData.extracts.length > 0 && pageData.extracts[0].length > 50) {
+      const extractText = pageData.extracts?.[0] || "";
+      console.log(`[LLM CHECK] Extracts found: ${pageData.extracts?.length || 0} | First extract length: ${extractText.length} chars`);
+
+      if (extractText.length > 50) {
         try {
-          const summary = await summarizeWebpageExtract(pageData.extracts[0])
+          const summary = await summarizeWebpageExtract(extractText);
           await db.document.update({
             where: {
               id : document?.id
@@ -89,6 +93,8 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
           console.error(`Error updating document in DB (${line}):`, ex);
           continue;
         }
+      } else {
+        console.warn(`[LLM SKIPPED] Text extract too short (${extractText.length} chars) for URL: ${line}`);
       }
 
       console.log("Downloaded explicitly stated URL:", line);
