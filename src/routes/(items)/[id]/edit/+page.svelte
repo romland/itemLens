@@ -24,6 +24,50 @@
     let saving = false;
     let markdownHtml = "";
 
+// Bind to local state so we can mutate it directly via the AI
+    let currentTitle = data.item?.title || "";
+    let currentDescription = data.item?.description || "";
+
+    // AI Drawer State
+    let showAiDrawer = false;
+    let userHint = "";
+    let isRefining = false;
+
+    async function runAiRefine() {
+        if (!userHint.trim() || !data.item?.id) return;
+        
+        isRefining = true;
+        try {
+            const res = await fetch('/api/ai-refine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    itemId: data.item.id,
+                    hint: userHint 
+                })
+            });
+            
+            if (res.ok) {
+                const result = await res.json();
+                if (result.title) currentTitle = result.title;
+                if (result.description) {
+                    currentDescription = result.description;
+                    updateMarkdownPreview(); // Keep your preview tab in sync
+                }
+                showAiDrawer = false;
+                userHint = ""; // Reset for next time
+                notify("success", "Item details enhanced by AI!");
+            } else {
+                notify("error", "Failed to refine with AI.");
+            }
+        } catch (e) {
+            console.error(e);
+            notify("error", "Network error communicating with AI.");
+        } finally {
+            isRefining = false;
+        }
+    }
+
     const onSubmit: SubmitFunction = async (data) => {
         saving = true;
 
@@ -58,15 +102,18 @@
 <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
     <input type="hidden" name="id" value="{data.item?.id}">
 
-    <div class="mb-3">
-        <input type="text" name="title" value="{data.item?.title}" placeholder="Product name" class="input input-bordered w-full">
+    <div class="mb-3 relative w-full">
+        <input type="text" name="title" bind:value={currentTitle} placeholder="Product name" class="input input-bordered w-full pr-12">
+        <button type="button" class="absolute right-3 top-3 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => showAiDrawer = true}>
+            <i class="bi bi-stars text-xl"></i>
+        </button>
     </div>
 
     <div class="mb-3">
         <div role="tablist" class="tabs tabs-lifted">
             <input type="radio" name="markdownEditorTab" role="tab" class="tab" aria-label="Edit" checked />
-            <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-                <textarea id="description" name="description" rows="5" placeholder="Product description" class="textarea textarea-bordered w-full">{data.item?.description}</textarea>
+            <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6 relative">
+                <textarea id="description" name="description" bind:value={currentDescription} rows="5" placeholder="Product description" class="textarea textarea-bordered w-full"></textarea>
                 <div class="mt-1 text-gray-400 text-xs">
                     Markdown can be used.
                 </div>
@@ -151,3 +198,29 @@
 <Notifications
     bind:notifications
 />
+
+<!-- The Bottom Drawer -->
+<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={showAiDrawer}>
+    <div class="modal-box p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl">
+        <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
+            <i class="bi bi-stars text-primary"></i> Refine AI Guess
+        </h3>
+        <p class="text-sm text-gray-500 mb-6">Tell us what this actually is, and we'll rewrite the details.</p>
+        
+        <input type="text" bind:value={userHint} on:keydown={(e) => e.key === 'Enter' && runAiRefine()} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
+        
+        <div class="modal-action mt-0 flex gap-2">
+            <button type="button" class="btn btn-ghost rounded-xl flex-1" on:click={() => showAiDrawer = false}>Cancel</button>
+            <button type="button" class="btn btn-primary rounded-xl flex-1 shadow-md" on:click={runAiRefine} disabled={isRefining}>
+                {#if isRefining}
+                    <span class="loading loading-spinner"></span>
+                {:else}
+                    Enhance
+                {/if}
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button type="button" on:click={() => showAiDrawer = false}>close</button>
+    </form>
+</dialog>

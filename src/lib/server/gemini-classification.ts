@@ -82,10 +82,15 @@ export async function analyzePhoto(
   return JSON.parse(response.text!);
 }
 
-export async function guessProductDetails(localFilePath: string): Promise<{title: string, description: string}> {
+export async function guessProductDetails(localFilePath: string, hint: string = ""): Promise<{title: string, description: string}> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const ext = path.extname(localFilePath).toLowerCase();
   const mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+
+  let promptText = "Identify this product. Return a concise 'title' and a 1-2 sentence 'description'.";
+  if (hint.trim() !== "") {
+    promptText += `\n\nUSER HINT: "${hint}". You MUST use this hint to identify the exact product model or brand, overriding your default guess.`;
+  }
 
   const response = await ai.models.generateContent({
     model: 'gemini-3.1-flash-lite',
@@ -93,7 +98,7 @@ export async function guessProductDetails(localFilePath: string): Promise<{title
       {
         role: 'user',
         parts: [
-          { text: "Identify this product. Return a concise 'title' and a 1-2 sentence 'description'." },
+          { text: promptText },
           { inlineData: { mimeType, data: fileBuffer.toString('base64') } }
         ]
       }
