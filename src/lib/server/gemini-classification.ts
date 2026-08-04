@@ -81,3 +81,35 @@ export async function analyzePhoto(
 
   return JSON.parse(response.text!);
 }
+
+export async function guessProductDetails(localFilePath: string): Promise<{title: string, description: string}> {
+  const fileBuffer = fs.readFileSync(localFilePath);
+  const ext = path.extname(localFilePath).toLowerCase();
+  const mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.1-flash-lite',
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: "Identify this product. Return a concise 'title' and a 1-2 sentence 'description'." },
+          { inlineData: { mimeType, data: fileBuffer.toString('base64') } }
+        ]
+      }
+    ],
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' }
+        },
+        required: ['title', 'description']
+      }
+    }
+  });
+
+  return JSON.parse(response.text!);
+}

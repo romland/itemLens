@@ -2,6 +2,7 @@ import { getProductFromReverseImageSearch } from "./llm";
 import { reverseImageSearch } from "./reverseimagesearch";
 import { spawn } from 'child_process'
 import { env } from '$env/dynamic/private';
+import { guessProductDetails } from "./gemini-classification";
 
 
 /*
@@ -10,27 +11,33 @@ TODO:
 */
 export async function autoFill(localFilePath)
 {
+    // 1. Primary: Fast local Gemini vision call
     try {
-        // SO many things can go wrong here...
+        const geminiResult = await guessProductDetails(localFilePath);
+        if (geminiResult?.title) {
+            console.log("autoFill(): Gemini success:", geminiResult);
+            return geminiResult;
+        }
+    } catch (e) {
+        console.warn("Gemini autoFill failed, falling back to reverse search:", e.message);
+    }
 
+    // 2. Fallback: Google Reverse Image Search
+    try {
         const uniqueName = "" + process.hrtime.bigint();
         const remotePath = env.SCP_THUMBNAIL_STORAGE + uniqueName;
         await scp(localFilePath, remotePath);
         console.log('File successfully copied:', localFilePath, remotePath);
 
         const titleDesc = await getNameDescription(env.SCP_THUMBNAIL_STORAGE_WEBPATH + uniqueName);
-        console.log("autoFill(): title/desc:", titleDesc);
-    
         const ob = JSON.parse(titleDesc);
 
-        console.log("Parsed:", ob);
-
         return {
-            title : ob.productName,
-            description : ob.productDescription,
+            title: ob.productName,
+            description: ob.productDescription,
         }
     } catch (err) {
-        console.error(`Error: ${err}`);
+        console.error(`autoFill fallback Error: ${err}`);
         return {};
     }
 }
