@@ -132,10 +132,10 @@ return fail(400, {
         downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
 
         // This (among other things) creates a thumbnail
-        processProductPhotos(item, uploadsRemoteSite, undefined, perPhotoCallback);
+        await processProductPhotos(item, uploadsRemoteSite, undefined, perPhotoCallback);
 
         processInvoicePhotos(item, uploadsRemoteSite);
-        processOtherPhotos(item, uploadsRemoteSite);
+        await processOtherPhotos(item, uploadsRemoteSite);
 
         redirect(302, `/${item.id}/${item.slug}`);
     }

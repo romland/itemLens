@@ -9,11 +9,11 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @unique @default(autoincrement())
-  username String  @unique
-  password String
-  token    String? @unique
-  items    Item[]
+  id        Int      @id @unique @default(autoincrement())
+  username  String   @unique
+  password  String
+  token     String?  @unique
+  items     Item[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -22,20 +22,36 @@ model User {
 // E.g. "Electronics", "DIY", "Clothes", "Shoes", ...
 // Every class in ML model should be assigned to an inventory
 model Inventory {
-  id          Int    @id @unique @default(autoincrement())
+  id          Int        @id @unique @default(autoincrement())
   name        String
   description String
-  classes     String // NOTE: JSON array, E.g. [ shoes, clothes, *, O, R]
+  classes     String     // NOTE: JSON array, E.g. [ shoes, clothes, *, O, R]
   items       Item[]
+  categories  Category[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Category {
+  id          Int        @id @unique @default(autoincrement())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+  inventoryId Int?
+
+  photos      Photo[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 // TODO: "Item" is _actually_ "Product" or "ItemType". This table actually describe _many_
 //       items, which becomes confusing.
 model Item {
-  id          Int       @id @unique @default(autoincrement())
+  id          Int        @id @unique @default(autoincrement())
   slug        String
   amount      Int?
   title       String?
@@ -46,51 +62,54 @@ model Item {
   inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   inventoryId Int?
 
-  author      User @relation(fields: [authorId], references: [id])
+  author      User       @relation(fields: [authorId], references: [id])
   authorId    Int
 
   photos      Photo[]
   documents   Document[]
   tags        Tag[]
   locations   ItemsInContainer[]
-  attributes  KVP[] // e.g. width, height, color (should override colors of photo, I guess), etc
+  attributes  KVP[]      // e.g. width, height, color (should override colors of photo, I guess), etc
   usage       InUse[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Photo {
-  id              Int     @id @unique @default(autoincrement())
-  type            String  @default("product")
-  orgPath         String?
-  cropPath        String?
-  thumbPath       String?
-  ocr             String?
-  colors          String? // NOTE: JSON array
+  id          Int       @id @unique @default(autoincrement())
+  type        String    @default("product")
+  orgPath     String?
+  cropPath    String?
+  thumbPath   String?
+  ocr         String?
+  colors      String?   // NOTE: JSON array
 
-  classBlip       String? // NOTE: JSON
-  classTrash      String? // NOTE: JSON
-  llmAnalysis     String? // NOTE: JSON
+  category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
 
-  item            Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId          Int
+  classBlip   String?   // NOTE: JSON
+  classTrash  String?   // NOTE: JSON
+  llmAnalysis String?   // NOTE: JSON
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      Int
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Document {
-  id       Int     @id @unique @default(autoincrement())
-  type     String?  // E.g. invoice, information, product-page, ...
-  title    String
-  source   String   // AKA url
-  path     String
-  extracts String   // AKA extracts
-  summary  String?  // Comes from LLM based on extract
+  id        Int      @id @unique @default(autoincrement())
+  type      String?  // E.g. invoice, information, product-page, ...
+  title     String
+  source    String   // AKA url
+  path      String
+  extracts  String   // AKA extracts
+  summary   String?  // Comes from LLM based on extract
 
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId Int
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,25 +129,25 @@ model Container {
 
   items       ItemsInContainer[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model ItemsInContainer {
-  item          Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId        Int   
-  container     Container     @relation(fields: [containerName], references: [name])
+  item          Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId        Int    
+  container     Container @relation(fields: [containerName], references: [name])
   containerName String
 
   @@id([itemId, containerName])
 }
 
 model KVP {
-  id    Int    @id @unique @default(autoincrement())
-  key   String
-  value String
+  id     Int    @id @unique @default(autoincrement())
+  key    String
+  value  String
 
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int
 }
 
@@ -142,13 +161,13 @@ model Tag {
 // Be able to tag items that are in use by/on something
 // TODO: I believe this needs to be redefined to many->many as we can have several individual items
 model InUse {
-  id          Int     @id @unique @default(autoincrement())
-  title       String? // e.g. By VidensiVision
-  description String? // e.g. ...mounted in shed to check presence of Ery
+  id          Int      @id @unique @default(autoincrement())
+  title       String?  // e.g. By VidensiVision
+  description String?  // e.g. ...mounted in shed to check presence of Ery
 
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId Int
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

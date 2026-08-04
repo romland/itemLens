@@ -196,9 +196,9 @@ console.log("formData:", orgData);
 
         downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
 
-        processProductPhotos(item, uploadsRemoteSite);
+        await processProductPhotos(item, uploadsRemoteSite);
         processInvoicePhotos(item, uploadsRemoteSite);
-        processOtherPhotos(item, uploadsRemoteSite);        
+        await processOtherPhotos(item, uploadsRemoteSite);        
 
         console.log("=== Done updating ===");
 

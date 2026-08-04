@@ -18,6 +18,8 @@ import { extractInvoiceData } from '$lib/server/llm';
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
 import QRUrlDownloader from "$lib/server/urldownloader";
+// import { analyzePhoto } from '$lib/server/gemini-classification';
+// import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
 
 export function processInvoicePhotos(item : Item, remoteSite: string)
@@ -56,9 +58,9 @@ export function processInvoicePhotos(item : Item, remoteSite: string)
   }
 }
 
-export function processOtherPhotos(item : Item, remoteSite: string)
+export async function processOtherPhotos(item : Item, remoteSite: string)
 {
-  return processProductPhotos(item, remoteSite, ["information", "other"]);
+  return await processProductPhotos(item, remoteSite, ["information", "other"]);
 }
 
 
@@ -67,8 +69,14 @@ export function processOtherPhotos(item : Item, remoteSite: string)
  * @param item 
  * @param remoteSite 
  */
-export function processProductPhotos(item : Item, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback = null)
+export async function processProductPhotos(item : Item, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback = null)
 {
+  // Dynamically import helpers to break Vite SSR top-level circular dependency
+  const { analyzePhoto } = await import('$lib/server/gemini-classification');
+  const { getExistingCategoryNames, getOrCreateCategory } = await import('$lib/server/categories');  
+
+  let existingCategories = await getExistingCategoryNames();
+
   // Deal with each photo
   for(let i = 0; i < item.photos.length; i++) {
     const photo = item.photos[i];
@@ -84,6 +92,7 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
       continue;
     }
 
+    const localImgPath = `static${photo.orgPath}`;
     const imgUrl = `${remoteSite}${photo.orgPath}`;
 
     if(false) {
@@ -97,10 +106,31 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
         photo.classBlip = JSON.stringify(result);
         updatePhoto(photo.id, photo);
       });
-    } else {
-      console.log("Replicate.com's Blip classification is disabled (incurs cost)");
+    // } else {
+    //   console.log("Replicate.com's Blip classification is disabled (incurs cost)");
     }
 
+    if(true) {
+      // --- Gemini Classification & Categorization ---
+      console.log(`Classifying photo ${photo.id} with Gemini Flash...`);
+      const targetPath = photo.thumbPath ? `static${photo.thumbPath}` : localImgPath;
+      const analysis = await analyzePhoto(targetPath, existingCategories);
+      console.log(`Photo ${photo.id} classified as: ${analysis.subCategory}`);
+
+      const category = await getOrCreateCategory(analysis.subCategory);
+      if (analysis.isNewCategory) {
+        existingCategories.push(category.name);
+      }
+
+      // Logic / DB updates for classification and categories
+      photo.categoryId = category.id;
+      photo.type = analysis.photoType;
+      photo.llmAnalysis = JSON.stringify(analysis);
+      await updatePhoto(photo.id, photo);
+      console.log(`Classified photo ${photo.id} with Gemini Flash as: `, analysis.subCategory);      
+    }
+
+    /*
     jetsonInference(`static${photo.orgPath}`, (err, result) => {
       if (err) {
         console.error("Error getting Trash classification", err);
@@ -111,6 +141,7 @@ export function processProductPhotos(item : Item, remoteSite: string, acceptType
       photo.classTrash = JSON.stringify(result);
       updatePhoto(photo.id, photo);
     });
+    */
 
     getOCRdata(imgUrl, (err, result) => {
       if (err) {
