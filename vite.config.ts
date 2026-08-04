@@ -8,7 +8,7 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 export default defineConfig({
 	ssr: {
-        external: ['canvas', 'crop-node', 'get-pixels/node-pixels']
+        external: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'pdf-parse']
     },
     
     // completely exclude them from Vite's pre-bundler:

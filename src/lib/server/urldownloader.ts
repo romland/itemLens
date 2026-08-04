@@ -3,6 +3,7 @@ import jsQR from 'jsqr';
 import { downloadQRURLs, getSafeFilename } from './photouploads';
 import fs from 'fs';
 import { summarizeWebpageExtract } from './llm';
+import { PDFParse } from 'pdf-parse';
 
 export async function downloadAndStoreDocuments(item: Item, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
@@ -42,10 +43,21 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
         console.error("Error creating document in DB:", ex);
       }
 
+      // Divert to PDF handler if needed
+      if (await isPdfUrl(line)) {
+        try {
+          await handlePdfDownload(line, item, document?.id, diskFolder, webFolder);
+        } catch (e) {
+          console.error(`Error downloading PDF ${line}:`, e);
+        }
+        continue; // Skip SingleFile logic
+      }
+
       const str: string|null = await QRUrlDownloader.downloadURL(line);
       if(!str) {
         console.log(`Did not get any result when downloading: ${line}`);
-        return;
+        // return;
+        continue;
       }
 
       const pageData = JSON.parse(str);
@@ -101,6 +113,79 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
     }
 }
 
+async function isPdfUrl(url: string): Promise<boolean> {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.pathname.toLowerCase().endsWith('.pdf')) return true;
+  } catch (e) {
+    console.warn(`Invalid URL format: ${url}`);
+  }
+
+  try {
+    const headRes = await fetch(url, { method: 'HEAD' });
+    const contentType = headRes.headers.get('content-type') || '';
+    return contentType.toLowerCase().includes('application/pdf');
+  } catch (e) {
+    console.warn(`HEAD request failed for ${url}, relying on URL parsing.`);
+    return false;
+  }
+}
+
+async function handlePdfDownload(url: string, item: any, documentId: string, diskFolder: string, webFolder: string) {
+  console.log(`Detected PDF, downloading directly: ${url}`);
+  const pdfRes = await fetch(url);
+  const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+  const docFilename = getSafeFilename(`${item.id}-doc`);
+  
+  fs.writeFileSync(`${diskFolder}/${docFilename}.pdf`, pdfBuffer);
+  
+  let extractedText = "";
+  let pdfTitle = "PDF Document";
+  
+  let parser;
+  try {
+    // 1. Initialize with the buffer
+    parser = new PDFParse({ data: pdfBuffer });
+    
+    // 2. Extract text (returns a TextResult object)
+    const textResult = await parser.getText();
+    extractedText = textResult.text;
+    
+    // 3. Extract metadata (returns an InfoResult object)
+    const infoResult = await parser.getInfo();
+    if (infoResult.info?.Title) {
+        pdfTitle = infoResult.info.Title;
+    }
+    
+  } catch (e: any) {
+    console.error("Failed to parse PDF:", e);
+  } finally {
+    // 4. Always destroy to free memory, as stated in the docs
+    if (parser) {
+        await parser.destroy();
+    }
+  }
+
+  const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
+
+  await db.document.update({
+    where: { id: documentId },
+    data: {
+      title: pdfTitle,
+      path: `${webFolder}/${docFilename}.pdf`,
+      extracts: JSON.stringify([cappedText])
+    }
+  });
+
+  if (cappedText.trim().length > 50) {
+    const summary = await summarizeWebpageExtract(cappedText);
+    await db.document.update({
+      where: { id: documentId },
+      data: { summary: summary }
+    });
+    console.log("Have summary of PDF:", summary);
+  }
+}
 
 export default class QRUrlDownloader
 {

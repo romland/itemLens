@@ -15,7 +15,7 @@
                 }
             }
         }
-        return { thumbPath: "/placeholder.png", classTrash: null };
+        return { thumbPath: "", classTrash: null };
     }
 
     function hasSummarizedDocuments(item) {
