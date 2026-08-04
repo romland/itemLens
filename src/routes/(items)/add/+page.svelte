@@ -155,7 +155,7 @@
                 
                 <div class="card bg-base-100 shadow-sm border border-base-200">
                     <div class="card-body">
-                        <h3 class="font-semibold mb-4">Media</h3>
+                        <h3 class="font-semibold mb-4">Images</h3>
                         <MediaHub 
                             photoTypes={photoTypes} 
                             on:success={(ev) => notify("success", ev.detail)} 

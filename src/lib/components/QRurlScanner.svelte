@@ -3,8 +3,6 @@
     import { createEventDispatcher } from 'svelte'
     const dispatch = createEventDispatcher();
 
-    // The mini prop is kept for backwards compatibility if used elsewhere, 
-    // but the tabbed design naturally solves the mobile space issue!
     export let mini = false; 
 
     const uploadPictureForQRcodes = false;
@@ -12,8 +10,12 @@
     let scanningURLs = false;
     let addedURLs = [];
     
+    // Premium Dynamic URL state
+    let manualUrls = [{ id: 1, val: "" }];
+    let nextUrlId = 2;
+    
     // View state for tabs
-    let activeTab = 'scan'; // 'scan' | 'paste'
+    let activeTab = 'scan'; 
 
     var qrPhotoFileCounter = 1;
     function qrPhotoUploadChanged(ev)
@@ -21,33 +23,48 @@
         if(ev.target.value) {
             const orgElt = ev.target;
             const newInput = orgElt.cloneNode(true);
-
             newInput.name = "qr." + qrPhotoFileCounter;
             newInput.value = "";
             newInput.addEventListener("change", qrPhotoUploadChanged);
             orgElt.insertAdjacentElement("afterend", newInput);
-
             qrPhotoFileCounter++;
         }
     }
 
+    function handleUrlInput() {
+        const last = manualUrls[manualUrls.length - 1];
+        if (last.val.trim() !== "") {
+            manualUrls = [...manualUrls, { id: nextUrlId++, val: "" }];
+        }
+        
+        const emptyCount = manualUrls.filter(u => u.val.trim() === "").length;
+        if (emptyCount > 1) {
+            const lastId = manualUrls[manualUrls.length - 1].id;
+            manualUrls = manualUrls.filter(u => u.val.trim() !== "" || u.id === lastId);
+        }
+    }
+
+    // Reactively combine QR URLs and Manual URLs for the hidden form input
+    // and dispatch the count back to MobileAddHub
+    $: compiledUrls = [
+        ...addedURLs,
+        ...manualUrls.map(u => u.val.trim()).filter(v => v !== "")
+    ].join("\n");
+    
+    $: dispatch('change', { count: compiledUrls ? compiledUrls.split('\n').filter(x => x).length : 0 });
+
     function scannedURL(ev, inputEltName)
     {
         scanningURLs = false;
-
         if(!addedURLs.includes(ev.detail)) {
-            document.getElementById("eltForm").elements[inputEltName].value += ev.detail + "\n";
-            addedURLs.push(ev.detail);
-            addedURLs = addedURLs;
+            addedURLs = [...addedURLs, ev.detail];
         }
         dispatch("success", `Added URL: ${ev.detail}`);
     }
 
     function isValidURL(txt)
     {
-        if(isURL(txt)) {
-            return true;
-        }
+        if(isURL(txt)) return true;
         return `QR-code should contain an URL.<br/>It contained: "${txt}"`;
     }
 
@@ -60,30 +77,29 @@
 
 <div class="flex flex-col w-full">
     <!-- Tab Navigation -->
-    <div role="tablist" class="tabs tabs-boxed bg-base-200/50 p-1 mb-4 w-full grid grid-cols-2 rounded-xl">
+    <div role="tablist" class="tabs tabs-boxed bg-base-200/50 p-1 mb-4 grid grid-cols-2 w-full rounded-xl">
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 transition-all {activeTab === 'scan' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+            class="tab h-10 w-full flex-nowrap {activeTab === 'scan' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
             on:click={() => activeTab = 'scan'}
         >
-            <i class="bi bi-qr-code-scan mr-2"></i> Scan QR
+            <i class="bi bi-qr-code-scan mr-2 whitespace-nowrap"></i> <span class="truncate">Scan QR</span>
         </button>
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 transition-all {activeTab === 'paste' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+            class="tab h-10 w-full flex-nowrap {activeTab === 'paste' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
             on:click={() => activeTab = 'paste'}
         >
-            <i class="bi bi-link-45deg mr-2"></i> Paste Links
+            <i class="bi bi-link-45deg mr-2 whitespace-nowrap"></i> <span class="truncate">Paste Links</span>
         </button>
     </div>
 
-    <!-- Content Area -->
-    <div class="bg-base-50/50 rounded-xl border-2 border-dashed border-base-300 p-6 min-h-[200px] flex flex-col transition-all">
+    <!-- Content Area with tighter mobile padding -->
+    <div class="bg-base-50/50 rounded-xl border-2 border-dashed border-base-300 p-2 sm:p-6 min-h-[200px] flex flex-col transition-all">
         
         {#if uploadPictureForQRcodes}
-            <!-- Legacy fallback if enabled -->
             <input on:change={qrPhotoUploadChanged} type="file" name="qr.0" accept="image/*" capture="environment" class="file-input w-full">
         {:else}
             
@@ -96,10 +112,10 @@
                         <div class="bg-base-200 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
                             <i class="bi bi-phone text-2xl text-gray-500"></i>
                         </div>
-                        <h3 class="font-semibold text-lg mb-1">Scan Document Link</h3>
+                        <h3 class="font-semibold text-lg mb-1 text-center">Scan Document Link</h3>
                         <p class="text-sm text-gray-400 text-center mb-4">Use your camera to scan a QR code containing a web link.</p>
                         
-                        <button class="btn btn-primary btn-wide rounded-full shadow-sm" type="button" on:click={()=>scanningURLs=true}>
+                        <button class="btn btn-primary btn-wide shadow-sm" type="button" on:click={()=>scanningURLs=true}>
                             <i class="bi bi-qr-code-scan mr-2"></i> Open Scanner
                         </button>
                     {/if}
@@ -119,22 +135,35 @@
                 </div>
             {:else}
                 <div class="flex flex-col h-full animate-fade-in w-full">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="bg-base-200 w-10 h-10 rounded-full flex items-center justify-center">
+                    <div class="flex items-center gap-3 mb-4 px-2">
+                        <div class="bg-base-200 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
                             <i class="bi bi-keyboard text-gray-500"></i>
                         </div>
                         <div>
                             <h3 class="font-semibold">Manual Entry</h3>
-                            <p class="text-xs text-gray-400">Paste one URL per line</p>
+                            <p class="text-xs text-gray-400">Paste or type links below</p>
                         </div>
                     </div>
                     
-                    <textarea name="urls" rows="4" placeholder="https://example.com/manual.pdf&#10;https://example.com/specs" class="textarea textarea-bordered w-full rounded-xl flex-grow font-mono text-sm"></textarea>
+                    <div class="flex flex-col gap-2">
+                        {#each manualUrls as urlBox (urlBox.id)}
+                            <input 
+                                type="url" 
+                                placeholder="https://..." 
+                                class="input input-bordered w-full rounded-xl"
+                                bind:value={urlBox.val}
+                                on:input={handleUrlInput}
+                            >
+                        {/each}
+                    </div>
                 </div>
             {/if}
             
         {/if}
     </div>
+    
+    <!-- Unified hidden input for form submission -->
+    <input type="hidden" name="urls" value={compiledUrls} />
     
     <div class="mt-3 text-gray-400 text-xs text-center flex items-center justify-center gap-1">
         <i class="bi bi-info-circle"></i> Linked documents will be downloaded, indexed, and stored forever.

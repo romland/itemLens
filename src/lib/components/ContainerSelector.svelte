@@ -5,19 +5,28 @@
 
     export let values = [];
     export let containers = [];
-    // Kept for backward compatibility, but the tabbed layout solves the space issue natively!
     export let mini = false;
 
     let scanningContainers = false;
     let addedContainers = [];
+    let manualSelected = [];
     
     // View state for tabs
     let activeTab = 'scan'; // 'scan' | 'select'
 
+    // // Combine QR-scanned containers and manually selected ones
+    // // and dispatch back to MobileAddHub to show on badges
+    // $: allContainers = Array.from(new Set([...addedContainers, ...manualSelected]));
+
+    // Prevent Svelte string-spread bug by forcing array, 
+    // and strip spaces so "A 001" displays as "A001" on the pill
+    $: safeManualSelected = Array.isArray(manualSelected) ? manualSelected : (manualSelected ? [manualSelected] : []);
+    $: allContainers = Array.from(new Set([...addedContainers, ...safeManualSelected])).map(c => c.replace(/\s+/g, ''));
+    $: dispatch('change', { containers: allContainers });
+
     onMount(async () => {
         if(typeof window !== 'undefined' && values.length) {
             for(let i = 0; i < values.length; i++) {
-                console.log("hum:", values[i].containerName);
                 scannedContainer({detail: values[i].containerName}, "containers", false);
             }
         }
@@ -44,8 +53,7 @@
         }
 
         if(option.selected === false) {
-            addedContainers.push(ev.detail);
-            addedContainers = addedContainers;
+            addedContainers = [...addedContainers, ev.detail];
         }
 
         option.selected = true;
@@ -58,29 +66,28 @@
 
 <div class="flex flex-col w-full">
     <!-- Tab Navigation -->
-    <div role="tablist" class="tabs tabs-boxed bg-base-200/50 p-1 mb-4 w-full grid grid-cols-2 rounded-xl">
+    <div role="tablist" class="tabs tabs-boxed bg-base-200/50 p-1 mb-4 grid grid-cols-2 w-full rounded-xl">
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 transition-all {activeTab === 'scan' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+            class="tab h-10 w-full flex-nowrap {activeTab === 'scan' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
             on:click={() => activeTab = 'scan'}
         >
-            <i class="bi bi-qr-code-scan mr-2"></i> Scan QR
+            <i class="bi bi-qr-code-scan mr-2 whitespace-nowrap"></i> <span class="truncate">Scan QR</span>
         </button>
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 transition-all {activeTab === 'select' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+            class="tab h-10 w-full flex-nowrap {activeTab === 'select' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
             on:click={() => activeTab = 'select'}
         >
-            <i class="bi bi-list-check mr-2"></i> Choose List
+            <i class="bi bi-list-check mr-2 whitespace-nowrap"></i> <span class="truncate">Choose List</span>
         </button>
     </div>
 
-    <!-- Content Area -->
-    <div class="bg-base-50/50 rounded-xl border-2 border-dashed border-base-300 p-6 min-h-[200px] flex flex-col transition-all">
+    <!-- Content Area with tighter mobile padding -->
+    <div class="bg-base-50/50 rounded-xl border-2 border-dashed border-base-300 p-2 sm:p-6 min-h-[200px] flex flex-col transition-all">
         
-        <!-- SCAN TAB -->
         <div class="flex flex-col items-center justify-center h-full w-full animate-fade-in" class:hidden={activeTab !== 'scan'}>
             {#if scanningContainers}
                 <QRreader validator={isValidContainer} title="Scan QR-code on container" on:scan={(ev) => { scannedContainer(ev, "containers") } } on:stop={()=>{ scanningContainers=false }}></QRreader>
@@ -91,7 +98,7 @@
                 <h3 class="font-semibold text-lg mb-1">Scan Container</h3>
                 <p class="text-sm text-gray-400 text-center mb-4">Point your camera at a storage box QR code.</p>
                 
-                <button class="btn btn-primary btn-wide rounded-full shadow-sm" type="button" on:click={()=>{scanningContainers=true;}}>
+                <button class="btn btn-primary btn-wide shadow-sm" type="button" on:click={()=>{scanningContainers=true;}}>
                     <i class="bi bi-qr-code-scan mr-2"></i> Open Scanner
                 </button>
             {/if}
@@ -110,10 +117,9 @@
             {/if}
         </div>
 
-        <!-- SELECT TAB -->
         <div class="flex flex-col h-full w-full animate-fade-in" class:hidden={activeTab !== 'select'}>
-            <div class="flex items-center gap-3 mb-4">
-                <div class="bg-base-200 w-10 h-10 rounded-full flex items-center justify-center">
+            <div class="flex items-center gap-3 mb-4 px-2">
+                <div class="bg-base-200 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
                     <i class="bi bi-ui-checks text-gray-500"></i>
                 </div>
                 <div>
@@ -122,8 +128,7 @@
                 </div>
             </div>
             
-            <!-- Kept in DOM so form submits and QR scanner can select options -->
-            <select name="containers" class="select select-bordered w-full rounded-xl flex-grow font-mono" multiple="multiple" size="6">
+            <select name="containers" bind:value={manualSelected} class="select select-bordered w-full rounded-xl flex-grow font-mono" multiple size="6">
                 <option value="" disabled>Select one or more containers</option>
                 {#each containers as container}
                     <option value="{container.name}" class="font-bold py-1">{container.name}: {container.description}</option>

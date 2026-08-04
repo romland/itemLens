@@ -14,23 +14,16 @@
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
     let activeView = 'hub';
 
-    // Simple tracking to show badges on the hub
-    let counts = {
-        photos: 0,
-        locations: 0,
-        links: 0
-    };
-
-    function handleSuccess(type: 'photos' | 'locations' | 'links', ev: any) {
-        counts[type]++;
-        dispatch('success', ev.detail);
-    }
+    // State for the Hub Badges
+    let photoCount = 0;
+    let selectedLocations = [];
+    let linkCount = 0;
 </script>
 
 <div class="relative w-full overflow-hidden bg-base-100 min-h-[75vh] rounded-xl shadow-lg border border-base-200">
     
     <!-- ================= THE HUB VIEW ================= -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out p-6 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
+    <div class="absolute inset-0 transition-transform duration-300 ease-in-out p-4 sm:p-6 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
         
         <div class="text-center mb-8">
             <h2 class="text-2xl font-bold">New Item</h2>
@@ -41,7 +34,7 @@
             
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'photos'}>
                 <div class="flex items-center gap-4">
-                    <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                    <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
                         <i class="bi bi-camera"></i>
                     </div>
                     <div class="text-left">
@@ -49,9 +42,9 @@
                         <div class="text-xs text-gray-500 font-normal">Upload or fetch</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    {#if counts.photos > 0}
-                        <span class="badge badge-primary">{counts.photos}</span>
+                <div class="flex items-center gap-2">
+                    {#if photoCount > 0}
+                        <span class="badge badge-primary">{photoCount}</span>
                     {/if}
                     <i class="bi bi-chevron-right text-gray-400"></i>
                 </div>
@@ -59,7 +52,7 @@
 
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'location'}>
                 <div class="flex items-center gap-4">
-                    <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                    <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
                         <i class="bi bi-box-seam"></i>
                     </div>
                     <div class="text-left">
@@ -67,17 +60,19 @@
                         <div class="text-xs text-gray-500 font-normal">Scan QR or select</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    {#if counts.locations > 0}
-                        <span class="badge badge-primary">{counts.locations}</span>
+                <div class="flex items-center gap-1 flex-wrap justify-end">
+                    {#if selectedLocations.length > 0}
+                        {#each selectedLocations as loc}
+                            <span class="badge badge-primary badge-sm font-mono">{loc}</span>
+                        {/each}
                     {/if}
-                    <i class="bi bi-chevron-right text-gray-400"></i>
+                    <i class="bi bi-chevron-right text-gray-400 ml-1"></i>
                 </div>
             </button>
 
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'links'}>
                 <div class="flex items-center gap-4">
-                    <div class="bg-emerald-100 text-emerald-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                    <div class="bg-emerald-100 text-emerald-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
                         <i class="bi bi-link-45deg"></i>
                     </div>
                     <div class="text-left">
@@ -85,9 +80,9 @@
                         <div class="text-xs text-gray-500 font-normal">Manual or scan QR</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    {#if counts.links > 0}
-                        <span class="badge badge-primary">{counts.links}</span>
+                <div class="flex items-center gap-2">
+                    {#if linkCount > 0}
+                        <span class="badge badge-primary">{linkCount}</span>
                     {/if}
                     <i class="bi bi-chevron-right text-gray-400"></i>
                 </div>
@@ -95,7 +90,7 @@
             
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'details'}>
                 <div class="flex items-center gap-4">
-                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
                         <i class="bi bi-pencil-square"></i>
                     </div>
                     <div class="text-left">
@@ -120,58 +115,67 @@
     </div>
 
     <!-- ================= SUB-VIEWS ================= -->
-    <!-- Notice the flex-col layout. It creates a rigid header, scrollable body, and rigid footer. -->
 
     <!-- PHOTOS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'photos' ? 'translate-x-0' : 'translate-x-full'}">
-        <div class="flex items-center p-6 pb-2">
+        <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Photos</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pb-6">
-            <MediaHub photoTypes={photoTypes} on:success={(ev) => handleSuccess('photos', ev)} />
+        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+            <MediaHub 
+                photoTypes={photoTypes} 
+                on:success={(ev) => { photoCount++; dispatch('success', ev.detail); }} 
+            />
         </div>
-        <div class="p-6 bg-base-100 border-t border-base-200">
+        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
             <button type="button" class="btn btn-neutral btn-lg w-full rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- LOCATION VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'location' ? 'translate-x-0' : 'translate-x-full'}">
-        <div class="flex items-center p-6 pb-2">
+        <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Storage Location</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pb-6">
-            <ContainerSelector containers={containers} on:success={(ev) => handleSuccess('locations', ev)} />
+        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+            <ContainerSelector 
+                containers={containers} 
+                on:success={(ev) => dispatch('success', ev.detail)}
+                on:change={(ev) => selectedLocations = ev.detail.containers}
+            />
         </div>
-        <div class="p-6 bg-base-100 border-t border-base-200">
+        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
             <button type="button" class="btn btn-neutral btn-lg w-full rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- LINKS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'links' ? 'translate-x-0' : 'translate-x-full'}">
-        <div class="flex items-center p-6 pb-2">
+        <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Document Links</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pb-6">
-            <QRurlScanner on:success={(ev) => handleSuccess('links', ev)} />
+        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+            <QRurlScanner 
+                on:success={(ev) => dispatch('success', ev.detail)}
+                on:change={(ev) => linkCount = ev.detail.count}
+            />
         </div>
-        <div class="p-6 bg-base-100 border-t border-base-200">
+        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
             <button type="button" class="btn btn-neutral btn-lg w-full rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- DETAILS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'details' ? 'translate-x-0' : 'translate-x-full'}">
-        <div class="flex items-center p-6 pb-2">
+        <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Item Details</h2>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-6 pb-6">
+        <div class="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
             <div class="flex flex-col gap-5">
                 <div class="form-control w-full">
                     <label class="label"><span class="label-text font-semibold">Title</span></label>
@@ -203,7 +207,7 @@
             </div>
         </div>
         
-        <div class="p-6 bg-base-100 border-t border-base-200">
+        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
             <button type="button" class="btn btn-neutral btn-lg w-full rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>

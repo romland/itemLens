@@ -133,8 +133,8 @@
 
     <div class="dropdown">
         <div class="flex justify-center w-full">
-            <div tabindex="0" role="button" class="btn btn-primary btn-wide rounded-full shadow-sm">
-                <i class="bi bi-plus-circle mr-2"></i> Add photo of...
+            <div tabindex="0" role="button" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-circle mr-2"></i> Add image of...
             </div>
         </div>
 
