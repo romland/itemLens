@@ -132,9 +132,12 @@
     <input type="hidden" name="file.type.0" value="">
 
     <div class="dropdown">
-        <div tabindex="0" role="button" class="btn-primary btn m-1">
-            Add photo of...
+        <div class="flex justify-center w-full">
+            <div tabindex="0" role="button" class="btn btn-primary btn-wide rounded-full shadow-sm">
+                <i class="bi bi-plus-circle mr-2"></i> Add photo of...
+            </div>
         </div>
+
         <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
             {#each photoTypes as type}
                 <li class="cursor-pointer" on:click={ (ev) => {
