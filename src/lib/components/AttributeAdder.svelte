@@ -12,6 +12,13 @@
 
     let numKVPs = 1;
     
+    // Modal state
+    let showTableModal = false;
+    let pendingRows = [];
+    let keyColIndex = 0;
+    let valColIndex = 1;
+    let targetIndex = 0;
+
     if(values.length) {
         numKVPs = values.length;
     }
@@ -44,93 +51,40 @@
         }
     }
 
-    function pasteHTML(pasted, valueCellIndex = 1)
-    {
+    function applyKVPs(pastedKVPs, startIndex) {
+        if (!pastedKVPs || pastedKVPs.length === 0) return;
+        
+        numKVPs += pastedKVPs.length - 1;
+        
+        // TODO: No idea why tick() does not do it for me, doing a setTimeout instead then.
+        tick();
+        setTimeout(() => {
+            for(let i = 0; i < pastedKVPs.length; i++) {
+                const kInput = document.querySelector(`input[name="kvpK-${startIndex+i}"]`);
+                const vInput = document.querySelector(`input[name="kvpV-${startIndex+i}"]`);
+                if (kInput) kInput.value = pastedKVPs[i].key;
+                if (vInput) vInput.value = pastedKVPs[i].value;
+            }
+        }, 10);
+    }
+
+    function handleTableConfirm() {
         const pastedKVPs = [];
-
-        const docNode = document.createElement("body");
-        docNode.innerHTML = pasted;
-        const tables = docNode.querySelectorAll("table");
-
-        if(tables.length === 0) {
-            console.warn("Pasted is not a table", pasted);
-            return null;
-        }
-
-        console.log(pasted);
-        let tr = [];
-
-        // Allow for multiple tables
-        for(let i = 0; i < tables.length; i++) {
-            tr = [...tr, ...tables[i].querySelectorAll("tr")]
-        }
-
-        if(tr.length > 0) {
-            const cellCount = tr[0].querySelectorAll("td,th").length;
-
-            if(cellCount > 2) {
-                // TODO: Replace this with a more HTML-y solution which show what is in which column.
-                const promptRes = prompt(`There are more than two columns.\n\nSelect which column contains the value (2-${cellCount}).\nDefault is taking second column (2).`);
-                valueCellIndex = parseInt(promptRes, 10);
-                if((""+valueCellIndex) !== promptRes) {
-                    console.warn("Invalid column index, taking default: 1 (second column)");
-                    valueCellIndex = 1;
-                } else {
-                    // reduce one (since we asked for +1 (first col is key))
-                    valueCellIndex--;
-                }
-            }
-        }
-
-        for(let i = 0; i < tr.length; i++) {
-            const td = tr[i].querySelectorAll("td,th");
-
-            // We accept more than 2 cells, but will only take data from first two.
-            if(td.length < 2) {
-                console.warn(`A row did not have two cells (had ${td.length}):`, tr[i]);
-                continue;
-            }
-
-            // TODO: We probably need to remove pointless stuff here like tooltips,
-            // Like at e.g. tweakers.net: https://tweakers.net/pricewatch/1562568/raspberry-pi-4-model-b-8gb-ram/specificaties/
-            let keyCell = td[0].innerText || "";
-            const valueCell = td[valueCellIndex].innerText || "";
-
+        for (const row of pendingRows) {
+            let keyCell = row[keyColIndex] || "";
+            let valueCell = row[valColIndex] || "";
+            
             // Remove last character if it's a :
-            if(keyCell.length > 0 && keyCell.endsWith(":")) {
+            if (keyCell.endsWith(":")) {
                 keyCell = keyCell.slice(0, -1);
             }
-
-            if(keyCell.length === 0 && valueCell.length === 0) {
-                console.warn("Skipping empty row", tr[i]);
-                continue;
-            }
-
-            if(valueCell.length === 0) {
-                // Probably some kind of header.
-                console.warn("Skipping header-type");
-                continue;
-            }
-
-            // Let's assume that if we do not have a key, the value should go on previous item.
-            if(keyCell.length === 0 && pastedKVPs.length > 0 && pastedKVPs[pastedKVPs.length-1].key.length > 0) {
-                // Did not have a key
-                pastedKVPs[pastedKVPs.length-1].value += "\n" + valueCell;
-            } else {
-                // We had a key and a value
-                pastedKVPs.push({
-                    key: keyCell,
-                    value: valueCell
-                });
+            
+            if (keyCell.trim() || valueCell.trim()) {
+                pastedKVPs.push({ key: keyCell.trim(), value: valueCell.trim() });
             }
         }
-
-        if(pastedKVPs.length === 0) {
-            console.warn("No valid KVPs found in pasted table");
-            return null;
-        }
-
-        return pastedKVPs;
+        showTableModal = false;
+        applyKVPs(pastedKVPs, targetIndex);
     }
 
     function isOfTextFormat(str, regEx)
@@ -178,10 +132,10 @@
         const kvps = str.split('\n').map(item => {
             const [key, ...value] = item.split(':');
             return {
-                "key":   [key.slice(2).trim()],
+                "key":   key.slice(2).trim(),
                 "value": value.join(':').trim()
             };
-        });
+        }).filter(kv => kv.key.length > 0 || kv.value.length > 0);
         console.log(kvps);
         return kvps;
     }
@@ -217,69 +171,103 @@
         const kvps = str.split('\n').map(item => {
             const [key, ...value] = item.split(':');
             return {
-                "key":   [key.trim()],
+                "key":   key.trim(),
                 "value": value.join(':').trim()
             };
-        });
+        }).filter(kv => kv.key.length > 0 || kv.value.length > 0);
         console.log(kvps);
         return kvps;
     }
 
     function pasteTable(ev, ix)
     {
+        let pastedHtml = ev.clipboardData.getData("text/html");
+        let pastedText = ev.clipboardData.getData("text/plain");
+        let rows = [];
 
         // Try with a standard paste of a HTML table.
-        let pasted = ev.clipboardData.getData("text/html");
-        let pastedKVPs = pasteHTML(pasted);
-
-        /*
-        if(!pasted || pasted.length === 0) {
-            pasted = ev.clipboardData.getData("application/pdf");
-            console.log("PDF fragment:", pasted);
-            throw "TODO: Never seen this... PDF? I always got text in Firefox"
-        }
-        */
-
-        if(!pastedKVPs || pastedKVPs.length === 0) {
-            pasted = ev.clipboardData.getData("text/plain");
-            console.log(pasted);
-
-            // Check which format fits this "paste" best.
-            let formats = [
-                { func: convertDashKeyColonValueToTable, ratio : isOfTextFormat(pasted, /^[–|\-|*|#] (.+)[:] (.+)$/g) },
-                // Note 'it should not start with' or will always return better than the one above since both will match
-                { func: convertKeyColonValueToTable, ratio : isOfTextFormat(pasted, /^(?![–|\-|\*|#])(.+)[:] (.+)$/g) },
-            ];
-            formats.sort((a, b) => b.ratio - a.ratio);
-
-            if(formats[0].ratio > 0.5) {
-                console.log(`Best matching format (${formats[0].ratio}) is: `, formats[0].func);
-
-                // For future reference, if truly complex format: The easiest would be to convert it to HTML tables, so as to not duplicate that effort.
-                pastedKVPs = formats[0].func(pasted);
-            } else {
-                pastedKVPs = []
+        if (pastedHtml) {
+            const docNode = document.createElement("body");
+            docNode.innerHTML = pastedHtml;
+            const tables = docNode.querySelectorAll("table");
+            
+            if (tables.length > 0) {
+                tables.forEach(table => {
+                    table.querySelectorAll("tr").forEach(tr => {
+                        const cells = Array.from(tr.querySelectorAll("td, th")).map(c => c.innerText.trim());
+                        if (cells.length > 0) rows.push(cells);
+                    });
+                });
             }
         }
 
-        if(pastedKVPs && pastedKVPs.length > 0) {
-            const startKVPinputId = parseInt(ev.target.name.split("-")[1]);
-            numKVPs += pastedKVPs.length - 1;
+        // Fallback to plain text logic if no valid table structure was found
+        if (rows.length === 0 && pastedText) {
+            // Excel / Google Sheets format (TSV)
+            if (pastedText.indexOf('\t') !== -1) {
+                rows = pastedText.split('\n')
+                    .map(r => r.split('\t').map(c => c.trim()))
+                    .filter(r => r.length > 1 || (r.length === 1 && r[0] !== ""));
+            } else {
+                // Check which format fits this "paste" best.
+                let formats = [
+                    { func: convertDashKeyColonValueToTable, ratio : isOfTextFormat(pastedText, /^[–|\-|*|#] (.+)[:] (.+)$/g) },
+                    // Note 'it should not start with' or will always return better than the one above since both will match
+                    { func: convertKeyColonValueToTable, ratio : isOfTextFormat(pastedText, /^(?![–|\-|\*|#])(.+)[:] (.+)$/g) },
+                ];
+                formats.sort((a, b) => b.ratio - a.ratio);
 
-            // TODO: No idea why tick() does not do it for me, doing a setTimeout instead then.
-            tick();
-            setTimeout(() => {
-                for(let i = 0; i < pastedKVPs.length; i++) {
-                    document.querySelector(`input[name="kvpK-${startKVPinputId+i}"]`).value = pastedKVPs[i].key;
-                    document.querySelector(`input[name="kvpV-${startKVPinputId+i}"]`).value = pastedKVPs[i].value;
+                if(formats[0].ratio > 0.5) {
+                    console.log(`Best matching format (${formats[0].ratio}) is: `, formats[0].func);
+                    const pastedKVPs = formats[0].func(pastedText);
+                    applyKVPs(pastedKVPs, ix);
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                    return;
                 }
-            }, 1);
+            }
+        }
 
+        if (rows.length > 0) {
+            let maxCols = 0;
+            rows.forEach(r => maxCols = Math.max(maxCols, r.length));
+            
+            // Normalize rows so all have same column count
+            rows = rows.map(r => {
+                while(r.length < maxCols) r.push("");
+                return r;
+            }).filter(r => r.join("").trim().length > 0);
+
+            if (maxCols > 2) {
+                // Launch Interactive Modal for Column Picker
+                pendingRows = rows;
+                targetIndex = ix;
+                keyColIndex = 0;
+                valColIndex = 1;
+                showTableModal = true;
+            } else {
+                // Direct import for simple tables
+                const pastedKVPs = rows.map(r => {
+                    let k = r[0] || "";
+                    if (k.endsWith(":")) k = k.slice(0, -1);
+                    return { key: k, value: r[1] || "" };
+                });
+                applyKVPs(pastedKVPs, ix);
+            }
+            
             ev.stopPropagation();
             ev.preventDefault();
         }
     }
+
+    function handleKeydown(event) {
+        if (showTableModal && event.key === 'Escape') {
+            showTableModal = false;
+        }
+    }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
     {#each {length:numKVPs} as _, i}
         <div>
@@ -295,5 +283,60 @@
     {/each}
     <div class="mt-1 text-gray-400 text-xs">
         Attributes, e.g.: weight = 400g, width = 140mm.<br/>
-        <strong>Note:</strong> You can paste in HTML tables and we will clean up the data.
+        <strong>Note:</strong> You can paste in HTML tables or Excel/Sheets data and we will import it.
     </div>
+
+<!-- Column Picker Modal -->
+<dialog class="modal" class:modal-open={showTableModal}>
+    <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">Select Columns to Import</h3>
+        <p class="text-sm mb-4">We detected multiple columns in your pasted data. Please select which one represents the <strong>Attribute</strong> and which is the <strong>Value</strong>.</p>
+        
+        <div class="overflow-x-auto max-h-96 border border-base-200 rounded-lg">
+            <table class="table table-sm table-zebra w-full">
+                <thead class="sticky top-0 bg-base-200 z-10">
+                    <tr>
+                        {#each pendingRows[0] || [] as _, colIndex}
+                            <th class="text-center bg-base-200">
+                                <div class="flex flex-col gap-2 items-center">
+                                    <label class="cursor-pointer flex items-center gap-1">
+                                        <input type="radio" name="keyCol" class="radio radio-primary radio-xs" value={colIndex} bind:group={keyColIndex} />
+                                        <span class="text-xs">Attribute</span>
+                                    </label>
+                                    <label class="cursor-pointer flex items-center gap-1">
+                                        <input type="radio" name="valCol" class="radio radio-secondary radio-xs" value={colIndex} bind:group={valColIndex} />
+                                        <span class="text-xs">Value</span>
+                                    </label>
+                                </div>
+                            </th>
+                        {/each}
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each pendingRows.slice(0, 10) as row}
+                        <tr>
+                            {#each row as cell, colIndex}
+                                <td class:bg-primary={keyColIndex === colIndex}
+                                    class:bg-secondary={valColIndex === colIndex}
+                                    class:bg-opacity-10={keyColIndex === colIndex || valColIndex === colIndex}>
+                                    <div class="truncate max-w-[150px]" title={cell}>{cell}</div>
+                                </td>
+                            {/each}
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+        {#if pendingRows.length > 10}
+            <div class="text-xs text-gray-500 mt-2 text-center">Showing first 10 of {pendingRows.length} rows.</div>
+        {/if}
+        
+        <div class="modal-action">
+            <button type="button" class="btn" on:click={() => showTableModal = false}>Cancel</button>
+            <button type="button" class="btn btn-primary" on:click={handleTableConfirm}>Import</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button on:click={() => showTableModal = false}>close</button>
+    </form>
+</dialog>
