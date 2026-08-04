@@ -1,4 +1,4 @@
-import getPixels from 'get-pixels/node-pixels.js';
+import sharp from 'sharp';
 import quantize from '@lokesh.dhakar/quantize/dist/index.mjs';
 
 function createPixelArray(imgData, pixelCount, quality) {
@@ -22,7 +22,6 @@ function createPixelArray(imgData, pixelCount, quality) {
             skippedPixels++;
         }
     }
-    // console.log("Skipped pixels: ", skippedPixels);
     return pixelArray;
 }
 
@@ -31,7 +30,7 @@ function validateOptions(options) {
 
     if (typeof colorCount === 'undefined' || !Number.isInteger(colorCount)) {
         colorCount = 10;
-    } else if (colorCount === 1 ) {
+    } else if (colorCount === 1) {
         throw new Error('colorCount should be between 2 and 20. To get one color, call getColor() instead of getPalette()');
     } else {
         colorCount = Math.max(colorCount, 2);
@@ -45,53 +44,49 @@ function validateOptions(options) {
     return {
         colorCount,
         quality
+    };
+}
+
+async function loadImg(img) {
+    let input = img;
+
+    // Fetch remote HTTP/HTTPS image URLs natively if passed as string
+    if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) {
+        const response = await fetch(img);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image from URL: ${response.statusText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        input = Buffer.from(arrayBuffer);
     }
+
+    // Extract raw RGBA buffer and dimensions via sharp
+    const { data, info } = await sharp(input)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+    return {
+        data,
+        shape: [info.width, info.height, info.channels]
+    };
 }
 
-function loadImg(img) {
-    return new Promise((resolve, reject) => {
-        getPixels(img, function(err, data) {
-            if(err) {
-                reject(err)
-            } else {
-                resolve(data);
-            }
-        })
-    });
+export async function getColor(img, quality) {
+    const palette = await getPalette(img, 5, quality);
+    return palette ? palette[0] : null;
 }
 
-export function getColor(img, quality) {
-    return new Promise((resolve, reject) => {
-        getPalette(img, 5, quality)
-            .then(palette => {
-                resolve(palette[0]);
-            })
-            .catch(err => {
-                reject(err);
-            })
-    });
-
-}
-
-export function getPalette(img, colorCount = 10, quality = 10) {
+export async function getPalette(img, colorCount = 10, quality = 10) {
     const options = validateOptions({
         colorCount,
         quality
     });
 
-    return new Promise((resolve, reject) => {
-        loadImg(img)
-            .then(imgData => {
-                const pixelCount = imgData.shape[0] * imgData.shape[1];
-                const pixelArray = createPixelArray(imgData.data, pixelCount, options.quality);
+    const imgData = await loadImg(img);
+    const pixelCount = imgData.shape[0] * imgData.shape[1];
+    const pixelArray = createPixelArray(imgData.data, pixelCount, options.quality);
 
-                const cmap = quantize(pixelArray, options.colorCount);
-                const palette = cmap? cmap.palette() : null;
-
-                resolve(palette);
-            })
-            .catch(err => {
-                reject(err);
-            })
-    });
+    const cmap = quantize(pixelArray, options.colorCount);
+    return cmap ? cmap.palette() : null;
 }

@@ -1,4 +1,4 @@
-import Jimp from 'jimp';
+import sharp from 'sharp';
 import jsQR from 'jsqr';
 import { downloadQRURLs, getSafeFilename } from './photouploads';
 import fs from 'fs';
@@ -178,16 +178,17 @@ export default class QRUrlDownloader
     private static async getImageData(imagePath : string) : Promise<any>
     {
         try {
-            // Load the image with Jimp
-            const image = await Jimp.read(imagePath);
+            // Load the image and extract raw RGBA pixels via Sharp
+            const { data, info } = await sharp(imagePath)
+                .ensureAlpha()
+                .raw()
+                .toBuffer({ resolveWithObject: true });
 
-            // Get the image data
-            const imageData = {
-                data: new Uint8ClampedArray(image.bitmap.data),
-                width: image.bitmap.width,
-                height: image.bitmap.height,
+            return {
+                data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+                width: info.width,
+                height: info.height,
             };
-            return imageData;
         } catch (error) {
             console.error('Error loading image for QR check:', error);
             return null;

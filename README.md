@@ -59,6 +59,11 @@ $ cd node_modules/canvas
 $ npx node-gyp rebuild
 ```
 
+Prisma error? Deleted node_modules?
+```
+$ npx prisma generate
+```
+
 # Development
 
 ## Stack
