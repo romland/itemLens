@@ -19,7 +19,8 @@
 
     import pageTitle from '$lib/stores';
     import MediaHub from "$lib/components/add/MediaHub.svelte";
-    
+    import PasteHandler from "$lib/components/PasteHandler.svelte";
+
     import MobileAddHub from "$lib/components/add/MobileAddHub.svelte";
 
     const LARGE_CONTAINER_SELECTOR = false;
@@ -67,6 +68,7 @@
 </script>
 
 <svelte:window on:resize={toggleMinimal} />
+<PasteHandler formId="eltForm" on:success={(ev) => notify("success", ev.detail)} />
 
 {#if form?.error}
     <div class="mb-6">

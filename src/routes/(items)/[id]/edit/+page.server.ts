@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
-import { writeFileSync } from "fs";
+import fs, { writeFileSync } from "fs";
 import slugify from 'slugify';
 import { db } from '$lib/server/database';
 import type { Tag } from "@prisma/client";
@@ -9,7 +9,7 @@ import type { Item, Photo, KVP } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
+import { savePhotos, getSafeFilename, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -187,6 +187,28 @@ console.log("formData:", orgData);
         // Store all image IDs belonging to this item, including ones just created.
         const allExistingPhotoIds = item.photos.map(p=>p.id);
         const allExistingDocumentIds = item.documents.map(p=>p.id);
+
+        const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
+        if (pastedUrls.length > 0) {
+            data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");
+        }
+
+        const pastedDocsRaw = orgData.getAll("pasted_documents[]");
+        const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
+        for (const doc of pastedDocs) {
+            const filename = getSafeFilename(`${item.id}-note`);
+            fs.writeFileSync(`${uploadsDiskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
+            await db.document.create({
+                data: {
+                    itemId: item.id,
+                    type: "note",
+                    title: doc.title,
+                    source: "Pasted Note",
+                    path: `${uploadsWebFolder}/${filename}.txt`,
+                    extracts: JSON.stringify([doc.content])
+                }
+            });
+        }
 
         // Deal with refreshing and deleting documents and images.
         // Refresh takes presedence over delete (that is, if something is 

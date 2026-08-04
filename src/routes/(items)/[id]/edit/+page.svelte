@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { ActionData, PageServerData } from "./$types";
+    import type { SubmitFunction } from "@sveltejs/kit";
     import { enhance } from "$app/forms";
     import { photoTypes } from "$lib/shared/constants.ts";
     import { marked } from "marked";
@@ -14,7 +15,8 @@
     import Notifications from "$lib/components/Notifications.svelte";
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
-  
+    import PasteHandler from "$lib/components/PasteHandler.svelte";
+
     export let data: PageServerData;
     export let form: ActionData;
 
@@ -22,12 +24,10 @@
     let saving = false;
     let markdownHtml = "";
 
-    // TODO: Is this messing with form-validation messages?
     const onSubmit: SubmitFunction = async (data) => {
         saving = true;
 
         return async (options) => {
-            // After the form submits...
             saving = false;
             if(options.result?.type === "redirect") {
                 window.location.href = options.result.location;
@@ -35,11 +35,8 @@
         }
     }
 
-
     function updateMarkdownPreview()
     {
-        // TODO: Security. Sanitize?
-        // markdownHtml = marked.parse(data.item?.description!, {gfm:true,breaks:true});
         markdownHtml = marked.parse(description.value, {gfm:true,breaks:true});
     }
 
@@ -51,6 +48,8 @@
     import pageTitle from '$lib/stores';
     pageTitle.set("Edit " + data.item?.title);
 </script>
+
+<PasteHandler formId="eltForm" on:success={(ev) => notify("success", ev.detail)} />
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>
@@ -67,7 +66,6 @@
         <div role="tablist" class="tabs tabs-lifted">
             <input type="radio" name="markdownEditorTab" role="tab" class="tab" aria-label="Edit" checked />
             <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-                <!-- for live changes: on:input={updateMarkdownPreview} -->
                 <textarea id="description" name="description" rows="5" placeholder="Product description" class="textarea textarea-bordered w-full">{data.item?.description}</textarea>
                 <div class="mt-1 text-gray-400 text-xs">
                     Markdown can be used.
@@ -76,13 +74,11 @@
             
             <input type="radio" name="markdownEditorTab" role="tab" class="tab" aria-label="Preview" on:click={updateMarkdownPreview}/>
             <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-                <!-- preview -->
                 <div class="content prose max-w-none mb-3">
                     {@html markdownHtml}
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="mb-3">
@@ -115,7 +111,7 @@
         values={data.item?.documents || []}
         inputName="documents"
         columns={{
-            "3":{name:"Title",    fieldName:"title", isImage: false},
+            "3":{name:"Title",     fieldName:"title", isImage: false},
             "4":{name:"Filename", fieldName:"path", isLink: true}
         }}
     />

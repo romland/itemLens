@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 
 import slugify from 'slugify';
+import fs from 'fs';
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 
@@ -8,7 +9,7 @@ import type { Item, Photo, KVP } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
+import { savePhotos, getSafeFilename, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
 import { autoFill } from '$lib/server/autofill';
 
 export const actions = {
@@ -94,6 +95,28 @@ return fail(400, {
               photos : true,
             }
         });
+
+        const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
+        if (pastedUrls.length > 0) {
+            data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");
+        }
+
+        const pastedDocsRaw = orgData.getAll("pasted_documents[]");
+        const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
+        for (const doc of pastedDocs) {
+            const filename = getSafeFilename(`${item.id}-note`);
+            fs.writeFileSync(`${uploadsDiskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
+            await db.document.create({
+                data: {
+                    itemId: item.id,
+                    type: "note",
+                    title: doc.title,
+                    source: "Pasted Note",
+                    path: `${uploadsWebFolder}/${filename}.txt`,
+                    extracts: JSON.stringify([doc.content])
+                }
+            });
+        }
 
         let photoCount = 0;
         const perPhotoCallback = (async (err, photo) => {
