@@ -205,7 +205,7 @@
         <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
             <i class="bi bi-stars text-primary"></i> Refine AI Guess
         </h3>
-        <p class="text-sm text-gray-500 mb-6">Tell us what this actually is, and we'll rewrite the details.</p>
+        <p class="text-sm text-gray-500 mb-6">Give the AI a nudge with a brand or model name to get a better match.</p>
         
         <input type="text" bind:value={userHint} on:keydown={(e) => e.key === 'Enter' && runAiRefine()} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
         
