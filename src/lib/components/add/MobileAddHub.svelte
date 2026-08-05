@@ -3,7 +3,7 @@
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import QRurlScanner from "$lib/components/QRurlScanner.svelte";
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
-    import { photoTypes } from "$lib/shared/constants.ts";
+    import { photoTypes } from "$lib/shared/constants";
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();

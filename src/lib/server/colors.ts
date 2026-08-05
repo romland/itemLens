@@ -2,7 +2,7 @@ import { getPalette } from "$lib/server/colorthief";
 import namer from 'color-namer';
 
 // Extract top colors of image
-export function getTopColorsNamed(imagePath : string, callback)
+export function getTopColorsNamed(imagePath : string, callback: any)
 {
     console.log("Extracting colors from", imagePath);
 
@@ -18,7 +18,7 @@ export function getTopColorsNamed(imagePath : string, callback)
             console.log(`<div style='height:100; width:100; background-color: ${hexCol}'></div>`);
             
             // color-namer
-            const colorName = namer(hexCol, { distance : "deltae", pick: ['basic', "pantone"] });
+            const colorName: any = namer(hexCol, { distance : "deltae", pick: ['basic', "pantone"] } as any);
             if(colorName.basic[0].distance < 25)
             {
                 // colorNames.push(colorName.basic[0].name.toLowerCase());

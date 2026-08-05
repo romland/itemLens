@@ -52,7 +52,7 @@ export const actions = {
 
         const post = await db.container.findUnique({
             where: {
-                name: data.id
+                name: data.id as string
             }
         });
 
@@ -73,12 +73,12 @@ export const actions = {
         }
 
         await db.container.update({
-            where: { name: data.id },
+            where: { name: data.id as string },
             data: {
                 name: name.trim(),
                 photoPath: filename,
                 description: description.trim(),
-                location : data.location,
+                location : (data.location as string) || null,
             }
         });
 

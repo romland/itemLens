@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
 
     import { createEventDispatcher } from 'svelte'
@@ -12,7 +12,7 @@
 
     // This is very un-Svelte; I had trouble getting something Svelte-ish
     // working on my old iPhone.
-    function productPhotoUploadChanged(ev)
+    function productPhotoUploadChanged(ev: any)
     {
         if(ev.target.files[0]) {
             // Take parent of file-select, clone it and make a new element
@@ -38,7 +38,7 @@
                 const prodPhotoId = productPhotoFileCounter;
                 item.addEventListener('click', (ev) => {
                     newParent.querySelector(`input[type='file']`)?.click();
-                    document?.activeElement?.blur();
+                    (document?.activeElement as HTMLElement | null)?.blur();
 
                     // Set name and avalue of the hidden input for type of file (product, receipt, ...)
                     const photoTypeElt = ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']");
@@ -142,8 +142,9 @@
             {#each photoTypes as type}
                 <li class="cursor-pointer" on:click={ (ev) => {
                         document?.getElementById('file.0')?.click();
-                        document?.activeElement?.blur();
-                        ev.target.parentNode.parentNode.parentNode.parentNode.querySelector("input[type='hidden']").value = ev.target.text.toLowerCase();
+                        (document?.activeElement as HTMLElement | null)?.blur();
+                        const hiddenInput = (ev.currentTarget as HTMLElement).closest('.dropdown')?.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+                        if (hiddenInput) hiddenInput.value = type.toLowerCase();
                     }}>
                     <a>{type}</a>
                 </li>

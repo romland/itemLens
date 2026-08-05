@@ -53,7 +53,7 @@ and you can use it all -- but adding new products will be more work.
 Goal is: No fixed cost / month -- only pay for use
 
 # ARRRGH's
-You may need to do this after `npm install`:
+You may need to do this after `npm install` if you get `Error: Cannot find module '../build/Release/canvas.node'`:
 ```
 $ cd node_modules/canvas
 $ npx node-gyp rebuild

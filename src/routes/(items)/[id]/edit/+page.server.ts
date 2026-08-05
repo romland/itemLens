@@ -5,7 +5,7 @@ import slugify from 'slugify';
 import { db } from '$lib/server/database';
 import type { Tag } from "@prisma/client";
 
-import type { Item, Photo, KVP } from '@prisma/client';
+import type { Item, Photo, Prisma } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
@@ -108,7 +108,7 @@ export const actions = {
           }
   
           let photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
-          const kvps: KVP[] = formKVPsToDBrows(data);
+		  const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
           const tagIds = await getTagIds(tagcsv);
 
 
@@ -166,7 +166,7 @@ console.log("formData:", orgData);
                   create: containers.map((cont) => {
                     return {
                       container : {
-                          connect: { name : cont },     // CHECK: set? on add: connect
+                          connect: { name : String(cont) },     // CHECK: set? on add: connect
                       }
                     }
                   }),
@@ -229,7 +229,7 @@ console.log("formData:", orgData);
 } satisfies Actions;
 
 
-async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, allExistingPhotoIds: number[], preExistingPhotoIds: number[], item: Item | null)
+async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, allExistingPhotoIds: number[], preExistingPhotoIds: number[], item: any)
 {
     try {
         let imagesToDelete = JSON.parse(data.delete_images as string);
@@ -283,7 +283,7 @@ async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, a
 }
 
 
-async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }, allExistingIds: number[], preExistingIds: number[], item: Item | null)
+async function refreshDeleteDocuments(data: { [k: string]: FormDataEntryValue; }, allExistingIds: number[], preExistingIds: number[], item: any)
 {
     try {
         // let toDelete = JSON.parse(data.delete_documents as string);

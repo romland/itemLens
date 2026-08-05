@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import QRreader from "$lib/components/QRreader.svelte";
     import { createEventDispatcher, onMount } from 'svelte'
     const dispatch = createEventDispatcher();
@@ -38,13 +38,13 @@
         return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
     }
 
-    function scannedContainer(ev, inputEltName, notify = true)
+    function scannedContainer(ev: any, inputEltName: string, notify = true)
     {
         const form = document.getElementById("eltForm");
         if (!form) return;
         
-        const elt = form.elements[inputEltName];
-        const options = Array.from(elt.querySelectorAll('option'));
+        const elt = (form as any).elements[inputEltName];
+        const options = Array.from(elt.querySelectorAll('option')) as HTMLOptionElement[];
         const option = options.find(c => c.value === ev.detail);
 
         if(!option) {

@@ -41,7 +41,7 @@ export const actions = {
                 name: name.trim(),
                 photoPath: filename,
                 description: description.trim(),
-                location : data.location?.trim(),
+                location : (data.location as string)?.trim(),
             }
         });
 

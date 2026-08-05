@@ -3,9 +3,10 @@
     import type { PageServerData } from "./$types";
 
     import { tick }  from 'svelte';
-    import { enhance, type SubmitFunction } from '$app/forms';
+    import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
     import { redirect } from '@sveltejs/kit';
-    import { photoTypes } from "$lib/shared/constants.ts";
+    import { photoTypes } from "$lib/shared/constants";
 
     import Alert from "$lib/components/alert.svelte";
     import QRreader from "$lib/components/QRreader.svelte";
@@ -22,6 +23,8 @@
     import PasteHandler from "$lib/components/PasteHandler.svelte";
 
     import MobileAddHub from "$lib/components/add/MobileAddHub.svelte";
+
+    import { onMount } from 'svelte';
 
     const LARGE_CONTAINER_SELECTOR = false;
 
@@ -60,14 +63,18 @@
     }
     
     // Call it once on load
-    toggleMinimal();
+    // toggleMinimal();
+    onMount(() => {
+        toggleMinimal();
+    });
 
     $: console.log("Form changed:", form);
 
     pageTitle.set("Add new product");
 </script>
 
-<svelte:window on:resize={toggleMinimal} />
+<svelte:window onresize={toggleMinimal} />
+
 <PasteHandler formId="eltForm" on:success={(ev) => notify("success", ev.detail)} />
 
 {#if form?.error}

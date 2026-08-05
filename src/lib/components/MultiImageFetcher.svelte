@@ -1,14 +1,15 @@
-<script>
+<script lang="ts">
     export let photoTypes = [];
 
-    let addedImagesToDownload = [];
+    let addedImagesToDownload: { type: string; url: string }[] = [];
 
-    function addImageToDownload(ev, type)
+    function addImageToDownload(ev: Event, type: string)
     {
         const downloadImage = window.prompt(`Link to "${type}" image:`);
 
         if(downloadImage) {
-            document.querySelector("input[name='downloadImages']").value += type.toLowerCase() + " " + downloadImage + "\n";
+            const input = document.querySelector("input[name='downloadImages']") as HTMLInputElement | null;
+            if (input) input.value += type.toLowerCase() + " " + downloadImage + "\n";
             addedImagesToDownload.push({
                 type: type.toLowerCase(),
                 url: downloadImage
@@ -32,7 +33,7 @@
         <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
             {#each photoTypes as type}
                 <li class="cursor-pointer" on:click={ (ev) => {
-                        document?.activeElement?.blur();
+                        (document?.activeElement as HTMLElement | null)?.blur();
                         addImageToDownload(ev, type);
                     }}>
                     <a>{type}</a>

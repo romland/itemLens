@@ -6,10 +6,11 @@
     import Items from "$lib/components/items.svelte";
 
     export let q: string = '';
+    let resultsAsYouType: HTMLDivElement;
 
     let items = [];
     
-    async function query(ev, q)
+    async function query(ev: Event, q: string)
     {
         if(!q || q.length === 0) {
             items = [];
@@ -23,7 +24,7 @@
         resultsAsYouType.classList.add("dropdown-open");
     }
 
-    function focus(ev)
+    function focus(ev: Event)
     {
         if(items.length > 0) {
             resultsAsYouType.classList.add("dropdown-open");
@@ -45,7 +46,7 @@
             <input 
                 on:focus={focus} 
                 on:blur={blur} 
-                on:input={(ev)=>query(ev, ev.target.value)} 
+                on:input={(ev)=>query(ev, (ev.target as HTMLInputElement).value)}
                 autocomplete="off" 
                 type="text" 
                 name="q" 
@@ -64,7 +65,7 @@
                   mind that it licks the right edge (and does not obscure 
                   other content)
         -->
-        <div id="resultsAsYouType"
+        <div bind:this={resultsAsYouType} id="resultsAsYouType"
             class:hidden={items.length === 0}
             class="dropdown border-solid dropdown-open dropdown-end"
             style="position: absolute; right: 0; bottom: 0;"

@@ -1,9 +1,9 @@
-import type { KVP } from '@prisma/client';
+import type { KVP, Prisma } from '@prisma/client';
 import { db } from '$lib/server/database';
 import slugify from 'slugify';
 
 export const getTagIds = async (tagcsv: string) => {
-    const ids = [];
+    const ids: { id: number }[] = [];
 
     if (tagcsv) {
         const tagNames = tagcsv.split(',');
@@ -26,25 +26,26 @@ export const getTagIds = async (tagcsv: string) => {
         });
 
         for (const tag of tags) {
-            ids.push({
-                id: (await tag)?.id
-            });
+            const resolved = await tag;
+            if (resolved?.id) {
+                ids.push({ id: resolved.id });
+            }
         }
     }
 
     return ids;
 }
 
-export function formKVPsToDBrows(formData: FormData[])
+export function formKVPsToDBrows(formData: Record<string, any>)
 {
-  const kvps: KVP[] = [];
+  const kvps: Prisma.KVPCreateWithoutItemInput[] = [];
 
   for(const key in formData) {
     if(key.startsWith("kvpK")) {
       const index = parseInt(key.split("-")[1], 10);
       kvps.push({
-        key: formData[key],
-        value: formData[`kvpV-${index}`]
+        key: String(formData[key] ?? ''),
+        value: String(formData[`kvpV-${index}`] ?? '')
       })
     }
   }

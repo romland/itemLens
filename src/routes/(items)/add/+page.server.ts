@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 
-import type { Item, Photo, KVP } from '@prisma/client';
+import type { Item, Photo, Prisma } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
@@ -22,7 +22,7 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
-        const requestedAutoFillFields = {};
+        const requestedAutoFillFields: Record<string, string> = {};
         let autoFillRequested = false;
 
         if (title.length == 0) {
@@ -51,7 +51,7 @@ export const actions = {
         }
 
         const photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
-        const kvps: KVP[] = formKVPsToDBrows(data);
+    		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
         const ids = await getTagIds(tagcsv);
 
 /*
@@ -79,7 +79,7 @@ return fail(400, {
                   create: containers.map((cont) => {
                     return {
                       container : {
-                          connect: { name : cont },
+                          connect: { name : String(cont) },
                       }
                     }
                   })
@@ -134,7 +134,7 @@ return fail(400, {
           console.log("Autofilling based on first photo to come back. Hmm.", photo);
           const autofillResult = await autoFill(`static${photo.orgPath}_thumb.jpg`)
 
-          const autoFillData = {};
+          const autoFillData: Record<string, string> = {};
           if(requestedAutoFillFields.title && autofillResult.title) {
             autoFillData.title = autofillResult.title;
           }

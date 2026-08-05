@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte'
     import { tick }  from 'svelte';
 
@@ -8,13 +8,13 @@
     up due to input-elements having the same names.
 */
 
-    export let values = [];
+    export let values: any[] = [];
 
     let numKVPs = 1;
     
     // Modal state
     let showTableModal = false;
-    let pendingRows = [];
+    let pendingRows: string[][] = [];
     let keyColIndex = 0;
     let valColIndex = 1;
     let targetIndex = 0;
@@ -26,23 +26,25 @@
     onMount(async () => {
         if(typeof window !== 'undefined' && values.length) {
             for(let i = 0; i < values.length; i++) {
-                document.querySelector(`input[name="kvpK-${i}"]`).value = values[i].key;
-                document.querySelector(`input[name="kvpV-${i}"]`).value = values[i].value;
+                const k = document.querySelector(`input[name="kvpK-${i}"]`) as HTMLInputElement | null;
+                const v = document.querySelector(`input[name="kvpV-${i}"]`) as HTMLInputElement | null;
+                if (k) k.value = values[i].key;
+                if (v) v.value = values[i].value;
             }
         }
     });
 
 
-    function addKVP(ev)
+    function addKVP(ev: Event)
     {
         numKVPs = numKVPs + 1;
         // No idea why tick() does not work, cba to read up on it atm. Doing this:
         setTimeout(() => {
-            document.querySelector('input[name="kvpK-' + (numKVPs-1) + '"]').focus();
+            (document.querySelector('input[name="kvpK-' + (numKVPs-1) + '"]') as HTMLElement | null)?.focus();
         }, 1);
     }
 
-    function removeKVP(ev, ix)
+    function removeKVP(ev: any, ix: number)
     {
         if(numKVPs > 1) {
             ev.target.parentNode.remove("kvpK-"+ix);
@@ -51,7 +53,7 @@
         }
     }
 
-    function applyKVPs(pastedKVPs, startIndex) {
+    function applyKVPs(pastedKVPs: any[], startIndex: number) {
         if (!pastedKVPs || pastedKVPs.length === 0) return;
         
         numKVPs += pastedKVPs.length - 1;
@@ -60,8 +62,8 @@
         tick();
         setTimeout(() => {
             for(let i = 0; i < pastedKVPs.length; i++) {
-                const kInput = document.querySelector(`input[name="kvpK-${startIndex+i}"]`);
-                const vInput = document.querySelector(`input[name="kvpV-${startIndex+i}"]`);
+                const kInput = document.querySelector(`input[name="kvpK-${startIndex+i}"]`) as HTMLInputElement | null;
+                const vInput = document.querySelector(`input[name="kvpV-${startIndex+i}"]`) as HTMLInputElement | null;
                 if (kInput) kInput.value = pastedKVPs[i].key;
                 if (vInput) vInput.value = pastedKVPs[i].value;
             }
@@ -87,7 +89,7 @@
         applyKVPs(pastedKVPs, targetIndex);
     }
 
-    function isOfTextFormat(str, regEx)
+    function isOfTextFormat(str: string, regEx: RegExp)
     {
         str = str.replaceAll("\r\n", "\n");
         const lines = str.split("\n");
@@ -124,7 +126,7 @@
         – Breedte: 25.6mm
         – Gewicht: 10g
     */
-    function convertDashKeyColonValueToTable(str)
+    function convertDashKeyColonValueToTable(str: string)
     {
         str = str.replaceAll("\r\n", "\n");
 
@@ -164,7 +166,7 @@
             Distortion: <1%
             Baseline Length: 60mm
     */
-    function convertKeyColonValueToTable(str)
+    function convertKeyColonValueToTable(str: string)
     {
         str = str.replaceAll("\r\n", "\n");
 
@@ -179,11 +181,11 @@
         return kvps;
     }
 
-    function pasteTable(ev, ix)
+    function pasteTable(ev: any, ix: number)
     {
         let pastedHtml = ev.clipboardData.getData("text/html");
         let pastedText = ev.clipboardData.getData("text/plain");
-        let rows = [];
+        let rows: string[][] = [];
 
         // Try with a standard paste of a HTML table.
         if (pastedHtml) {
@@ -194,7 +196,7 @@
             if (tables.length > 0) {
                 tables.forEach(table => {
                     table.querySelectorAll("tr").forEach(tr => {
-                        const cells = Array.from(tr.querySelectorAll("td, th")).map(c => c.innerText.trim());
+                        const cells = Array.from(tr.querySelectorAll("td, th")).map(c => (c as HTMLElement).innerText.trim());
                         if (cells.length > 0) rows.push(cells);
                     });
                 });
@@ -260,14 +262,14 @@
         }
     }
 
-    function handleKeydown(event) {
+    function handleKeydown(event: KeyboardEvent) {
         if (showTableModal && event.key === 'Escape') {
             showTableModal = false;
         }
     }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+    <svelte:window onkeydown={handleKeydown} />
 
     {#each {length:numKVPs} as _, i}
         <div>
@@ -336,7 +338,12 @@
             <button type="button" class="btn btn-primary" on:click={handleTableConfirm}>Import</button>
         </div>
     </div>
-    <form method="dialog" class="modal-backdrop">
+
+    <!--form method="dialog" class="modal-backdrop">
         <button on:click={() => showTableModal = false}>close</button>
-    </form>
+    </form-->
+
+    <div class="modal-backdrop">
+        <button type="button" on:click={() => showTableModal = false}>close</button>
+    </div>    
 </dialog>

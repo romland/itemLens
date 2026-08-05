@@ -20,4 +20,15 @@ declare global {
 	var db: PrismaClient;
 }
 
+declare module 'virtual:pwa-info' {
+	export const pwaInfo: {
+		webManifest: { linkTag: string };
+	} | undefined;
+}
+
+declare module '@lokesh.dhakar/quantize/dist/index.mjs' {
+    const quantize: any;
+    export default quantize;
+}
+
 export {};

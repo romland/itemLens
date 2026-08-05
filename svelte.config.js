@@ -15,7 +15,8 @@ const config = {
 		csrf: {
 			// I just cannot be arsed to fiddle with CORS issues right now;
 			// flip off Svelte Kit's checks when on dev-env.
-			checkOrigin: (process.env.NODE_ENV === "development" ? false : true),
+			// checkOrigin: (process.env.NODE_ENV === "development" ? false : true),
+			trustedOrigins: []
 		}
 	}
 };

@@ -2,7 +2,7 @@
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from "@sveltejs/kit";
     import { enhance } from "$app/forms";
-    import { photoTypes } from "$lib/shared/constants.ts";
+    import { photoTypes } from "$lib/shared/constants";
     import { marked } from "marked";
 
     import Alert from "$lib/components/alert.svelte";
@@ -81,7 +81,7 @@
 
     function updateMarkdownPreview()
     {
-        markdownHtml = marked.parse(description.value, {gfm:true,breaks:true});
+		markdownHtml = marked.parse(currentDescription, {gfm:true,breaks:true}) as string;
     }
 
     function notify(status, ev)

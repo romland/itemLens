@@ -13,6 +13,7 @@
     let classTrash = []
     let classBlip = [];
     let currentLightboxImage = null;
+    let lightboxModal: HTMLDialogElement;
 
     beforeNavigate(() => {
         {
@@ -388,7 +389,7 @@ $:  if(!done && invoicePhotos.length > 0) {
 </article>
 
 
-<dialog id="lightboxModal" class="modal">
+<dialog bind:this={lightboxModal} id="lightboxModal" class="modal">
   <div class="modal-box max-w-none w-8/10">
     <form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>

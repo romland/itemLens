@@ -1,4 +1,4 @@
-export function refineForLLM(data)
+export function refineForLLM(data: any)
 {
   const blocks = data.data[0];
   const [heights, smallest, biggest] = analyzeFontSizes(data);
@@ -7,22 +7,22 @@ export function refineForLLM(data)
   return minimizeBlocksForLLM(refineOCRdBlocks(blocks), normalizedHeights);
 }
 
-export function refine(data)
+export function refine(data: any)
 {
   const blocks = data.data[0];
   return refineOCRdBlocks(blocks);
 }
 
-function refineOCRdBlocks(blocks)
+function refineOCRdBlocks(blocks: any)
 {
   // const blocks = data.data[0];
   const [heights, smallest, biggest] = analyzeFontSizes(blocks);
   const normalizedHeights = getNormalized(0, biggest, heights);
 
-  const refinedBlocks = [];
+  const refinedBlocks: any[] = [];
   for(let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    const b = {
+    const b: any = {
       box: {
         leftTop : { 
           x: block[0][0][0],
@@ -69,9 +69,9 @@ function refineOCRdBlocks(blocks)
   return refinedBlocks;
 }
 
-function analyzeFontSizes(blocks)
+function analyzeFontSizes(blocks: any): [number[], number, number]
 {
-  let heights = [];
+  let heights: number[] = [];
   let smallest = Infinity;
   let biggest = 0;
 
@@ -93,10 +93,10 @@ function analyzeFontSizes(blocks)
   return [ heights, smallest, biggest ];
 }
 
-function minimizeBlocksForLLM(refinedBlocks, normalizedHeights)
+function minimizeBlocksForLLM(refinedBlocks: any, normalizedHeights: any)
 {
   const modeHeight = getMode(normalizedHeights);
-  const keptBlocks = [];
+  const keptBlocks: any[] = [];
   for(let i = 0; i < refinedBlocks.length; i++) {
     const block = refinedBlocks[i];
     // Remove blocks with small fontsize or low confidence
@@ -115,7 +115,7 @@ function minimizeBlocksForLLM(refinedBlocks, normalizedHeights)
   return keptBlocks;
 }
 
-function extractPairs(blocks)
+function extractPairs(blocks: any)
 {
   // Sort data from left to right, top to bottom
   blocks.sort((a, b) => { 
@@ -164,7 +164,7 @@ function extractPairs(blocks)
 }
 
 
-function assignLineToBlocks(blocks)
+function assignLineToBlocks(blocks: any)
 {
   // Sort blocks from top to bottom accepting minor deviations (tolerance)
   let sorted = blocks.sort((a, b) => a.box.leftTop.y - b.box.leftTop.y);        
@@ -193,7 +193,7 @@ function assignLineToBlocks(blocks)
   return blocks;
 }
 
-function assignColumnToBlocks(blocks)
+function assignColumnToBlocks(blocks: any)
 {
   // Sort blocks from left to right accepting minor deviations (tolerance)
   let sorted = blocks.sort((a, b) => a.box.leftTop.x - b.box.leftTop.x);        
@@ -241,16 +241,16 @@ function getAverage(numbers: number[])
 
 function getMode(numbers: number[])
 {
-  const frequencyMap = numbers.reduce((acc, curr) => {
+  const frequencyMap = numbers.reduce((acc: Record<string, number>, curr) => {
       acc[curr] = (acc[curr] || 0) + 1;
       return acc;
   }, {});
 
-  const maxFrequency = Math.max(...Object.values(frequencyMap));
+  const maxFrequency = Math.max(...(Object.values(frequencyMap) as number[]));
   return Object.keys(frequencyMap).filter(num => frequencyMap[num] === maxFrequency).map(Number)[0];
 }
 
-export function toTextDocument(ocr)
+export function toTextDocument(ocr: any)
 {
   let boxes = refine(ocr);
   // We will assume that the 'boxes' array contains the box objects.

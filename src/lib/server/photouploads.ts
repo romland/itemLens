@@ -22,7 +22,7 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
 
-export function processInvoicePhotos(item : Item, remoteSite: string)
+export function processInvoicePhotos(item : any, remoteSite: string)
 {
   for(let i = 0; i < item.photos.length; i++) {
     const photo = item.photos[i];
@@ -58,7 +58,7 @@ export function processInvoicePhotos(item : Item, remoteSite: string)
   }
 }
 
-export async function processOtherPhotos(item : Item, remoteSite: string)
+export async function processOtherPhotos(item : any, remoteSite: string)
 {
   return await processProductPhotos(item, remoteSite, ["information", "other"]);
 }
@@ -69,7 +69,7 @@ export async function processOtherPhotos(item : Item, remoteSite: string)
  * @param item 
  * @param remoteSite 
  */
-export async function processProductPhotos(item : Item, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback = null)
+export async function processProductPhotos(item : any, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback: any = null)
 {
   // Dynamically import helpers to break Vite SSR top-level circular dependency
   const { analyzePhoto } = await import('$lib/server/gemini-classification');
@@ -192,7 +192,7 @@ export async function processProductPhotos(item : Item, remoteSite: string, acce
  * @param imgUrl 
  * @param item 
  */
-function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback)
+function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback: any)
 {
   // A lot of things will be done after we have removed background ...
   const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
@@ -226,7 +226,7 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
     // Create thumbnail
     const thumbOptions = {
       width: 256,
-      responseType: 'buffer',
+      responseType: 'buffer' as const,
       jpegOptions: {
         force: true,
         quality: 90
@@ -270,7 +270,7 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
 }
 
 
-async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item, callback)
+async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item, callback: any)
 {
   // TODO: Ugh, pass in the filename for this:
   let page = await QRUrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
@@ -321,7 +321,7 @@ async function updatePhoto(id : number, data : Photo)
   }
 }
 
-async function removeBackground(imgUrl, outputFileNoBkg, callback)
+async function removeBackground(imgUrl: string, outputFileNoBkg: string, callback: any)
 {
   // const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
   const localPath = outputFileNoBkg.replace(/_crop\.png$/, '');
@@ -363,10 +363,7 @@ async function removeBackground(imgUrl, outputFileNoBkg, callback)
 }
 
 
-export async function downloadQRURLs(data: any, diskFolder: string, webFolder: string, formPrefix: string,
-  remoteSite: string, item: { id: number; slug: string; amount: number | null; title: string | null;
-  description: string | null; reason: string | null; inventoryId: number | null; authorId: number;
-  createdAt: Date; updatedAt: Date; })
+export async function downloadQRURLs(data: any, diskFolder: string, webFolder: string, formPrefix: string, remoteSite: string, item: any)
 {
   const qrPhotos: Photo[] = await savePhotos(data, diskFolder, webFolder, formPrefix);
 
@@ -417,7 +414,7 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
   }
   
   // separate logic to handle remote URL downloads
-  let remoteFilesPromises = [];
+  let remoteFilesPromises: Promise<any>[] = [];
   if(remoteURLlist.trim().length > 0) {
     remoteURLlist = remoteURLlist.replace("\r\n", "\n");
 
@@ -473,7 +470,7 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
 }
 
 // This is _very_ basic, will fail if there are query parameters etc etc etc etc
-function hasImageExtension(url)
+function hasImageExtension(url: string)
 {
   return url.toLowerCase().trim().endsWith(".jpg")
       || url.toLowerCase().trim().endsWith(".jpeg")

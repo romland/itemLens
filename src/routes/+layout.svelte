@@ -4,15 +4,21 @@
     import { page } from "$app/stores";
     import { onNavigate } from '$app/navigation';
     import Search from "$lib/components/search.svelte";
+    import ReloadPrompt from "$lib/components/ReloadPrompt.svelte";
+    import pageTitle from '$lib/stores';
 
     import "../app.css";
 
     // Check out the virtual:pwa-info documentation to learn more about the virtually exposed module pwa-info.
     // https://vite-pwa-org.netlify.app/frameworks/#accessing-pwa-info
     import { onMount } from 'svelte'
+    // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
     
+    let mounted = false;    
+
     onMount(async () => {
+        mounted = true;
         if (pwaInfo) {
             const { registerSW } = await import('virtual:pwa-register')
             registerSW({
@@ -77,12 +83,10 @@
         Full: {fullScreen}
     </div>
     */
-
-    import pageTitle from '$lib/stores';
 </script>
 
 <svelte:head> 
-  {@html webManifest} 
+  {#if mounted && webManifest}{@html webManifest}{/if}
   <title>{$pageTitle} | itemLens</title>
 </svelte:head>
 
@@ -179,9 +183,9 @@
 </main>
 
 
-{#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt}}
+{#if mounted}
   <ReloadPrompt />
-{/await}
+{/if}
 
 <div class="btm-nav" style="z-index: 1;">
   <a class:active={$page.url.pathname==='/'} href="/">
@@ -196,7 +200,7 @@
       </a>
   {/if}
 
-  <a class:active={$page.url.pathname==='???'} href="">
+  <a class:active={($page.url.pathname as string)==='???'} href="">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
     <span class="btm-nav-label">Something</span>
   </a>

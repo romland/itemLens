@@ -1,5 +1,7 @@
 import sharp from 'sharp';
 import jsQR from 'jsqr';
+import { db } from '$lib/server/database';
+import type { Item } from '@prisma/client';
 import { downloadQRURLs, getSafeFilename } from './photouploads';
 import fs from 'fs';
 import { summarizeWebpageExtract } from './llm';
@@ -131,7 +133,7 @@ async function isPdfUrl(url: string): Promise<boolean> {
   }
 }
 
-async function handlePdfDownload(url: string, item: any, documentId: string, diskFolder: string, webFolder: string) {
+async function handlePdfDownload(url: string, item: any, documentId: any, diskFolder: string, webFolder: string) {
   console.log(`Detected PDF, downloading directly: ${url}`);
   const pdfRes = await fetch(url);
   const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
@@ -169,7 +171,7 @@ async function handlePdfDownload(url: string, item: any, documentId: string, dis
   const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
 
   await db.document.update({
-    where: { id: documentId },
+    where: { id: Number(documentId) },
     data: {
       title: pdfTitle,
       path: `${webFolder}/${docFilename}.pdf`,
@@ -180,7 +182,7 @@ async function handlePdfDownload(url: string, item: any, documentId: string, dis
   if (cappedText.trim().length > 50) {
     const summary = await summarizeWebpageExtract(cappedText);
     await db.document.update({
-      where: { id: documentId },
+      where: { id: Number(documentId) },
       data: { summary: summary }
     });
     console.log("Have summary of PDF:", summary);

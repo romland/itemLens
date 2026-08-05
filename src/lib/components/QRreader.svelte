@@ -1,10 +1,11 @@
-<script>
+<script lang="ts">
     import { Html5Qrcode } from 'html5-qrcode'
     import { onMount } from 'svelte'
     import { createEventDispatcher } from 'svelte'
 
     let scanning = true;
-    let showingError = null;
+    let showingError: { message: any } | null = null;
+    let modal: HTMLDialogElement;
     var html5Qrcode;
     const dispatch = createEventDispatcher();
     export let validator = null;
@@ -47,7 +48,7 @@
 
     function onScanSuccess(decodedText, decodedResult)
     {
-        let allowed;
+        let allowed: any;
 
         if(validator) {
             allowed = validator(decodedText);
@@ -90,11 +91,15 @@
     }
 </style>
 
-<dialog on:close={()=>stop()} on:blur={()=>stop()} id="modal" class="modal">
+<dialog bind:this={modal} on:close={()=>stop()} on:blur={()=>stop()} id="modal" class="modal">
   <div class="modal-box">
-    <form method="dialog">
+    <!--form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-    </form>
+    </form-->
+    <div class="absolute right-2 top-2">
+      <button type="button" class="btn btn-sm btn-circle btn-ghost" on:click={stop}>✕</button>
+    </div>
+
     <h3 class="font-bold text-lg">{title}</h3>
     <main class="py-4">
         {#if showingError !== null}
@@ -103,10 +108,13 @@
             </div>
         {/if}
     
-        <reader id="reader"/>
+        <reader id="reader"></reader>
     </main>
   </div>
-  <form method="dialog" class="modal-backdrop">
+  <!--form method="dialog" class="modal-backdrop">
     <button>close</button>
-  </form>
+  </form-->
+  <div class="modal-backdrop">
+    <button type="button" on:click={stop}>close</button>
+  </div>
 </dialog>

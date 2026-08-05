@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ActionData } from "./$types";
     import { enhance } from "$app/forms";
+    import type { SubmitFunction } from "@sveltejs/kit";
     import Alert from "$lib/components/alert.svelte";
     import { page } from "$app/stores";
 

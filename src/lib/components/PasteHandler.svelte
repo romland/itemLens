@@ -1,13 +1,13 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { photoTypes } from '$lib/shared/constants.ts';
+    import { photoTypes } from '$lib/shared/constants';
     
     export let formId = "eltForm";
     
     const dispatch = createEventDispatcher();
     
     let modalOpen = false;
-    let pastedType: 'image' | 'text' | null = null;
+    let pastedType: 'image' | 'text' | 'url' | null = null;
     let pastedImageUrl: string | null = null;
     let pastedFile: File | null = null;
     let pastedText: string = "";
@@ -148,7 +148,7 @@
     }    
 </script>
 
-<svelte:window on:paste={handlePaste} on:keydown={handleKeydown} />
+    <svelte:window onpaste={handlePaste} onkeydown={handleKeydown} />
 
     {#if clipboardQueue.length > 0}
         <div class="alert alert-info shadow-sm mb-4 flex flex-col items-start gap-2">

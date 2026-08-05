@@ -2,6 +2,7 @@
 Doc: https://kit.svelte.dev/docs/routing#server
 */
 import { db } from '$lib/server/database';
+import type { Prisma } from '@prisma/client';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -13,7 +14,7 @@ export async function GET({ url }) {
     const page = Number(url.searchParams.get('page') ?? '1');
     const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
 
-    const query = {
+    const query: Prisma.ItemFindManyArgs = {
         take: count,
         skip: page == 1 ? 0 : (page - 1) * count,
         orderBy: [{ id: 'desc'}],
