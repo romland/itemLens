@@ -31,7 +31,7 @@
 
     <div class="mb-3">
         {#if data.item?.photoPath}
-            <img class="w-32 h-32" src="{data.item?.photoPath}"/>
+            <img class="w-32 h-32" src="{data.item?.photoPath}" alt="Container thumbnail"/>
         {/if}
         <input type="file" name="photoPath" accept="image/*" class="file-input w-full">
     </div>

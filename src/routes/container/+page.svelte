@@ -54,7 +54,7 @@ model Container {
           {#each data.containers as cont}
             <tr>
               <td>
-                <img class="h-20 w-20" src="{cont.photoPath}"/>
+                <img class="h-20 w-20" src="{cont.photoPath}" alt="{cont.location || 'Container photo'}"/>
               </td> 
               <td>
                 <a href="/container/{cont.name}">{cont.name}</a><br/>

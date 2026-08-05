@@ -34,14 +34,14 @@
                         {/if}
                     </td>
                     <th>
-                        <label>
+                        <div>
                             {container.location}<br/>
-                        </label>
+                        </div>
                     </th>
                     <th>
-                        <label>
+                        <div>
                             {container.description}<br/>
-                        </label>
+                        </div>
                     </th>
                 </tr>
             {/each}

@@ -6,6 +6,8 @@
     export let values = [];
     export let containers = [];
     export let mini = false;
+    // To satisfy Svelte -- mini is unused
+    void mini;
 
     let scanningContainers = false;
     let addedContainers = [];

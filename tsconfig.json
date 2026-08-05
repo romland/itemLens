@@ -9,13 +9,11 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"noImplicitAny": false,
-		"strictNullChecks": false,
-    	"useUnknownInCatchVariables": false,
-		"skipLibCheck": true,
 
-    	"noEmit": true,
-    	"moduleResolution": "bundler",
+		"noImplicitAny": false, 				// TODO at some point: 200 errors killed with this set to false
+		"strictNullChecks": false,				// TODO at some point: 100 errors killed with this set to false
+    	"useUnknownInCatchVariables": true,	// TODO at some point: 6 errors killed with this set to false
+
     	"types": ["node", "vite-plugin-pwa/client"]
 	}
 	// Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias

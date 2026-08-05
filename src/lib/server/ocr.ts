@@ -32,8 +32,9 @@ export async function getOCRdata(imageUrl : string, callback)
         return callback(response.statusText, response);
       }
     } catch (error) {
-      console.log('OCR Error:', error.message);
-      return callback(error.message, null);
+      const err = error as Error;
+      console.log('OCR Error:', err.message);
+      return callback(err.message, null);
     }
   }
   
@@ -52,7 +53,8 @@ export async function getOCRdata(imageUrl : string, callback)
       callback(response.statusText, response);
     }
   } catch (error) {
-    console.log('OCR Error:', error.message);
-    callback(error.message, null);
+    const err = error as Error;
+    console.log('OCR Error:', err.message);
+    callback(err.message, null);
   }
 }

@@ -119,7 +119,7 @@
     <!-- PHOTOS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'photos' ? 'translate-x-0' : 'translate-x-full'}">
         <div class="flex items-center p-4 sm:p-6 pb-2">
-            <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
+            <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Photos</h2>
         </div>
         <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
@@ -136,7 +136,7 @@
     <!-- LOCATION VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'location' ? 'translate-x-0' : 'translate-x-full'}">
         <div class="flex items-center p-4 sm:p-6 pb-2">
-            <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
+            <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Storage Location</h2>
         </div>
         <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
@@ -154,7 +154,7 @@
     <!-- LINKS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'links' ? 'translate-x-0' : 'translate-x-full'}">
         <div class="flex items-center p-4 sm:p-6 pb-2">
-            <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
+            <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Document Links</h2>
         </div>
         <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
@@ -171,35 +171,35 @@
     <!-- DETAILS VIEW -->
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'details' ? 'translate-x-0' : 'translate-x-full'}">
         <div class="flex items-center p-4 sm:p-6 pb-2">
-            <button type="button" class="btn btn-circle btn-ghost bg-base-200" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
+            <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Item Details</h2>
         </div>
 
         <div class="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
             <div class="flex flex-col gap-5">
                 <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-semibold">Title</span></label>
+                    <div class="label"><span class="label-text font-semibold">Title</span></div>
                     <input type="text" name="title" placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full rounded-xl">
                 </div>
 
                 <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-semibold">Description</span></label>
+                    <div class="label"><span class="label-text font-semibold">Description</span></div>
                     <textarea name="description" rows="3" placeholder="Notes..." class="textarea textarea-bordered w-full rounded-xl"></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-control w-full">
-                        <label class="label"><span class="label-text font-semibold">Amount</span></label>
+                        <div class="label"><span class="label-text font-semibold">Amount</span></div>
                         <input type="number" name="amount" placeholder="1" class="input input-bordered w-full rounded-xl">
                     </div>
                     <div class="form-control w-full">
-                        <label class="label"><span class="label-text font-semibold">Tags</span></label>
+                        <div class="label"><span class="label-text font-semibold">Tags</span></div>
                         <input type="text" name="tagcsv" placeholder="spare, tool..." class="input input-bordered w-full rounded-xl">
                     </div>
                 </div>
 
                 <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-semibold">Attributes</span></label>
+                    <div class="label"><span class="label-text font-semibold">Attributes</span></div>
                     <div class="bg-base-200/50 p-3 rounded-xl border border-base-200">
                         <AttributeAdder />
                     </div>

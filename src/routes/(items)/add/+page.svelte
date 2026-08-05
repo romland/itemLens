@@ -114,14 +114,14 @@
                 <div class="card bg-base-100 shadow-sm border border-base-200">
                     <div class="card-body">
                         <div class="form-control w-full mb-4">
-                            <label class="label"><span class="label-text font-semibold">Product Name</span></label>
+                            <div class="label"><span class="label-text font-semibold">Product Name</span></div>
                             <input type="text" name="title" value="" placeholder="e.g. Logitech MX Master 3" class="input input-bordered w-full">
                         </div>
 
                         <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold">Description</span></label>
+                            <div class="label"><span class="label-text font-semibold">Description</span></div>
                             <textarea name="description" rows="5" placeholder="Enter product details..." class="textarea textarea-bordered w-full"></textarea>
-                            <label class="label"><span class="label-text-alt text-gray-400">Markdown is supported.</span></label>
+                            <div class="label"><span class="label-text-alt text-gray-400">Markdown is supported.</span></div>
                         </div>
                     </div>
                 </div>
@@ -133,24 +133,24 @@
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div class="form-control w-full">
-                                <label class="label"><span class="label-text font-semibold">Amount / Quantity</span></label>
+                                <div class="label"><span class="label-text font-semibold">Amount / Quantity</span></div>
                                 <input type="text" name="amount" value="" placeholder="e.g. 1" class="input input-bordered w-full">
                             </div>
 
                             <div class="form-control w-full">
-                                <label class="label"><span class="label-text font-semibold">Reason for purchase</span></label>
+                                <div class="label"><span class="label-text font-semibold">Reason for purchase</span></div>
                                 <input type="text" name="reason" value="" placeholder="e.g. Project Apollo" class="input input-bordered w-full">
                             </div>
                         </div>
 
                         <div class="form-control w-full mb-6">
-                            <label class="label"><span class="label-text font-semibold">Tags</span></label>
+                            <div class="label"><span class="label-text font-semibold">Tags</span></div>
                             <input type="text" name="tagcsv" placeholder="electronics, office, spare" class="input input-bordered w-full">
-                            <label class="label"><span class="label-text-alt text-gray-400">Separated by comma.</span></label>
+                            <div class="label"><span class="label-text-alt text-gray-400">Separated by comma.</span></div>
                         </div>
 
                         <div class="form-control w-full">
-                            <label class="label"><span class="label-text font-semibold">Custom Attributes</span></label>
+                            <div class="label"><span class="label-text font-semibold">Custom Attributes</span></div>
                             <div class="bg-base-200 rounded-lg p-2">
                                 <AttributeAdder />
                             </div>

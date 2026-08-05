@@ -181,10 +181,11 @@ $:  if(!done && invoicePhotos.length > 0) {
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in">
                             {#if productPhotos[i].cropPath}
-                                <img 
-                                    on:click={(ev)=>{currentLightboxImage = productPhotos[i]; lightboxModal.showModal()}} 
-                                    src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" 
-                                    class="object-scale-down">
+                                <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
+                                    <img 
+                                        src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" 
+                                        class="object-scale-down">
+                                </button>
                             {:else}
                                 <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
                             {/if}
@@ -193,8 +194,8 @@ $:  if(!done && invoicePhotos.length > 0) {
                 </div>
                 <div class="flex justify-start w-full py-2 gap-1">
                     {#each productPhotos as photo, i}
-                        <button on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
-                            <img class="object-scale-down w-10 h-10" src="{photo.cropPath}"/>
+                        <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
+                            <img class="object-scale-down w-10 h-10" src="{photo.cropPath}" alt="Thumbnail {i + 1}"/>
                         </button>
                     {/each}
                 </div>
@@ -221,9 +222,9 @@ $:  if(!done && invoicePhotos.length > 0) {
                         {#if i === 0}
                             <div class="stat-figure text-secondary">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="h-18" src="{loc.container.parent.photoPath}"/>
+                                    <img class="h-18" src="{loc.container.parent.photoPath}" alt="Parent container"/>
                                 {:else}
-                                    <img class="h-18" src="/images/containers/{loc.container.parentId}_thumb.jpg"/>
+                                    <img class="h-18" src="/images/containers/{loc.container.parentId}_thumb.jpg" alt="Container thumbnail"/>
                                 {/if}
                             </div>
                             <div class="stat-title">
@@ -315,10 +316,12 @@ $:  if(!done && invoicePhotos.length > 0) {
 
             <div class="mb-3">
                 {#each otherPhotos as photo}
-                    <img 
-                        on:click={(ev)=>{currentLightboxImage = photo; lightboxModal.showModal()}}
-                        src="{photo.orgPath}"
-                        class="w-32 h-32 cursor-zoom-in">
+                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = photo; lightboxModal.showModal(); }}>
+                        <img 
+                            src="{photo.orgPath}"
+                            alt="Additional detail view"
+                            class="w-32 h-32 cursor-zoom-in">
+                    </button>
                 {/each}
             </div>
         {/if}
@@ -359,10 +362,12 @@ $:  if(!done && invoicePhotos.length > 0) {
 
             <div class="justify-between items-center w-full">
                 {#each invoicePhotos as photo}
-                    <img
-                        on:click={(ev)=>{currentLightboxImage = photo; lightboxModal.showModal()}}
-                        src="{photo.orgPath}"
-                        class="h-32 w-32 cursor-zoom-in">
+                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = photo; lightboxModal.showModal(); }}>
+                        <img
+                            src="{photo.orgPath}"
+                            alt="Invoice attachment"
+                            class="h-32 w-32 cursor-zoom-in">
+                    </button>
                 {/each}
             </div>
         </div>
@@ -405,9 +410,9 @@ $:  if(!done && invoicePhotos.length > 0) {
         </h3>
         <p class="py-4 text-center ">
             {#if currentLightboxImage.cropPath && currentLightboxImage.type === "product"}
-                <img src="{currentLightboxImage.cropPath}" class="object-scale-down h-full w-full"/>
+                <img src="{currentLightboxImage.cropPath}" alt="Enlarged view" class="object-scale-down h-full w-full"/>
             {:else}
-                <img src="{currentLightboxImage.orgPath}" class="object-scale-down h-full w-full"/>
+                <img src="{currentLightboxImage.orgPath}" alt="Enlarged view" class="object-scale-down h-full w-full"/>
             {/if}
             <span class="text-xs">
                 Tap x, press ESC key or click outside to close.

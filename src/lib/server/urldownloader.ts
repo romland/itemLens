@@ -250,7 +250,8 @@ export default class QRUrlDownloader
             }
 
           } catch (error) {
-            console.log('URL download error:', error.message, url);
+            const err = error as Error;
+            console.log('URL download error:', err.message, url);
             return null;
           }
     }

@@ -176,7 +176,7 @@
                 <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
             </div>
             <div class="form-control w-full">
-                <label class="label"><span class="label-text font-semibold">What type of image is this?</span></label>
+                <div class="label"><span class="label-text font-semibold">What type of image is this?</span></div>
                 <select bind:value={selectedPhotoType} class="select select-bordered w-full">
                     {#each photoTypes as type}
                         <option value={type.toLowerCase()}>{type}</option>
@@ -194,11 +194,11 @@
             <p class="text-sm">Do you want to fetch and save this document when you submit the form?</p>            
         {:else if pastedType === 'text'}
             <div class="form-control w-full mb-4">
-                <label class="label"><span class="label-text font-semibold">Note Title</span></label>
+                <div class="label"><span class="label-text font-semibold">Note Title</span></div>
                 <input type="text" bind:value={textDocumentTitle} class="input input-bordered w-full" />
             </div>
             <div class="mb-4">
-                <label class="label"><span class="label-text font-semibold">Content</span></label>
+                <div class="label"><span class="label-text font-semibold">Content</span></div>
                 <pre class="bg-base-200 p-3 rounded w-full text-xs overflow-x-auto max-h-48 whitespace-pre-wrap">{pastedText}</pre>
             </div>
         {/if}

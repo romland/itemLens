@@ -30,13 +30,13 @@
             </svg>
             Add image of...
         </div>
-        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
+        <ul class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
             {#each photoTypes as type}
-                <li class="cursor-pointer" on:click={ (ev) => {
+                <li>
+                    <button type="button" on:click={(ev) => {
                         (document?.activeElement as HTMLElement | null)?.blur();
                         addImageToDownload(ev, type);
-                    }}>
-                    <a>{type}</a>
+                    }}>{type}</button>
                 </li>
             {/each}
         </ul>

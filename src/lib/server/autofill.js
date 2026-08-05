@@ -19,7 +19,8 @@ export async function autoFill(localFilePath)
             return geminiResult;
         }
     } catch (e) {
-        console.warn("Gemini autoFill failed, falling back to reverse search:", e.message);
+        const message = e instanceof Error ? e.message : String(e);
+        console.warn("Tier-One autoFill failed, falling back to reverse search:", message);
     }
 
     // 2. Fallback: Google Reverse Image Search

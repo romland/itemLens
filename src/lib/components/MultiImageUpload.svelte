@@ -138,15 +138,15 @@
             </div>
         </div>
 
-        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
+        <ul class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
             {#each photoTypes as type}
-                <li class="cursor-pointer" on:click={ (ev) => {
+                <li>
+                    <button type="button" on:click={(ev) => {
                         document?.getElementById('file.0')?.click();
                         (document?.activeElement as HTMLElement | null)?.blur();
                         const hiddenInput = (ev.currentTarget as HTMLElement).closest('.dropdown')?.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
                         if (hiddenInput) hiddenInput.value = type.toLowerCase();
-                    }}>
-                    <a>{type}</a>
+                    }}>{type}</button>
                 </li>
             {/each}
         </ul>

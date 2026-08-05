@@ -3,7 +3,7 @@
     import { createEventDispatcher } from 'svelte'
     const dispatch = createEventDispatcher();
 
-    export let mini = false; 
+    export const mini = false; 
 
     const uploadPictureForQRcodes = false;
 

@@ -103,7 +103,7 @@
 
 <div id="postScrollArea" class="flex justify-center gap-3 py-6">
     {#if prevPage > 0 && loadedPages.length === 0}
-        <a href="{href}page={prevPage}" class="btn btn-sm"><i class="bi bi-arrow-left" /></a>
+        <a href="{href}page={prevPage}" class="btn btn-sm" aria-label="Previous Page"><i class="bi bi-arrow-left"></i></a>
     {/if}
 
     {#if nextPage > 0 && !reachedEnd}
@@ -111,7 +111,7 @@
             {#if loading}
                 <span class="loading loading-spinner loading-sm"></span>
             {:else}
-                <i class="bi bi-arrow-right" />
+                <i class="bi bi-arrow-right"></i>
             {/if}
         </a>
     {/if}
