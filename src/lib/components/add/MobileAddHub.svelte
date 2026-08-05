@@ -22,20 +22,63 @@
 	let currentTitle = "";
 	let currentDescription = "";
 	let isAnalyzing = false;
+	let draftImagePath = "";
 
-	function handleAnalyzingStart() {
+	let showAiDrawer = false;
+	let userHint = "";
+	let isRefining = false;
+
+	function handleAnalyzingStart(ev) {
 		isAnalyzing = true;
+		if (ev?.detail?.localUrl) {
+			draftImagePath = ev.detail.localUrl;
+		}
 	}
 
 	function handleAnalyzingComplete(ev) {
 		isAnalyzing = false;
 		const data = ev.detail;
+		if (data && data.draftPath) {
+			draftImagePath = data.draftPath;
+		}
 		if (data && data.aiData) {
-			if (!currentTitle) currentTitle = data.aiData.title || "";
-			if (!currentDescription) currentDescription = data.aiData.description || "";
-			dispatch('success', 'AI auto-filled details!');
+			// if (!currentTitle) currentTitle = data.aiData.title || "";
+			// if (!currentDescription) currentDescription = data.aiData.description || "";
+			currentTitle = data.aiData.title || currentTitle;
+			currentDescription = data.aiData.description || currentDescription;
+            dispatch('success', 'AI auto-filled details!');
 		}
 	}    
+
+	async function runAiRefine() {
+		if (!userHint.trim() || !draftImagePath) return;
+		
+		isRefining = true;
+		try {
+			const res = await fetch('/api/analyze-draft-refine', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ 
+					draftPath: draftImagePath,
+					hint: userHint 
+				})
+			});
+			
+			if (res.ok) {
+				const result = await res.json();
+				if (result.aiData?.title) currentTitle = result.aiData.title;
+				if (result.aiData?.description) currentDescription = result.aiData.description;
+				showAiDrawer = false;
+				userHint = "";
+				dispatch('success', 'Item details enhanced by AI!');
+			}
+		} catch (e) {
+			console.error(e);
+		} finally {
+			isRefining = false;
+		}
+	}
+
 </script>
 
 <div class="relative w-full overflow-hidden bg-base-100 min-h-[75vh] rounded-xl shadow-lg border border-base-200">
@@ -49,10 +92,39 @@
 				{#if isAnalyzing}
 					<span class="loading loading-spinner loading-xs text-primary align-middle mr-1"></span> AI is analyzing...
 				{:else}
-					Select a section to add details
+					Tap camera to start, or select a section below
 				{/if}
 			</p>
         </div>
+
+		<!-- HERO CAMERA BUTTON -->
+		<div class="flex justify-center mb-10">
+			<div class="relative">
+				<button type="button" class="btn btn-primary btn-circle h-28 w-28 shadow-xl hover:scale-105 transition-transform overflow-hidden p-0" aria-label="Quick Take Photo"
+					on:click={() => {
+						// Grab the most recently generated hidden file input from MultiImageUpload
+						const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
+						const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+						const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
+						const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
+						if (fileInput && typeInput) {
+							typeInput.value = 'product';
+							fileInput.click();
+						}
+					}}>
+					{#if draftImagePath}
+						<img src={draftImagePath} alt="Draft image" class="w-full h-full object-cover" />
+					{:else}
+						<i class="bi bi-camera text-5xl"></i>
+					{/if}
+				</button>
+				{#if photoCount > 0}
+					<div class="absolute top-0 right-0 bg-success text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-md border-2 border-base-100 z-10">
+						<i class="bi bi-check-lg"></i>
+					</div>
+				{/if}
+			</div>
+		</div>
 
         <div class="flex flex-col gap-3">
             
@@ -213,7 +285,14 @@
 							{/if}
 						</span>
 					</div>
-					<input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full rounded-xl" class:input-primary={isAnalyzing}>
+					<div class="relative w-full">
+						<input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full pr-12 rounded-xl" class:input-primary={isAnalyzing}>
+						{#if draftImagePath}
+							<button type="button" class="absolute right-3 top-3 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => showAiDrawer = true}>
+								<i class="bi bi-stars text-xl"></i>
+							</button>
+						{/if}
+					</div>
                 </div>
 
                 <div class="form-control w-full">
@@ -246,3 +325,29 @@
         </div>
     </div>
 </div>
+
+<!-- The Bottom Drawer for AI Refinement -->
+<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={showAiDrawer}>
+	<div class="modal-box p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl">
+		<h3 class="font-bold text-xl mb-2 flex items-center gap-2">
+			<i class="bi bi-stars text-primary"></i> Refine AI Guess
+		</h3>
+		<p class="text-sm text-gray-500 mb-6">Give the AI a nudge with a brand or model name to get a better match.</p>
+		
+		<input type="text" bind:value={userHint} on:keydown={(e) => e.key === 'Enter' && runAiRefine()} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
+		
+		<div class="modal-action mt-0 flex gap-2">
+			<button type="button" class="btn btn-ghost rounded-xl flex-1" on:click={() => showAiDrawer = false}>Cancel</button>
+			<button type="button" class="btn btn-primary rounded-xl flex-1 shadow-md" on:click={runAiRefine} disabled={isRefining}>
+				{#if isRefining}
+					<span class="loading loading-spinner"></span>
+				{:else}
+					Enhance
+				{/if}
+			</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button type="button" on:click={() => showAiDrawer = false}>close</button>
+	</form>
+</dialog>

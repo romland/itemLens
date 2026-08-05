@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import mkcert from 'vite-plugin-mkcert';
 
 // For dev-env (self signed cert)
 // import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -17,6 +18,10 @@ export default defineConfig({
     },
 
 	plugins: [
+		mkcert({
+			hosts: ['localhost', '127.0.0.1', '192.168.178.104']
+		}),
+
 		sveltekit(),
 		SvelteKitPWA({
 			srcDir: './src',
@@ -119,6 +124,7 @@ export default defineConfig({
 	// Commented this out in August 2026
 	server: {
 		// https: false,
+		https: true,
 		allowedHosts: [
 			"itemlens-dev.loca.lt"
 		]

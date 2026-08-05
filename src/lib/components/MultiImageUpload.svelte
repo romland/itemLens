@@ -59,7 +59,7 @@
 			// ----------------------------------------------------
 			// Instant-On Background Upload for AI Analysis
 			// ----------------------------------------------------
-			dispatch('analyzingStart');
+			dispatch('analyzingStart', { localUrl: URL.createObjectURL(file) });
 			const formData = new FormData();
 			formData.append('file', file);
 
