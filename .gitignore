@@ -16,3 +16,4 @@ dev-dist
 cat-files.sh
 prompt.txt
 old
+rootCA.crt
