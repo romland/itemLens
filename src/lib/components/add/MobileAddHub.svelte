@@ -18,6 +18,24 @@
     let photoCount = 0;
     let selectedLocations = [];
     let linkCount = 0;
+
+	let currentTitle = "";
+	let currentDescription = "";
+	let isAnalyzing = false;
+
+	function handleAnalyzingStart() {
+		isAnalyzing = true;
+	}
+
+	function handleAnalyzingComplete(ev) {
+		isAnalyzing = false;
+		const data = ev.detail;
+		if (data && data.aiData) {
+			if (!currentTitle) currentTitle = data.aiData.title || "";
+			if (!currentDescription) currentDescription = data.aiData.description || "";
+			dispatch('success', 'AI auto-filled details!');
+		}
+	}    
 </script>
 
 <div class="relative w-full overflow-hidden bg-base-100 min-h-[75vh] rounded-xl shadow-lg border border-base-200">
@@ -26,8 +44,14 @@
     <div class="absolute inset-0 transition-transform duration-300 ease-in-out p-4 sm:p-6 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
         
         <div class="text-center mb-8">
-            <h2 class="text-2xl font-bold">New Item</h2>
-            <p class="text-gray-500 text-sm">Select a section to add details</p>
+			<h2 class="text-2xl font-bold">{currentTitle || 'New Item'}</h2>
+			<p class="text-gray-500 text-sm">
+				{#if isAnalyzing}
+					<span class="loading loading-spinner loading-xs text-primary align-middle mr-1"></span> AI is analyzing...
+				{:else}
+					Select a section to add details
+				{/if}
+			</p>
         </div>
 
         <div class="flex flex-col gap-3">
@@ -126,6 +150,8 @@
             <MediaHub 
                 photoTypes={photoTypes} 
                 on:success={(ev) => { photoCount++; dispatch('success', ev.detail); }} 
+				on:analyzingStart={handleAnalyzingStart}
+				on:analyzingComplete={handleAnalyzingComplete}
             />
         </div>
         <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
@@ -178,13 +204,21 @@
         <div class="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
             <div class="flex flex-col gap-5">
                 <div class="form-control w-full">
-                    <div class="label"><span class="label-text font-semibold">Title</span></div>
-                    <input type="text" name="title" placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full rounded-xl">
+					<div class="label">
+						<span class="label-text font-semibold flex items-center gap-2">
+							Title
+							{#if isAnalyzing}
+								<span class="loading loading-spinner loading-xs text-primary"></span>
+								<span class="text-xs text-primary font-normal">AI analyzing image...</span>
+							{/if}
+						</span>
+					</div>
+					<input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full rounded-xl" class:input-primary={isAnalyzing}>
                 </div>
 
                 <div class="form-control w-full">
                     <div class="label"><span class="label-text font-semibold">Description</span></div>
-                    <textarea name="description" rows="3" placeholder="Notes..." class="textarea textarea-bordered w-full rounded-xl"></textarea>
+					<textarea name="description" bind:value={currentDescription} rows="3" placeholder="Notes..." class="textarea textarea-bordered w-full rounded-xl" class:textarea-primary={isAnalyzing}></textarea>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">

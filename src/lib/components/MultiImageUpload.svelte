@@ -15,6 +15,7 @@
     function productPhotoUploadChanged(ev: any)
     {
         if(ev.target.files[0]) {
+			const file = ev.target.files[0];
             // Take parent of file-select, clone it and make a new element
             // for further file-uploads. One could argue that one should use
             // multi-select, but that's not handy when camera is the source of
@@ -54,6 +55,23 @@
             container.insertAdjacentElement("afterend", newParent);
 
             productPhotoFileCounter++;
+
+			// ----------------------------------------------------
+			// Instant-On Background Upload for AI Analysis
+			// ----------------------------------------------------
+			dispatch('analyzingStart');
+			const formData = new FormData();
+			formData.append('file', file);
+
+			fetch('/api/analyze-draft', {
+				method: 'POST',
+				body: formData
+			}).then(res => res.json()).then(data => {
+				dispatch('analyzingComplete', data);
+			}).catch(err => {
+				console.error("Draft analysis failed", err);
+				dispatch('analyzingComplete', { error: true });
+			});
 
             addedPhotoFilenames.push({
                 type: container.querySelector("input[type='hidden']").value,

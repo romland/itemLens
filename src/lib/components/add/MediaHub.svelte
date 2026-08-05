@@ -45,7 +45,12 @@
             </div>
             
             <div class="w-full max-w-sm">
-                <MultiImageUpload {photoTypes} on:success />
+				<MultiImageUpload 
+					{photoTypes} 
+					on:success 
+					on:analyzingStart
+					on:analyzingComplete
+				/>
             </div>
 
         {:else}

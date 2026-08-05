@@ -115,9 +115,12 @@ export default defineConfig({
 	// Instead of the above, I went with a self-signed cert and the plugin:
 	// https://github.com/vitejs/vite-plugin-basic-ssl
 	// It still means you have to accept a "dodgy site", but at least it's flagged
-	// as https and we can use full WPA capabilities (I hope at least?)
+	// as https and we can use full PWA capabilities (I hope at least?)
 	// Commented this out in August 2026
-	// server: {
-	// 	https: false,
-	// }
+	server: {
+		// https: false,
+		allowedHosts: [
+			"itemlens-dev.loca.lt"
+		]
+	}
 });
