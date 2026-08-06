@@ -127,7 +127,6 @@
 		</div>
 
         <div class="flex flex-col gap-3">
-            
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'photos'}>
                 <div class="flex items-center gap-4">
                     <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
