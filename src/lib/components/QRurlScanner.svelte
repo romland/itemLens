@@ -109,11 +109,11 @@
 
 <div class="flex flex-col w-full">
     <!-- Tab Navigation -->
-    <div role="tablist" class="tabs tabs-boxed bg-base-200/50 p-1 mb-4 grid grid-cols-2 w-full rounded-xl">
+	<div role="tablist" class="flex bg-base-200/70 p-1 mb-4 w-full rounded-xl">
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 w-full flex-nowrap {activeTab === 'scan' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+			class="flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center flex-nowrap whitespace-nowrap {activeTab === 'scan' ? 'bg-base-100 shadow text-base-content' : 'text-gray-500 hover:text-gray-700'}"
             on:click={() => activeTab = 'scan'}
         >
             <i class="bi bi-qr-code-scan mr-2 whitespace-nowrap"></i> <span class="truncate">Scan QR</span>
@@ -121,7 +121,7 @@
         <button 
             type="button" 
             role="tab" 
-            class="tab h-10 w-full flex-nowrap {activeTab === 'paste' ? 'tab-active bg-base-100 shadow-sm font-semibold' : 'text-gray-500'}" 
+			class="flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center flex-nowrap whitespace-nowrap {activeTab === 'paste' ? 'bg-base-100 shadow text-base-content' : 'text-gray-500 hover:text-gray-700'}"
             on:click={() => activeTab = 'paste'}
         >
             <i class="bi bi-link-45deg mr-2 whitespace-nowrap"></i> <span class="truncate">Paste Links</span>
