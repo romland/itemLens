@@ -29,7 +29,9 @@ export async function GET({ url }) {
             usage: true,
             locations: {
                 include: {
-                    container: true,
+                    container: {
+                        include : { parent : true }
+                    },
                 }
             },
         }

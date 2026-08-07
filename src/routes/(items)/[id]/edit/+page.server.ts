@@ -147,6 +147,8 @@ console.log("formData:", orgData);
           },
         });
 
+		const parsedAmount = parseInt(data.amount as string, 10);
+
         // Note: We overwrite the initial version of item here so that we have the new ID's
         //       of images, etc.
         item = await db.item.update({
@@ -154,7 +156,7 @@ console.log("formData:", orgData);
             data: {
                 title: title.trim(),
                 reason: data.reason as string || "",
-                amount: parseInt(data.amount as string, 10) || null,
+				amount: isNaN(parsedAmount) ? null : parsedAmount,
                 photos: {
                   create: photos
                 },

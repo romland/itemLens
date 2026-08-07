@@ -47,11 +47,14 @@ return fail(400, {
   message: '<strong>Debugging</strong>'
 });
 */
+
+    		const parsedAmount = parseInt(data.amount as string, 10);
         const item : Item = await db.item.create({
             data: {
                 title: title.trim() || "Default product",
                 reason: data.reason as string || "",
-                amount: parseInt(data.amount as string, 10) || null,
+                // amount: parseInt(data.amount as string, 10) || null,
+        				amount: isNaN(parsedAmount) ? null : parsedAmount,
                 photos: {
                   create: photos
                 },

@@ -8,20 +8,18 @@
         const downloadImage = window.prompt(`Link to "${type}" image:`);
 
         if(downloadImage) {
-            const input = document.querySelector("input[name='downloadImages']") as HTMLInputElement | null;
-            if (input) input.value += type.toLowerCase() + " " + downloadImage + "\n";
             addedImagesToDownload.push({
                 type: type.toLowerCase(),
                 url: downloadImage
             });
-            // console.log("urls now:", document.querySelector("input[name='downloadImages']").value);
             addedImagesToDownload = addedImagesToDownload;
         }
     }
 
+    $: compiledDownloadImages = addedImagesToDownload.map(img => `${img.type} ${img.url}`).join('\n');
 </script>
 <div>
-    <input type="hidden" name="downloadImages" value="">
+	<input type="hidden" name="downloadImages" value={compiledDownloadImages}>
 
     <div class="dropdown">
         <div tabindex="0" role="button" class="btn-primary btn m-1">

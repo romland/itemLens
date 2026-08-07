@@ -4,6 +4,7 @@ import slugify from 'slugify';
 import { writeFileSync } from "fs";
 import { db } from '$lib/server/database';
 import { getTagIds } from "$lib/server/services";
+import imageThumbnail from 'image-thumbnail';
 
 export const actions = {
     default: async ({ locals, request }) => {
@@ -23,6 +24,7 @@ export const actions = {
         let filename = null;
 
         if (file.size > 0) {
+			const buffer = Buffer.from(await file.arrayBuffer());
             const date = new Date().toISOString()
                 .replaceAll('-', '')
                 .replaceAll(':', '')
@@ -31,7 +33,13 @@ export const actions = {
 
             filename = date + '-' + slugify(file.name.toLowerCase());
 
-            writeFileSync(`static/images/containers/${filename}`, Buffer.from(await file.arrayBuffer()));
+			writeFileSync(`static/images/containers/${filename}`, buffer);
+
+			try {
+				const thumb = await imageThumbnail(buffer, { width: 256, responseType: 'buffer', jpegOptions: { force: true, quality: 90 } } as any);
+				const thumbFilename = filename.replace(/\.[^/.]+$/, "_thumb.jpg");
+				writeFileSync(`static/images/containers/${thumbFilename}`, thumb);
+			} catch (e) { console.error("Failed to generate container thumbnail", e); }
 
             filename = "/images/containers/" + filename;
         }

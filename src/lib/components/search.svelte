@@ -67,7 +67,7 @@
         -->
         <div bind:this={resultsAsYouType} id="resultsAsYouType"
             class:hidden={items.length === 0}
-            class="dropdown border-solid dropdown-open dropdown-end"
+			class="dropdown border-solid dropdown-open dropdown-end z-[100]"
             style="position: absolute; right: 0; bottom: 0;"
         >
             <div class="dropdown-content z-[1] menu p-2 shadow bg-slate-800 rounded-box grow w-96">

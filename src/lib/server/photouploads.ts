@@ -164,7 +164,7 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
     };
 
     try {
-      const thumbnail = await imageThumbnail(outputFileNoBkg, thumbOptions);
+      const thumbnail = await imageThumbnail(outputFileNoBkg, thumbOptions as any);
       fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
       console.log("Updating photo.thumbPath in", photo.id);
       photo.thumbPath = `${photo.orgPath}_thumb.jpg`;

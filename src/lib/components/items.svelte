@@ -11,10 +11,7 @@
         if (item?.photos?.length > 0) {
             for (let i = 0; i < item.photos.length; i++) {
                 if (item.photos[i].type === "product") {
-					return {
-						...item.photos[i],
-						thumbPath: item.photos[i].thumbPath || item.photos[i].orgPath || ""
-					};
+                    return item.photos[i];
                 }
             }
         }

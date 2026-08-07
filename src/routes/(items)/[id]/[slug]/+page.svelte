@@ -174,8 +174,8 @@ $:  if(!done && invoicePhotos.length > 0) {
     </div>
 
     <!-- flex flex-row -->
-    <div class="flex flex-col md:flex-row w-full space-x-4">
-        <div class="basis-4/5 pl-2">
+    <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
+        <div class="w-full md:w-2/3 pl-2">
             {#if productPhotos?.length > 0}
                 <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
                     {#each productPhotos as photo, i}
@@ -202,61 +202,111 @@ $:  if(!done && invoicePhotos.length > 0) {
             {/if}
         </div>
 
-        <div class="w-3/5">
-            <div class="stats shadow">
-                <div class="stat">
-                    <div class="stat-figure text-secondary">
+<div class="w-full md:w-1/3 flex flex-col gap-4">
+            
+            <!-- MOBILE ONLY: Compact Side-by-Side Row -->
+            <div class="md:hidden bg-base-100 shadow-sm border border-base-200 rounded-xl p-3 flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <!-- Stock Box -->
+                    <div class="flex flex-col justify-center bg-base-200/60 px-3 py-2 rounded-xl text-center shrink-0 min-w-[4.5rem]">
+                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Stock</div>
+                        <div class="text-2xl font-bold leading-tight">{data.item.amount !== null ? data.item.amount : '-'}</div>
                     </div>
-                    <div class="stat-title">
-                        <span class="text-xs">Stock</span>
-                    </div>
-                    <div class="stat-value text-secondary">
-                        {#if data.item.amount !== null}
-                            {data.item.amount}
-                        {/if}
-                    </div>
-                    <div class="stat-desc">&nbsp;</div>
-                </div>
-                <div class="stat">
-                    {#each data.item.locations as loc, i}
-                        {#if i === 0}
-                            <div class="stat-figure text-secondary">
+
+                    <!-- Container (First location) -->
+                    {#if data.item.locations?.[0]}
+                        {@const loc = data.item.locations[0]}
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-base-200 bg-base-50 flex items-center justify-center">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="h-18" src="{loc.container.parent.photoPath}" alt="Parent container"/>
+                                    <img class="w-full h-full object-cover" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                {:else if loc.container?.photoPath}
+                                    <img class="w-full h-full object-cover" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.photoPath; } }} alt="Container thumbnail"/>
                                 {:else}
-                                    <img class="h-18" src="/images/containers/{loc.container.parentId}_thumb.jpg" alt="Container thumbnail"/>
+                                    <i class="bi bi-box-seam text-2xl text-gray-400"></i>
                                 {/if}
                             </div>
-                            <div class="stat-title">
-                                <span class="text-xs">{loc.container?.parent?.description}</span>
+                            <div class="flex flex-col justify-center min-w-0">
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold leading-none mb-0.5">Location</div>
+                                <div class="font-bold text-sm leading-tight truncate">{loc.containerName}</div>
+                                <div class="text-xs text-gray-500 leading-snug line-clamp-1 mt-0.5">{loc.container?.parent?.description || loc.container?.description || 'No description'}</div>
                             </div>
-                            <div class="stat-value text-secondary">
-                                {loc.containerName}
-                            </div>
+                        </div>
+                    {/if}
+                </div>
 
-                            {#if data.item.locations.length === 1}
-                                <div class="stat-desc">&nbsp;</div>
-                            {/if}
-                        {:else}
-                            <div class="stat-desc">
-                                <div class="badge badge-ghost">{loc.containerName}</div>
+                {#if data.item.locations.length > 1 || data.item.reason}
+                    <div class="divider m-0 h-0"></div>
+                    <div class="flex flex-col gap-1.5 text-xs">
+                        {#if data.item.reason}
+                            <div><span class="font-semibold text-gray-500 uppercase">Reason:</span> {data.item.reason}</div>
+                        {/if}
+                        {#if data.item.locations.length > 1}
+                            <div class="text-gray-500 font-semibold uppercase text-[10px] mt-0.5">Other Locations:</div>
+                            <div class="flex flex-wrap gap-1">
+                                {#each data.item.locations.slice(1) as loc}
+                                    <div class="badge badge-ghost badge-sm">{loc.containerName}</div>
+                                {/each}
                             </div>
                         {/if}
-                    {/each}
-                </div>
-
+                    </div>
+                {/if}
             </div>
 
-            {#if data.item.reason}
-                <div class="mb-3 text-sm">
-                    Reason: {data.item.reason}<br/>
-                </div>
-            {/if}
 
-            {#if data.item?.tags}
-                <div class="flex flex-wrap justify-center gap-3">
+            <!-- DESKTOP ONLY: Original Stacked Layout -->
+            <div class="hidden md:flex flex-col gap-4">
+                <div class="stats shadow w-full">
+                    <div class="stat">
+                        <div class="stat-figure text-secondary">
+                        </div>
+                        <div class="stat-title">
+                            <span class="text-xs">Stock</span>
+                        </div>
+                        <div class="stat-value text-secondary">
+                            {#if data.item.amount !== null}
+                                {data.item.amount}
+                            {/if}
+                        </div>
+                        <div class="stat-desc">&nbsp;</div>
+                    </div>
+                </div>
+
+                {#each data.item.locations as loc, i}
+                    <div class="card bg-base-100 shadow-sm border border-base-200 w-full overflow-hidden">
+                        {#if i === 0}
+                            <figure class="w-full h-20 border-b border-base-200 bg-base-200 m-0">
+                                {#if loc.container.parent?.photoPath}
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                {:else if loc.container?.photoPath}
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.photoPath; } }} alt="Container thumbnail"/>
+                                {:else}
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <i class="bi bi-box-seam text-4xl text-gray-400"></i>
+                                    </div>
+                                {/if}
+                            </figure>
+                        {/if}
+                        <div class="card-body p-4 gap-1">
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
+                            <h3 class="card-title text-lg m-0">{loc.containerName}</h3>
+                            <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
+                        </div>
+                    </div>
+                {/each}
+
+                {#if data.item.reason}
+                    <div class="mb-3 text-sm">
+                        Reason: {data.item.reason}<br/>
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Tags (Shared) -->
+            {#if data.item?.tags && data.item.tags.length > 0}
+                <div class="flex flex-wrap justify-start gap-2 mt-1">
                     {#each data.item?.tags as tag}
-                        <div class="badge badge-ghost">
+                        <div class="badge badge-ghost badge-sm">
                             <a href="/tag/{tag.slug}">{tag.name}</a>
                         </div>
                     {/each}
@@ -318,9 +368,9 @@ $:  if(!done && invoicePhotos.length > 0) {
                 {#each otherPhotos as photo}
                     <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = photo; lightboxModal.showModal(); }}>
                         <img 
-                            src="{photo.orgPath}"
+                            src="{photo.thumbPath || photo.orgPath}"
                             alt="Additional detail view"
-                            class="w-32 h-32 cursor-zoom-in">
+                            class="w-32 h-32 object-cover rounded-lg shadow-sm cursor-zoom-in">
                     </button>
                 {/each}
             </div>
