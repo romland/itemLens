@@ -21,163 +21,93 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
+export async function enrichPhotoData(localPath: string, webPath: string, type: string): Promise<any> {
+  const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
-export function processInvoicePhotos(item : any, remoteSite: string)
-{
-  for(let i = 0; i < item.photos.length; i++) {
-    const photo = item.photos[i];
-
-    if(photo.type !== "invoice or receipt") {
-      continue;
-    }
-
-    console.log("Dealing with", photo.type, "photo", item.id);
-
-    if(!photo.orgPath) {
-      continue;
-    }
-
-    const imgUrl = `${remoteSite}${photo.orgPath}`;
-
-    getOCRdata(imgUrl, async (err, result) => {
-      if (err) {
-        console.error("Error getting OCR data", err);
-        return;
-      }
-
-      console.log("Updating photo.ocr in", photo.id);
-      photo.ocr = JSON.stringify(result);
-      updatePhoto(photo.id, photo);
-
-      const llmData = await extractInvoiceData(result);
-      console.log("Updating photo.llmAnalysis in", photo.id);
-      photo.llmAnalysis = llmData;
-      updatePhoto(photo.id, photo);
+  const ocrPromise = new Promise((resolve) => {
+    getOCRdata(localPath, (err, res) => {
+      if (!err) tempPhoto.ocr = JSON.stringify(res);
+      resolve(true);
     });
+  });
 
-  }
-}
+  const imgPromise = new Promise((resolve) => {
+    processPhoto(tempPhoto, localPath, { id: -1 } as any, false, true, (err, res) => resolve(true));
+  });
 
-export async function processOtherPhotos(item : any, remoteSite: string)
-{
-  return await processProductPhotos(item, remoteSite, ["information", "other"]);
-}
+  await Promise.all([ocrPromise, imgPromise]);
 
+  let categoryName = null;
 
-/**
- * 
- * @param item 
- * @param remoteSite 
- */
-export async function processProductPhotos(item : any, remoteSite: string, acceptTypes: string[] = ["product"], perPhotoCallback: any = null)
-{
-  // Dynamically import helpers to break Vite SSR top-level circular dependency
-  const { analyzePhoto } = await import('$lib/server/gemini-classification');
-  const { getExistingCategoryNames, getOrCreateCategory } = await import('$lib/server/categories');  
-
-  let existingCategories = await getExistingCategoryNames();
-
-  // Deal with each photo
-  for(let i = 0; i < item.photos.length; i++) {
-    const photo = item.photos[i];
-
-    // if(photo.type !== "product") {
-    if(!acceptTypes.includes(photo.type)) {
-      continue;
-    }
-
-    console.log("Dealing with", photo.type, "photo", item.id);
-
-    if(!photo.orgPath) {
-      continue;
-    }
-
-    const localImgPath = `static${photo.orgPath}`;
-    const imgUrl = `${remoteSite}${photo.orgPath}`;
-
-    if(false) {
-      classifyImageUsingReplicate(imgUrl, (err, result) => {
-        if (err) {
-          console.error("Error getting Blip classification", err);
-          return;
-        }
-
-        console.log("Updating photo.classTrash in", photo.id);
-        photo.classBlip = JSON.stringify(result);
-        updatePhoto(photo.id, photo);
-      });
-    // } else {
-    //   console.log("Replicate.com's Blip classification is disabled (incurs cost)");
-    }
-
-    if(true) {
-      // --- Gemini Classification & Categorization ---
-      console.log(`Classifying photo ${photo.id} with Gemini Flash...`);
-      const targetPath = photo.thumbPath ? `static${photo.thumbPath}` : localImgPath;
+  if (type === 'product' || type === 'information' || type === 'other') {
+    try {
+      const { analyzePhoto } = await import('$lib/server/gemini-classification');
+      const { getExistingCategoryNames } = await import('$lib/server/categories');
+      const existingCategories = await getExistingCategoryNames();
+      const targetPath = tempPhoto.thumbPath ? `static${tempPhoto.thumbPath}` : localPath;
       const analysis = await analyzePhoto(targetPath, existingCategories);
-      console.log(`Photo ${photo.id} classified as: ${analysis.subCategory}`);
+      tempPhoto.llmAnalysis = JSON.stringify(analysis);
+      categoryName = analysis.subCategory;
+    } catch (e) { console.error("[Background Task] LLM classification failed:", e); }
+  } else if (type === 'invoice or receipt') {
+    try {
+      const { extractInvoiceData } = await import('$lib/server/llm');
+      if (tempPhoto.ocr) tempPhoto.llmAnalysis = await extractInvoiceData(JSON.parse(tempPhoto.ocr));
+    } catch (e) { console.error("[Background Task] Invoice extraction failed:", e); }
+  }
 
-      const category = await getOrCreateCategory(analysis.subCategory);
-      if (analysis.isNewCategory) {
-        existingCategories.push(category.name);
-      }
+  return {
+    ocr: tempPhoto.ocr,
+    colors: tempPhoto.colors,
+    cropPath: tempPhoto.cropPath,
+    thumbPath: tempPhoto.thumbPath,
+    llmAnalysis: tempPhoto.llmAnalysis,
+    categoryName
+  };
+}
 
-      // Logic / DB updates for classification and categories
-      photo.categoryId = category.id;
-      photo.type = analysis.photoType;
-      photo.llmAnalysis = JSON.stringify(analysis);
-      await updatePhoto(photo.id, photo);
-      console.log(`Classified photo ${photo.id} with Gemini Flash as: `, analysis.subCategory);      
+export async function processDraftPhotoBackground(webPath: string, type: string) {
+  console.log(`[Background Task] Starting heavy processing for draft image: ${webPath}`);
+  const localPath = `static${webPath}`;
+  const data = await enrichPhotoData(localPath, webPath, type);
+  fs.writeFileSync(`${localPath}.json`, JSON.stringify(data), 'utf8');
+  console.log(`[Background Task] Finished heavy processing for draft image: ${webPath}`);
+}
+
+export async function processItemPhotosBackground(item: any) {
+  for (const photo of item.photos) {
+    if (!photo.orgPath) continue;
+    
+    if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
+      console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
+      continue;
     }
 
-    /*
-    jetsonInference(`static${photo.orgPath}`, (err, result) => {
-      if (err) {
-        console.error("Error getting Trash classification", err);
-        return;
-      }
+    console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
+    const webPath = photo.orgPath;
+    const localPath = `static${webPath}`;
 
-      console.log("Updating photo.classTrash in", photo.id);
-      photo.classTrash = JSON.stringify(result);
-      updatePhoto(photo.id, photo);
-    });
-    */
+    const enriched = await enrichPhotoData(localPath, webPath, photo.type);
 
-    getOCRdata(imgUrl, (err, result) => {
-      if (err) {
-        console.error("Error getting OCR data", err);
-        return;
-      }
+    photo.ocr = enriched.ocr || photo.ocr;
+    photo.colors = enriched.colors || photo.colors;
+    photo.cropPath = enriched.cropPath || photo.cropPath;
+    photo.thumbPath = enriched.thumbPath || photo.thumbPath;
+    photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
 
-      console.log("Updating photo.ocr in", photo.id);
-      photo.ocr = JSON.stringify(result);
-      updatePhoto(photo.id, photo);
-    });
+    if (enriched.categoryName) {
+        const { getOrCreateCategory } = await import('$lib/server/categories');
+        const cat = await getOrCreateCategory(enriched.categoryName);
+        photo.categoryId = cat.id;
+    }
 
-    processPhoto(photo, imgUrl, item, true, true, async (err, res) => {
-      if(err) {
-        console.error(`Failed to process photo ${photo.id} in item ${item.id}`, err);
-        return;
-      }
+    await updatePhoto(photo.id, photo);
 
-      // This is not pretty; it's asynchronous on the other side -- it is used for 'autoFill'.
-      // The only requirement is really that we have a thumbnail available so this is not 
-      // the best place for this. But it works for now. Holy-moly-prototype.
-      if(perPhotoCallback) {
-        perPhotoCallback(null, photo);
-      }
-
-      // Download any URL in QR codes in the photo (done on thumbnails)
-      // REFACTOR: Get rid of this and attempt only on photos of type 'other' or 'information'
-      await processQRcodeThenDownload(photo.orgPath, photo, item, (err, res) => {
-        if (err) {
-          console.log("Did not download (non-)QR file's URL:", err);
-          return;
-        }
+    if (photo.type !== 'invoice or receipt') {
+      await new Promise((resolve) => {
+        processQRcodeThenDownload(photo.orgPath, photo, item, resolve);
       });
-
-      console.log("processPhoto returned for item", item.id);
-    });
+    }
   }
 }
 
@@ -399,15 +329,42 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
           })
         );
 
+        let ocr = null, colors = null, llmAnalysis = null, cropPath = null, thumbPath = null;
+        const draftPath = formData[`${fieldPrefix}draft.${i}`] as string;
+
+        if (draftPath) {
+            const jsonPath = `static${draftPath}.json`;
+            if (fs.existsSync(jsonPath)) {
+                try {
+                    const sidecar = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                    ocr = sidecar.ocr || null;
+                    colors = sidecar.colors || null;
+                    llmAnalysis = sidecar.llmAnalysis || null;
+
+                    if (sidecar.cropPath) {
+                        cropPath = `${webPath}/${filename}_crop.png`;
+                        fs.copyFileSync(`static${sidecar.cropPath}`, `static${cropPath}`);
+                    }
+                    if (sidecar.thumbPath) {
+                        thumbPath = `${webPath}/${filename}_thumb.jpg`;
+                        fs.copyFileSync(`static${sidecar.thumbPath}`, `static${thumbPath}`);
+                    }
+                    console.log(`[Background Task] Successfully merged pre-processed sidecar for image ${i}`);
+                } catch (e) {
+                    console.error(`Error reading sidecar JSON for ${draftPath}:`, e);
+                }
+            }
+        }
+
         // @ts-expect-error (missing DB fields that will be filled in)
         photos.push({
           type: formData[`${fieldPrefix}type.${i}`] as string,
           orgPath: `${webPath}/${filename}`,
-          thumbPath: null,
-          cropPath: null,
-          llmAnalysis: null,
-          ocr: null,
-          colors: null,
+          thumbPath,
+          cropPath,
+          llmAnalysis,
+          ocr,
+          colors,
         });
     }
     i++;

@@ -9,7 +9,7 @@ import type { Item, Photo, Prisma } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, getSafeFilename, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
+import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { autoFill } from '$lib/server/autofill';
 
 export const actions = {
@@ -129,9 +129,7 @@ return fail(400, {
 
         // Kick off heavy ML, OCR, and Document processing in the background (fire-and-forget)
         downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
-        processProductPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
-        processInvoicePhotos(item, uploadsRemoteSite);
-        processOtherPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
+    		processItemPhotosBackground(item).catch(e => console.error(e));
 
         redirect(302, `/${item.id}/${item.slug}`);
     }

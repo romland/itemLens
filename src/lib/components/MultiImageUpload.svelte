@@ -54,20 +54,30 @@
             // Insert the new element after the previous
             container.insertAdjacentElement("afterend", newParent);
 
+			const currentPhotoIndex = productPhotoFileCounter;
             productPhotoFileCounter++;
 
 			// ----------------------------------------------------
 			// Instant-On Background Upload for AI Analysis
 			// ----------------------------------------------------
+			const fileType = container.querySelector("input[type='hidden']").value;
 			dispatch('analyzingStart', { localUrl: URL.createObjectURL(file) });
 			const formData = new FormData();
 			formData.append('file', file);
+			formData.append('type', fileType);
 
 			fetch('/api/analyze-draft', {
 				method: 'POST',
 				body: formData
 			}).then(res => res.json()).then(data => {
 				dispatch('analyzingComplete', data);
+				if (data.success && data.draftPath) {
+					const draftInput = document.createElement('input');
+					draftInput.type = 'hidden';
+					draftInput.name = `file.draft.${currentPhotoIndex - 1}`;
+					draftInput.value = data.draftPath;
+					container.appendChild(draftInput);
+				}
 			}).catch(err => {
 				console.error("Draft analysis failed", err);
 				dispatch('analyzingComplete', { error: true });

@@ -1,7 +1,8 @@
+// src/routes/api/analyze-draft/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guessProductDetails } from '$lib/server/gemini-classification';
-import { getSafeFilename } from '$lib/server/photouploads';
+import { getSafeFilename, processDraftPhotoBackground } from '$lib/server/photouploads';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 
@@ -9,6 +10,7 @@ export const POST: RequestHandler = async ({ request }) => {
     try {
         const data = await request.formData();
         const file = data.get('file') as File;
+        const type = data.get('type') as string || 'product';
 
         if (!file || !file.size) {
             return json({ error: 'No file provided' }, { status: 400 });
@@ -22,8 +24,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
         fs.writeFileSync(localPath, buffer);
 
-        // 2. Run the fast Gemini analysis
-        // Wrapping in try/catch so if AI fails, we still return the uploaded draft path
+        // 2. Run the fast Gemini analysis for the UI
         let aiData = null;
         try {
             aiData = await guessProductDetails(localPath);
@@ -31,7 +32,10 @@ export const POST: RequestHandler = async ({ request }) => {
             console.warn("Draft AI Analysis failed:", aiError);
         }
 
-        // 3. Return the web path and the AI guess to the frontend
+        // 3. Kick off heavy processing in the background for ALL image types (Fire-and-forget)
+        processDraftPhotoBackground(webPath, type).catch(e => console.error(e));
+
+        // 4. Return the fast UI updates immediately
         return json({
             success: true,
             draftPath: webPath,

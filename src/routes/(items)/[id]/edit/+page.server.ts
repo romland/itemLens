@@ -9,7 +9,7 @@ import type { Item, Photo, Prisma } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, getSafeFilename, processInvoicePhotos, processOtherPhotos, processProductPhotos } from '$lib/server/photouploads';
+import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -242,9 +242,7 @@ console.log("formData:", orgData);
         data.urls += "\n" + await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
 		downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
-		processProductPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
-		processInvoicePhotos(item, uploadsRemoteSite);
-		processOtherPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
+		processItemPhotosBackground(item).catch(e => console.error(e));
 
         console.log("=== Done updating ===");
 
