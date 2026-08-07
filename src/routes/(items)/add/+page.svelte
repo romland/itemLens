@@ -47,13 +47,26 @@
         }
     }
     
-    function notify(status: string, message: string) {
-        notifications.push( { status, message } );
+	function notify(status: string, message: string, id: string | null = null) {
+		if (id) {
+			const existingIndex = notifications.findIndex(n => n.id === id);
+			if (existingIndex !== -1) {
+				notifications[existingIndex] = { ...notifications[existingIndex], status, message };
+				notifications = [...notifications];
+				if (status !== 'loading') setTimeout(() => removeNotification(id), 3000);
+				return id;
+			}
+		}
+		
+		const newId = id || Math.random().toString(36);
+		notifications = [...notifications, { id: newId, status, message }];
+		if (status !== 'loading') setTimeout(() => removeNotification(newId), 3000);
+		return newId;
+	}
+
+	function removeNotification(id: string) {
+		notifications = notifications.filter(n => n.id !== id);
         notifications = notifications;
-        setTimeout(() => {
-            notifications.shift();
-            notifications = notifications;
-        }, 3000)
     }
 
     const toggleMinimal = () => {
@@ -75,7 +88,12 @@
 
 <svelte:window onresize={toggleMinimal} />
 
-<PasteHandler formId="eltForm" on:success={(ev) => notify("success", ev.detail)} />
+<PasteHandler 
+	formId="eltForm" 
+	on:success={(ev) => notify("success", ev.detail)} 
+	on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+	on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+/>
 
 {#if form?.error}
     <div class="mb-6">
@@ -91,6 +109,8 @@
             containers={data.containers} 
             saving={saving} 
             on:success={(ev) => notify("success", ev.detail)} 
+			on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+			on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
         />
     {:else}
         <!-- DESKTOP GRID EXPERIENCE -->
@@ -194,6 +214,8 @@
                             <QRurlScanner 
                                 mini={minimalInput}
                                 on:success={(ev) => notify("success", ev.detail)}
+								on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+								on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
                             />
                         </div>
                     </div>

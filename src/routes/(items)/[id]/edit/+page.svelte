@@ -32,6 +32,13 @@
     let showAiDrawer = false;
     let userHint = "";
     let isRefining = false;
+	let aiDialog: HTMLDialogElement;
+
+	$: if (aiDialog) {
+		if (showAiDrawer && !aiDialog.open) aiDialog.showModal();
+		if (!showAiDrawer && aiDialog.open) aiDialog.close();
+	}
+
 
     async function runAiRefine() {
         if (!userHint.trim() || !data.item?.id) return;
@@ -84,16 +91,38 @@
 		markdownHtml = marked.parse(currentDescription, {gfm:true,breaks:true}) as string;
     }
 
-    function notify(status, ev)
-    {
-        notifications.push({status, message:ev.detail});
-    }
+	function notify(status: string, message: string, id: string | null = null) {
+		if (id) {
+			const existingIndex = notifications.findIndex(n => n.id === id);
+			if (existingIndex !== -1) {
+				notifications[existingIndex] = { ...notifications[existingIndex], status, message };
+				notifications = [...notifications];
+				if (status !== 'loading') setTimeout(() => removeNotification(id), 3000);
+				return id;
+			}
+		}
+		
+		const newId = id || Math.random().toString(36);
+		notifications = [...notifications, { id: newId, status, message }];
+		if (status !== 'loading') setTimeout(() => removeNotification(newId), 3000);
+		return newId;
+	}
+
+	function removeNotification(id: string) {
+		notifications = notifications.filter(n => n.id !== id);
+		notifications = notifications;
+	}
 
     import pageTitle from '$lib/stores';
     pageTitle.set("Edit " + data.item?.title);
 </script>
 
-<PasteHandler formId="eltForm" on:success={(ev) => notify("success", ev.detail)} />
+<PasteHandler 
+	formId="eltForm" 
+	on:success={(ev) => notify("success", ev.detail)} 
+	on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+	on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+/>
 
 {#if form?.error}
     <Alert>{@html form?.message}</Alert>
@@ -151,6 +180,8 @@
     <div class="mb-3">
         <QRurlScanner 
             on:success={(ev) => notify("success", ev.detail)}
+			on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+			on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
         />
     </div>
 
@@ -200,8 +231,8 @@
 />
 
 <!-- The Bottom Drawer -->
-<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={showAiDrawer}>
-    <div class="modal-box p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl">
+<dialog bind:this={aiDialog} class="modal modal-bottom sm:modal-middle" on:close={() => showAiDrawer = false}>
+	<div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl overflow-hidden">
         <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
             <i class="bi bi-stars text-primary"></i> Refine AI Guess
         </h3>

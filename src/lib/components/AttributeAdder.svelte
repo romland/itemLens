@@ -18,6 +18,12 @@
     let keyColIndex = 0;
     let valColIndex = 1;
     let targetIndex = 0;
+	let tableModalDialog: HTMLDialogElement;
+
+	$: if (tableModalDialog) {
+		if (showTableModal && !tableModalDialog.open) tableModalDialog.showModal();
+		if (!showTableModal && tableModalDialog.open) tableModalDialog.close();
+	}
 
     if(values.length) {
         numKVPs = values.length;
@@ -289,7 +295,7 @@
     </div>
 
 <!-- Column Picker Modal -->
-<dialog class="modal" class:modal-open={showTableModal}>
+<dialog bind:this={tableModalDialog} class="modal" on:close={() => showTableModal = false}>
     <div class="modal-box max-w-4xl">
         <h3 class="font-bold text-lg mb-4">Select Columns to Import</h3>
         <p class="text-sm mb-4">We detected multiple columns in your pasted data. Please select which one represents the <strong>Attribute</strong> and which is the <strong>Value</strong>.</p>

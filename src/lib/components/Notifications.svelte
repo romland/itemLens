@@ -1,13 +1,22 @@
 <script>
+    import { slide, fade } from 'svelte/transition';
     export let notifications = [];
 </script>
 
 {#if notifications.length > 0}
-    <div style="position: absolute; top: 0; left: 0; z-index: 2;" class="w-full">
-        {#each notifications as note}
-            <div role="alert" class="alert alert-{note.status} md-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span>{note.message}</span>
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-max max-w-[90vw]">
+        {#each notifications as note (note.id)}
+            <div transition:slide={{duration: 200}} class="pointer-events-auto flex items-center gap-3 px-4 py-2.5 bg-base-200/90 backdrop-blur-xl border border-base-content/10 rounded-full shadow-lg text-sm font-medium">
+                {#if note.status === 'success'}
+                    <i class="bi bi-check-circle-fill text-success text-lg"></i>
+                {:else if note.status === 'error'}
+                    <i class="bi bi-exclamation-circle-fill text-error text-lg"></i>
+                {:else if note.status === 'loading'}
+                    <span class="loading loading-spinner loading-xs text-primary"></span>
+                {:else}
+                    <i class="bi bi-info-circle-fill text-info text-lg"></i>
+                {/if}
+                <span class="truncate">{note.message}</span>
             </div>
         {/each}
     </div>

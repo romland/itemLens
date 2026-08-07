@@ -111,19 +111,66 @@
             const textInput = document.createElement('input');
             textInput.type = 'hidden';
             textInput.name = 'pasted_documents[]';
+			textInput.id = `raw_text_${taskId}`;
             textInput.value = JSON.stringify({ title: textDocumentTitle, content: pastedText });
             form.appendChild(textInput);
             clipboardQueue = [...clipboardQueue, { type: 'text', label: `Note: ${textDocumentTitle}` }];
-            dispatch('success', `Added pasted text document`);
+
+            // Background Process
+			const taskId = Math.random().toString(36);
+			dispatch('processingStart', { taskId, message: "Analyzing note..." });
+			fetch('/api/analyze-draft-document', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ type: 'text', payload: pastedText })
+			}).then(r => r.json()).then(data => {
+				if (data.success) {
+					document.getElementById(`raw_text_${taskId}`)?.remove();
+					const preInput = document.createElement('input');
+					preInput.type = 'hidden';
+					preInput.name = 'preprocessed_docs[]';
+					preInput.value = JSON.stringify({ ...data, type: 'text' });
+					form.appendChild(preInput);
+					dispatch('processingComplete', { taskId, status: 'success', message: "Note analyzed!" });
+				} else {
+					dispatch('processingComplete', { taskId, status: 'error', message: "Failed to analyze note." });
+				}
+			}).catch(() => {
+				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to analyze note." });
+			});
         } else if (pastedType === 'url') {
+            // Background Process
+			const taskId = Math.random().toString(36);
+
             const urlInput = document.createElement('input');
             urlInput.type = 'hidden';
             urlInput.name = 'pasted_urls[]';
+			urlInput.id = `raw_url_${taskId}`;
             urlInput.value = pastedUrl;
             form.appendChild(urlInput);
             
             clipboardQueue = [...clipboardQueue, { type: 'url', label: `URL: ${pastedUrl}` }];
-            dispatch('success', `Added pasted URL`);
+
+			dispatch('processingStart', { taskId, message: "Fetching link..." });
+			fetch('/api/analyze-draft-document', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ type: 'url', payload: pastedUrl })
+			}).then(r => r.json()).then(data => {
+				if (data.success) {
+					document.getElementById(`raw_url_${taskId}`)?.remove();
+					const preInput = document.createElement('input');
+					preInput.type = 'hidden';
+					preInput.name = 'preprocessed_docs[]';
+					preInput.value = JSON.stringify({ ...data, type: 'url' });
+					form.appendChild(preInput);
+					dispatch('processingComplete', { taskId, status: 'success', message: "Link indexed!" });
+				} else {
+					dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
+				}
+			}).catch(() => {
+				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
+			});
         }
         
         closeModal();

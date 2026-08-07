@@ -22,24 +22,8 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
-        const requestedAutoFillFields: Record<string, string> = {};
-        let autoFillRequested = false;
-
         if (title.length == 0) {
             console.warn("Missing required field(s): title");
-            // return fail(400, {
-            //     error: true,
-            //     message: '<strong>Title</strong> can not be blank.'
-            // });
-            console.log("Will attempt to auto-fill tite...");
-            requestedAutoFillFields.title = "Default Product";
-            requestedAutoFillFields.slug = "default-product";
-            autoFillRequested = true;
-        }
-
-        if(description.length === 0) {
-          requestedAutoFillFields.description = "...";
-          autoFillRequested = true;
         }
 
         if(containers.length === 0) {
@@ -101,6 +85,17 @@ return fail(400, {
             data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");
         }
 
+        const preDocsRaw = orgData.getAll("preprocessed_docs[]");
+        const preDocs = preDocsRaw.map(d => JSON.parse(d as string));
+        const preprocessedSources = new Set(preDocs.map(d => d.source));
+
+        if (data.urls) {
+          data.urls = (data.urls as string)
+            .split('\n')
+            .filter(u => u.trim() && !preprocessedSources.has(u.trim()))
+            .join('\n');
+        }
+
         const pastedDocsRaw = orgData.getAll("pasted_documents[]");
         const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
         for (const doc of pastedDocs) {
@@ -118,47 +113,25 @@ return fail(400, {
             });
         }
 
-        let photoCount = 0;
-        const perPhotoCallback = (async (err, photo) => {
-          if(err) {
-            console.log("Error passed to perPhotoCallback:", err);
-            return;
-          }
-
-          if(!autoFillRequested || photoCount > 0) {
-            console.log("No autofill requested for this photo");
-            return;
-          }
-
-          photoCount++;
-          console.log("Autofilling based on first photo to come back. Hmm.", photo);
-          const autofillResult = await autoFill(`static${photo.orgPath}_thumb.jpg`)
-
-          const autoFillData: Record<string, string> = {};
-          if(requestedAutoFillFields.title && autofillResult.title) {
-            autoFillData.title = autofillResult.title;
-          }
-
-          if(requestedAutoFillFields.description && autofillResult.description) {
-            autoFillData.description = autofillResult.description;
-          }
-
-          const updatedItem = await db.item.update({
-            where: { id: item.id },
-            data: autoFillData
+        for (const doc of preDocs) {
+          await db.document.create({
+            data: {
+              itemId: item.id,
+              type: doc.type === 'text' ? 'note' : 'uncategorized',
+              title: doc.title || "",
+              source: doc.source,
+              path: doc.path,
+              extracts: doc.extracts,
+              summary: doc.summary || null
+            }
           });
+        }
 
-          console.log("Autofilled item! Now:", updatedItem);
-        });
-
-        // This is all asynchronous so it will happen in parallel.
-        downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
-
-        // This (among other things) creates a thumbnail
-        await processProductPhotos(item, uploadsRemoteSite, undefined, perPhotoCallback);
-
+        // Kick off heavy ML, OCR, and Document processing in the background (fire-and-forget)
+        downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
+        processProductPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
         processInvoicePhotos(item, uploadsRemoteSite);
-        await processOtherPhotos(item, uploadsRemoteSite);
+        processOtherPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
 
         redirect(302, `/${item.id}/${item.slug}`);
     }

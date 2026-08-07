@@ -193,6 +193,17 @@ console.log("formData:", orgData);
             data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");
         }
 
+		const preDocsRaw = orgData.getAll("preprocessed_docs[]");
+		const preDocs = preDocsRaw.map(d => JSON.parse(d as string));
+		const preprocessedSources = new Set(preDocs.map(d => d.source));
+
+		if (data.urls) {
+			data.urls = (data.urls as string)
+				.split('\n')
+				.filter(u => u.trim() && !preprocessedSources.has(u.trim()))
+				.join('\n');
+		}
+
         const pastedDocsRaw = orgData.getAll("pasted_documents[]");
         const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
         for (const doc of pastedDocs) {
@@ -210,17 +221,30 @@ console.log("formData:", orgData);
             });
         }
 
+		for (const doc of preDocs) {
+			await db.document.create({
+				data: {
+					itemId: item.id,
+					type: doc.type === 'text' ? 'note' : 'uncategorized',
+					title: doc.title || "",
+					source: doc.source,
+					path: doc.path,
+					extracts: doc.extracts,
+					summary: doc.summary || null
+				}
+			});
+		}
+
         // Deal with refreshing and deleting documents and images.
         // Refresh takes presedence over delete (that is, if something is 
         // both deleted and refreshed, refresh wins)
         await refreshDeleteImages(data, allExistingPhotoIds, preExistingPhotoIds, item);
         data.urls += "\n" + await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
-        downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.");
-
-        await processProductPhotos(item, uploadsRemoteSite);
-        processInvoicePhotos(item, uploadsRemoteSite);
-        await processOtherPhotos(item, uploadsRemoteSite);        
+		downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
+		processProductPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
+		processInvoicePhotos(item, uploadsRemoteSite);
+		processOtherPhotos(item, uploadsRemoteSite).catch(e => console.error(e));
 
         console.log("=== Done updating ===");
 

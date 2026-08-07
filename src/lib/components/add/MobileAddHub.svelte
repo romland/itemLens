@@ -27,6 +27,12 @@
 	let showAiDrawer = false;
 	let userHint = "";
 	let isRefining = false;
+	let aiDialog: HTMLDialogElement;
+
+	$: if (aiDialog) {
+		if (showAiDrawer && !aiDialog.open) aiDialog.showModal();
+		if (!showAiDrawer && aiDialog.open) aiDialog.close();
+	}
 
 	function handleAnalyzingStart(ev) {
 		isAnalyzing = true;
@@ -84,8 +90,7 @@
 <div class="relative w-full overflow-hidden bg-base-100 min-h-[75vh] rounded-xl shadow-lg border border-base-200">
     
     <!-- ================= THE HUB VIEW ================= -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out p-4 sm:p-6 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
-        
+	<div class="absolute inset-0 pb-24 transition-transform duration-300 ease-in-out p-4 sm:p-6 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
         <div class="text-center mb-8">
 			<h2 class="text-2xl font-bold">{currentTitle || 'New Item'}</h2>
 			<p class="text-gray-500 text-sm">
@@ -113,7 +118,7 @@
 						}
 					}}>
 					{#if draftImagePath}
-						<img src={draftImagePath} alt="Draft image" class="w-full h-full object-cover" />
+						<img src={draftImagePath} alt="Draft" class="w-full h-full object-cover" />
 					{:else}
 						<i class="bi bi-camera text-5xl"></i>
 					{/if}
@@ -198,15 +203,6 @@
 
         </div>
 
-        <div class="mt-8 pb-8">
-            <button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full rounded-xl shadow-md">
-                {#if saving}
-                    <span class="loading loading-spinner"></span> Processing...
-                {:else}
-                    <i class="bi bi-save mr-2"></i> Save to Inventory
-                {/if}
-            </button>
-        </div>
     </div>
 
     <!-- ================= SUB-VIEWS ================= -->
@@ -258,6 +254,8 @@
             <QRurlScanner 
                 on:success={(ev) => dispatch('success', ev.detail)}
                 on:change={(ev) => linkCount = ev.detail.count}
+				on:processingStart={(ev) => dispatch('processingStart', ev.detail)}
+				on:processingComplete={(ev) => dispatch('processingComplete', ev.detail)}
             />
         </div>
         <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
@@ -323,11 +321,22 @@
             <button type="button" class="btn btn-neutral btn-lg w-full rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
+
+	<!-- ================= STICKY FOOTER ================= -->
+	<div class="absolute bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 z-50">
+		<button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full rounded-xl shadow-md">
+			{#if saving}
+				<span class="loading loading-spinner"></span> Finalizing...
+			{:else}
+				<i class="bi bi-save mr-2 text-xl"></i> Save to Inventory
+			{/if}
+		</button>
+	</div>
 </div>
 
 <!-- The Bottom Drawer for AI Refinement -->
-<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={showAiDrawer}>
-	<div class="modal-box p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl">
+<dialog bind:this={aiDialog} class="modal modal-bottom sm:modal-middle" on:close={() => showAiDrawer = false}>
+	<div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl overflow-hidden">
 		<h3 class="font-bold text-xl mb-2 flex items-center gap-2">
 			<i class="bi bi-stars text-primary"></i> Refine AI Guess
 		</h3>
@@ -346,7 +355,7 @@
 			</button>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop">
+	<div class="modal-backdrop">
 		<button type="button" on:click={() => showAiDrawer = false}>close</button>
-	</form>
+	</div>
 </dialog>

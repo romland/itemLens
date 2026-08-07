@@ -53,11 +53,43 @@
     
     $: dispatch('change', { count: compiledUrls ? compiledUrls.split('\n').filter(x => x).length : 0 });
 
+	let processedUrls = new Set();
+	
+	function triggerBackgroundProcessing(url) {
+		url = url.trim();
+		if (!url || !isURL(url) || processedUrls.has(url)) return;
+		processedUrls.add(url);
+		
+		const taskId = Math.random().toString(36);
+		dispatch('processingStart', { taskId, message: "Fetching link..." });
+		
+		fetch('/api/analyze-draft-document', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'url', payload: url })
+		}).then(r => r.json()).then(data => {
+			if (data.success) {
+				const form = document.getElementById("eltForm");
+				const preInput = document.createElement('input');
+				preInput.type = 'hidden';
+				preInput.name = 'preprocessed_docs[]';
+				preInput.value = JSON.stringify({ ...data, type: 'url' });
+				form?.appendChild(preInput);
+				dispatch('processingComplete', { taskId, status: 'success', message: "Link indexed!" });
+			} else {
+				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
+			}
+		}).catch(() => {
+			dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
+		});
+	}
+
     function scannedURL(ev, inputEltName)
     {
         scanningURLs = false;
         if(!addedURLs.includes(ev.detail)) {
             addedURLs = [...addedURLs, ev.detail];
+			triggerBackgroundProcessing(ev.detail);
         }
         dispatch("success", `Added URL: ${ev.detail}`);
     }
@@ -153,6 +185,7 @@
                                 class="input input-bordered w-full rounded-xl"
                                 bind:value={urlBox.val}
                                 on:input={handleUrlInput}
+								on:blur={() => triggerBackgroundProcessing(urlBox.val)}
                             >
                         {/each}
                     </div>
