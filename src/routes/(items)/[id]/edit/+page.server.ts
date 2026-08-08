@@ -99,13 +99,15 @@ export const actions = {
             });
         }
 
+        /*
         if(containers.length === 0) {
             console.warn("Missing required field(s): containers");
             return fail(400, {
                 error: true,
                 message: 'You must have at least one <strong>Container</strong>.'
             });
-          }
+        }
+        */
   
           let photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
 		  const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);

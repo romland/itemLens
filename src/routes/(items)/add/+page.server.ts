@@ -26,6 +26,7 @@ export const actions = {
             console.warn("Missing required field(s): title");
         }
 
+        /*
         if(containers.length === 0) {
           console.warn("Missing required field(s): containers");
           return fail(400, {
@@ -33,6 +34,7 @@ export const actions = {
               message: 'You must have at least one <strong>Container</strong>.'
           });
         }
+        */
 
         const photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);

@@ -5,6 +5,13 @@ import { db } from '$lib/server/database';
 export const load = (async ({ locals, url }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
 
+    const unassignedCount = await db.item.count({
+        where: {
+            authorId: locals.user.id,
+            locations: { none: {} }
+        }
+    });
+
     const items = await db.item.findMany({
         where: { author: { id: locals.user.id } },
         take: 10,
@@ -25,7 +32,7 @@ export const load = (async ({ locals, url }) => {
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;
 
-    return { items: items, prevPage, nextPage };
+    return { items, prevPage, nextPage, unassignedCount };
 }) satisfies PageServerLoad;
 
 export const actions = {
