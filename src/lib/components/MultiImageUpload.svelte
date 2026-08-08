@@ -56,7 +56,9 @@
                     e.preventDefault();
                     hiddenInput.value = e.currentTarget.textContent.trim().toLowerCase();
                     newInput.click();
-                    (document?.activeElement as HTMLElement | null)?.blur();
+                    setTimeout(() => {
+                        (document?.activeElement as HTMLElement | null)?.blur();
+                    }, 50);
                 });
             });
 
@@ -143,29 +145,29 @@
     <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" class="file-input mb-3">
     <input type="hidden" name="file.type.0" value="">
 
-    <div class="dropdown">
-        <div class="flex justify-center w-full">
-            <div tabindex="0" role="button" class="btn btn-primary shadow-sm">
+    <div class="flex justify-center w-full">
+        <details class="dropdown">
+            <summary class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-circle mr-2"></i> Add image of...
-            </div>
-        </div>
-
+            </summary>
         <ul class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box">
             {#each photoTypes as type}
                 <li>
-                    <button type="button" class="py-3 font-medium" on:click={(ev) => {
-                        (document?.activeElement as HTMLElement | null)?.blur();
+                    <button type="button" class="py-3 font-medium w-full text-left px-4" on:click={(ev) => {
+                        const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
+                        const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+                        const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
+                        const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
                         
-                        const container = (ev.currentTarget as HTMLElement).closest('.group-container');
-                        const fileInput = container?.querySelector("input[type='file']") as HTMLInputElement | null;
-                        const hiddenInput = container?.querySelector("input[type='hidden']") as HTMLInputElement | null;
-                        
-                        if (hiddenInput) hiddenInput.value = type.toLowerCase();
+                        if (typeInput) typeInput.value = type.toLowerCase();
                         if (fileInput) fileInput.click();
+
+                        ev.currentTarget.closest('details')?.removeAttribute('open');
                     }}>{type}</button>
                 </li>
             {/each}
         </ul>
+        </details>
     </div>
 </div>
 
