@@ -1,6 +1,5 @@
 <!-- src/lib/components/add/MediaHub.svelte -->
 <script lang="ts">
-    /* Passes the pre-existing values correctly for Edit mode into the MultiImageUpload. */
     import MultiImageUpload from "$lib/components/MultiImageUpload.svelte";
     import MultiImageFetcher from "$lib/components/MultiImageFetcher.svelte";
     import { createEventDispatcher } from 'svelte';
@@ -56,6 +55,7 @@
                     on:success 
                     on:analyzingStart
                     on:analyzingComplete
+                    on:pendingChange
                 />
             </div>
 
