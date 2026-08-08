@@ -1,32 +1,10 @@
 <!-- src/lib/components/MultiImageUpload.svelte -->
 <script lang="ts">
-    import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
-
     import { createEventDispatcher } from 'svelte'
     const dispatch = createEventDispatcher();
 
     export let photoTypes = ["Other"];
     export let values = [];
-
-    // Map existing photos to extract AI category and format it cleanly
-    $: displayValues = values.map(photo => {
-        let category = "";
-        
-        // Try to pull the category from the LLM analysis or legacy ML classification
-        if (photo.llmAnalysis) {
-            try { category = JSON.parse(photo.llmAnalysis).subCategory || ""; } catch(e) {}
-        } else if (photo.classTrash) {
-            try { category = JSON.parse(photo.classTrash).predicted_classes?.[0] || ""; } catch(e) {}
-        }
-        
-        // Capitalize the base type (e.g., 'product' -> 'Product')
-        const typeStr = photo.type ? photo.type.charAt(0).toUpperCase() + photo.type.slice(1) : "Unknown";
-        
-        return {
-            ...photo,
-            displayInfo: category ? `${typeStr} — ${category}` : typeStr
-        };
-    });
 
     let pendingPhotos: any[] = [];
     var productPhotoFileCounter = 1;
@@ -129,17 +107,6 @@
         dispatch('pendingChange', pendingPhotos);
     }
 </script>
-
-{#if values.length > 0}
-    <RefreshDeleteList
-        values={displayValues}
-        inputName="images"
-        columns={{
-            "3":{name:"Image",    fieldName:"orgPath", isImage: true},
-            "4":{name:"Details", fieldName:"displayInfo"}
-        }}
-    />
-{/if}
 
 <div class="group-container">
     <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" class="file-input mb-3">

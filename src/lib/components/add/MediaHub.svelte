@@ -1,7 +1,8 @@
 <!-- src/lib/components/add/MediaHub.svelte -->
 <script lang="ts">
-    import MultiImageUpload from "$lib/components/MultiImageUpload.svelte";
     import MultiImageFetcher from "$lib/components/MultiImageFetcher.svelte";
+    import MultiImageUpload from "$lib/components/MultiImageUpload.svelte";
+    import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
     import { createEventDispatcher } from 'svelte';
     
     const dispatch = createEventDispatcher();
@@ -11,6 +12,26 @@
     
     // View state for tabs
     let activeTab = 'device'; // 'device' | 'web'
+
+    // Map existing photos to extract AI category and format it cleanly
+    $: displayValues = photoValues.map(photo => {
+        let category = "";
+        
+        // Try to pull the category from the LLM analysis or legacy ML classification
+        if (photo.llmAnalysis) {
+            try { category = JSON.parse(photo.llmAnalysis).subCategory || ""; } catch(e) {}
+        } else if (photo.classTrash) {
+            try { category = JSON.parse(photo.classTrash).predicted_classes?.[0] || ""; } catch(e) {}
+        }
+        
+        // Capitalize the base type (e.g., 'product' -> 'Product')
+        const typeStr = photo.type ? photo.type.charAt(0).toUpperCase() + photo.type.slice(1) : "Unknown";
+        
+        return {
+            ...photo,
+            displayInfo: category ? `${typeStr} — ${category}` : typeStr
+        };
+    });    
 </script>
 
 <div class="flex flex-col w-full">
@@ -73,4 +94,20 @@
             </div>
         {/if}
     </div>
+    
+    {#if photoValues.length > 0}
+        <div class="mb-6 bg-base-50/50 p-4 rounded-xl border border-base-200">
+            <h3 class="font-semibold text-sm text-gray-500 mb-3 flex items-center gap-2"><i class="bi bi-images"></i> Existing Photos</h3>
+            <RefreshDeleteList
+                values={displayValues}
+                inputName="images"
+                columns={{
+                    "3":{name:"Image",    fieldName:"orgPath", isImage: true},
+                    "4":{name:"Details", fieldName:"displayInfo"}
+                }}
+            />
+        </div>
+    {/if}
+
+
 </div>
