@@ -21,6 +21,21 @@
             } catch(e) {}
         }
         return "";
+    }
+
+    function openLinksInNewTab(node: HTMLElement) {
+        const updateLinks = () => {
+            node.querySelectorAll('a').forEach(a => {
+                if (a.hostname !== window.location.hostname || a.href.startsWith('http')) {
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                }
+            });
+        };
+        updateLinks();
+        const observer = new MutationObserver(updateLinks);
+        observer.observe(node, { childList: true, subtree: true });
+        return { destroy() { observer.disconnect(); } };
     }    
 </script>
 
@@ -78,7 +93,7 @@
             </form>
         {:else}
             {#if note.content}
-                <div class="prose prose-sm max-w-none text-base-content leading-snug break-words">
+                <div class="prose prose-sm max-w-none text-base-content leading-snug break-words" use:openLinksInNewTab>
                     {@html marked.parse(note.content, { breaks: true })}
                 </div>
             {/if}

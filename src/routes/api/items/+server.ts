@@ -34,7 +34,8 @@ export async function GET({ url }) {
         query.where = {
             OR: [
                 { title: { contains: q }},
-                { description: { contains: q }}
+                { description: { contains: q }},
+                { locations: { some: { containerName: { contains: q } } } }
             ],
             // AND: [
             //     { authorId: locals.user.id },
