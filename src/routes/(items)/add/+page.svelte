@@ -26,19 +26,20 @@
     export let form: ActionData;
     export let data: PageServerData;
 
-    const onSubmit: SubmitFunction = async (data) => {
+    const onSubmit: SubmitFunction = async ({ cancel }) => {
+        if (saving) {
+            cancel();
+            return;
+        }
         saving = true;
+        isDirty = false;
         return async (options) => {
             saving = false;
-            if(options.result?.type === "redirect") {
-                window.location.href = options.result.location;
-            } else if (options.result?.type === "failure") {
+            if (options.result?.type === "failure") {
                 const msg = String(options.result.data?.message || "Failed to save item.").replace(/<\/?[^>]+(>|$)/g, "");
                 notify("error", msg);
-                options.update();
-            } else {
-                options.update();
             }
+            options.update();            
         }
     }
     

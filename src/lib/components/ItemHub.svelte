@@ -32,11 +32,17 @@
     let isAnalyzing = false;
     let pendingPhotos: any[] = [];
     let showPreview = false;
-    
+    let currentDraftPath = "";
+
     // Default draft preview logic
-    $: draftImagePath = pendingPhotos.length > 0 
+    $: previewImagePath = pendingPhotos.length > 0
         ? pendingPhotos[pendingPhotos.length - 1].localUrl 
         : item?.photos?.find(p => p.type === 'product')?.cropPath || item?.photos?.find(p => p.type === 'product')?.orgPath || "";
+
+    $: serverImagePath = currentDraftPath 
+        || item?.photos?.find(p => p.type === 'product')?.cropPath 
+        || item?.photos?.find(p => p.type === 'product')?.orgPath 
+        || "";
 
     let showAiDrawer = false;
     let userHint = "";
@@ -55,6 +61,9 @@
     function handleAnalyzingComplete(ev: any) {
         isAnalyzing = false;
         const data = ev.detail;
+        if (data && data.draftPath) {
+            currentDraftPath = data.draftPath;
+        }        
         if (data && data.aiData) {
             let autofilled = false;
             if (!currentTitle && data.aiData.title) {
@@ -86,7 +95,7 @@
     }
 
     async function runAiRefine() {
-        if (!userHint.trim() || !draftImagePath) return;
+        if (!userHint.trim() || !serverImagePath) return;
         
         isRefining = true;
         try {
@@ -105,7 +114,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        draftPath: draftImagePath,
+                        draftPath: serverImagePath,
                         hint: userHint 
                     })
                 });
@@ -119,6 +128,9 @@
                 showAiDrawer = false;
                 userHint = "";
                 dispatch('success', 'Item details enhanced by AI!');
+            } else {
+                alert("AI Refinement failed. Check server logs.");
+                showAiDrawer = false;
             }
         } catch (e) {
             console.error(e);
@@ -162,8 +174,8 @@
                     </div>
                 {/if}
                 
-                {#if draftImagePath}
-                    <img src={draftImagePath} alt="Preview" class="w-full h-full object-cover" />
+                {#if previewImagePath}
+                    <img src={previewImagePath} alt="Preview" class="w-full h-full object-cover" />
                 {:else}
                     <i class="bi bi-camera text-5xl"></i>
                 {/if}
@@ -390,7 +402,7 @@
                     </div>
                     <div class="relative w-full">
                         <input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full pr-12 rounded-xl" class:input-primary={isAnalyzing}>
-                        {#if draftImagePath}
+                        {#if previewImagePath}
                             <button type="button" class="absolute right-3 top-3 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => showAiDrawer = true}>
                                 <i class="bi bi-stars text-xl"></i>
                             </button>
@@ -458,14 +470,14 @@
 </style>
 
 <!-- The Bottom Drawer for AI Refinement -->
-<dialog bind:this={aiDialog} class="modal modal-bottom sm:modal-middle" on:close={() => showAiDrawer = false}>
-    <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto p-6 bg-base-100/95 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl overflow-hidden">
+<dialog bind:this={aiDialog} class="modal modal-top sm:modal-middle" on:close={() => showAiDrawer = false}>
+    <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
         <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
             <i class="bi bi-stars text-primary"></i> Refine AI Guess
         </h3>
         <p class="text-sm text-gray-500 mb-6">Give the AI a nudge with a brand or model name to get a better match.</p>
         
-        <input type="text" bind:value={userHint} on:keydown={(e) => e.key === 'Enter' && runAiRefine()} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
+        <input type="text" bind:value={userHint} on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runAiRefine(); } }} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
         
         <div class="modal-action mt-0 flex gap-2">
             <button type="button" class="btn btn-ghost rounded-xl flex-1" on:click={() => showAiDrawer = false}>Cancel</button>
