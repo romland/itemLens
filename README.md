@@ -116,6 +116,22 @@ Password: password
 npm run build
 ```
 
+### Safari Share Target
+Apple limitation: **iOS Safari does not support the Web Share Target API.**
+Apple only allows PWAs to *send* shares out, not *receive* them natively via the share sheet.
+
+### The Workaround: iOS Shortcuts
+
+If you want to share things directly into itemLens on an iPhone, the best workaround is to build a quick iOS Shortcut:
+1. Open the **Shortcuts** app on your iPhone and create a new shortcut.
+2. Tap the **(i)** icon at the bottom and turn on **Show in Share Sheet**.
+3. Set it to accept **URLs, Text, and Images**.
+4. Add an action to **URL Encode** the shortcut input.
+5. Add an action to **Open URLs**, and construct the URL to point to your app's capture route with the encoded input attached as a query parameter (e.g., `[https://dev.providi.nl/timeline?pasteText=](https://dev.providi.nl/timeline?pasteText=)[Encoded Input]`).
+
+It's a bit of a hack, but once you set it up, "Send to itemLens" will sit right there in your iOS share sheet.
+
+
 ### External services
 _Notes to self for now_:  
 Start the docker containers in Ubuntu VM if they are not running with:
