@@ -193,8 +193,13 @@
     }
 
     function handleKeydown(event: KeyboardEvent) {
-        if (modalOpen && event.key === 'Escape') {
-            closeModal();
+        if (modalOpen) {
+            if (event.key === 'Escape') {
+                closeModal();
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmPaste();
+            }
         }
     }    
 </script>
@@ -235,7 +240,7 @@
                 </select>
             </div>
         {:else if pastedType === 'url'}
-            <div class="alert alert-success bg-emerald-100 text-emerald-900 border-none shadow-sm mb-4">
+            <div class="alert alert-success border-none shadow-sm mb-4">
                 <i class="bi bi-link-45deg text-2xl"></i>
                 <div>
                     <h3 class="font-bold">Link Detected</h3>
