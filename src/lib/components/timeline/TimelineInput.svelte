@@ -1,7 +1,9 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
     import { onMount } from 'svelte';
-    import { saveToQueue, getQueue, clearQueueItem } from '$lib/client/offlineQueue';
+    import { createEventDispatcher } from 'svelte';
+
+    const dispatch = createEventDispatcher();
 
     let content = "";
     let isUploading = false;
@@ -132,7 +134,8 @@
                 linkedItemIds.clear();
 
                 // Cleanup dynamically appended hidden inputs from PasteHandler
-                document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());                
+                document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());
+                dispatch('posted');
             };
         }}
         class="max-w-2xl mx-auto flex items-end gap-2 w-full box-border"

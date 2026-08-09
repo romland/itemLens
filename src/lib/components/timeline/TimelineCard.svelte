@@ -39,11 +39,11 @@
                 <i class="bi bi-three-dots"></i>
             </button>
             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40 border border-base-200">
-                <li><button on:click={() => { editContent = note.content || ""; isEditing = true; }}><i class="bi bi-pencil"></i> Edit</button></li>
+                <li><button class="flex items-center gap-3 w-full" on:click={(e) => { editContent = note.content || ""; isEditing = true; (document.activeElement)?.blur(); }}><i class="bi bi-pencil w-4 text-center"></i> Edit</button></li>
                 <li>
-                    <form action="/timeline?/delete" method="POST" use:enhance class="m-0 p-0 w-full">
+                    <form action="/timeline?/delete" method="POST" use:enhance style="display: contents;">
                         <input type="hidden" name="id" value={note.id}>
-                        <button type="submit" class="text-error w-full text-left"><i class="bi bi-trash"></i> Delete</button>
+                        <button type="submit" class="text-error hover:bg-error/10 hover:text-error flex items-center gap-3 w-full"><i class="bi bi-trash w-4 text-center"></i> Delete</button>
                     </form>
                 </li>
             </ul>
@@ -124,9 +124,12 @@
                     <option value="other">📌 Other</option>
                 </select>
             </form>
-            <button class="btn btn-xs btn-ghost text-gray-500 hover:text-primary gap-1">
-                <i class="bi bi-box-arrow-in-right"></i> Promote to Item
-            </button>
+            <form action="/timeline?/promote" method="POST" use:enhance class="m-0 p-0">
+                <input type="hidden" name="id" value={note.id}>
+                <button type="submit" class="btn btn-xs btn-ghost text-gray-500 hover:text-primary gap-1">
+                    <i class="bi bi-box-arrow-in-right"></i> Promote to Item
+                </button>
+            </form>
         </div>
     </div>
 </div>

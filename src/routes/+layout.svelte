@@ -201,8 +201,8 @@
   {/if}
 
   <a class:active={$page.url.pathname.startsWith('/timeline')} href="/timeline">
-    <i class="bi bi-card-list text-xl"></i>
-    <span class="btm-nav-label">Timeline</span>
+    <i class="bi bi-journal-bookmark text-xl"></i>
+    <span class="btm-nav-label">Notebook</span>
   </a>
 
 </div>

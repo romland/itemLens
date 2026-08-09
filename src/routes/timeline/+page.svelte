@@ -7,7 +7,9 @@
 
     export let data;
 
-    pageTitle.set("Timeline");
+    pageTitle.set("Notebook");
+
+    let pasteKey = 0;
 
     let notifications: any[] = [];
     function notify(status: string, message: string, id: string | null = null) {
@@ -31,13 +33,13 @@
     formId="timelineForm" 
     on:success={(ev) => {
         notify("success", ev.detail);
-        setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 100);
+        setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 50);
     }} 
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
     on:processingComplete={(ev) => {
         notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
         if (ev.detail.status === 'success') {
-            setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 100);
+            setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 50);
         }
     }}
 />
@@ -65,6 +67,6 @@
 </div>
 
 <!-- Fixed Input Bar Component -->
-<TimelineInput />
+<TimelineInput on:posted={() => pasteKey++} />
 
 <Notifications bind:notifications />

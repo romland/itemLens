@@ -1,5 +1,5 @@
 import { db } from '$lib/server/database';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { savePhotos } from '$lib/server/photouploads';
 import { uploadsDiskFolder, uploadsWebFolder, uploadsRemoteSite } from '$lib/server/constants';
@@ -112,5 +112,34 @@ export const actions = {
     edit: async ({ request }) => {
         const data = await request.formData();
         await db.timelineNote.update({ where: { id: Number(data.get('id')) }, data: { content: data.get('content') as string } });
+    },
+    promote: async ({ request }) => {
+        const data = await request.formData();
+        const noteId = Number(data.get('id'));
+        
+        const note = await db.timelineNote.findUnique({
+            where: { id: noteId },
+            include: { photos: true, documents: true }
+        });
+        
+        if (!note) return fail(404, { error: true, message: "Note not found" });
+
+        // Create a new base Item using the note's text as the initial description
+        const newItem = await db.item.create({
+            data: {
+                title: "Promoted from Notebook",
+                slug: "promoted-from-notebook",
+                description: note.content || "",
+                authorId: note.authorId,
+            }
+        });
+
+        // Transfer relationships and delete original note
+        await db.photo.updateMany({ where: { timelineNoteId: noteId }, data: { timelineNoteId: null, itemId: newItem.id }});
+        await db.document.updateMany({ where: { timelineNoteId: noteId }, data: { timelineNoteId: null, itemId: newItem.id }});
+        await db.timelineNote.delete({ where: { id: noteId } });
+
+        redirect(303, `/${newItem.id}/edit`);
     }
+
 } satisfies Actions;
