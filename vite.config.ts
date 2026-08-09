@@ -61,7 +61,20 @@ export default defineConfig({
 					  "type": "image/png",
 					  "purpose": "maskable"
 					}
-				  ],
+				],
+				share_target: {
+					action: "/timeline?/capture",
+					method: "POST",
+					enctype: "multipart/form-data",
+					params: {
+						title: "title",
+						text: "text",
+						url: "url",
+						files: [
+							{ name: "images", accept: ["image/*", "video/*"] }
+						]
+					}
+				}				  
 			},
 			injectManifest: {
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']

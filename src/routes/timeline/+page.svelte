@@ -1,0 +1,70 @@
+<script lang="ts">
+    import TimelineInput from '$lib/components/timeline/TimelineInput.svelte';
+    import TimelineCard from '$lib/components/timeline/TimelineCard.svelte';
+    import pageTitle from '$lib/stores';
+    import PasteHandler from "$lib/components/PasteHandler.svelte";
+    import Notifications from "$lib/components/Notifications.svelte";
+
+    export let data;
+
+    pageTitle.set("Timeline");
+
+    let notifications: any[] = [];
+    function notify(status: string, message: string, id: string | null = null) {
+        if (id) {
+            const existingIndex = notifications.findIndex(n => n.id === id);
+            if (existingIndex !== -1) {
+                notifications[existingIndex] = { ...notifications[existingIndex], status, message };
+                notifications = [...notifications];
+                if (status !== 'loading') setTimeout(() => notifications = notifications.filter(n => n.id !== id), 3000);
+                return id;
+            }
+        }
+        const newId = id || Math.random().toString(36);
+        notifications = [...notifications, { id: newId, status, message }];
+        if (status !== 'loading') setTimeout(() => notifications = notifications.filter(n => n.id !== newId), 3000);
+        return newId;
+    }    
+</script>
+
+<PasteHandler 
+    formId="timelineForm" 
+    on:success={(ev) => {
+        notify("success", ev.detail);
+        setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 100);
+    }} 
+    on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+    on:processingComplete={(ev) => {
+        notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
+        if (ev.detail.status === 'success') {
+            setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 100);
+        }
+    }}
+/>
+
+<div class="flex flex-col h-full max-w-2xl mx-auto pb-32 box-border overflow-x-hidden">
+    <div class="flex justify-center pt-4 px-2">
+        <div class="tabs tabs-boxed bg-base-200/50">
+            <a href="/timeline?category=all" class="tab {data.currentCategory === 'all' ? 'tab-active' : ''}">All</a>
+            <a href="/timeline?category=idea" class="tab {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
+            <a href="/timeline?category=todo" class="tab {data.currentCategory === 'todo' ? 'tab-active' : ''}">Todo</a>
+            <a href="/timeline?category=to buy" class="tab {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto flex flex-col gap-4 py-4 px-2 w-full box-border">
+        {#each data.notes as note (note.id)}
+            <TimelineCard {note} />
+        {:else}
+            <div class="text-center text-gray-400 mt-10">
+                <i class="bi bi-chat-square-text text-4xl"></i>
+                <p class="mt-4">Your timeline is empty.<br>Start dumping ideas below!</p>
+            </div>
+        {/each}
+    </div>
+</div>
+
+<!-- Fixed Input Bar Component -->
+<TimelineInput />
+
+<Notifications bind:notifications />
