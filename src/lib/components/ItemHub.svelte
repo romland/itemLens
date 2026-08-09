@@ -338,8 +338,7 @@
                             values={item.documents}
                             inputName="documents"
                             columns={{
-                                "3":{name:"Title",     fieldName:"title", isImage: false},
-                                "4":{name:"Filename", fieldName:"path", isLink: true}
+                                "3":{name:"Document", fieldName:"title", subFieldName:"source", linkFieldName:"path", isImage: false}
                             }}
                         />
                     </div>

@@ -4,7 +4,8 @@
     import { toTextDocument, refine, refineForLLM } from "$lib/shared/ocrparser";
     import { afterNavigate, beforeNavigate } from '$app/navigation'
     import { marked } from "marked";
-    
+    import { enhance } from "$app/forms";
+
     export let data: PageServerData;
     
     var refreshIntervalId = null;
@@ -179,11 +180,18 @@ $:  if(!done && invoicePhotos.length > 0) {
             {#if productPhotos?.length > 0}
                 <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
                     {#each productPhotos as photo, i}
-                        <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in">
+                        <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
+                                <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); refineItemData(); } }} class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <input type="hidden" name="photoId" value={productPhotos[i].id} />
+                                    <input type="hidden" name="showOriginal" value={productPhotos[i].showOriginal ? 'false' : 'true'} />
+                                    <button type="submit" class="btn btn-circle btn-sm btn-ghost bg-base-100/70 shadow-sm" title={productPhotos[i].showOriginal ? "Show Cutout" : "Show Original"}>
+                                        <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'}"></i>
+                                    </button>
+                                </form>                            
                                 <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
                                     <img 
-                                        src="{productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}" 
+                                        src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}"
                                         class="object-scale-down">
                                 </button>
                             {:else}
@@ -195,7 +203,7 @@ $:  if(!done && invoicePhotos.length > 0) {
                 <div class="flex justify-start w-full py-2 gap-1">
                     {#each productPhotos as photo, i}
                         <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
-                            <img class="object-scale-down w-10 h-10" src="{photo.cropPath}" alt="Thumbnail {i + 1}"/>
+                            <img class="object-scale-down w-10 h-10 bg-base-100" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                         </button>
                     {/each}
                 </div>

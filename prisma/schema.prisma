@@ -85,6 +85,7 @@ model Photo {
   cropPath    String?
   thumbPath   String?
   ocr         String?
+  showOriginal Boolean @default(false)
   colors      String?   // NOTE: JSON array
 
   category    Category? @relation(fields: [categoryId], references: [id])

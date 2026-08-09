@@ -177,6 +177,14 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
       return;
     }
 
+    // Create original thumbnail (without background removed)
+    try {
+      const orgThumbnail = await imageThumbnail(`static${photo.orgPath}`, thumbOptions as any);
+      fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
+    } catch(ex) {
+      console.error("Error generating original thumbnail", ex);
+    }
+
     if(getColors) {
       // Get top colors of no-backgrounded-image
       await getTopColorsNamed(outputFileNoBkg, (err, result) => {

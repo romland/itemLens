@@ -231,8 +231,8 @@ console.log("formData:", orgData);
 async function refreshDeleteImages(data: { [k: string]: FormDataEntryValue; }, allExistingPhotoIds: number[], preExistingPhotoIds: number[], item: any)
 {
     try {
-        let imagesToDelete = JSON.parse(data.delete_images as string);
-        let imagesToRefresh = JSON.parse(data.refresh_images as string);
+        let imagesToDelete = JSON.parse((data.delete_images as string) || "[]");
+        let imagesToRefresh = JSON.parse((data.refresh_images as string) || "[]");
 
         console.log({ imagesToDelete, imagesToRefresh });
 

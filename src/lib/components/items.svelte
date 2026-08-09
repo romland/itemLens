@@ -15,7 +15,7 @@
                 }
             }
         }
-        return { thumbPath: "", classTrash: null };
+        return { thumbPath: "", orgPath: "", showOriginal: false, classTrash: null };
     }
 
     function hasSummarizedDocuments(item) {
@@ -41,6 +41,7 @@
                         This catches clicks on the image, the title, AND the edit button!
                     -->
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
+                    {@const mainPhoto = getFirstProductPhoto(item)}
                     
                     <tr class="hover transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
                         <td>
@@ -48,7 +49,7 @@
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12 bg-base-200">
                                         <a href="/{item.id}/{item.slug}">
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16" src="{getFirstProductPhoto(item).thumbPath}" alt="{item.title || 'Item image'}"/>
+                                            <img class="mask mask-squircle object-scale-down h-16 w-16 bg-base-100" src="{mainPhoto.showOriginal ? mainPhoto.orgPath + '_org_thumb.jpg' : mainPhoto.thumbPath}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                         </a>
                                     </div>
                                 </div>
@@ -103,9 +104,9 @@
                                         </div>
                                     {/if}
 
-                                    {#if getFirstProductPhoto(item).classTrash}
+                                    {#if mainPhoto.classTrash}
                                         <span class="text-xs text-gray-400">
-                                            Class: {JSON.parse(getFirstProductPhoto(item).classTrash).predicted_classes}
+                                            Class: {JSON.parse(mainPhoto.classTrash).predicted_classes}
                                         </span>
                                     {/if}
                                 </div>

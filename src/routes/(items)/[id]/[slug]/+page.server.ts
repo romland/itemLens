@@ -1,6 +1,6 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/database';
-import { redirect } from "@sveltejs/kit";
+import { redirect, fail } from "@sveltejs/kit";
 import { marked } from "marked";
 import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
@@ -45,3 +45,18 @@ export const load = (async ({ locals, params }) => {
         }
     };
 }) satisfies PageServerLoad;
+
+export const actions = {
+    toggleBackground: async ({ request }) => {
+        const data = await request.formData();
+        const photoId = Number(data.get('photoId'));
+        const showOriginal = data.get('showOriginal') === 'true';
+        if (photoId) {
+            await db.photo.update({
+                where: { id: photoId },
+                data: { showOriginal }
+            });
+        }
+        return { success: true };
+    }
+} satisfies Actions;

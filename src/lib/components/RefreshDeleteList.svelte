@@ -76,8 +76,8 @@
                             <input type="checkbox" class="checkbox" on:change={toggleRefreshAll}/>
                         </label>
                     </th>
-                    <th>{columns["3"].name}</th>
-                    <th class="invisible lg:visible">{columns["4"].name}</th>
+                    {#if columns["3"]}<th>{columns["3"].name}</th>{/if}
+                    {#if columns["4"]}<th class="invisible lg:visible">{columns["4"].name}</th>{/if}
                 </tr>
             </thead>
 
@@ -95,34 +95,43 @@
                             </label>
                         </td>
                         <td>
-                            <div class="avatar">
                                 {#if columns["3"]?.isImage}
-                                    <div class="mask mask-squircle w-12 h-12">
-                                        {#if columns["4"].isLink}
-                                            <a href="{item[columns["4"].fieldName]}" target="_blank">
+                                    <div class="avatar">
+                                        <div class="mask mask-squircle w-12 h-12">
+                                            {#if columns["4"].isLink}
+                                                <a href="{item[columns["4"].fieldName]}" target="_blank">
+                                                    <img src="{item[columns["3"].fieldName]}" alt="" />
+                                                </a>
+                                            {:else}
                                                 <img src="{item[columns["3"].fieldName]}" alt="" />
-                                            </a>
-                                        {:else}
-                                            <img src="{item[columns["3"].fieldName]}" alt="" />
-                                        {/if}
+                                            {/if}
+                                        </div>
                                     </div>
                                 {:else}
-                                    {item[columns["3"].fieldName]}
+                                    <div class="flex flex-col min-w-0 max-w-[200px] md:max-w-xs">
+                                        <span class="font-bold text-sm truncate" title={item[columns["3"].fieldName]}>{item[columns["3"].fieldName]}</span>
+                                        {#if columns["3"].subFieldName && item[columns["3"].subFieldName]}
+                                            <a href={item[columns["3"].linkFieldName] || '#'} target="_blank" class="text-xs text-gray-400 hover:text-primary truncate block w-full mt-0.5" title={item[columns["3"].subFieldName]}>
+                                                {item[columns["3"].subFieldName]}
+                                            </a>
+                                        {/if}
+                                    </div>
                                 {/if}
-                            </div>
                         </td>
-                        <td class="invisible lg:visible">
-                            {#if columns["4"].prefix}
-                                [{item[columns["4"].prefix]}]
-                            {/if}
-                            {#if columns["4"].isLink}
-                                <a href="{item[columns["4"].fieldName]}" target="_blank">
+                        {#if columns["4"]}
+                            <td class="invisible lg:visible">
+                                {#if columns["4"].prefix}
+                                    [{item[columns["4"].prefix]}]
+                                {/if}
+                                {#if columns["4"].isLink}
+                                    <a href="{item[columns["4"].fieldName]}" target="_blank">
+                                        {item[columns["4"].fieldName]}
+                                    </a>
+                                {:else}
                                     {item[columns["4"].fieldName]}
-                                </a>
-                            {:else}
-                                {item[columns["4"].fieldName]}
-                            {/if}
-                        </td>
+                                {/if}
+                            </td>
+                        {/if}
                     </tr>
                 {/each}
             </tbody>
