@@ -10,6 +10,7 @@
     pageTitle.set("Notebook");
 
     let pasteKey = 0;
+    let pasteHandler: any;
 
     let notifications: any[] = [];
     function notify(status: string, message: string, id: string | null = null) {
@@ -30,6 +31,7 @@
 </script>
 
 <PasteHandler 
+    bind:this={pasteHandler}
     formId="timelineForm" 
     on:success={(ev) => {
         notify("success", ev.detail);
@@ -67,6 +69,6 @@
 </div>
 
 <!-- Fixed Input Bar Component -->
-<TimelineInput on:posted={() => pasteKey++} />
+<TimelineInput on:posted={() => pasteHandler?.clearQueue()} />
 
 <Notifications bind:notifications />

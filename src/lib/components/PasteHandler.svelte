@@ -3,7 +3,11 @@
     import { photoTypes } from '$lib/shared/constants';
     
     export let formId = "eltForm";
-    
+
+    export function clearQueue() {
+        clipboardQueue = [];
+    }
+
     const dispatch = createEventDispatcher();
     
     let modalOpen = false;

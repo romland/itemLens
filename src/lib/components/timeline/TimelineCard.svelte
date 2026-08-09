@@ -41,12 +41,12 @@
             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40 border border-base-200">
                 <li><button class="flex items-center gap-3 w-full" on:click={(e) => { editContent = note.content || ""; isEditing = true; (document.activeElement)?.blur(); }}><i class="bi bi-pencil w-4 text-center"></i> Edit</button></li>
                 <li>
-                    <form action="/timeline?/delete" method="POST" use:enhance style="display: contents;">
-                        <input type="hidden" name="id" value={note.id}>
-                        <button type="submit" class="text-error hover:bg-error/10 hover:text-error flex items-center gap-3 w-full"><i class="bi bi-trash w-4 text-center"></i> Delete</button>
-                    </form>
+                    <button type="submit" form="delete-form-{note.id}" class="text-error hover:bg-error/10 hover:text-error flex items-center gap-3 w-full"><i class="bi bi-trash w-4 text-center"></i> Delete</button>
                 </li>
             </ul>
+            <form id="delete-form-{note.id}" action="/timeline?/delete" method="POST" use:enhance class="hidden">
+                <input type="hidden" name="id" value={note.id}>
+            </form>            
         </div>
     </div>
     <!-- Attached Photos -->
@@ -117,10 +117,10 @@
         <div class="flex justify-between items-center mt-3 pt-3 border-t border-base-200/50">
             <form action="/timeline?/updateCategory" method="POST" use:enhance class="m-0 p-0">
                 <input type="hidden" name="id" value={note.id}>
-                <select name="category" class="select select-ghost select-xs text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-primary focus:outline-none px-0" value={note.category} on:change={(e) => e.currentTarget.form?.requestSubmit()}>
+                <select name="category" class="select select-ghost select-xs text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-primary focus:outline-none pl-0 pr-8" value={note.category} on:change={(e) => e.currentTarget.form?.requestSubmit()}>
                     <option value="idea">💡 Idea</option>
                     <option value="todo">✅ Todo</option>
-                    <option value="to buy">🛒 To Buy</option>
+                    <option value="to buy">🛒 Buy</option>
                     <option value="other">📌 Other</option>
                 </select>
             </form>
