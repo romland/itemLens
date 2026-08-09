@@ -117,6 +117,7 @@ async function addItems(user: User)
                                 ocr: '{"resultcode":200,"message":"Success","data":[[]]}',
                                 // TODO colors: Refine? Separate table? How will we use it after pre-processing?
                                 colors: "[ 'black', 'gray', 'midnight blue', 'manatee' ]",
+                                llmAnalysis: '{"photoType":"product","subCategory":"electronics","isNewCategory":false,"description":"A component."}'
                             },
                             {
                                 type : "receipt",

@@ -5,13 +5,23 @@
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from '@sveltejs/kit';
+    import { beforeNavigate } from '$app/navigation';
     import Notifications from "$lib/components/Notifications.svelte";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import pageTitle from '$lib/stores';
 
     let saving = false;
+    let isDirty = false;
     let notifications: any[] = [];
+
+    beforeNavigate(({ cancel }) => {
+        if (isDirty && !saving) {
+            if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                cancel();
+            }
+        }
+    });
 
     export let form: ActionData;
     export let data: PageServerData;
@@ -68,7 +78,7 @@
     </div>
 {/if}
 
-<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
+<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
     <ItemHub 
         containers={data.containers} 
         saving={saving} 

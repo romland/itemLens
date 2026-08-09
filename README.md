@@ -19,6 +19,7 @@ If feeling particularly ambitious on a day, you can also:
 - add additional photos (using camera or just paste in links)
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
+- **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by AI). Hit `Ctrl+V` anywhere!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
 ### Features

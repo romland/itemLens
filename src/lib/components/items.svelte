@@ -3,6 +3,7 @@
     import type { Item } from "@prisma/client";
     import Delete from "./delete.svelte";
     import { navigating } from '$app/stores';
+    import { goto } from '$app/navigation';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -43,12 +44,12 @@
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     
-                    <tr class="hover transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
+                    <tr on:click={() => goto(`/${item.id}/${item.slug}`)} class="hover cursor-pointer transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12 bg-base-200">
-                                        <a href="/{item.id}/{item.slug}">
+                                        <a href="/{item.id}/{item.slug}" on:click|stopPropagation>
                                             <img class="mask mask-squircle object-scale-down h-16 w-16 bg-base-100" src="{mainPhoto.showOriginal ? mainPhoto.orgPath + '_org_thumb.jpg' : mainPhoto.thumbPath}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                         </a>
                                     </div>
@@ -60,7 +61,7 @@
                             {#if item.locations}
                                 {#each item.locations as loc}
                                     <div class="badge badge-ghost badge-sm whitespace-nowrap">
-                                        <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
+                                        <a href="/container/{loc.containerName.replace(/ /g, '-')}" on:click|stopPropagation>{loc.containerName}</a>
                                     </div>
                                 {/each}
                             {/if}
@@ -68,7 +69,7 @@
 
                         <td>
                             <div class="flex items-center gap-2">
-                                <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
+                                <a class="text-base font-semibold" href="/{item.id}/{item.slug}" on:click|stopPropagation>{item.title}</a>
                                 <!-- Show a loading spinner right next to the title while we wait -->
                                 {#if isNavigatingToThis}
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
@@ -78,16 +79,14 @@
                             {#if !brief}
                             <div class="hidden lg:block mt-1">
                                 <div class="line-clamp-2 text-sm text-gray-500">
-                                    <a href="/{item.id}/{item.slug}">
-                                        {item.description}
-                                    </a>
+                                    {item.description}
                                 </div>
 
                                 <div class="hidden lg:flex pt-2 gap-2 flex-wrap items-center">
                                     {#if item.tags}
                                         {#each item.tags as tag}
                                             <div class="badge badge-ghost badge-sm">
-                                                <a href="/tag/{tag.slug}">{tag.name}</a>
+                                                <a href="/tag/{tag.slug}" on:click|stopPropagation>{tag.name}</a>
                                             </div>
                                         {/each}
                                     {/if}
@@ -104,9 +103,9 @@
                                         </div>
                                     {/if}
 
-                                    {#if mainPhoto.classTrash}
+                                    {#if mainPhoto.llmAnalysis}
                                         <span class="text-xs text-gray-400">
-                                            Class: {JSON.parse(mainPhoto.classTrash).predicted_classes}
+                                            {JSON.parse(mainPhoto.llmAnalysis)?.subCategory || 'Unknown'}
                                         </span>
                                     {/if}
                                 </div>
@@ -116,7 +115,7 @@
 
                         {#if !brief}
                         <td class="whitespace-nowrap">
-                            <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500 hover:text-primary">
+                            <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500 hover:text-primary" on:click|stopPropagation>
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                         </td>

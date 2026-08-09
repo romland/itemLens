@@ -112,6 +112,7 @@
             clipboardQueue = [...clipboardQueue, { type: 'image', label: `Image (${selectedPhotoType})` }];
             dispatch('success', `Added pasted image (${selectedPhotoType})`);
         } else if (pastedType === 'text') {
+            const taskId = Math.random().toString(36);
             const textInput = document.createElement('input');
             textInput.type = 'hidden';
             textInput.name = 'pasted_documents[]';
@@ -121,7 +122,6 @@
             clipboardQueue = [...clipboardQueue, { type: 'text', label: `Note: ${textDocumentTitle}` }];
 
             // Background Process
-			const taskId = Math.random().toString(36);
 			dispatch('processingStart', { taskId, message: "Analyzing note..." });
 			fetch('/api/analyze-draft-document', {
 				method: 'POST',

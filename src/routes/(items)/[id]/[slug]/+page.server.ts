@@ -4,6 +4,10 @@ import { redirect, fail } from "@sveltejs/kit";
 import { marked } from "marked";
 import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
+import { savePhotos, processItemPhotosBackground } from '$lib/server/photouploads';
+import { processFormDocuments } from '$lib/server/services';
+import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
+import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -58,5 +62,33 @@ export const actions = {
             });
         }
         return { success: true };
+    },
+
+    addPasted: async ({ request, params }) => {
+        const orgData = await request.formData();
+        const itemId = Number(params.id);
+
+        const photos = await savePhotos(Object.fromEntries(orgData), uploadsDiskFolder, uploadsWebFolder, "file.", "");
+
+        if (photos.length > 0) {
+            await db.item.update({
+                where: { id: itemId },
+                data: { photos: { create: photos } }
+            });
+            const itemForBg = await db.item.findUnique({ where: { id: itemId }, include: { photos: true } });
+            if (itemForBg) processItemPhotosBackground(itemForBg).catch(e => console.error(e));
+        }
+
+        const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
+        let urls = pastedUrls.join("\n");
+        
+        await processFormDocuments(orgData, { itemId }, uploadsDiskFolder, uploadsWebFolder);
+        
+        if (urls.trim()) {
+            downloadAndStoreDocuments({ itemId }, uploadsRemoteSite, { urls }, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
+        }
+        
+        return { success: true };
     }
+
 } satisfies Actions;

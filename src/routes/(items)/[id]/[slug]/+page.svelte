@@ -5,15 +5,15 @@
     import { afterNavigate, beforeNavigate } from '$app/navigation'
     import { marked } from "marked";
     import { enhance } from "$app/forms";
+    import PasteHandler from "$lib/components/PasteHandler.svelte";
 
     export let data: PageServerData;
     
     var refreshIntervalId = null;
     let productPhotos = [], invoicePhotos = [], otherPhotos = [];
     let photoAttributes = [];
-    let classTrash = []
-    let classBlip = [];
     let currentLightboxImage = null;
+    let isSavingPasted = false;
     let lightboxModal: HTMLDialogElement;
 
     beforeNavigate(() => {
@@ -44,25 +44,9 @@
         
         // TODO: This should be done during initial processing (once), not every time rendering
         photoAttributes = [];
-        classTrash = [];
-        classBlip = [];
         
         for(let i = 0; i < data.item.photos?.length; i++) {
             const photo = data.item.photos[i];
-            
-            if(photo.type === "product") {
-                if(photo.classTrash) {
-                    classTrash.push(getClassTrash(photo));
-                } else {
-                    classTrash.push("")
-                }
-                
-                if(photo.classBlip) {
-                    classBlip.push(getClassBlip(photo));
-                } else {
-                    classBlip.push("");
-                }
-            }
             
             try {
                 const ocr = JSON.parse(photo.ocr)?.data[0] || [];
@@ -96,24 +80,8 @@
             }
         }
         photoAttributes = photoAttributes;
-        //  console.log(classTrash, classBlip);
     }
     
-    function getClassTrash(photo)
-    {
-        const cls = JSON.parse(photo.classTrash);
-        return cls?.predicted_classes[0] || "";
-    }
-
-    function getClassBlip(photo)
-    {
-        const cls = photo.classBlip;
-        if(cls.length > 0) {
-            return cls.replace('"', "").replace("Caption:", "");
-        }
-        return "";
-    }
-
     function alterSummary(txt)
     {
         if(!txt) return "";
@@ -160,6 +128,25 @@ $:  if(!done && invoicePhotos.length > 0) {
     pageTitle.set(data.item?.title);
 </script>
 
+<PasteHandler 
+    formId="pasteForm"
+    on:success={() => document.getElementById('pasteForm')?.requestSubmit()}
+    on:processingComplete={(ev) => {
+        if (ev.detail.status === 'success') {
+            document.getElementById('pasteForm')?.requestSubmit();
+        }
+    }}
+/>
+
+<form id="pasteForm" action="?/addPasted" method="POST" class="hidden" enctype="multipart/form-data" use:enhance={() => {
+    isSavingPasted = true;
+    return async ({ update }) => {
+        await update({ reset: true });
+        isSavingPasted = false;
+        refineItemData();
+    };
+}}></form>
+
 <article style="padding-bottom: 100px;" class="">
 
     <div class="flex justify-between items-center border-b border-base-300 pb-3 mb-3">
@@ -167,6 +154,9 @@ $:  if(!done && invoicePhotos.length > 0) {
             {data.item?.title}
         </div>
         <div class="inline-flex gap-3">
+            {#if isSavingPasted}
+                <span class="loading loading-spinner loading-sm text-primary"></span>
+            {/if}
             <a href="/{data.item?.id}/edit" title="Edit item" class="text-gray-500">
                 <i class="bi bi-pencil-square"></i>
             </a>
@@ -191,7 +181,7 @@ $:  if(!done && invoicePhotos.length > 0) {
                                 </form>                            
                                 <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
                                     <img 
-                                        src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{classBlip[i] || data.item.title}"
+                                        src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}"
                                         class="object-scale-down">
                                 </button>
                             {:else}
@@ -459,8 +449,9 @@ $:  if(!done && invoicePhotos.length > 0) {
     </form>
 
     {#if currentLightboxImage}
+        {@const ai = currentLightboxImage.llmAnalysis ? JSON.parse(currentLightboxImage.llmAnalysis) : null}
         <h3 class="font-bold text-lg">
-            {JSON.parse(currentLightboxImage.classBlip) || data.item.title}
+            {ai?.description || data.item.title}
             <span class="text-xs">
                 <a href="{currentLightboxImage.orgPath}" target="_blank">-- Show original</a>
             </span>
@@ -479,7 +470,7 @@ $:  if(!done && invoicePhotos.length > 0) {
 
         <span class="text-xs">
             Type: {currentLightboxImage.type},
-            classification: {JSON.parse(currentLightboxImage.classTrash)?.predicted_classes}
+            Category: <span class="badge badge-sm badge-ghost">{ai?.subCategory || 'Unknown'}</span>
         </span>
         <br/>
         {#if currentLightboxImage.colors?.length > 2}
