@@ -90,11 +90,14 @@ export const actions = {
         await processFormDocuments(formData, { timelineNoteId: note.id }, uploadsDiskFolder, uploadsWebFolder);
 
         // Trigger the centralized SingleFile scraper for any URLs found in the text
+        const preprocessedSources = new Set(preDocs.map((d: any) => d.source));
         const urls = content.match(/https?:\/\/[^\s]+/g);
         if (urls && urls.length > 0) {
-            const uniqueUrls = [...new Set(urls)];
-            const dummyData = { urls: uniqueUrls.join('\n') };
-            downloadAndStoreDocuments({ timelineNoteId: note.id }, uploadsRemoteSite, dummyData, uploadsDiskFolder, uploadsWebFolder, '').catch(e => console.error(e));            
+            const uniqueUrls = [...new Set(urls)].filter(u => !preprocessedSources.has(u));
+            if (uniqueUrls.length > 0) {
+                const dummyData = { urls: uniqueUrls.join('\n') };
+                downloadAndStoreDocuments({ timelineNoteId: note.id }, uploadsRemoteSite, dummyData, uploadsDiskFolder, uploadsWebFolder, '').catch(e => console.error(e));            
+            }
         }        
 
         // Return success instead of redirect to prevent back-history generation
