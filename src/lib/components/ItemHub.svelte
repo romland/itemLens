@@ -6,6 +6,7 @@
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
     import { photoTypes } from "$lib/shared/constants";
+    import { marked } from 'marked';
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
@@ -30,6 +31,7 @@
 
     let isAnalyzing = false;
     let pendingPhotos: any[] = [];
+    let showPreview = false;
     
     // Default draft preview logic
     $: draftImagePath = pendingPhotos.length > 0 
@@ -126,10 +128,10 @@
     }
 </script>
 
-<div class="relative w-full md:max-w-2xl mx-auto overflow-hidden bg-base-100 min-h-[75vh] md:min-h-[80vh] md:rounded-[2rem] rounded-xl shadow-lg md:shadow-2xl border border-base-200">
+<div class="relative w-full md:max-w-2xl mx-auto bg-base-100 md:rounded-[2rem] rounded-xl shadow-lg md:shadow-2xl border border-base-200 flex flex-col">
     
     <!-- ================= THE HUB VIEW ================= -->
-    <div class="absolute inset-0 pb-24 transition-transform duration-300 ease-in-out p-4 sm:p-8 overflow-y-auto {activeView === 'hub' ? 'translate-x-0' : '-translate-x-full'}">
+    <div class="{activeView === 'hub' ? 'flex' : 'hidden'} flex-col flex-1 p-4 sm:p-8 pb-0 animate-fade-in">
         <div class="text-center mb-8">
             <h2 class="text-2xl font-bold">{currentTitle || (item ? 'Edit Item' : 'New Item')}</h2>
             <p class="text-gray-500 text-sm">
@@ -202,7 +204,7 @@
             </div>
         {/if}
 
-        <div class="flex flex-col gap-3 max-w-lg mx-auto {!pendingPhotos.length ? 'mt-10' : ''}">
+        <div class="flex flex-col gap-3 max-w-lg mx-auto flex-1 w-full {!pendingPhotos.length ? 'mt-10' : ''}">
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'photos'}>
                 <div class="flex items-center gap-4">
                     <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
@@ -275,17 +277,28 @@
                 <i class="bi bi-chevron-right text-gray-400"></i>
             </button>
         </div>
+
+        <!-- STICKY FOOTER -->
+        <div class="sticky bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 z-50 rounded-b-xl md:rounded-b-[2rem] mt-6">
+            <button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md">
+                {#if saving}
+                    <span class="loading loading-spinner"></span> Saving...
+                {:else}
+                    <i class="bi bi-save mr-2 text-xl"></i> {item ? 'Save Changes' : 'Save Item'}
+                {/if}
+            </button>
+        </div>
     </div>
 
     <!-- ================= SUB-VIEWS ================= -->
 
     <!-- PHOTOS VIEW -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'photos' ? 'translate-x-0' : 'translate-x-full'}">
+    <div class="{activeView === 'photos' ? 'flex' : 'hidden'} flex-col bg-base-100 rounded-xl md:rounded-[2rem] animate-fade-in">
         <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Photos</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+        <div class="px-2 sm:px-6 pb-6">
             <div class="max-w-lg mx-auto w-full">
                 <MediaHub 
                     photoTypes={photoTypes} 
@@ -297,18 +310,18 @@
                 />
             </div>
         </div>
-        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
+        <div class="sticky bottom-0 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- LOCATION VIEW -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'location' ? 'translate-x-0' : 'translate-x-full'}">
+    <div class="{activeView === 'location' ? 'flex' : 'hidden'} flex-col bg-base-100 rounded-xl md:rounded-[2rem] animate-fade-in">
         <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Storage Location</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+        <div class="px-2 sm:px-6 pb-6">
             <div class="max-w-lg mx-auto w-full">
                 <ContainerSelector 
                     containers={containers} 
@@ -318,18 +331,18 @@
                 />
             </div>
         </div>
-        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
+        <div class="sticky bottom-0 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- LINKS VIEW -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'links' ? 'translate-x-0' : 'translate-x-full'}">
+    <div class="{activeView === 'links' ? 'flex' : 'hidden'} flex-col bg-base-100 rounded-xl md:rounded-[2rem] animate-fade-in">
         <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Documents</h2>
         </div>
-        <div class="flex-1 overflow-y-auto px-2 sm:px-6 pb-6">
+        <div class="px-2 sm:px-6 pb-6">
             <div class="max-w-lg mx-auto w-full">
                 {#if item?.documents?.length > 0}
                     <div class="mb-6 bg-base-50/50 p-4 rounded-xl border border-base-200">
@@ -351,19 +364,19 @@
                 />
             </div>
         </div>
-        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
+        <div class="sticky bottom-0 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
 
     <!-- DETAILS VIEW -->
-    <div class="absolute inset-0 transition-transform duration-300 ease-in-out bg-base-100 flex flex-col {activeView === 'details' ? 'translate-x-0' : 'translate-x-full'}">
+    <div class="{activeView === 'details' ? 'flex' : 'hidden'} flex-col bg-base-100 rounded-xl md:rounded-[2rem] animate-fade-in">
         <div class="flex items-center p-4 sm:p-6 pb-2">
             <button type="button" class="btn btn-circle btn-ghost bg-base-200" aria-label="Back to Hub" on:click={() => activeView = 'hub'}><i class="bi bi-arrow-left text-xl"></i></button>
             <h2 class="text-xl font-bold ml-4">Item Details</h2>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
+        <div class="px-4 sm:px-6 pb-6">
             <div class="flex flex-col gap-5 max-w-lg mx-auto w-full">
                 <div class="form-control w-full">
                     <div class="label">
@@ -386,8 +399,19 @@
                 </div>
 
                 <div class="form-control w-full">
-                    <div class="label"><span class="label-text font-semibold">Description</span></div>
-                    <textarea name="description" bind:value={currentDescription} rows="3" placeholder="Notes (Markdown supported)..." class="textarea textarea-bordered w-full rounded-xl" class:textarea-primary={isAnalyzing}></textarea>
+                    <div class="label flex justify-between">
+                        <span class="label-text font-semibold">Description</span>
+                        <button type="button" class="btn btn-xs btn-ghost text-primary" on:click={() => showPreview = !showPreview}>
+                            {showPreview ? 'Edit' : 'Preview'}
+                        </button>
+                    </div>
+                    {#if showPreview}
+                        <div class="prose prose-sm max-w-none bg-base-200/50 p-4 rounded-xl border border-base-200 min-h-[5rem]">
+                            {@html currentDescription ? marked.parse(currentDescription, { breaks: true, gfm: true }) : '<span class="text-gray-400">Empty</span>'}
+                        </div>
+                    {:else}
+                        <textarea name="description" bind:value={currentDescription} rows="3" placeholder="Notes (Markdown supported)..." class="textarea textarea-bordered w-full rounded-xl" class:textarea-primary={isAnalyzing}></textarea>
+                    {/if}
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -416,20 +440,9 @@
             </div>
         </div>
         
-        <div class="p-4 sm:p-6 bg-base-100 border-t border-base-200">
+        <div class="sticky bottom-0 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
-    </div>
-
-    <!-- ================= STICKY FOOTER ================= -->
-    <div class="absolute bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 z-50">
-        <button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md">
-            {#if saving}
-                <span class="loading loading-spinner"></span> Saving...
-            {:else}
-                <i class="bi bi-save mr-2 text-xl"></i> {item ? 'Save Changes' : 'Save Item'}
-            {/if}
-        </button>
     </div>
 </div>
 
