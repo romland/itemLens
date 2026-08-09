@@ -11,6 +11,7 @@ import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/ser
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { autoFill } from '$lib/server/autofill';
+import { processFormDocuments } from '$lib/server/services';
 
 export const actions = {
     default: async ({ locals, request }) => {
@@ -101,39 +102,11 @@ return fail(400, {
             .join('\n');
         }
 
-        const pastedDocsRaw = orgData.getAll("pasted_documents[]");
-        const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
-        for (const doc of pastedDocs) {
-            const filename = getSafeFilename(`${item.id}-note`);
-            fs.writeFileSync(`${uploadsDiskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
-            await db.document.create({
-                data: {
-                    itemId: item.id,
-                    type: "note",
-                    title: doc.title,
-                    source: "Pasted Note",
-                    path: `${uploadsWebFolder}/${filename}.txt`,
-                    extracts: JSON.stringify([doc.content])
-                }
-            });
-        }
+        // Consolidated Document & Paste Saving
+        await processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder);
 
-        for (const doc of preDocs) {
-          await db.document.create({
-            data: {
-              itemId: item.id,
-              type: doc.type === 'text' ? 'note' : 'uncategorized',
-              title: doc.title || "",
-              source: doc.source,
-              path: doc.path,
-              extracts: doc.extracts,
-              summary: doc.summary || null
-            }
-          });
-        }
-
-        // Kick off heavy ML, OCR, and Document processing in the background (fire-and-forget)
-        downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
+        // Heavy ML, URL Scraping & Document processing
+        downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
     		processItemPhotosBackground(item).catch(e => console.error(e));
 
         redirect(302, `/${item.id}/${item.slug}`);

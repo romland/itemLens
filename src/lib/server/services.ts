@@ -1,6 +1,8 @@
 import type { KVP, Prisma } from '@prisma/client';
 import { db } from '$lib/server/database';
 import slugify from 'slugify';
+import fs from 'fs';
+import { getSafeFilename } from '$lib/server/photouploads';
 
 export const getTagIds = async (tagcsv: string) => {
     const ids: { id: number }[] = [];
@@ -50,4 +52,42 @@ export function formKVPsToDBrows(formData: Record<string, any>)
     }
   }
   return kvps;
+}
+
+export async function processFormDocuments(formData: FormData, target: { itemId?: number, timelineNoteId?: number }, diskFolder: string, webFolder: string) {
+    const pastedDocsRaw = formData.getAll("pasted_documents[]");
+    const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
+    for (const doc of pastedDocs) {
+        const prefix = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+        const filename = getSafeFilename(`${prefix}-note`);
+        fs.writeFileSync(`${diskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
+        await db.document.create({
+            data: {
+                itemId: target.itemId || null,
+                timelineNoteId: target.timelineNoteId || null,
+                type: "note",
+                title: doc.title,
+                source: "Pasted Note",
+                path: `${webFolder}/${filename}.txt`,
+                extracts: JSON.stringify([doc.content])
+            }
+        });
+    }
+    
+    const preDocsRaw = formData.getAll("preprocessed_docs[]");
+    const preDocs = preDocsRaw.map(d => JSON.parse(d as string));
+    for (const doc of preDocs) {
+        await db.document.create({
+            data: {
+                itemId: target.itemId || null,
+                timelineNoteId: target.timelineNoteId || null,
+                type: doc.type === 'text' ? 'note' : 'uncategorized',
+                title: doc.title || "",
+                source: doc.source,
+                path: doc.path,
+                extracts: typeof doc.extracts === 'string' ? doc.extracts : JSON.stringify(doc.extracts || []),
+                summary: doc.summary || null
+            }
+        });
+    }
 }

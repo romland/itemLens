@@ -2,10 +2,9 @@ import { db } from '$lib/server/database';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { savePhotos } from '$lib/server/photouploads';
-import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
-import QRUrlDownloader from '$lib/server/urldownloader';
-import { getSafeFilename } from '$lib/server/photouploads';
-import fs from 'fs';
+import { uploadsDiskFolder, uploadsWebFolder, uploadsRemoteSite } from '$lib/server/constants';
+import { downloadAndStoreDocuments } from '$lib/server/urldownloader';
+import { processFormDocuments } from '$lib/server/services';
 
 export const load = (async ({ locals, url }) => {
     const category = url.searchParams.get('category') || 'all';
@@ -39,8 +38,8 @@ export const actions = {
         const pastedUrls = formData.getAll("pasted_urls[]") as string[];
         const preDocsRaw = formData.getAll("preprocessed_docs[]");
 
-        if (pastedUrls.length > 0) {
-            content += "\n" + pastedUrls.join("\n");
+        for (const url of pastedUrls) {
+            if (!content.includes(url)) content += (content.length > 0 ? "\n" : "") + url;
         }
 
         const preDocs = preDocsRaw.map(d => JSON.parse(d as string));
@@ -87,74 +86,15 @@ export const actions = {
             }
         });
 
-        // Pasted text notes (from the global PasteHandler)
-        const pastedDocsRaw = formData.getAll("pasted_documents[]");
-        const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
-        for (const doc of pastedDocs) {
-            if (!content.includes(doc.content)) {
-                content += (content.length > 0 ? "\n\n" : "") + doc.content;
-            }
+        // Consolidated Document & Paste Saving
+        await processFormDocuments(formData, { timelineNoteId: note.id }, uploadsDiskFolder, uploadsWebFolder);
 
-            const filename = getSafeFilename(`note-${note.id}`);
-            fs.writeFileSync(`${uploadsDiskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
-            await db.document.create({
-                data: { timelineNoteId: note.id, type: "note", title: doc.title, source: "Pasted Note", path: `${uploadsWebFolder}/${filename}.txt`, extracts: JSON.stringify([doc.content]) }
-            });
-        }
-
-        // Preprocessed Docs (from PasteHandler background fetch)
-        for (const doc of preDocs) {
-            await db.document.create({
-                data: {
-                    timelineNoteId: note.id,
-                    type: doc.type === 'text' ? 'note' : 'uncategorized',
-                    title: doc.title || "",
-                    source: doc.source,
-                    path: doc.path,
-                    extracts: JSON.stringify(doc.extracts || []),
-                    summary: doc.summary || null
-                }
-            });
-        }
-
-        // Centralized Background URL Scraping (Fire and forget)
+        // Trigger the centralized SingleFile scraper for any URLs found in the text
         const urls = content.match(/https?:\/\/[^\s]+/g);
         if (urls && urls.length > 0) {
-            Promise.all(urls.map(async (u) => {
-                try {
-                    const resultStr = await QRUrlDownloader.downloadURL(u);
-                    if (!resultStr) return;
-                    const result = JSON.parse(resultStr);
-                    
-                    const docFilename = getSafeFilename(`timeline-${note.id}-doc`);
-                    fs.writeFileSync(`${uploadsDiskFolder}/${docFilename}.html`, result.html, { encoding: "utf8" });
-
-                    await db.document.create({
-                        data: { title: result.title || u, source: u, path: `${uploadsWebFolder}/${docFilename}.html`, extracts: JSON.stringify(result.extracts || []), timelineNoteId: note.id }
-                    });
-                        
-                    // Deep Scrape: Safely parse HTML for high-value targets only
-                    const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
-                    const keywords = /datasheet|manual|schematic|user guide|instructions|specs|pinout|wiring|\.pdf$/i;
-                    let match;
-                    let deepLinksFound = 0;
-                    
-                    while ((match = linkRegex.exec(result.html)) !== null && deepLinksFound < 3) {
-                        const href = match[1];
-                        const text = match[2].replace(/<[^>]+>/g, '').trim(); // Strip HTML from inner text
-                        
-                        if (keywords.test(href) || keywords.test(text)) {
-                            try {
-                                const absUrl = new URL(href, u).href;
-                                await db.document.create({
-                                    data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', timelineNoteId: note.id }
-                                });
-                                deepLinksFound++;
-                            } catch (e) { /* ignore invalid urls */ }
-                        }                        
-                    }
-                } catch (e) { /* silent fail for unreachable urls */ }
-            })).catch(e => console.error("URL scrape failed", e));
+            const uniqueUrls = [...new Set(urls)];
+            const dummyData = { urls: uniqueUrls.join('\n') };
+            downloadAndStoreDocuments({ timelineNoteId: note.id }, uploadsRemoteSite, dummyData, uploadsDiskFolder, uploadsWebFolder, '').catch(e => console.error(e));            
         }        
 
         // Return success instead of redirect to prevent back-history generation

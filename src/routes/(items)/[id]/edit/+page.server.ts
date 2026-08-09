@@ -10,6 +10,7 @@ import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
+import { processFormDocuments } from '$lib/server/services';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -208,36 +209,8 @@ console.log("formData:", orgData);
 				.join('\n');
 		}
 
-        const pastedDocsRaw = orgData.getAll("pasted_documents[]");
-        const pastedDocs = pastedDocsRaw.map(d => JSON.parse(d as string));
-        for (const doc of pastedDocs) {
-            const filename = getSafeFilename(`${item.id}-note`);
-            fs.writeFileSync(`${uploadsDiskFolder}/${filename}.txt`, doc.content, { encoding: "utf8" });
-            await db.document.create({
-                data: {
-                    itemId: item.id,
-                    type: "note",
-                    title: doc.title,
-                    source: "Pasted Note",
-                    path: `${uploadsWebFolder}/${filename}.txt`,
-                    extracts: JSON.stringify([doc.content])
-                }
-            });
-        }
-
-		for (const doc of preDocs) {
-			await db.document.create({
-				data: {
-					itemId: item.id,
-					type: doc.type === 'text' ? 'note' : 'uncategorized',
-					title: doc.title || "",
-					source: doc.source,
-					path: doc.path,
-					extracts: doc.extracts,
-					summary: doc.summary || null
-				}
-			});
-		}
+        // Consolidated Document & Paste Saving
+        await processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder);
 
         // Deal with refreshing and deleting documents and images.
         // Refresh takes presedence over delete (that is, if something is 
@@ -245,7 +218,7 @@ console.log("formData:", orgData);
         await refreshDeleteImages(data, allExistingPhotoIds, preExistingPhotoIds, item);
         data.urls += "\n" + await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
-		downloadAndStoreDocuments(item, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
+		downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
 		processItemPhotosBackground(item).catch(e => console.error(e));
 
         console.log("=== Done updating ===");

@@ -88,14 +88,19 @@
         {#if note.documents && note.documents.length > 0}
             <div class="flex flex-col gap-2 {note.content ? 'mt-3' : ''}">
                 {#each note.documents as doc}
-                    <a href={doc.source} target="_blank" rel="noopener noreferrer" class="flex flex-col border border-base-200 bg-base-200/30 rounded-xl p-3 hover:border-primary/50 transition-colors no-underline">
+                    <div class="flex flex-col border border-base-200 bg-base-200/30 rounded-xl p-3">
                         <div class="flex items-start gap-3">
                             <div class="bg-base-300 text-gray-500 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                                 <i class="bi {doc.type === 'note' ? 'bi-file-text' : 'bi-link-45deg'} text-xl"></i>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-bold text-sm text-base-content line-clamp-1 m-0">{doc.title || doc.source}</h4>
-                                <p class="text-[10px] text-primary line-clamp-1 m-0 mt-0.5">{doc.source}</p>
+                                <div class="flex items-center gap-3 mt-1.5">
+                                    <a href={doc.source} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1"><i class="bi bi-globe"></i> Original</a>
+                                    {#if doc.path}
+                                        <a href={doc.path} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1"><i class="bi bi-hdd-network"></i> Local Cache</a>
+                                    {/if}
+                                </div>
                             </div>
                         </div>
                         {#if getDocSnippet(doc)}
@@ -103,7 +108,7 @@
                                 {getDocSnippet(doc).replace(/<[^>]+>/g, '')}
                             </div>
                         {/if}
-                    </a>
+                    </div>
                 {/each}
             </div>
         {/if}        

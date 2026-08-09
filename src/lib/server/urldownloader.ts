@@ -7,13 +7,13 @@ import fs from 'fs';
 import { summarizeWebpageExtract } from './llm';
 import { PDFParse } from 'pdf-parse';
 
-export async function downloadAndStoreDocuments(item: Item, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
+export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
     //
     // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
     // (this is largely obsolete after I started using client-side QR code scanner)
     //
-    await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, item);
+    await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, target.itemId ? { id: target.itemId } : { id: target.timelineNoteId });
 
     //
     // Download all URLs in the URLs field (TODO: SECURITY?)
@@ -31,16 +31,27 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
 
       let document;
       try {
-        document = await db.document.create({
-          data: {
-            itemId: item.id,
-            type: "uncategorized",
-            title: "",
-            source: line,
-            path: "",
-            extracts: "[]"
-          }
+        document = await db.document.findFirst({
+            where: {
+                source: line,
+                itemId: target.itemId || null,
+                timelineNoteId: target.timelineNoteId || null
+            }
         });
+
+        if (!document) {
+            document = await db.document.create({
+              data: {
+                itemId: target.itemId || null,
+                timelineNoteId: target.timelineNoteId || null,
+                type: "uncategorized",
+                title: "",
+                source: line,
+                path: "",
+                extracts: "[]"
+              }
+            });
+        }        
       } catch (ex) {
         console.error("Error creating document in DB:", ex);
       }
@@ -48,7 +59,7 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
       // Divert to PDF handler if needed
       if (await isPdfUrl(line)) {
         try {
-          await handlePdfDownload(line, item, document?.id, diskFolder, webFolder);
+          await handlePdfDownload(line, target, document?.id, diskFolder, webFolder);
         } catch (e) {
           console.error(`Error downloading PDF ${line}:`, e);
         }
@@ -63,7 +74,8 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
       }
 
       const pageData = JSON.parse(str);
-      const docFilename = getSafeFilename(`${item.id}-doc`);
+      const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+      const docFilename = getSafeFilename(`${idStr}-doc`);
 
       fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
 
@@ -74,7 +86,8 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
             id : document?.id
           },
           data: {
-            itemId: item.id,
+            itemId: target.itemId || null,
+            timelineNoteId: target.timelineNoteId || null,
             type: "uncategorized",
             title: pageData.title,
             source: pageData.url,
@@ -111,6 +124,26 @@ export async function downloadAndStoreDocuments(item: Item, remoteSite: string, 
         console.warn(`[LLM SKIPPED] Text extract too short (${extractText.length} chars) for URL: ${line}`);
       }
 
+      // DEEP SCRAPE LOGIC (Consolidated)
+      const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+      const keywords = /datasheet|manual|schematic|user guide|instructions|specs|pinout|wiring|\.pdf$/i;
+      let match;
+      let deepLinksFound = 0;
+      
+      while ((match = linkRegex.exec(pageData.html)) !== null && deepLinksFound < 3) {
+          const href = match[1];
+          const text = match[2].replace(/<[^>]+>/g, '').trim(); 
+          
+          if (keywords.test(href) || keywords.test(text)) {
+              try {
+                  const absUrl = new URL(href, line).href;
+                  await db.document.create({
+                      data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', itemId: target.itemId || null, timelineNoteId: target.timelineNoteId || null }
+                  });
+                  deepLinksFound++;
+              } catch (e) { /* ignore invalid urls */ }
+          }
+      }      
       console.log("Downloaded explicitly stated URL:", line);
     }
 }
@@ -133,11 +166,12 @@ async function isPdfUrl(url: string): Promise<boolean> {
   }
 }
 
-async function handlePdfDownload(url: string, item: any, documentId: any, diskFolder: string, webFolder: string) {
+async function handlePdfDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string) {
   console.log(`Detected PDF, downloading directly: ${url}`);
   const pdfRes = await fetch(url);
   const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
-  const docFilename = getSafeFilename(`${item.id}-doc`);
+  const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+  const docFilename = getSafeFilename(`${idStr}-doc`);
   
   fs.writeFileSync(`${diskFolder}/${docFilename}.pdf`, pdfBuffer);
   
