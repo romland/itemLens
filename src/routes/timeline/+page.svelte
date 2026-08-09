@@ -62,7 +62,9 @@
         {:else}
             <div class="text-center text-gray-400 mt-10">
                 <i class="bi bi-chat-square-text text-4xl"></i>
-                <p class="mt-4">Your timeline is empty.<br>Start dumping ideas below!</p>
+                <p class="mt-4">Your notebook is empty.<br>Start dumping ideas, TODOs, shopping lists, pictures, links below!<br><br>
+                    You can also just <i>paste</i> (ctrl+v) things in on this page.
+                </p>
             </div>
         {/each}
     </div>
