@@ -57,7 +57,7 @@
                             </div>
                         </td>
 
-                        <td>
+                        <td class="hidden sm:table-cell">
                             {#if item.locations}
                                 {#each item.locations as loc}
                                     <div class="badge badge-ghost badge-sm whitespace-nowrap">
@@ -75,7 +75,18 @@
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
                                 {/if}
                             </div>
-                            
+
+                            <!-- MOBILE ONLY LOCATIONS -->
+                            <div class="sm:hidden mt-1 flex flex-wrap gap-1">
+                                {#if item.locations}
+                                    {#each item.locations as loc}
+                                        <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
+                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}" on:click|stopPropagation>{loc.containerName}</a>
+                                        </div>
+                                    {/each}
+                                {/if}
+                            </div>
+
                             {#if !brief}
                             <div class="hidden lg:block mt-1">
                                 <div class="line-clamp-2 text-sm text-gray-500">
