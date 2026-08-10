@@ -11,7 +11,7 @@
 </script>
 
 {#if data.unassignedCount > 0}
-    <div class="alert bg-warning/20 border border-warning text-warning-content shadow-sm mb-6 flex justify-between items-center rounded-xl">
+    <div class="alert bg-warning/20 border border-warning shadow-sm mb-6 flex justify-between items-center rounded-xl">
         <div class="flex items-center gap-3">
             <i class="bi bi-exclamation-triangle-fill text-xl"></i>
             <div>
