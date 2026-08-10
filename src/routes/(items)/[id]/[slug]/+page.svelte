@@ -179,13 +179,15 @@ $:  if(!done && invoicePhotos.length > 0) {
                                         <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'}"></i>
                                     </button>
                                 </form>                            
-                                <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
                                     <img 
                                         src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}"
-                                        class="object-scale-down">
+                                        class="object-scale-down max-h-full max-w-full">
                                 </button>
                             {:else}
-                                <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="">
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
+                                    <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
+                                </button>
                             {/if}
                         </div> 
                     {/each}

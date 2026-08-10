@@ -4,6 +4,7 @@
     import type { SubmitFunction } from "@sveltejs/kit";
     import Alert from "$lib/components/alert.svelte";
     import { page } from "$app/stores";
+    import { goto } from "$app/navigation";
 
     export let form: ActionData;
 
@@ -13,6 +14,15 @@
         if (theme) {
             document.documentElement.setAttribute('data-theme', theme);
         }
+
+        return async ({ result, update }) => {
+            // Intercept the server redirect to force a replaceState instead of a history push
+            if (result.type === 'redirect') {
+                await goto(result.location, { replaceState: true, invalidateAll: true });
+            } else {
+                await update();
+            }
+        };        
     }
 
 

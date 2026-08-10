@@ -122,13 +122,33 @@ export async function processItemPhotosBackground(item: any) {
  * @param imgUrl 
  * @param item 
  */
-function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback: any)
+async function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback: any)
 {
+  const thumbOptions = {
+    width: 256,
+    responseType: 'buffer' as const,
+    jpegOptions: {
+      force: true,
+      quality: 90
+    }
+  };
+
+  // Create original thumbnail immediately so it's always available
+  try {
+    const orgThumbnail = await imageThumbnail(`static${photo.orgPath}`, thumbOptions as any);
+    fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
+  } catch(ex) {
+    console.error("Error generating original thumbnail", ex);
+  }
+
   // A lot of things will be done after we have removed background ...
   const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
   removeBackground(imgUrl, outputFileNoBkg, async (err, result) => {
     if (err) {
       console.log("Error when removing background:", err);
+      photo.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
+      if(updateDB) updatePhoto(photo.id, photo);
+      callback(err, null);
       return;
     }
 
@@ -153,16 +173,6 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
       updatePhoto(photo.id, photo);
     }
 
-    // Create thumbnail
-    const thumbOptions = {
-      width: 256,
-      responseType: 'buffer' as const,
-      jpegOptions: {
-        force: true,
-        quality: 90
-      }
-    };
-
     try {
       const thumbnail = await imageThumbnail(outputFileNoBkg, thumbOptions as any);
       fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
@@ -175,14 +185,6 @@ function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolea
       console.error("Error generating thumbnail", ex);
       callback("Error generating thumbnail", null)
       return;
-    }
-
-    // Create original thumbnail (without background removed)
-    try {
-      const orgThumbnail = await imageThumbnail(`static${photo.orgPath}`, thumbOptions as any);
-      fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
-    } catch(ex) {
-      console.error("Error generating original thumbnail", ex);
     }
 
     if(getColors) {
