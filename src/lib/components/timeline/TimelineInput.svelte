@@ -107,7 +107,7 @@
 
 <div class="fixed bottom-16 md:bottom-20 left-0 w-full bg-base-100/95 backdrop-blur-lg border-t border-base-200 p-2 z-40 box-border">
     {#if showMentions && mentionResults.length > 0}
-        <ul class="absolute bottom-full left-0 w-full max-w-2xl mx-auto bg-base-100 shadow-xl border border-base-200 rounded-t-xl max-h-48 overflow-y-auto z-50 p-2 m-0 mb-2">
+        <ul class="absolute bottom-full left-0 w-full max-w-2xl mx-auto bg-base-100 shadow-xl border border-base-200 rounded-t-xl max-h-48 overflow-y-auto p-2 m-0 mb-2">
             {#each mentionResults as item}
                 <li>
                     <button type="button" class="w-full text-left p-2 hover:bg-base-200 rounded-lg text-sm font-semibold flex items-center gap-2" on:click={() => insertMention(item)}>

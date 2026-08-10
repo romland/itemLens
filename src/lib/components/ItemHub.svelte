@@ -291,7 +291,7 @@
         </div>
 
         <!-- STICKY FOOTER -->
-        <div class="sticky bottom-16 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 z-50 rounded-b-xl md:rounded-b-[2rem] mt-6">
+        <div class="sticky bottom-16 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] mt-6">
             <button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md">
                 {#if saving}
                     <span class="loading loading-spinner"></span> Saving...
@@ -322,7 +322,7 @@
                 />
             </div>
         </div>
-        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
+        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] ">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
@@ -343,7 +343,7 @@
                 />
             </div>
         </div>
-        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
+        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] ">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
@@ -376,7 +376,7 @@
                 />
             </div>
         </div>
-        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
+        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] ">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
@@ -452,7 +452,7 @@
             </div>
         </div>
         
-        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] z-50">
+        <div class="sticky bottom-16 p-4 sm:p-6 bg-base-100 border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] ">
             <button type="button" class="btn btn-neutral btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-sm" on:click={() => activeView = 'hub'}><i class="bi bi-check2-circle mr-2"></i> Done</button>
         </div>
     </div>
