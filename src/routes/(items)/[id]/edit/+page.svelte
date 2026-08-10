@@ -1,5 +1,4 @@
 <script lang="ts">
-    /* Replaces the previous disjointed edit logic, mapping gracefully to the new ItemHub wrapper. */
     import { enhance } from "$app/forms";
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData, PageServerData } from "./$types";
@@ -15,7 +14,6 @@
     let saving = false;
     let notifications: any[] = [];
 
-    const onSubmit: SubmitFunction = async (data) => {
     const onSubmit: SubmitFunction = async ({ cancel }) => {
         if (saving) {
             cancel();

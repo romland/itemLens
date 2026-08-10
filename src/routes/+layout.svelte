@@ -2,7 +2,8 @@
 	import type { SubmitFunction } from "./$types";
     import { enhance } from "$app/forms";
     import { page } from "$app/stores";
-  	import { onNavigate, afterNavigate } from '$app/navigation';
+    import { onNavigate, afterNavigate, invalidateAll } from '$app/navigation';
+    import { browser } from '$app/environment';
     import Search from "$lib/components/search.svelte";
     import ReloadPrompt from "$lib/components/ReloadPrompt.svelte";
     import pageTitle from '$lib/stores';
@@ -11,7 +12,7 @@
 
     // Check out the virtual:pwa-info documentation to learn more about the virtually exposed module pwa-info.
     // https://vite-pwa-org.netlify.app/frameworks/#accessing-pwa-info
-    import { onMount } from 'svelte'
+    import { onMount, onDestroy } from 'svelte'
     // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
     
@@ -22,6 +23,48 @@
         // Service worker is managed reliably by <ReloadPrompt />.
         // Removing redundant manual registration to prevent race conditions.
     })
+
+    // REALTIME SYNC ENGINE
+    if (browser) {
+        let evtSource: EventSource | null = null;
+
+        const connectSync = () => {
+            if (evtSource) return;
+            evtSource = new EventSource('/api/events');
+            evtSource.onmessage = () => {
+                console.log("Remote database change detected. Syncing...");
+                // 1. Purge ghost data so infinite scroll fetches fresh
+                Object.keys(sessionStorage).forEach(key => {
+                    if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
+                });
+                // 2. Refresh SvelteKit UI seamlessly
+                invalidateAll(); 
+            };
+        };
+
+        const disconnectSync = () => {
+            if (evtSource) {
+                evtSource.close();
+                evtSource = null;
+            }
+        };
+
+        onMount(() => {
+            connectSync();
+            
+            // Aggressive battery saving: Kill connection when app goes to background.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    connectSync();
+                    invalidateAll(); // Fetch fresh data to catch up on what we missed while asleep
+                } else {
+                    disconnectSync();
+                }
+            });
+        });
+
+        onDestroy(disconnectSync);
+    }
 
     afterNavigate(({ type }) => {
       // Form submissions = Database mutations.

@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"start": "node build/index.js",
-		"dev": "vite dev --host",
+		"dev": "vite dev --host -- --trace-warnings",
 		"build": "vite build",
 		"preview": "vite preview",
 		"updatedbschema": "npx prisma db push && npx prisma generate",
