@@ -45,11 +45,6 @@
         // Fast workflow: Reset form to allow immediate scanning of next item
         const eltForm = document.getElementById('eltForm') as HTMLFormElement;
         if (eltForm) eltForm.reset();
-
-        // Clear out any dynamically attached pasted document/photo inputs
-        document.querySelectorAll('#eltForm input[name^="pasted_"], #eltForm input[name^="preprocessed_"]').forEach(el => el.remove());
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
         await goto('/add', { invalidateAll: true });
     }
     
