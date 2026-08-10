@@ -77,8 +77,10 @@
 
     function submitForm(formData: FormData, cancelSubmit: () => void) {
         cancelSubmit(); // Always cancel default Sveltekit behavior
-        const hasPasted = formData.getAll('pasted_urls[]').length > 0 || formData.getAll('pasted_documents[]').length > 0 || formData.getAll('preprocessed_docs[]').length > 0;
-        if (!content.trim() && !fileInput?.files?.length && !hasPasted) return;
+        const hasPasted = Array.from(formData.keys()).some(k => k.startsWith('pasted_') || k.startsWith('preprocessed_'));
+        const hasFiles = Array.from(formData.values()).some(v => (v instanceof File || v instanceof Blob) && v.size > 0);
+        
+        if (!content.trim() && !hasFiles && !hasPasted) return;
 
         saveToQueue('/timeline?/capture', formData).then(() => {
             content = "";
