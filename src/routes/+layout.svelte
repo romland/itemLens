@@ -129,11 +129,11 @@
       }
     }
 
-  	afterNavigate(({ type, from }) => {
-      // Form submissions = Database mutations.
-      // Flush the infinite-scroll sessionStorage so old data doesn't revive on back navigation.
-      const mutated = from?.url.pathname.match(/\/(edit|add|delete)$/);
-      if (type === 'form' || mutated) {
+    afterNavigate(({ type }) => {
+      // ROOT CAUSE FIX: The infinite-scroll cache should ONLY be used when hitting the 
+      // browser's 'Back' button ('popstate'). 
+      // If it's a hard reload ('enter'), clicking the menu ('link'), or a 'form' submit, destroy it.
+      if (type !== 'popstate') {
         try {
           Object.keys(sessionStorage).forEach(key => {
             if (key.startsWith('nav-cache-')) {
