@@ -161,9 +161,8 @@ export default defineConfig({
 	// Commented this out in August 2026
 	server: {
 		// https: false,
-		https: true,
+		// https: true,
 		allowedHosts: [
-			"itemlens-dev.loca.lt"
 		]
 	}
 });

@@ -362,9 +362,9 @@
                         <RefreshDeleteList
                             values={item.documents}
                             inputName="documents"
-                            columns={{
+                            columns={({
                                 "3":{name:"Document", fieldName:"title", subFieldName:"source", linkFieldName:"path", isImage: false}
-                            }}
+                            } as any)}
                         />
                     </div>
                 {/if}

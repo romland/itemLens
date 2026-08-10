@@ -4,7 +4,10 @@
     const dispatch = createEventDispatcher();
 
     export let photoTypes = ["Other"];
-    export let values = [];
+    export let values: any[] = [];
+
+    // To satisfy Svelte -- values is intentionally unused internally
+    void values;
 
     let pendingPhotos: any[] = [];
     var productPhotoFileCounter = 1;

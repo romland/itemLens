@@ -50,11 +50,13 @@
         </div>
         
         <div class="dropdown dropdown-end">
+            <!-- svelte-ignore a11y_consider_explicit_label -->
             <button tabindex="0" class="btn btn-ghost btn-xs btn-circle text-gray-400 hover:text-primary">
                 <i class="bi bi-three-dots"></i>
             </button>
+            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40 border border-base-200">
-                <li><button class="flex items-center gap-3 w-full" on:click={(e) => { editContent = note.content || ""; isEditing = true; (document.activeElement)?.blur(); }}><i class="bi bi-pencil w-4 text-center"></i> Edit</button></li>
+                <li><button class="flex items-center gap-3 w-full" on:click={(e) => { editContent = note.content || ""; isEditing = true; (document.activeElement as HTMLElement)?.blur(); }}><i class="bi bi-pencil w-4 text-center"></i> Edit</button></li>
                 <li>
                     <button type="submit" form="delete-form-{note.id}" class="text-error hover:bg-error/10 hover:text-error flex items-center gap-3 w-full"><i class="bi bi-trash w-4 text-center"></i> Delete</button>
                 </li>

@@ -25,6 +25,10 @@ export const actions = {
 
         if (title.length == 0) {
             console.warn("Missing required field(s): title");
+            return fail(400, {
+                error: true,
+                message: 'Field <strong>Title</strong> cannot be blank.'
+            });
         }
 
         /*

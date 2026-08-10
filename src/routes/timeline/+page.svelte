@@ -35,13 +35,13 @@
     formId="timelineForm" 
     on:success={(ev) => {
         notify("success", ev.detail);
-        setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 50);
+        setTimeout(() => (document.getElementById('timelineForm') as HTMLFormElement)?.requestSubmit(), 50);
     }} 
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
     on:processingComplete={(ev) => {
         notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
         if (ev.detail.status === 'success') {
-            setTimeout(() => document.getElementById('timelineForm')?.requestSubmit(), 50);
+            setTimeout(() => (document.getElementById('timelineForm') as HTMLFormElement)?.requestSubmit(), 50);
         }
     }}
 />

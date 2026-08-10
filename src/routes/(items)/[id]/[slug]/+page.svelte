@@ -130,10 +130,10 @@ $:  if(!done && invoicePhotos.length > 0) {
 
 <PasteHandler 
     formId="pasteForm"
-    on:success={() => document.getElementById('pasteForm')?.requestSubmit()}
+    on:success={() => (document.getElementById('pasteForm') as HTMLFormElement)?.requestSubmit()}
     on:processingComplete={(ev) => {
         if (ev.detail.status === 'success') {
-            document.getElementById('pasteForm')?.requestSubmit();
+            (document.getElementById('pasteForm') as HTMLFormElement)?.requestSubmit();
         }
     }}
 />
@@ -195,7 +195,7 @@ $:  if(!done && invoicePhotos.length > 0) {
                 <div class="flex justify-start w-full py-2 gap-1">
                     {#each productPhotos as photo, i}
                         <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
-                            <img class="object-scale-down w-10 h-10 bg-base-100" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                            <img class="object-scale-down w-10 h-10 bg-base-100" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                         </button>
                     {/each}
                 </div>
@@ -219,9 +219,9 @@ $:  if(!done && invoicePhotos.length > 0) {
                         <div class="flex items-center gap-3 flex-1 min-w-0">
                             <div class="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-base-200 bg-base-50 flex items-center justify-center">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="w-full h-full object-cover" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                    <img class="w-full h-full object-cover" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
                                 {:else if loc.container?.photoPath}
-                                    <img class="w-full h-full object-cover" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.photoPath; } }} alt="Container thumbnail"/>
+                                    <img class="w-full h-full object-cover" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
                                 {:else}
                                     <i class="bi bi-box-seam text-2xl text-gray-400"></i>
                                 {/if}
@@ -277,9 +277,9 @@ $:  if(!done && invoicePhotos.length > 0) {
                         {#if i === 0}
                             <figure class="w-full h-20 border-b border-base-200 bg-base-200 m-0">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="w-full h-full object-cover object-top" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
                                 {:else if loc.container?.photoPath}
-                                    <img class="w-full h-full object-cover object-top" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = loc.container.photoPath; } }} alt="Container thumbnail"/>
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
                                 {:else}
                                     <div class="w-full h-full flex items-center justify-center">
                                         <i class="bi bi-box-seam text-4xl text-gray-400"></i>
