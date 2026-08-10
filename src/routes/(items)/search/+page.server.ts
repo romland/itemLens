@@ -1,7 +1,10 @@
 import type { PageServerLoad } from "./$types";
 import { db } from '$lib/server/database';
 
-export const load = (async ({ locals, url }) => {
+export const load = (async ({ locals, url, setHeaders }) => {
+	setHeaders({
+		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+	});
     const q = String(url.searchParams.get('q')).trim();
     const page = Number(url.searchParams.get('page') ?? '1');
 

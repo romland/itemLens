@@ -12,7 +12,10 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url }) {
+export async function GET({ url, setHeaders }) {
+	setHeaders({
+		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+	});
     const item = await db.item.findFirst({
         where: {
             AND: [

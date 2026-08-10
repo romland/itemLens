@@ -76,11 +76,31 @@ export default defineConfig({
 					}
 				}				  
 			},
-			injectManifest: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']
-			},
 			workbox: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
+				cleanupOutdatedCaches: true,
+				runtimeCaching: [
+					{
+						// Cache API calls, full pages, and SvelteKit's __data.json with NetworkFirst
+						urlPattern: ({ request, url }) => {
+							return request.destination === 'document' ||
+							       url.pathname.startsWith('/api/') ||
+							       url.search.includes('__data.json');
+						},
+						handler: 'NetworkFirst',
+						options: {
+							cacheName: 'app-dynamic-data',
+							networkTimeoutSeconds: 3,
+							expiration: {
+								maxEntries: 200,
+								maxAgeSeconds: 7 * 24 * 60 * 60 // 1 week
+							},
+							cacheableResponse: {
+								statuses: [0, 200]
+							}
+						}
+					}
+				]				
 			},
 			devOptions: {
 				enabled: true,

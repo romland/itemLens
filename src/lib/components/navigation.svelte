@@ -31,7 +31,8 @@
         const url = `${h}c=10&page=${nextPage}`;
         
         try {
-            const res = await fetch(url);
+			// Explicitly command fetch to bypass browser disk cache
+			const res = await fetch(url, { cache: 'no-store' });
             const data = await res.json();
             
             if(!data || !data.items || data.items.length === 0) {

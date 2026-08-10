@@ -2,7 +2,7 @@
 	import type { SubmitFunction } from "./$types";
     import { enhance } from "$app/forms";
     import { page } from "$app/stores";
-    import { onNavigate } from '$app/navigation';
+  	import { onNavigate, afterNavigate } from '$app/navigation';
     import Search from "$lib/components/search.svelte";
     import ReloadPrompt from "$lib/components/ReloadPrompt.svelte";
     import pageTitle from '$lib/stores';
@@ -17,27 +17,25 @@
     
     let mounted = false;    
 
-    onMount(async () => {
+  	onMount(() => {
         mounted = true;
-        if (pwaInfo) {
-            const { registerSW } = await import('virtual:pwa-register')
-            registerSW({
-                immediate: true,
-                onRegistered(r) {
-                    // uncomment following code if you want check for updates
-                    r && setInterval(() => {
-                        console.log('Checking for sw update')
-                        r.update()
-                    }, 20000 /* 20s for testing purposes */)
-                    console.log(`SW Registered: ${r}`)
-                },
-                onRegisterError(error) {
-                    console.log('SW registration error', error)
-                }
-            })
-        }
+        // Service worker is managed reliably by <ReloadPrompt />.
+        // Removing redundant manual registration to prevent race conditions.
     })
 
+    afterNavigate(({ type }) => {
+      // Form submissions = Database mutations.
+      // Flush the infinite-scroll sessionStorage so old data doesn't revive on back navigation.
+      if (type === 'form') {
+        try {
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith('nav-cache-')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        } catch (e) {}
+      }
+    });
 
     onNavigate((navigation) => {
         // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
@@ -57,7 +55,28 @@
             });
         });
     });    
-    
+
+    async function nukeAllCaches() {
+      if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+        localStorage.clear();
+        
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+        
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) await registration.unregister();
+        }
+        
+        window.location.href = window.location.href; // Force reload bypassing internal router
+      }
+    }
+
     $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
 
     // TOOD:
@@ -142,6 +161,14 @@
             <span class="badge">New</span>
           </a>
         </li>
+
+        <li>
+          <button type="button" class="text-error hover:bg-error/10" on:click={nukeAllCaches} title="Clear all offline data and caches">
+            <i class="bi bi-trash3"></i>
+            <span class="btm-nav-label">Clear Cache</span>
+          </button>
+        </li>
+        <li class="divider my-1 h-[1px] bg-base-300"></li>
 
         {#if $page.data.user}
             <li>

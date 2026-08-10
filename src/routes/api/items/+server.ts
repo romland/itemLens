@@ -9,7 +9,10 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url }) {
+export async function GET({ url, setHeaders }) {
+	setHeaders({
+		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+	});
     const q = String(url.searchParams.get('q') || "").trim();
     const page = Number(url.searchParams.get('page') ?? '1');
     const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
