@@ -18,10 +18,22 @@
     
     let mounted = false;    
 
-  	onMount(() => {
+    onMount(async () => {
         mounted = true;
-        // Service worker is managed reliably by <ReloadPrompt />.
-        // Removing redundant manual registration to prevent race conditions.
+        if (pwaInfo) {
+            // Silently registers the service worker. The `immediate: true` flag prevents 
+            // Vite's dev-mode HMR from triggering the update toast on every file change.
+            const { registerSW } = await import('virtual:pwa-register')
+            registerSW({
+                immediate: true,
+                onRegistered(r) {
+                    console.log(`SW Registered: ${r}`)
+                },
+                onRegisterError(error) {
+                    console.log('SW registration error', error)
+                }
+            })
+        }
     })
 
     // REALTIME SYNC ENGINE

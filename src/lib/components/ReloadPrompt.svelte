@@ -38,7 +38,10 @@
 			{/if}
 		</div>
 		{#if $needRefresh}
-			<button on:click={() => updateServiceWorker(true)}>
+			<button on:click={() => {
+				updateServiceWorker(true);
+				setTimeout(() => window.location.reload(), 0);
+			}}>
 				Reload
 			</button>
 		{/if}
@@ -52,15 +55,15 @@
 	.pwa-toast {
 		position: fixed;
 		right: 0;
-		bottom: 0;
+		bottom: 80px;
 		margin: 16px;
 		padding: 12px;
 		border: 1px solid #8885;
 		border-radius: 4px;
 		z-index: 2;
 		text-align: left;
-		box-shadow: 3px 4px 5px 0 #8885;
-		background-color: white;
+		box-shadow: 3px 4px 5px 0 #000;
+		background-color: #444;
 	}
 	.pwa-toast .message {
 		margin-bottom: 8px;
