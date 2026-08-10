@@ -40,7 +40,7 @@
 		{#if $needRefresh}
 			<button on:click={() => {
 				updateServiceWorker(true);
-				setTimeout(() => window.location.reload(), 0);
+				setTimeout(() => window.location.reload(), 300);
 			}}>
 				Reload
 			</button>
