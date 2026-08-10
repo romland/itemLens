@@ -66,6 +66,13 @@
         onDestroy(disconnectSync);
     }
 
+    let hamburgerMenu: HTMLDetailsElement;
+    function closeHamburger(e: MouseEvent) {
+      if (hamburgerMenu && hamburgerMenu.hasAttribute('open') && !hamburgerMenu.contains(e.target as Node)) {
+        hamburgerMenu.removeAttribute('open');
+      }
+    }
+
     afterNavigate(({ type }) => {
       // Form submissions = Database mutations.
       // Flush the infinite-scroll sessionStorage so old data doesn't revive on back navigation.
@@ -153,6 +160,7 @@
     */
 </script>
 
+<svelte:window on:click={closeHamburger} />
 <svelte:head> 
   {#if mounted && webManifest}{@html webManifest}{/if}
   <title>{$pageTitle} | itemLens</title>
@@ -196,7 +204,7 @@
   </div>
 
   <div class="navbar-end">
-    <details class="dropdown dropdown-end">
+    <details bind:this={hamburgerMenu} class="dropdown dropdown-end">
       <summary class="btn btn-ghost">
         <div class="w-10 flex justify-center items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
