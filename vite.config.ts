@@ -81,16 +81,18 @@ export default defineConfig({
 				cleanupOutdatedCaches: true,
 				runtimeCaching: [
 					{
-						// Cache API calls, full pages, and SvelteKit's __data.json with NetworkFirst
+						// Cache API calls and __data.json with NetworkFirst.
+						// CRITICAL: Exclude /api/events! Caching an SSE stream crashes Workbox.
 						urlPattern: ({ request, url }) => {
-							return request.destination === 'document' ||
-							       url.pathname.startsWith('/api/') ||
+							if (url.pathname.includes('/api/events')) return false;
+							return url.pathname.startsWith('/api/') ||
+							       url.pathname.endsWith('__data.json') ||
 							       url.search.includes('__data.json');
-						},
+						},						
 						handler: 'NetworkFirst',
 						options: {
 							cacheName: 'app-dynamic-data',
-							networkTimeoutSeconds: 3,
+							networkTimeoutSeconds: 10,
 							expiration: {
 								maxEntries: 200,
 								maxAgeSeconds: 7 * 24 * 60 * 60 // 1 week
@@ -106,7 +108,7 @@ export default defineConfig({
 				enabled: true,
 				suppressWarnings: process.env.SUPPRESS_WARNING === 'true',
 				type: 'module',
-				navigateFallback: '/',
+                navigateFallback: '/',
 			},
 			// if you have shared info in svelte config file put in a separate module and use it also here
 			kit: {

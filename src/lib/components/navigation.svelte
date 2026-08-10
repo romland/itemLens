@@ -12,6 +12,12 @@
     let loading = false;
     let observer: IntersectionObserver;
 
+	const handleSync = () => {
+		loadedPages = [];
+		nextPage = 1;
+		reachedEnd = false;
+	};
+
     // Tie the cache directly to the specific page/search URL
     $: cacheKey = `nav-cache-${href}`;
 
@@ -62,7 +68,9 @@
     }
     
     onMount(async () => {
-        // 1. Check if we have a saved state for this exact search/page
+		window.addEventListener('app-sync', handleSync);
+
+        // Check if we have a saved state for this exact search/page
         if (typeof sessionStorage !== 'undefined') {
             const cached = sessionStorage.getItem(cacheKey);
             if (cached) {
@@ -77,11 +85,11 @@
             }
         }
 
-        // 2. Wait for Svelte to physically draw the restored items into the DOM.
+        // Wait for Svelte to physically draw the restored items into the DOM.
         // This is CRUCIAL so the browser has enough page height to restore your scroll position.
         await tick();
 
-        // 3. Set up the observer
+        //  Set up the observer
         const el = document.getElementById('postScrollArea');
         if (el) {
             observer = new IntersectionObserver(handleIntersection, {
@@ -94,6 +102,7 @@
     });
 
     onDestroy(() => {
+		if (typeof window !== 'undefined') window.removeEventListener('app-sync', handleSync);
         if (observer) observer.disconnect();
     });
 </script>

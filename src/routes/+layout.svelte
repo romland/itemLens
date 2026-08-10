@@ -33,11 +33,15 @@
             evtSource = new EventSource('/api/events');
             evtSource.onmessage = () => {
                 console.log("Remote database change detected. Syncing...");
-                // 1. Purge ghost data so infinite scroll fetches fresh
+                // Purge ghost data so infinite scroll fetches fresh
                 Object.keys(sessionStorage).forEach(key => {
                     if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
                 });
-                // 2. Refresh SvelteKit UI seamlessly
+
+                // Tell memory-heavy components to drop their state
+                window.dispatchEvent(new CustomEvent('app-sync'));
+
+                // Refresh SvelteKit UI seamlessly
                 invalidateAll(); 
             };
         };
@@ -73,16 +77,18 @@
       }
     }
 
-    afterNavigate(({ type }) => {
+  	afterNavigate(({ type, from }) => {
       // Form submissions = Database mutations.
       // Flush the infinite-scroll sessionStorage so old data doesn't revive on back navigation.
-      if (type === 'form') {
+      const mutated = from?.url.pathname.match(/\/(edit|add|delete)$/);
+      if (type === 'form' || mutated) {
         try {
           Object.keys(sessionStorage).forEach(key => {
             if (key.startsWith('nav-cache-')) {
               sessionStorage.removeItem(key);
             }
           });
+    		  window.dispatchEvent(new CustomEvent('app-sync'));
         } catch (e) {}
       }
     });
