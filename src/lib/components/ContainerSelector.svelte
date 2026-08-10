@@ -83,7 +83,7 @@
 			class="flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center flex-nowrap whitespace-nowrap {activeTab === 'select' ? 'bg-base-100 shadow text-base-content' : 'text-gray-500 hover:text-gray-700'}"
             on:click={() => activeTab = 'select'}
         >
-            <i class="bi bi-list-check mr-2 whitespace-nowrap"></i> <span class="truncate">Choose List</span>
+            <i class="bi bi-list-check mr-2 whitespace-nowrap"></i> <span class="truncate">Manual</span>
         </button>
     </div>
 
