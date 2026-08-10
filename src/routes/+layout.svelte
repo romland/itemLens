@@ -103,20 +103,26 @@
       if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
       
       if (typeof window !== 'undefined') {
-        sessionStorage.clear();
-        localStorage.clear();
+        try {
+          sessionStorage.clear();
+          localStorage.clear();
+        } catch(e) { console.warn("Storage clear blocked:", e); }
         
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(key => caches.delete(key)));
-        }
+        try {
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(key => caches.delete(key)));
+          }
+        } catch(e) { console.warn("Cache clear blocked:", e); }
         
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const registration of registrations) await registration.unregister();
-        }
+        try {
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) await registration.unregister();
+          }
+        } catch(e) { console.warn("SW clear blocked:", e); }
         
-        window.location.href = window.location.href; // Force reload bypassing internal router
+        window.location.reload();
       }
     }
 
