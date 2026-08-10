@@ -3,17 +3,12 @@ import { writeFileSync, promises as fsPromises } from "fs";
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 
-// Cropping
-import crop from "crop-node";
-
-// Thumbnails
-import imageThumbnail from 'image-thumbnail';
-import { getTopColorsNamed } from '$lib/server/colors';
-import { classifyImageUsingReplicate, jetsonInference } from '$lib/server/classification';
 import { getOCRdata } from '$lib/server/ocr';
-
-// Invoice data
-import { extractInvoiceData } from '$lib/server/llm';
+import { generatePhotoDerivatives } from '$lib/server/imageProcessor';
+import { apiQueue, ioQueue } from '$lib/server/queue/index';
+import { logActivity } from '$lib/server/logger';
+import { db } from '$lib/server/database';
+import { autoFill } from '$lib/server/autofill';
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
@@ -24,44 +19,37 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 export async function enrichPhotoData(localPath: string, webPath: string, type: string): Promise<any> {
   const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
-  const ocrPromise = new Promise((resolve) => {
-    getOCRdata(localPath, (err, res) => {
-      if (!err) tempPhoto.ocr = JSON.stringify(res);
-      resolve(true);
-    });
-  });
-
-  const imgPromise = new Promise((resolve) => {
-    processPhoto(tempPhoto, localPath, { id: -1 } as any, false, true, (err, res) => resolve(true));
-  });
-
-  await Promise.all([ocrPromise, imgPromise]);
+  const [ocrResult, imgUpdates] = await Promise.all([
+    getOCRdata(localPath).catch(() => null),
+    generatePhotoDerivatives(tempPhoto, localPath, true)
+  ]);
 
   let categoryName = null;
+  let llmAnalysis = null;
 
   if (type === 'product' || type === 'information' || type === 'other') {
     try {
       const { analyzePhoto } = await import('$lib/server/gemini-classification');
       const { getExistingCategoryNames } = await import('$lib/server/categories');
       const existingCategories = await getExistingCategoryNames();
-      const targetPath = tempPhoto.thumbPath ? `static${tempPhoto.thumbPath}` : localPath;
-      const analysis = await analyzePhoto(targetPath, existingCategories);
-      tempPhoto.llmAnalysis = JSON.stringify(analysis);
+      const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
+      const analysis = await apiQueue.add(() => analyzePhoto(targetPath, existingCategories));
+      llmAnalysis = JSON.stringify(analysis);
       categoryName = analysis.subCategory;
     } catch (e) { console.error("[Background Task] LLM classification failed:", e); }
   } else if (type === 'invoice or receipt') {
     try {
       const { extractInvoiceData } = await import('$lib/server/llm');
-      if (tempPhoto.ocr) tempPhoto.llmAnalysis = await extractInvoiceData(JSON.parse(tempPhoto.ocr));
+      if (ocrResult) llmAnalysis = await apiQueue.add(() => extractInvoiceData(ocrResult));
     } catch (e) { console.error("[Background Task] Invoice extraction failed:", e); }
   }
 
   return {
-    ocr: tempPhoto.ocr,
-    colors: tempPhoto.colors,
-    cropPath: tempPhoto.cropPath,
-    thumbPath: tempPhoto.thumbPath,
-    llmAnalysis: tempPhoto.llmAnalysis,
+    ocr: ocrResult ? JSON.stringify(ocrResult) : null,
+    colors: imgUpdates.colors,
+    cropPath: imgUpdates.cropPath,
+    thumbPath: imgUpdates.thumbPath,
+    llmAnalysis,
     categoryName
   };
 }
@@ -75,6 +63,7 @@ export async function processDraftPhotoBackground(webPath: string, type: string)
 }
 
 export async function processItemPhotosBackground(item: any) {
+  let itemNeedsTitleUpdate = item.title === "Default product" || item.title === "";
   for (const photo of item.photos) {
     if (!photo.orgPath) continue;
     
@@ -84,16 +73,37 @@ export async function processItemPhotosBackground(item: any) {
     }
 
     console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
+    await logActivity(item.id, 'Image Processing', `Started ML pipeline for photo ID ${photo.id}`);
     const webPath = photo.orgPath;
     const localPath = `static${webPath}`;
 
     const enriched = await enrichPhotoData(localPath, webPath, photo.type);
+
+    if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
+    if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
+    if (enriched.llmAnalysis) await logActivity(item.id, 'AI Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
 
     photo.ocr = enriched.ocr || photo.ocr;
     photo.colors = enriched.colors || photo.colors;
     photo.cropPath = enriched.cropPath || photo.cropPath;
     photo.thumbPath = enriched.thumbPath || photo.thumbPath;
     photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
+
+    // If the user used the "Fast Workflow" and hit save before the title was generated, do it now
+    if (itemNeedsTitleUpdate && photo.type === 'product') {
+      try {
+        await logActivity(item.id, 'AI Analysis', `Attempting to auto-generate missing Item title...`);
+        const details = await apiQueue.add(() => autoFill(localPath));
+        if (details && details.title) {
+            await db.item.update({
+                where: { id: item.id },
+                data: { title: details.title, slug: slugify(details.title.toLowerCase()) }
+            });
+            await logActivity(item.id, 'AI Analysis', `Auto-assigned title: ${details.title}`, 'success');
+            itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
+        }
+      } catch (e) { console.error("Auto-fill failed:", e); }
+    }
 
     if (enriched.categoryName) {
         const { getOrCreateCategory } = await import('$lib/server/categories');
@@ -104,129 +114,20 @@ export async function processItemPhotosBackground(item: any) {
     await updatePhoto(photo.id, photo);
 
     if (photo.type !== 'invoice or receipt') {
-      await new Promise((resolve) => {
-        processQRcodeThenDownload(photo.orgPath, photo, item, resolve);
-      });
+      await processQRcodeThenDownload(photo.orgPath, photo, item);
     }
   }
 }
 
 
-/**
- * Remove background then:
- * 1. crop transparent pixels
- * 2. generate thumbnail
- * 3. get top named colors
- * 
- * @param photo 
- * @param imgUrl 
- * @param item 
- */
-async function processPhoto(photo: Photo, imgUrl: string, item: Item, updateDB: boolean, getColors: boolean, callback: any)
-{
-  const thumbOptions = {
-    width: 256,
-    responseType: 'buffer' as const,
-    jpegOptions: {
-      force: true,
-      quality: 90
-    }
-  };
-
-  // Create original thumbnail immediately so it's always available
-  try {
-    const orgThumbnail = await imageThumbnail(`static${photo.orgPath}`, thumbOptions as any);
-    fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
-  } catch(ex) {
-    console.error("Error generating original thumbnail", ex);
-  }
-
-  // A lot of things will be done after we have removed background ...
-  const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
-  removeBackground(imgUrl, outputFileNoBkg, async (err, result) => {
-    if (err) {
-      console.log("Error when removing background:", err);
-      photo.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
-      if(updateDB) updatePhoto(photo.id, photo);
-      callback(err, null);
-      return;
-    }
-
-    // Note: we are not updating DB with the removed-background ... yet. Crop it first.
-
-    // Crop file
-    const cropOptions = {
-      outputFormat: "png",
-    };
-    const cropped = await crop(outputFileNoBkg, cropOptions);
-    try {
-      writeFileSync(outputFileNoBkg, cropped);
-    } catch (ex) {
-      console.log("Error writing cropped file:", ex);
-      callback("Error writing cropped file", null)
-      return;
-    }
-
-    console.log("Updating photo.cropPath in", photo.id);
-    photo.cropPath = `${photo.orgPath}_crop.png`;
-    if(updateDB) {
-      updatePhoto(photo.id, photo);
-    }
-
-    try {
-      const thumbnail = await imageThumbnail(outputFileNoBkg, thumbOptions as any);
-      fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
-      console.log("Updating photo.thumbPath in", photo.id);
-      photo.thumbPath = `${photo.orgPath}_thumb.jpg`;
-      if(updateDB) {
-        updatePhoto(photo.id, photo);
-      }
-    } catch(ex) {
-      console.error("Error generating thumbnail", ex);
-      callback("Error generating thumbnail", null)
-      return;
-    }
-
-    if(getColors) {
-      // Get top colors of no-backgrounded-image
-      await getTopColorsNamed(outputFileNoBkg, (err, result) => {
-        if (err) {
-          console.log("Error getting top colors:", err);
-          callback("Error getting colors", null)
-          return;
-        }
-        console.log("Updating photo.colors in", photo.id);
-        photo.colors = JSON.stringify(result);
-        if(updateDB) {
-          updatePhoto(photo.id, photo);
-        }
-      });
-    }
-
-    callback(null, true);
-  });
-
-  // Nothing to return...
-}
-
-
-async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item, callback: any)
-{
-  // TODO: Ugh, pass in the filename for this:
-  let page = await QRUrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
-  if(page !== null) {
-    const pageData = JSON.parse(page);
-
-    fs.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" }, async (err) => {
-      if (err) {
-        console.log("Error saving SinglePage", err);
-        callback("Error saving SinglePage", null);
-        return;
-      }
-
-      console.log("Creating document from QR code in", photo.id);
+async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item) {
+  return ioQueue.add(async () => {
+    const page = await QRUrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
+    if (page !== null) {
+      const pageData = JSON.parse(page);
+      await fsPromises.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
       try {
-        const doc = await db.document.create({
+        await db.document.create({
           data: {
             itemId: item.id,
             type: "uncategorized",
@@ -236,18 +137,12 @@ async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item
             extracts: JSON.stringify(pageData.extracts)
           }
         });
-      } catch (ex) {
-        console.error("Error creating document in DB:", ex);
-        callback("Error creating document in DB", null);
-        return;
-      }
-      callback(null, pageData);
-      
-    });
-  } else {
-    callback("QR code not found", null);
-  }
+        await logActivity(item.id, 'QR Scanner', `Found and downloaded linked document: ${pageData.title}`, 'success');
+      } catch (ex) { console.error("Error creating document in DB:", ex); }
+    }
+  });
 }
+
 
 async function updatePhoto(id : number, data : Photo)
 {
@@ -261,46 +156,6 @@ async function updatePhoto(id : number, data : Photo)
   }
 }
 
-async function removeBackground(imgUrl: string, outputFileNoBkg: string, callback: any)
-{
-  // const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
-  const localPath = outputFileNoBkg.replace(/_crop\.png$/, '');
-  let response;
-  
-  try {
-    // const response = await fetch(url);
-    if (fs.existsSync(localPath)) {
-      const form = new FormData();
-      form.append('file', fs.createReadStream(localPath));
-      response = await fetch('http://localhost:7000/api/remove', {
-        method: 'POST',
-        body: form,
-        headers: form.getHeaders()
-      });
-    } else {
-      console.log(`Local file not found for rembg: ${localPath}, falling back to URL: ${imgUrl}`);
-      const url = `http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}`;
-      response = await fetch(url);
-    }
-
-    if (response && response.ok) {
-      const fileStream = fs.createWriteStream(outputFileNoBkg);
-      response.body?.pipe(fileStream);
-      fileStream.on('finish', () => {
-        fileStream.close();
-        console.log('Removed background, file downloaded and saved successfully.');
-        callback(null, `Success: Image saved as ${outputFileNoBkg}`);
-      });
-    } else {
-      const errBody = await response.text();
-      console.error(`RemBG HTTP ${response.status} error:`, errBody);
-      callback(`HTTP error! status: ${response.status}`, null);
-    }
-  } catch (error) {
-    console.error('Error while removing background:', error);
-    callback(error, null);
-  }
-}
 
 
 export async function downloadQRURLs(data: any, diskFolder: string, webFolder: string, formPrefix: string, remoteSite: string, item: any)
@@ -310,14 +165,7 @@ export async function downloadQRURLs(data: any, diskFolder: string, webFolder: s
   for (let i = 0; i < qrPhotos.length; i++) {
     const photo = qrPhotos[i];
 
-    // Process the QR code
-    processPhoto(photo, `${remoteSite}${photo.orgPath}`, item, false, false, (err, pageData) => {
-      if (err) {
-        console.error("Error processing QR code for URL: ", err);
-        return;
-      }
-      console.log("Downloaded explicitly stated URL via QR code:", pageData.url);
-    });
+    await generatePhotoDerivatives(photo, `${remoteSite}${photo.orgPath}`, false);
   }
 }
   

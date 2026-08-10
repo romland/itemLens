@@ -7,6 +7,7 @@
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import pageTitle from '$lib/stores';
+    import { saveToQueue } from '$lib/client/offlineQueue';
 
     export let data: PageServerData;
     export let form: ActionData;
@@ -14,20 +15,19 @@
     let saving = false;
     let notifications: any[] = [];
 
-    const onSubmit: SubmitFunction = async ({ cancel }) => {
+    const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
+        // Stop SvelteKit from natively submitting the form
+        cancel();
         if (saving) {
-            cancel();
             return;
         }        
         saving = true;
-        return async (options) => {
-            saving = false;
-            if (options.result?.type === "failure") {
-                const msg = String(options.result.data?.message || "Failed to save item.").replace(/<\/?[^>]+(>|$)/g, "");
-                notify("error", msg);
-            }
-            options.update();
-        }
+        await saveToQueue(`/${data.item?.id}/edit`, formData);
+        saving = false;
+        notify("success", "Changes queued! Returning...");
+        window.dispatchEvent(new CustomEvent('outbox-trigger'));
+        
+        history.back(); // Rapid workflow: get out of edit screen immediately
     }
     
     function notify(status: string, message: string, id: string | null = null) {

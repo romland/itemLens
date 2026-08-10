@@ -2,7 +2,7 @@
     import { enhance } from '$app/forms';
     import { onMount } from 'svelte';
     import { createEventDispatcher } from 'svelte';
-    import { getQueue, clearQueueItem, saveToQueue } from '$lib/client/offlineQueue';
+    import { saveToQueue } from '$lib/client/offlineQueue';
 
     const dispatch = createEventDispatcher();
 
@@ -23,22 +23,9 @@
 
     onMount(() => {
         isOffline = !navigator.onLine;
-        window.addEventListener('online', () => { isOffline = false; syncQueue(); });
+        window.addEventListener('online', () => { isOffline = false; });
         window.addEventListener('offline', () => isOffline = true);
-        if (!isOffline) syncQueue();
     });
-
-    async function syncQueue() {
-        const queue = await getQueue();
-        for (const item of queue) {
-            const fd = new FormData();
-            Object.entries(item).forEach(([k, v]) => { if (k !== 'id' && k !== 'timestamp') fd.append(k, v as Blob | string); });
-            try {
-                await fetch('/timeline?/capture', { method: 'POST', body: fd });
-                await clearQueueItem(item.id);
-            } catch (e) { console.error("Sync failed", e); }
-        }
-    }
 
     async function handleInput(e: Event) {
         const target = e.target as HTMLTextAreaElement;
@@ -89,19 +76,19 @@
     }
 
     function submitForm(formData: FormData, cancelSubmit: () => void) {
+        cancelSubmit(); // Always cancel default Sveltekit behavior
         const hasPasted = formData.getAll('pasted_urls[]').length > 0 || formData.getAll('pasted_documents[]').length > 0 || formData.getAll('preprocessed_docs[]').length > 0;
         if (!content.trim() && !fileInput?.files?.length && !hasPasted) return;
-        if (isOffline) {
-            cancelSubmit();
-            saveToQueue(formData).then(() => {
-                content = "";
-                if (fileInput) fileInput.value = "";
-                linkedItemIds.clear();
-                locationStatus = "Saved offline";
-            });
-            return;
-        }
-        isUploading = true;
+
+        saveToQueue('/timeline?/capture', formData).then(() => {
+            content = "";
+            if (fileInput) fileInput.value = "";
+            linkedItemIds.clear();
+            locationStatus = "Queued";
+            document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());
+            dispatch('posted');
+            window.dispatchEvent(new CustomEvent('outbox-trigger'));
+        });        
     }
 </script>
 
@@ -124,20 +111,6 @@
         enctype="multipart/form-data" 
         use:enhance={({ formData, cancel }) => {
             submitForm(formData, cancel);
-            return async ({ update }) => {
-                await update(); // SvelteKit handles success natively now
-                isUploading = false;
-                content = "";
-                if (fileInput) fileInput.value = "";
-                locationStatus = "";
-                latitude = null;
-                longitude = null;
-                linkedItemIds.clear();
-
-                // Cleanup dynamically appended hidden inputs from PasteHandler
-                document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());
-                dispatch('posted');
-            };
         }}
         class="max-w-2xl mx-auto flex items-end gap-2 w-full box-border"
     >

@@ -15,6 +15,7 @@
     import { onMount, onDestroy } from 'svelte'
     // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
+    import { outboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
     
     let mounted = false;    
 
@@ -68,6 +69,57 @@
         });
 
         onDestroy(disconnectSync);
+    }
+
+    // GLOBAL SYNC ENGINE (Outbox)
+    let isSyncing = false;
+    async function processOutbox() {
+        if (isSyncing || !navigator.onLine) return;
+        isSyncing = true;
+        try {
+            const queue = await getQueue();
+            for (const item of queue) {
+                if (item.status === 'syncing') continue;
+                await updateQueueItemStatus(item.id!, 'syncing', item.retries);
+                try {
+                    const fd = deserializeToFormData(item.payload);
+                    const cleanEndpoint = item.endpoint.replace('?/default', '');
+
+                    // Emulate SvelteKit native form action to prevent downloading full HTML pages on redirect
+                    const res = await fetch(cleanEndpoint, { 
+                        method: 'POST', 
+                        body: fd,
+                        headers: {
+                            'x-sveltekit-action': 'true',
+                            'accept': 'application/json'
+                        }
+                    });
+
+                    if (res.ok) {
+                        await clearQueueItem(item.id!);
+
+                        // Purge ghost data so infinite scroll fetches fresh
+                        Object.keys(sessionStorage).forEach(key => {
+                            if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
+                        });
+
+                        // Tell memory-heavy components to drop their state
+                        window.dispatchEvent(new CustomEvent('app-sync'));
+
+
+                        // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
+                        invalidateAll();                        
+                    } else {
+                        await updateQueueItemStatus(item.id!, 'failed', item.retries + 1);
+                    }
+                } catch (e) {
+                    await updateQueueItemStatus(item.id!, 'pending', item.retries + 1);
+                    break; // Stop syncing if network drops
+                }
+            }
+        } finally {
+            isSyncing = false;
+        }
     }
 
     let hamburgerMenu: HTMLDetailsElement;
@@ -154,6 +206,20 @@
     //  in safari: win: 548, scr: 667, full: false (...more)
     //
     
+    onMount(() => {
+        refreshStore();
+        window.addEventListener('online', processOutbox);
+        window.addEventListener('outbox-trigger', processOutbox); // Custom event to trigger sync instantly
+        processOutbox();
+        const outboxInterval = setInterval(processOutbox, 10000); // Failsafe check every 10s
+        
+        return () => {
+            window.removeEventListener('online', processOutbox);
+            window.removeEventListener('outbox-trigger', processOutbox);
+            clearInterval(outboxInterval);
+        };
+    });
+
     // let winHeight = window.innerHeight;
     // let scrHeight = screen.height;
     // let fullScreen = winHeight === scrHeight;
@@ -210,6 +276,16 @@
   </div>
 
   <div class="navbar-end">
+    {#if $outboxStore.length > 0}
+      <div class="tooltip tooltip-bottom mr-2" data-tip="Syncing {$outboxStore.length} items to server">
+        <span class="btn btn-ghost btn-circle text-primary pointer-events-none">
+          <span class="indicator">
+            <i class="bi bi-cloud-arrow-up text-xl {$outboxStore.some(i => i.status === 'syncing') ? 'animate-pulse' : ''}"></i>
+            <span class="badge badge-xs badge-primary indicator-item">{$outboxStore.length}</span>
+          </span>
+        </span>
+      </div>
+    {/if}
     <details bind:this={hamburgerMenu} class="dropdown dropdown-end">
       <summary class="btn btn-ghost">
         <div class="w-10 flex justify-center items-center">

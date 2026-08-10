@@ -93,12 +93,13 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
-        if (title.length == 0) {
-            return fail(400, {
-                error: true,
-                message: 'Field <strong>Title</strong> cannot be blank.'
-            });
-        }
+        // if (title.length == 0) {
+        //     return fail(400, {
+        //         error: true,
+        //         message: 'Field <strong>Title</strong> cannot be blank.'
+        //     });
+        // }
+		const safeTitle = title.trim() || "Default product";
 
         /*
         if(containers.length === 0) {
@@ -157,7 +158,7 @@ console.log("formData:", orgData);
         item = await db.item.update({
             where: { id: Number(params.id) },
             data: {
-                title: title.trim(),
+				title: safeTitle,
                 reason: data.reason as string || "",
 				amount: isNaN(parsedAmount) ? null : parsedAmount,
                 photos: {
@@ -176,7 +177,7 @@ console.log("formData:", orgData);
                     }
                   }),
                 },
-                slug: slugify(title.trim().toLowerCase()),
+				slug: slugify(safeTitle.toLowerCase()) || "default-product",
                 description: description.trim(),
                 // authorId: locals.user.id,
                 tags: {
@@ -209,8 +210,8 @@ console.log("formData:", orgData);
 				.join('\n');
 		}
 
-        // Consolidated Document & Paste Saving
-        await processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder);
+        // Fire and forget newly pasted document processing
+        processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder).catch(e => console.error(e));
 
         // Deal with refreshing and deleting documents and images.
         // Refresh takes presedence over delete (that is, if something is 
@@ -218,6 +219,7 @@ console.log("formData:", orgData);
         await refreshDeleteImages(data, allExistingPhotoIds, preExistingPhotoIds, item);
         data.urls += "\n" + await refreshDeleteDocuments(data, allExistingDocumentIds, preExistingDocumentIds, item);
 
+        // Fire and forget heavy background scraping and ML analysis (Fast Ack)
 		downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
 		processItemPhotosBackground(item).catch(e => console.error(e));
 

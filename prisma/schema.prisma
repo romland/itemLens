@@ -72,10 +72,21 @@ model Item {
   locations   ItemsInContainer[]
   attributes  KVP[]      // e.g. width, height, color (should override colors of photo, I guess), etc
   usage       InUse[]
+  logs        ActivityLog[]
   timelineNotes TimelineNote[] @relation("TimelineNoteToItem")
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+model ActivityLog {
+  id        Int      @id @unique @default(autoincrement())
+  level     String   @default("info") // 'info', 'success', 'warning', 'error'
+  action    String
+  message   String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    Int
+  createdAt DateTime @default(now())
 }
 
 model Photo {

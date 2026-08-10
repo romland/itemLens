@@ -37,6 +37,7 @@ export async function GET({ url, setHeaders }) {
                     },
                 }
             },
+            logs: { orderBy: { createdAt: 'desc' } }
         }
     });
 

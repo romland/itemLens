@@ -2,6 +2,7 @@ import { dbEvents } from '$lib/server/database';
 
 export function GET() {
     let listener: () => void;
+    let debounceTimeout: NodeJS.Timeout;
 
     const stream = new ReadableStream({
         start(controller) {
@@ -12,18 +13,22 @@ export function GET() {
             controller.enqueue(encoder.encode(': connected\n\n'));
 
             listener = () => {
-                try {
-                    // Push the signal as an encoded byte array
-                    controller.enqueue(encoder.encode('data: update\n\n'));
-                } catch (e) {
-                    // Client disconnected silently
-                }
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(() => {
+                    try {
+                        // Push the signal as an encoded byte array
+                        controller.enqueue(encoder.encode('data: update\n\n'));
+                    } catch (e) {
+                        // Client disconnected silently
+                    }
+                }, 500); // Wait 500ms for DB mutations to settle before notifying client
             };
             
             // Listen for the Prisma extension triggers
             dbEvents.on('mutation', listener);
         },
         cancel() {
+            clearTimeout(debounceTimeout);
             // Clean up memory the instant the client disconnects
             dbEvents.off('mutation', listener);
         }

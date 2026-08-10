@@ -6,6 +6,8 @@ import { downloadQRURLs, getSafeFilename } from './photouploads';
 import fs from 'fs';
 import { summarizeWebpageExtract } from './llm';
 import { PDFParse } from 'pdf-parse';
+import { ioQueue } from './queue/index';
+import { logActivity } from '$lib/server/logger';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
@@ -60,15 +62,19 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
       if (await isPdfUrl(line)) {
         try {
           await handlePdfDownload(line, target, document?.id, diskFolder, webFolder);
+          await logActivity(target.itemId, 'PDF Download', `Successfully parsed PDF: ${line}`, 'success');
         } catch (e) {
           console.error(`Error downloading PDF ${line}:`, e);
+          await logActivity(target.itemId, 'PDF Download', `Failed to download PDF: ${line}`, 'error');
         }
         continue; // Skip SingleFile logic
       }
 
+      await logActivity(target.itemId, 'Web Scraper', `Started downloading webpage: ${line}`, 'info');
       const str: string|null = await QRUrlDownloader.downloadURL(line);
       if(!str) {
         console.log(`Did not get any result when downloading: ${line}`);
+        await logActivity(target.itemId, 'Web Scraper', `Failed to fetch webpage: ${line}`, 'warning');
         // return;
         continue;
       }
@@ -78,8 +84,28 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
       const docFilename = getSafeFilename(`${idStr}-doc`);
 
       fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
+      await logActivity(target.itemId, 'Web Scraper', `Downloaded webpage: ${pageData.title || line}`, 'success');
 
       console.log("Creating document from explicit URL", docFilename);
+
+      // Fallback: If SingleFile failed to grab the title, manually extract it from HTML
+      if (!pageData.title && pageData.html) {
+          const titleMatch = pageData.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+          const h1Match = pageData.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+          pageData.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
+      }
+
+      let extractText = pageData.extracts?.[0] || "";
+      
+      // Fallback: If SingleFile extraction failed, aggressively strip HTML tags
+      if (extractText.length <= 50 && pageData.html) {
+          extractText = pageData.html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                     .replace(/<[^>]+>/g, ' ')
+                                     .replace(/\s+/g, ' ').trim();
+          pageData.extracts = [extractText.substring(0, 10000)];
+      }
+
       try {
         await db.document.update({
           where: {
@@ -89,10 +115,10 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
             itemId: target.itemId || null,
             timelineNoteId: target.timelineNoteId || null,
             type: "uncategorized",
-            title: pageData.title,
-            source: pageData.url,
+            title: pageData.title || line, // Fallback to URL if title is blank
+            source: pageData.url || line,
             path: `${webFolder}/${docFilename}.html`,
-            extracts: JSON.stringify(pageData.extracts)
+            extracts: JSON.stringify(pageData.extracts || [])
           }
         });
       } catch (ex) {
@@ -100,8 +126,6 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
         continue;
       }
 
-      // if(pageData.extracts.length > 0 && pageData.extracts[0].length > 50) {
-      const extractText = pageData.extracts?.[0] || "";
       console.log(`[LLM CHECK] Extracts found: ${pageData.extracts?.length || 0} | First extract length: ${extractText.length} chars`);
 
       if (extractText.length > 50) {
@@ -116,12 +140,14 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
             }
           });
           console.log("Have summary of webpage:", summary);
+          await logActivity(target.itemId, 'AI Analysis', `Generated summary for: ${pageData.title || line}`, 'success');
         } catch (ex) {
           console.error(`Error updating document in DB (${line}):`, ex);
           continue;
         }
       } else {
         console.warn(`[LLM SKIPPED] Text extract too short (${extractText.length} chars) for URL: ${line}`);
+        await logActivity(target.itemId, 'Web Scraper', `Skipped summary for ${line}, content too short.`, 'warning');
       }
 
       // DEEP SCRAPE LOGIC (Consolidated)
@@ -140,6 +166,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
                   await db.document.create({
                       data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', itemId: target.itemId || null, timelineNoteId: target.timelineNoteId || null }
                   });
+                  await logActivity(target.itemId, 'Web Scraper', `Deep link discovered: ${absUrl}`, 'info');
                   deepLinksFound++;
               } catch (e) { /* ignore invalid urls */ }
           }
@@ -167,60 +194,63 @@ async function isPdfUrl(url: string): Promise<boolean> {
 }
 
 async function handlePdfDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string) {
-  console.log(`Detected PDF, downloading directly: ${url}`);
-  const pdfRes = await fetch(url);
-  const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
-  const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
-  const docFilename = getSafeFilename(`${idStr}-doc`);
-  
-  fs.writeFileSync(`${diskFolder}/${docFilename}.pdf`, pdfBuffer);
-  
-  let extractedText = "";
-  let pdfTitle = "PDF Document";
-  
-  let parser;
-  try {
-    // 1. Initialize with the buffer
-    parser = new PDFParse({ data: pdfBuffer });
+  return ioQueue.add(async () => {
+    console.log(`Detected PDF, downloading directly: ${url}`);
+    const pdfRes = await fetch(url);
+    const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+    const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+    const docFilename = getSafeFilename(`${idStr}-doc`);
     
-    // 2. Extract text (returns a TextResult object)
-    const textResult = await parser.getText();
-    extractedText = textResult.text;
+    fs.writeFileSync(`${diskFolder}/${docFilename}.pdf`, pdfBuffer);
     
-    // 3. Extract metadata (returns an InfoResult object)
-    const infoResult = await parser.getInfo();
-    if (infoResult.info?.Title) {
-        pdfTitle = infoResult.info.Title;
-    }
+    let extractedText = "";
+    let pdfTitle = "PDF Document";
     
-  } catch (e: any) {
-    console.error("Failed to parse PDF:", e);
-  } finally {
-    // 4. Always destroy to free memory, as stated in the docs
-    if (parser) {
-        await parser.destroy();
+    let parser;
+    try {
+      // 1. Initialize with the buffer
+      parser = new PDFParse({ data: pdfBuffer });
+      
+      // 2. Extract text (returns a TextResult object)
+      const textResult = await parser.getText();
+      extractedText = textResult.text;
+      
+      // 3. Extract metadata (returns an InfoResult object)
+      const infoResult = await parser.getInfo();
+      if (infoResult.info?.Title) {
+          pdfTitle = infoResult.info.Title;
+      }
+      
+    } catch (e: any) {
+      console.error("Failed to parse PDF:", e);
+    } finally {
+      // 4. Always destroy to free memory, as stated in the docs
+      if (parser) {
+          await parser.destroy();
+      }
     }
-  }
 
-  const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
+    const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
 
-  await db.document.update({
-    where: { id: Number(documentId) },
-    data: {
-      title: pdfTitle,
-      path: `${webFolder}/${docFilename}.pdf`,
-      extracts: JSON.stringify([cappedText])
-    }
-  });
-
-  if (cappedText.trim().length > 50) {
-    const summary = await summarizeWebpageExtract(cappedText);
     await db.document.update({
       where: { id: Number(documentId) },
-      data: { summary: summary }
+      data: {
+        title: pdfTitle,
+        path: `${webFolder}/${docFilename}.pdf`,
+        extracts: JSON.stringify([cappedText])
+      }
     });
-    console.log("Have summary of PDF:", summary);
-  }
+
+    if (cappedText.trim().length > 50) {
+      const summary = await summarizeWebpageExtract(cappedText);
+      await db.document.update({
+        where: { id: Number(documentId) },
+        data: { summary: summary }
+      });
+      console.log("Have summary of PDF:", summary);
+      await logActivity(target.itemId, 'AI Analysis', `Generated summary for PDF: ${pdfTitle}`, 'success');
+    }
+  });
 }
 
 export default class QRUrlDownloader
@@ -265,6 +295,7 @@ export default class QRUrlDownloader
 
     static async downloadURL(url : string) : Promise<string|null>
     {
+        return ioQueue.add(async () => {
           try {
             const response = await fetch("http://localhost:8001", {
               method: 'POST',
@@ -288,6 +319,7 @@ export default class QRUrlDownloader
             console.log('URL download error:', err.message, url);
             return null;
           }
+        });
     }
 
 

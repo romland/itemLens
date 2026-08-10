@@ -9,39 +9,28 @@
 
     export let data: PageServerData;
     
-    var refreshIntervalId = null;
     let productPhotos = [], invoicePhotos = [], otherPhotos = [];
     let photoAttributes = [];
     let currentLightboxImage = null;
     let isSavingPasted = false;
     let lightboxModal: HTMLDialogElement;
+    let isProcessingItem = false;
 
-    beforeNavigate(() => {
-        {
-            if(refreshIntervalId) {
-                clearInterval(refreshIntervalId);
-            }
-        }
-    });
-
-    // Issue: https://kit.svelte.dev/docs/state-management#component-and-page-state-is-preserved
-    afterNavigate(() => {
-        // if(refreshIntervalId) {
-        //     clearInterval(refreshIntervalId);
-        // }
-        refineItemData();
-    });
-
-    function refineItemData()
-    {
-        console.log("refineItemData", data.item.id);
-
+    // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
+    // this block automatically re-runs and updates our local state instantly.
+    $: {
         if(data.item?.photos?.length > 0) {
             productPhotos = data.item.photos.filter((photo) => { return photo.type === "product" });
             invoicePhotos = data.item.photos.filter((photo) => { return photo.type === "invoice or receipt" });
             otherPhotos =  data.item.photos.filter((photo) => { return photo.type === "information" || photo.type === "other" });
+        } else {
+            productPhotos = []; invoicePhotos = []; otherPhotos = [];
         }
         
+        // Heuristic: If any photo lacks a thumbnail, or any web document lacks a downloaded path, we are still processing.
+        isProcessingItem = data.item?.photos?.some(p => !p.thumbPath) || 
+                           data.item?.documents?.some(d => !d.path && d.type !== 'note');
+
         // TODO: This should be done during initial processing (once), not every time rendering
         photoAttributes = [];
         
@@ -79,36 +68,12 @@
                 // console.warn("No or faulty OCR data for photo", photo.id)
             }
         }
-        photoAttributes = photoAttributes;
     }
-    
+
     function alterSummary(txt)
     {
         if(!txt) return "";
-
-        // TODO: Security. Sanitize?
-        // markdownHtml = marked.parse(data.item?.description!, {gfm:true,breaks:true});
         return marked.parse(txt, {gfm:true,breaks:true});
-    }
-    
-    if(typeof window !== 'undefined') {
-        // Periodically check if we have updated data for this page.
-        // I suppose using a MessageChannel or so on the Service Worker 
-        // could be a future improvement? I'd have to read up on that.
-        let fetchDone = true;
-        if(!refreshIntervalId) {
-            refreshIntervalId = setInterval(async () => {
-                if(!fetchDone) {
-                    return;
-                }
-                
-                const res = await fetch(`/api/item?id=${data.item.id}`);
-                const item = await res.json();
-                data.item = item;
-                refineItemData();
-                fetchDone = true;
-            }, 5000);   // TODO XXX: once per second is a bit excessive, but fine for now
-        }
     }
 
     let done = false;
@@ -143,7 +108,9 @@ $:  if(!done && invoicePhotos.length > 0) {
     return async ({ update }) => {
         await update({ reset: true });
         isSavingPasted = false;
-        refineItemData();
+        
+        // Cleanup dynamically appended hidden inputs to prevent ghost re-submissions
+        document.querySelectorAll('#pasteForm input[name^="pasted_"], #pasteForm input[name^="preprocessed_"]').forEach(el => el.remove());
     };
 }}></form>
 
@@ -164,6 +131,17 @@ $:  if(!done && invoicePhotos.length > 0) {
         </div>
     </div>
 
+    <!-- End-User Processing Indicator -->
+    {#if isProcessingItem}
+        <div class="alert bg-base-200/50 border border-base-300 shadow-sm mb-6 rounded-xl flex items-start gap-3 animate-fade-in">
+            <span class="loading loading-spinner text-primary mt-0.5"></span>
+            <div>
+                <h3 class="font-bold text-sm">Enhancing item details&hellip;</h3>
+                <p class="text-xs text-gray-500 mt-0.5">We're polishing up the details in the background. Images and summaries will appear automatically once they're ready.</p>
+            </div>
+        </div>
+    {/if}
+
     <!-- flex flex-row -->
     <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
         <div class="w-full md:w-2/3 pl-2">
@@ -172,7 +150,7 @@ $:  if(!done && invoicePhotos.length > 0) {
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
-                                <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); refineItemData(); } }} class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <input type="hidden" name="photoId" value={productPhotos[i].id} />
                                     <input type="hidden" name="showOriginal" value={productPhotos[i].showOriginal ? 'false' : 'true'} />
                                     <button type="submit" class="btn btn-circle btn-sm btn-ghost bg-base-100/70 shadow-sm" title={productPhotos[i].showOriginal ? "Show Cutout" : "Show Original"}>
@@ -439,6 +417,33 @@ $:  if(!done && invoicePhotos.length > 0) {
                 {/each}
             {/if}
         {/each}
+    </div>
+
+    <!-- Background Activity Log -->
+    <div class="border-b border-base-300 pb-3 mb-3">
+        <div class="title font-bold mb-3 flex items-center justify-between">
+            <span>Activity Log</span>
+        </div>
+        <div class="bg-base-200/50 rounded-xl max-h-64 overflow-y-auto p-4 font-mono text-xs border border-base-200 shadow-inner">
+            {#if data.item?.logs?.length > 0}
+                <ul class="space-y-2">
+                    {#each data.item.logs as log}
+                        <li class="flex items-start gap-3 border-b border-base-300/50 pb-2 last:border-0 last:pb-0">
+                            <span class="text-gray-400 shrink-0 w-16">
+                                {new Date(log.createdAt).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                            <span class="font-bold shrink-0 w-24 truncate 
+                                {log.level === 'success' ? 'text-success' : log.level === 'warning' ? 'text-warning' : log.level === 'error' ? 'text-error' : 'text-info'}">
+                                [{log.action}]
+                            </span>
+                            <span class="text-gray-600 break-words">{log.message}</span>
+                        </li>
+                    {/each}
+                </ul>
+            {:else}
+                <div class="text-gray-400 italic">No background activity recorded.</div>
+            {/if}
+        </div>
     </div>
 
 </article>

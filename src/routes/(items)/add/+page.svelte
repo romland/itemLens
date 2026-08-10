@@ -10,6 +10,8 @@
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import pageTitle from '$lib/stores';
+    import { saveToQueue } from '$lib/client/offlineQueue';
+    import { goto } from '$app/navigation';
 
     let saving = false;
     let isDirty = false;
@@ -26,21 +28,29 @@
     export let form: ActionData;
     export let data: PageServerData;
 
-    const onSubmit: SubmitFunction = async ({ cancel }) => {
+    const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
+        // Stop SvelteKit from natively submitting the form! 
+        // If missing, SvelteKit AND our Outbox will both upload it, causing duplicates.
+        cancel();
         if (saving) {
-            cancel();
             return;
         }
         saving = true;
         isDirty = false;
-        return async (options) => {
-            saving = false;
-            if (options.result?.type === "failure") {
-                const msg = String(options.result.data?.message || "Failed to save item.").replace(/<\/?[^>]+(>|$)/g, "");
-                notify("error", msg);
-            }
-            options.update();            
-        }
+        await saveToQueue('/add', formData);
+        saving = false;
+        notify("success", "Item queued for upload! Ready for next.");
+        window.dispatchEvent(new CustomEvent('outbox-trigger'));
+        
+        // Fast workflow: Reset form to allow immediate scanning of next item
+        const eltForm = document.getElementById('eltForm') as HTMLFormElement;
+        if (eltForm) eltForm.reset();
+
+        // Clear out any dynamically attached pasted document/photo inputs
+        document.querySelectorAll('#eltForm input[name^="pasted_"], #eltForm input[name^="preprocessed_"]').forEach(el => el.remove());
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        await goto('/add', { invalidateAll: true });
     }
     
     function notify(status: string, message: string, id: string | null = null) {

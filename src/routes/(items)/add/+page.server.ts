@@ -23,6 +23,7 @@ export const actions = {
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
 
+        /*
         if (title.length == 0) {
             console.warn("Missing required field(s): title");
             return fail(400, {
@@ -30,7 +31,9 @@ export const actions = {
                 message: 'Field <strong>Title</strong> cannot be blank.'
             });
         }
+        */
 
+    		const safeTitle = title.trim() || "Default product";
         /*
         if(containers.length === 0) {
           console.warn("Missing required field(s): containers");
@@ -58,7 +61,7 @@ return fail(400, {
     		const parsedAmount = parseInt(data.amount as string, 10);
         const item : Item = await db.item.create({
             data: {
-                title: title.trim() || "Default product",
+        				title: safeTitle,
                 reason: data.reason as string || "",
                 // amount: parseInt(data.amount as string, 10) || null,
         				amount: isNaN(parsedAmount) ? null : parsedAmount,
@@ -78,7 +81,7 @@ return fail(400, {
                     }
                   })
                 },
-                slug: slugify(title.trim().toLowerCase()) || "default-product",
+        				slug: slugify(safeTitle.toLowerCase()) || "default-product",
                 description: description.trim(),
                 authorId: locals.user.id,
                 tags: {
@@ -106,12 +109,10 @@ return fail(400, {
             .join('\n');
         }
 
-        // Consolidated Document & Paste Saving
-        await processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder);
-
-        // Heavy ML, URL Scraping & Document processing
+        // Fire and forget heavy IO & ML tasks so the server returns "200 OK" to the outbox instantly
+        processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder).catch(e => console.error(e));
         downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
-    		processItemPhotosBackground(item).catch(e => console.error(e));
+        processItemPhotosBackground(item).catch(e => console.error(e));
 
         redirect(302, `/${item.id}/${item.slug}`);
     }

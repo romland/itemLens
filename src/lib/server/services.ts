@@ -3,6 +3,7 @@ import { db } from '$lib/server/database';
 import slugify from 'slugify';
 import fs from 'fs';
 import { getSafeFilename } from '$lib/server/photouploads';
+import { logActivity } from '$lib/server/logger';
 
 export const getTagIds = async (tagcsv: string) => {
     const ids: { id: number }[] = [];
@@ -82,12 +83,20 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                 itemId: target.itemId || null,
                 timelineNoteId: target.timelineNoteId || null,
                 type: doc.type === 'text' ? 'note' : 'uncategorized',
-                title: doc.title || "",
+                title: doc.title || doc.source || "Untitled Document",
                 source: doc.source,
                 path: doc.path,
                 extracts: typeof doc.extracts === 'string' ? doc.extracts : JSON.stringify(doc.extracts || []),
                 summary: doc.summary || null
             }
         });
+        if (target.itemId) {
+            await logActivity(target.itemId, 'Document Attached', `Saved pasted document: ${doc.title || doc.source}`, 'success');
+            if (doc.summary) {
+                await logActivity(target.itemId, 'AI Analysis', `Saved AI summary for pasted document`, 'success');
+            } else {
+                await logActivity(target.itemId, 'AI Analysis', `No summary generated (content unreadable or too short)`, 'warning');
+            }
+        }        
     }
 }

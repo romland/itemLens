@@ -31,6 +31,7 @@ export const load = (async ({ locals, params }) => {
             },
             attributes: true,
             usage: true,
+            logs: { orderBy: { createdAt: 'desc' } }
         }
     });
 

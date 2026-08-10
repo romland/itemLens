@@ -22,16 +22,36 @@ export const POST: RequestHandler = async ({ request }) => {
             const result = await QRUrlDownloader.downloadURL(payload);
             if (result) {
                 const parsed = JSON.parse(result);
-                title = parsed.title;
-                extracts = JSON.stringify(parsed.extracts);
+
+                // Fallback: If SingleFile failed to grab the title, manually extract it from HTML
+                if (!parsed.title && parsed.html) {
+                    const titleMatch = parsed.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                    const h1Match = parsed.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+                    parsed.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
+                }
+
+                title = parsed.title || payload; // Fallback to URL if title is blank
                 path = `${uploadsWebFolder}/${docFilename}.html`;
                 console.log(`[Background Task] Saving HTML to ${path}`);
 
                 fs.writeFileSync(`${uploadsDiskFolder}/${docFilename}.html`, parsed.html, { encoding: "utf8" });
 
-                if (parsed.extracts?.[0] && parsed.extracts[0].length > 50) {
+                let extractText = parsed.extracts?.[0] || "";
+                
+                // Fallback: If readability failed, aggressively strip HTML tags to get raw text for the LLM
+                if (extractText.length <= 50 && parsed.html) {
+                    extractText = parsed.html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                             .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                             .replace(/<[^>]+>/g, ' ')
+                                             .replace(/\s+/g, ' ').trim();
+                    // Overwrite the empty array so the DB actually saves the raw text
+                    parsed.extracts = [extractText.substring(0, 10000)];
+                }
+                extracts = JSON.stringify(parsed.extracts || []);
+
+                if (extractText.length > 50) {
                     console.log(`[Background Task] Summarizing extract with LLM...`);
-                    summary = await summarizeWebpageExtract(parsed.extracts[0].substring(0, 5000));
+                    summary = await summarizeWebpageExtract(extractText.substring(0, 5000));
                 }
             } else {
                 console.warn(`[Background Task] Failed to fetch URL: ${payload}`);
