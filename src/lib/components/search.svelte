@@ -44,13 +44,13 @@
     <div class="flex" style="flex-direction: column; align-items:left;">
         <div class="form-control items-end">
             <input 
+                bind:value={q}
                 on:focus={focus} 
                 on:blur={blur} 
-                on:input={(ev)=>query(ev, (ev.target as HTMLInputElement).value)}
+                on:input={(ev)=>query(ev, q)}
                 autocomplete="off" 
                 type="text" 
                 name="q" 
-                value="{q}" 
                 placeholder="Search" 
                 class="input input-bordered md:w-auto w-full join-item"
             />
