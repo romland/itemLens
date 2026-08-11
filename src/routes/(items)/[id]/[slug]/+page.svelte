@@ -146,7 +146,7 @@ $:  if(!done && invoicePhotos.length > 0) {
     <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
         <div class="w-full md:w-2/3 pl-2">
             {#if productPhotos?.length > 0}
-                <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80">
+                <div class="carousel carousel-center max-w-md p-4 space-x-4 rounded-box max-h-80 bg-gradient-to-br from-primary/10 via-base-200 to-base-300 shadow-inner border border-base-300/50">
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
