@@ -43,6 +43,7 @@ export const actions = {
         const description = data.description as string;
         const file = data.photoPath as File;
 
+        /*
         // TODO: Check so that it's in the right format (one character, basically -- A-Z)
         if (name.length !== 1) {
             return fail(400, {
@@ -50,6 +51,7 @@ export const actions = {
                 message: 'Field <strong>Name</strong> must be one character (for now).'
             });
         }
+        */
 
         const post = await db.container.findUnique({
             where: {
@@ -83,7 +85,6 @@ export const actions = {
         await db.container.update({
             where: { name: data.id as string },
             data: {
-                name: name.trim(),
                 photoPath: filename,
                 description: description.trim(),
                 location : (data.location as string) || null,

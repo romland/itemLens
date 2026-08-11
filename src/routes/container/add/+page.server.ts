@@ -12,14 +12,7 @@ export const actions = {
         const name = data.name as string;
         const description = data.description as string;
         const file = data.photoPath as File;
-
-        // TODO: Check so that it's in the right format (one character, basically -- A-Z)
-        if (name.length !== 1) {
-            return fail(400, {
-                error: true,
-                message: 'Field <strong>Name</strong> must be one character (for now).'
-            });
-        }
+        const mode = data.mode as string;
 
         let filename = null;
 
@@ -53,20 +46,27 @@ export const actions = {
             }
         });
 
-        const trayCount = Number(data.numtrays);
-        const startTray = Number(data.starttray);
+        if (mode === 'batch') {
+            const trayCount = Number(data.numtrays) || 0;
+            const startTray = Number(data.starttray) || 1;
 
-        for(let i = startTray; i < (trayCount + startTray); i++) {
-            const trayId = i.toString().padStart(3, '0')
-            await db.container.create(
-                {
+            for(let i = startTray; i < (trayCount + startTray); i++) {
+                const trayId = i.toString().padStart(3, '0')
+                await db.container.create({
                     data: {
                         parentId: container.name,
                         name: `${name} ${trayId}`,
                         description: "",
                     }
-                }
-            )
+                });
+            }
+        }
+
+        // STUB: Label Studio Integration
+        const printLabel = data.printLabel;
+        const labelSize = data.labelSize as string;
+        if (printLabel === 'on') {
+            console.log(`[STUB] Queuing thermal label print for container: ${name} | Size: ${labelSize}`);
         }
     
         redirect(302, `/container/${container?.name}`);

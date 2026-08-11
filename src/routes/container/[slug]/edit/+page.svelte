@@ -14,31 +14,45 @@
     <Alert>{@html form?.message}</Alert>
 {/if}
 
-<form method="post" enctype="multipart/form-data" use:enhance>
+<form method="post" enctype="multipart/form-data" use:enhance class="flex flex-col gap-5 max-w-2xl mx-auto pb-8 mt-4">
     <input type="hidden" name="id" value="{data.item?.name}">
 
-    <div class="mb-3">
-        <input type="text" name="name" placeholder="Name" value="{data.item?.name}" class="input input-bordered w-full">
+    <div class="form-control">
+        <label class="label" for="name"><span class="label-text font-semibold">Container Name</span></label>
+        <div class="relative">
+            <input type="text" id="name" name="name" value="{data.item?.name}" class="input input-bordered w-full shadow-sm bg-base-200 text-base-content/60 cursor-not-allowed" readonly>
+            <i class="bi bi-lock-fill absolute right-4 top-1/2 -translate-y-1/2 text-base-content/40"></i>
+        </div>
+        <div class="label"><span class="label-text-alt text-gray-500">Locked to preserve physical QR code routing.</span></div>
     </div>
 
-    <div class="mb-3">
-        <input type="text" name="location" placeholder="Location" value="{data.item?.location}" class="input input-bordered w-full">
+    <div class="form-control">
+        <label class="label" for="location"><span class="label-text font-semibold">Location</span></label>
+        <input type="text" id="location" name="location" placeholder="e.g. Living Room Bookshelf" value="{data.item?.location}" class="input input-bordered w-full shadow-sm">
     </div>
 
-    <div class="mb-3">
-        <input type="text" name="numtrays" placeholder="Number of trays" value="{data.item?.children.length}" class="input input-bordered w-full">
+    <div class="form-control">
+        <label class="label" for="numtrays"><span class="label-text font-semibold">Number of Child Trays</span></label>
+        <input type="text" id="numtrays" name="numtrays" value="{data.item?.children?.length || 0}" class="input input-bordered w-full shadow-sm bg-base-200 text-base-content/60 cursor-not-allowed" readonly>
+        <div class="label"><span class="label-text-alt text-gray-500">Child trays are read-only and must be edited individually.</span></div>
     </div>
 
-    <div class="mb-3">
+    <div class="form-control">
+        <label class="label" for="photoPath"><span class="label-text font-semibold">Photo</span></label>
         {#if data.item?.photoPath}
-            <img class="w-32 h-32" src="{data.item?.photoPath}" alt="Container thumbnail"/>
+            <div class="mb-3">
+                <img class="w-32 h-32 object-cover rounded-xl border border-base-300 shadow-sm" src="{data.item?.photoPath}" alt="Container thumbnail"/>
+            </div>
         {/if}
-        <input type="file" name="photoPath" accept="image/*" class="file-input w-full">
+        <input type="file" id="photoPath" name="photoPath" accept="image/*" class="file-input file-input-bordered w-full shadow-sm">
     </div>
 
-    <div class="mb-3">
-        <textarea name="description" rows="10" placeholder="description" class="textarea textarea-bordered w-full">{data.item?.description}</textarea>
+    <div class="form-control">
+        <label class="label" for="description"><span class="label-text font-semibold">Description</span></label>
+        <textarea id="description" name="description" rows="4" placeholder="Optional notes about what goes in here..." class="textarea textarea-bordered w-full shadow-sm leading-relaxed">{data.item?.description}</textarea>
     </div>
 
-    <button type="submit" class="btn btn-primary">Update</button>
+    <div class="mt-2 flex justify-end">
+        <button type="submit" class="btn btn-primary w-full sm:w-auto sm:px-12 shadow-sm">Save Changes</button>
+    </div>
 </form>

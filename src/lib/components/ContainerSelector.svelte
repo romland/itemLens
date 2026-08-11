@@ -15,6 +15,17 @@
     
     // View state for tabs
     let activeTab = 'scan'; // 'scan' | 'select'
+    let searchQuery = '';
+
+    // Flatten parent/child hierarchy for easier searching and displaying
+    $: flatContainers = containers.reduce((acc, c) => {
+        acc.push({ ...c, isChild: false });
+        if (c.children && c.children.length > 0) {
+            c.children.forEach(child => acc.push({ ...child, isChild: true, parent: c.name }));
+        }
+        return acc;
+    }, []);
+    $: filteredContainers = flatContainers.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())));
 
     // // Combine QR-scanned containers and manually selected ones
     // // and dispatch back to MobileAddHub to show on badges
@@ -36,12 +47,15 @@
 
     function isValidContainer(txt)
     {
-        const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
-        return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
+        // const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
+        // return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
+        if (!txt || txt.trim() === '') return "Empty QR code";
+        return true;
     }
 
     function scannedContainer(ev: any, inputEltName: string, notify = true)
     {
+        /*
         const form = document.getElementById("eltForm");
         if (!form) return;
         
@@ -56,9 +70,12 @@
 
         if(option.selected === false) {
             addedContainers = [...addedContainers, ev.detail];
+        */
+        if(!addedContainers.includes(ev.detail) && !manualSelected.includes(ev.detail)) {
+            addedContainers = [...addedContainers, ev.detail];
         }
 
-        option.selected = true;
+        // option.selected = true;
 
         if(notify) {
             dispatch("success", `Added container: ${ev.detail}`);
@@ -67,6 +84,11 @@
 </script>
 
 <div class="flex flex-col w-full">
+    <!-- Hidden inputs to ensure scanned containers are submitted with the form -->
+    {#each addedContainers as container}
+        <input type="hidden" name="containers" value="{container}" />
+    {/each}
+
     <!-- Tab Navigation -->
 	<div role="tablist" class="flex bg-base-200/70 p-1 mb-4 w-full rounded-xl">
         <button 
@@ -130,24 +152,33 @@
                 </div>
             </div>
             
-            <select name="containers" bind:value={manualSelected} class="select select-bordered w-full rounded-xl flex-grow font-mono" multiple size="6">
-                <option value="" disabled>Select one or more containers</option>
-                {#each containers as container}
-                    <option value="{container.name}" class="font-bold py-1">{container.name}: {container.description}</option>
-                    {#if container.children.length > 0}
-                        {#each container.children as child}
-                            <option value="{child.name}" class="pl-6 py-1">
-                                {child.name}
-                                {#if child.description}
-                                    - {child.description}
-                                {/if}
-                            </option>
-                        {/each}
-                    {/if}
+            <div class="form-control mb-3">
+                <div class="input input-bordered flex items-center gap-2 rounded-xl shadow-sm">
+                    <i class="bi bi-search text-gray-400"></i>
+                    <input type="text" bind:value={searchQuery} placeholder="Search containers..." class="grow bg-transparent border-none focus:outline-none" />
+                </div>
+            </div>
+
+            <div class="bg-base-100 border border-base-200 rounded-xl overflow-y-auto max-h-64 p-2 flex flex-col gap-1 shadow-inner">
+                {#each filteredContainers as container}
+                    <label class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-base-300">
+                        <input type="checkbox" name="containers" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" />
+                        <div class="flex flex-col {container.isChild ? 'ml-6' : ''}">
+                            <span class="font-semibold text-sm leading-none flex items-center gap-2">
+                                {#if container.isChild}<i class="bi bi-arrow-return-right text-gray-400 text-xs"></i>{/if}
+                                {container.name}
+                            </span>
+                            {#if container.description}
+                                <span class="text-xs text-gray-500 mt-1 opacity-80">{container.description}</span>
+                            {/if}
+                        </div>
+                    </label>
+                {:else}
+                    <div class="p-6 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
+                        <i class="bi bi-inbox text-2xl"></i>
+                        No containers found matching "{searchQuery}"
+                    </div>
                 {/each}
-            </select>
-            <div class="mt-2 text-xs text-gray-400 text-center">
-                Hold Ctrl (Windows) or Cmd (Mac) to select multiple.
             </div>
         </div>
 
