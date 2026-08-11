@@ -38,7 +38,7 @@ export function GET() {
         headers: {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Connection': 'keep-alive'
+            // 'Connection': 'keep-alive'
         }
     });
 }
