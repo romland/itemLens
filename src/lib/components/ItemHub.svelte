@@ -149,7 +149,7 @@
             <h2 class="text-2xl font-bold">{currentTitle || (item ? 'Edit Item' : 'New Item')}</h2>
             <p class="text-gray-500 text-sm">
                 {#if isAnalyzing}
-                    <span class="loading loading-spinner loading-xs text-primary align-middle mr-1"></span> AI is analyzing...
+                    <span class="loading loading-spinner loading-xs text-primary align-middle mr-1"></span> Analyzing...
                 {:else}
                     {item ? 'Update sections below' : 'Tap camera to start, or select a section below'}
                 {/if}
