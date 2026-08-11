@@ -60,7 +60,7 @@
 		padding: 12px;
 		border: 1px solid #8885;
 		border-radius: 4px;
-		z-index: 2;
+		z-index: 100;
 		text-align: left;
 		box-shadow: 3px 4px 5px 0 #000;
 		background-color: #444;
