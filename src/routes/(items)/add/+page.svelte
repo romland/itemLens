@@ -15,6 +15,7 @@
 
     let saving = false;
     let isDirty = false;
+    let pastedDocCount = 0;
     let notifications: any[] = [];
 
     beforeNavigate(({ cancel }) => {
@@ -76,9 +77,15 @@
 
 <PasteHandler 
     formId="eltForm" 
-    on:success={(ev) => notify("success", ev.detail)} 
+    on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-    on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+    on:processingComplete={(ev) => { 
+        notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
+        if (ev.detail.status === 'success') {
+            isDirty = true;
+            pastedDocCount++;
+        }
+    }}
 />
 
 {#if form?.error}
@@ -91,7 +98,8 @@
     <ItemHub 
         containers={data.containers} 
         saving={saving}
-        isDirty={isDirty}
+        bind:isDirty
+        pastedDocCount={pastedDocCount}
         on:success={(ev) => notify("success", ev.detail)} 
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}

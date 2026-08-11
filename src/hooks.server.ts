@@ -39,7 +39,11 @@ export const handle = (async ({ event, resolve }) => {
             /^\/\d/.test(path) ||
             path.startsWith('/search') ||
             path.startsWith('/container') ||
-            path.startsWith('/tag')
+            path.startsWith('/tag') ||
+            path.startsWith('/timeline') ||
+            path.startsWith('/add') ||
+            path.startsWith('/settings') ||
+            path.startsWith('/profile')
         ) {
             redirect(303, '/login');
         }

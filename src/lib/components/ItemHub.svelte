@@ -14,7 +14,8 @@
     export let containers = [];
     export let item: any = null;
     export let saving = false;
-    export let isDirty = true;
+    export let isDirty = false;
+    export let pastedDocCount = 0;
 
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
     let activeView = 'hub';
@@ -22,7 +23,8 @@
     // State for the Hub Badges
     let photoCount = item?.photos?.length || 0;
     let selectedLocations = item?.locations?.map(l => l.containerName) || [];
-    let linkCount = item?.documents?.length || 0;
+    let qrScannerCount = 0;
+    $: linkCount = (item?.documents?.length || 0) + qrScannerCount + pastedDocCount;
 
     let currentTitle = item?.title || "";
     let currentDescription = item?.description || "";
@@ -34,6 +36,25 @@
     let pendingPhotos: any[] = [];
     let showPreview = false;
     let currentDraftPath = "";
+
+    // Dirty State Reactivity
+    $: {
+        let dirty = false;
+        if (currentTitle !== (item?.title || "")) dirty = true;
+        if (currentDescription !== (item?.description || "")) dirty = true;
+        if (String(amount) !== String(item?.amount || "")) dirty = true;
+        if (reason !== (item?.reason || "")) dirty = true;
+        if (tagcsv !== (item?.tagcsv || "")) dirty = true;
+        if (pendingPhotos.length > 0) dirty = true;
+        if (qrScannerCount > 0) dirty = true;
+        if (pastedDocCount > 0) dirty = true;
+        
+        const initialLocations = item?.locations?.map(l => l.containerName).sort().join(',') || "";
+        const currentLocs = [...selectedLocations].sort().join(',');
+        if (initialLocations !== currentLocs) dirty = true;
+        
+        if (dirty) isDirty = true;
+    }
 
     // Default draft preview logic
     $: previewImagePath = pendingPhotos.length > 0
@@ -406,7 +427,7 @@
                 {/if}
                 <QRurlScanner 
                     on:success={(ev) => dispatch('success', ev.detail)}
-                    on:change={(ev) => linkCount = (item?.documents?.length || 0) + ev.detail.count}
+                    on:change={(ev) => qrScannerCount = ev.detail.count}
                     on:processingStart={(ev) => dispatch('processingStart', ev.detail)}
                     on:processingComplete={(ev) => dispatch('processingComplete', ev.detail)}
                 />
