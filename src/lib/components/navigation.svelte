@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy, tick } from 'svelte';
-    import { beforeNavigate } from '$app/navigation';
+    import { browser } from '$app/environment';
+	import { beforeNavigate } from '$app/navigation';
     import Items from "$lib/components/items.svelte";
     
     export let prevPage: number;
@@ -12,17 +13,60 @@
     let loading = false;
     let observer: IntersectionObserver;
 
-	const handleSync = () => {
-		loadedPages = [];
-		nextPage = 1;
-		reachedEnd = false;
+    // 1. SYNCHRONOUS CACHE READ
+    // By doing this here instead of in onMount, Svelte renders the full height on the VERY FIRST DOM frame.
+    // This allows the browser to perfectly restore the Y-axis scroll position instantly.
+	$: cacheKey = `nav-cache-${href}`;
+    if (browser && typeof sessionStorage !== 'undefined') {
+        const cached = sessionStorage.getItem(`nav-cache-${href}`);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                loadedPages = parsed.loadedPages || [];
+                nextPage = parsed.nextPage || 1;
+                reachedEnd = parsed.reachedEnd || false;
+                console.log(`[DEBUG-NAV] Synchronously initialized ${loadedPages.length} pages from cache.`);
+            } catch (e) {}
+        }
+    }
+
+    const handleSync = async () => {
+		console.log("[DEBUG-NAV] handleSync received. Refreshing appended pages seamlessly to guarantee no old items!");
+        if (loadedPages.length === 0) return;
+        
+        let h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
+        for (let i = 0; i < loadedPages.length; i++) {
+            const p = i + 2; // SvelteKit natively handles page 1, so loadedPages[0] is page 2
+            const url = `${h}c=10&page=${p}`;
+            try {
+                console.log(`[DEBUG-NAV] Background refreshing page ${p} via ${url}`);
+                const res = await fetch(url, { cache: 'no-store' });
+                const data = await res.json();
+                if (data && data.items) {
+                    loadedPages[i] = data.items;
+                }
+            } catch (e) {
+                console.error(`[DEBUG-NAV] Failed to refresh page ${p}:`, e);
+            }
+        }
+        // Re-assign to trigger Svelte reactivity
+        loadedPages = [...loadedPages];
+        console.log("[DEBUG-NAV] Background refresh complete.");
 	};
 
-    // Tie the cache directly to the specific page/search URL
-    $: cacheKey = `nav-cache-${href}`;
+	beforeNavigate((nav) => {
+		console.log(`[DEBUG-NAV] beforeNavigate type: ${nav.type}`);
+		
+		// CRITICAL FIX: If the user is hard-reloading (Ctrl+R) or closing the tab, BURN the cache.
+		// NEVER save stale data on a reload.
+		if (nav.type === 'leave') {
+			console.log("[DEBUG-NAV] Hard reload detected! Nuking cache for a completely fresh start.");
+			sessionStorage.removeItem(cacheKey);
+			return;
+		}
 
-    // Fire exactly when the user clicks a link to leave the page
-    beforeNavigate(() => {
+		console.log(`[DEBUG-NAV] Saving cache: ${loadedPages.length} appended pages.`);
+
         if (typeof sessionStorage !== 'undefined') {
             sessionStorage.setItem(cacheKey, JSON.stringify({
                 loadedPages,
@@ -70,20 +114,10 @@
     onMount(async () => {
 		window.addEventListener('app-sync', handleSync);
 
-        // Check if we have a saved state for this exact search/page
-        if (typeof sessionStorage !== 'undefined') {
-            const cached = sessionStorage.getItem(cacheKey);
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    loadedPages = parsed.loadedPages;
-                    nextPage = parsed.nextPage;
-                    reachedEnd = parsed.reachedEnd;
-                } catch (e) {
-                    console.error("Cache parse error", e);
-                }
-            }
-        }
+		// Run the seamless sync instantly on mount.
+		// This guarantees that if you hit 'Back' (popstate), the instantly-restored cache is updated
+		// with fresh database data milliseconds later without dropping your scroll position.
+		handleSync();
 
         // Wait for Svelte to physically draw the restored items into the DOM.
         // This is CRUCIAL so the browser has enough page height to restore your scroll position.

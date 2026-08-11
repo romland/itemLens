@@ -53,6 +53,8 @@
             <a href="/timeline?category=idea" class="tab {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
             <a href="/timeline?category=todo" class="tab {data.currentCategory === 'todo' ? 'tab-active' : ''}">Todo</a>
             <a href="/timeline?category=to buy" class="tab {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
+            <a href="/timeline?category=archive" class="tab {data.currentCategory === 'archive' ? 'tab-active' : ''}">Archive</a>
+            <a href="/timeline?category=other" class="tab {data.currentCategory === 'other' ? 'tab-active' : ''}">Other</a>
         </div>
     </div>
 

@@ -186,7 +186,7 @@ model TimelineNote {
 
   author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  category  String?  @default("idea") // 'idea', 'todo', 'to buy', 'other'
+  category  String?  @default("idea") // 'idea', 'todo', 'to buy', 'other', 'archive'
 
   photos    Photo[]
   documents Document[]

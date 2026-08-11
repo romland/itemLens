@@ -44,12 +44,12 @@
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     
-                    <tr on:click={() => goto(`/${item.id}/${item.slug}`)} class="hover cursor-pointer transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
+                    <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover cursor-pointer transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12 bg-base-200">
-                                        <a href="/{item.id}/{item.slug}" on:click|stopPropagation>
+                                        <a href="/{item.id}/{item.slug}">
                                             <img class="mask mask-squircle object-scale-down h-16 w-16 bg-base-100" src="{mainPhoto.showOriginal ? mainPhoto.orgPath + '_org_thumb.jpg' : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                         </a>
                                     </div>
@@ -61,7 +61,7 @@
                             {#if item.locations}
                                 {#each item.locations as loc}
                                     <div class="badge badge-ghost badge-sm whitespace-nowrap">
-                                        <a href="/container/{loc.containerName.replace(/ /g, '-')}" on:click|stopPropagation>{loc.containerName}</a>
+                                        <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
                                     </div>
                                 {/each}
                             {/if}
@@ -69,7 +69,7 @@
 
                         <td>
                             <div class="flex items-center gap-2">
-                                <a class="text-base font-semibold" href="/{item.id}/{item.slug}" on:click|stopPropagation>{item.title}</a>
+                                <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
                                 <!-- Show a loading spinner right next to the title while we wait -->
                                 {#if isNavigatingToThis}
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
@@ -81,7 +81,7 @@
                                 {#if item.locations}
                                     {#each item.locations as loc}
                                         <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
-                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}" on:click|stopPropagation>{loc.containerName}</a>
+                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
                                         </div>
                                     {/each}
                                 {/if}
@@ -97,7 +97,7 @@
                                     {#if item.tags}
                                         {#each item.tags as tag}
                                             <div class="badge badge-ghost badge-sm">
-                                                <a href="/tag/{tag.slug}" on:click|stopPropagation>{tag.name}</a>
+                                                <a href="/tag/{tag.slug}">{tag.name}</a>
                                             </div>
                                         {/each}
                                     {/if}
@@ -126,7 +126,7 @@
 
                         {#if !brief}
                         <td class="whitespace-nowrap">
-                            <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500 hover:text-primary" on:click|stopPropagation>
+                            <a href="/{item.id}/edit" title="Edit Item" class="text-gray-500 hover:text-primary">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
                         </td>

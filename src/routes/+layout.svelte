@@ -2,7 +2,7 @@
 	import type { SubmitFunction } from "./$types";
     import { enhance } from "$app/forms";
     import { page } from "$app/stores";
-    import { onNavigate, afterNavigate, invalidateAll } from '$app/navigation';
+  	import { onNavigate, beforeNavigate, invalidateAll } from '$app/navigation';
     import { browser } from '$app/environment';
     import Search from "$lib/components/search.svelte";
     import ReloadPrompt from "$lib/components/ReloadPrompt.svelte";
@@ -33,13 +33,8 @@
             if (evtSource) return;
             evtSource = new EventSource('/api/events');
             evtSource.onmessage = () => {
-                console.log("Remote database change detected. Syncing...");
-                // Purge ghost data so infinite scroll fetches fresh
-                Object.keys(sessionStorage).forEach(key => {
-                    if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
-                });
+        				console.log("[DEBUG-LAYOUT] Remote database change detected. Firing sync event.");
 
-                // Tell memory-heavy components to drop their state
                 window.dispatchEvent(new CustomEvent('app-sync'));
 
                 // Refresh SvelteKit UI seamlessly
@@ -98,14 +93,7 @@
                     if (res.ok) {
                         await clearQueueItem(item.id!);
 
-                        // Purge ghost data so infinite scroll fetches fresh
-                        Object.keys(sessionStorage).forEach(key => {
-                            if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
-                        });
-
-                        // Tell memory-heavy components to drop their state
-                        window.dispatchEvent(new CustomEvent('app-sync'));
-
+            						console.log("[DEBUG-LAYOUT] Outbox item synced. Firing sync event.");
 
                         // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
                         invalidateAll();                        
@@ -129,20 +117,26 @@
       }
     }
 
-    afterNavigate(({ type }) => {
-      // ROOT CAUSE FIX: The infinite-scroll cache should ONLY be used when hitting the 
-      // browser's 'Back' button ('popstate'). 
-      // If it's a hard reload ('enter'), clicking the menu ('link'), or a 'form' submit, destroy it.
-      if (type !== 'popstate') {
-        try {
-          Object.keys(sessionStorage).forEach(key => {
-            if (key.startsWith('nav-cache-')) {
-              sessionStorage.removeItem(key);
-            }
-          });
-    		  window.dispatchEvent(new CustomEvent('app-sync'));
-        } catch (e) {}
-      }
+	beforeNavigate(({ type, to, from }) => {
+		console.log(`[DEBUG-LAYOUT] beforeNavigate: from ${from?.url?.pathname} to ${to?.url?.pathname}, type: ${type}`);
+		
+		// SCROLL FIX: We ONLY destroy the infinite-scroll cache if the user explicitly clicks 
+		// a navigation link TO a list page (like clicking the 'Home' icon).
+		if (type === 'link' && to && from?.url?.pathname !== to.url.pathname) {
+			const path = to.url.pathname;
+			const isListView = path === '/' || path.startsWith('/search') || path.startsWith('/container') || path.startsWith('/tag');
+			
+			if (isListView) {
+				console.log("[DEBUG-LAYOUT] Navigating to a list view. Clearing nav caches.");
+				try {
+					Object.keys(sessionStorage).forEach(key => {
+						if (key.startsWith('nav-cache-')) sessionStorage.removeItem(key);
+					});
+				} catch (e) {}
+			} else {
+				console.log("[DEBUG-LAYOUT] Navigating into item/action. Preserving nav cache.");
+			}
+		}
     });
 
     onNavigate((navigation) => {
