@@ -25,8 +25,9 @@
 </script>
 
 {#if toast}
-	<div class="pwa-toast" role="alert">
+    <div class="pwa-toast border border-primary" role="alert">
 		<div class="message">
+		<!--
 			{#if $offlineReady}
 				<span>
 					App ready to work offline
@@ -36,6 +37,10 @@
 					New content available, click on reload button to update.
 				</span>
 			{/if}
+		-->
+            <span>
+                New content available, click reload to update.
+            </span>
 		</div>
 		{#if $needRefresh}
 			<button on:click={() => {
