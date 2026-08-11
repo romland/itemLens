@@ -43,9 +43,9 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
     const thumbOptions = { width: 256, responseType: 'buffer' as const, jpegOptions: { force: true, quality: 90 } };
     
     try {
-        const orgThumbnail = await imageThumbnail(`static${photo.orgPath}`, thumbOptions as any);
+        const orgThumbnail = await heavyMlQueue.add(() => imageThumbnail(`static${photo.orgPath}`, thumbOptions as any));
         fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
-        updates.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
+        // updates.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
     } catch (ex) { console.error("Error generating original thumbnail", ex); }
 
     const outputFileNoBkg = `static${photo.orgPath}_crop.png`;

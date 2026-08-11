@@ -79,35 +79,53 @@
         }
 
         if (pastedType === 'image' && pastedFile) {
-            let maxIndex = -1;
             const fileInputs = form.querySelectorAll('input[type="file"][name^="file."]');
-            fileInputs.forEach(input => {
-                const name = input.getAttribute('name');
-                if (name) {
-                    const match = name.match(/file\.(\d+)/);
-                    if (match) {
-                        maxIndex = Math.max(maxIndex, parseInt(match[1], 10));
-                    }
+            const lastInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+            
+            // Hijack the empty file input so the UI component (MultiImageUpload / Timeline) can react normally
+            if (lastInput && (!lastInput.files || lastInput.files.length === 0)) {
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(pastedFile);
+                lastInput.files = dataTransfer.files;
+                
+                const match = lastInput.getAttribute('name')?.match(/file\.(\d+)/);
+                if (match) {
+                    const typeInput = form.querySelector(`input[type="hidden"][name="file.type.${match[1]}"]`) as HTMLInputElement;
+                    if (typeInput) typeInput.value = selectedPhotoType;
                 }
-            });
-            const nextIndex = maxIndex + 1;
-            
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.name = `file.${nextIndex}`;
-            fileInput.style.display = 'none';
-            
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(pastedFile);
-            fileInput.files = dataTransfer.files;
-            
-            const typeInput = document.createElement('input');
-            typeInput.type = 'hidden';
-            typeInput.name = `file.type.${nextIndex}`;
-            typeInput.value = selectedPhotoType;
-            
-            form.appendChild(fileInput);
-            form.appendChild(typeInput);
+
+                // Trigger standard component reaction (adds to pending queue, runs AI draft, etc.)
+                lastInput.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+                // Fallback (e.g. no empty input exists)
+                let maxIndex = -1;
+                fileInputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        const match = name.match(/file\.(\d+)/);
+                        if (match) maxIndex = Math.max(maxIndex, parseInt(match[1], 10));
+                    }
+                });
+                const nextIndex = maxIndex + 1;
+                
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.name = `file.${nextIndex}`;
+                fileInput.style.display = 'none';
+                
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(pastedFile);
+                fileInput.files = dataTransfer.files;
+                
+                const typeInput = document.createElement('input');
+                typeInput.type = 'hidden';
+                typeInput.name = `file.type.${nextIndex}`;
+                typeInput.value = selectedPhotoType;
+                
+                form.appendChild(fileInput);
+                form.appendChild(typeInput);
+            }
+
             
             clipboardQueue = [...clipboardQueue, { type: 'image', label: `Image (${selectedPhotoType})` }];
             dispatch('success', `Added pasted image (${selectedPhotoType})`);

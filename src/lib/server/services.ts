@@ -93,9 +93,9 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
         if (target.itemId) {
             await logActivity(target.itemId, 'Document Attached', `Saved pasted document: ${doc.title || doc.source}`, 'success');
             if (doc.summary) {
-                await logActivity(target.itemId, 'AI Analysis', `Saved AI summary for pasted document`, 'success');
+                await logActivity(target.itemId, 'Analysis', `Saved LLM summary for pasted document`, 'success');
             } else {
-                await logActivity(target.itemId, 'AI Analysis', `No summary generated (content unreadable or too short)`, 'warning');
+                await logActivity(target.itemId, 'Analysis', `No summary generated (content unreadable or too short)`, 'warning');
             }
         }        
     }

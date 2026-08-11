@@ -140,7 +140,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
             }
           });
           console.log("Have summary of webpage:", summary);
-          await logActivity(target.itemId, 'AI Analysis', `Generated summary for: ${pageData.title || line}`, 'success');
+          await logActivity(target.itemId, 'Analysis', `Generated summary for: ${pageData.title || line}`, 'success');
         } catch (ex) {
           console.error(`Error updating document in DB (${line}):`, ex);
           continue;
@@ -248,7 +248,7 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
         data: { summary: summary }
       });
       console.log("Have summary of PDF:", summary);
-      await logActivity(target.itemId, 'AI Analysis', `Generated summary for PDF: ${pdfTitle}`, 'success');
+      await logActivity(target.itemId, 'Analysis', `Generated summary for PDF: ${pdfTitle}`, 'success');
     }
   });
 }

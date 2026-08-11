@@ -81,7 +81,7 @@ export async function processItemPhotosBackground(item: any) {
 
     if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
     if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
-    if (enriched.llmAnalysis) await logActivity(item.id, 'AI Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
+    if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
 
     photo.ocr = enriched.ocr || photo.ocr;
     photo.colors = enriched.colors || photo.colors;
@@ -92,14 +92,14 @@ export async function processItemPhotosBackground(item: any) {
     // If the user used the "Fast Workflow" and hit save before the title was generated, do it now
     if (itemNeedsTitleUpdate && photo.type === 'product') {
       try {
-        await logActivity(item.id, 'AI Analysis', `Attempting to auto-generate missing Item title...`);
+        await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
         const details = await apiQueue.add(() => autoFill(localPath));
         if (details && details.title) {
             await db.item.update({
                 where: { id: item.id },
                 data: { title: details.title, slug: slugify(details.title.toLowerCase()) }
             });
-            await logActivity(item.id, 'AI Analysis', `Auto-assigned title: ${details.title}`, 'success');
+            await logActivity(item.id, 'Analysis', `Auto-assigned title: ${details.title}`, 'success');
             itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
         }
       } catch (e) { console.error("Auto-fill failed:", e); }
@@ -207,6 +207,12 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                         thumbPath = `${webPath}/${filename}_thumb.jpg`;
                         fs.copyFileSync(`static${sidecar.thumbPath}`, `static${thumbPath}`);
                     }
+
+                    const orgThumbDraft = `static${draftPath}_org_thumb.jpg`;
+                    if (fs.existsSync(orgThumbDraft)) {
+                        fs.copyFileSync(orgThumbDraft, `static${webPath}/${filename}_org_thumb.jpg`);
+                    }
+
                     console.log(`[Background Task] Successfully merged pre-processed sidecar for image ${i}`);
                 } catch (e) {
                     console.error(`Error reading sidecar JSON for ${draftPath}:`, e);

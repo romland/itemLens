@@ -14,6 +14,7 @@
     export let containers = [];
     export let item: any = null;
     export let saving = false;
+    export let isDirty = true;
 
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
     let activeView = 'hub';
@@ -156,15 +157,33 @@
         </div>
 
         <!-- HERO CAMERA BUTTON (Pure 1-Tap Capture) -->
-        <div class="flex justify-center mb-4 relative">
-            <button type="button" class="btn btn-primary btn-circle h-28 w-28 shadow-xl hover:scale-105 transition-transform overflow-hidden p-0" aria-label="Quick Take Photo"
+        <div class="flex justify-center items-center gap-4 mb-4 relative">
+            <!-- Gallery Button -->
+            <button type="button" class="btn btn-secondary btn-circle h-14 w-14 shadow-lg hover:scale-105 active:scale-95 transition-transform p-0 bg-base-100 text-base-content border-base-200" aria-label="Add from Gallery"
                 on:click={() => {
                     const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
                     const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
                     const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
                     const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
                     if (fileInput && typeInput) {
-                        typeInput.value = 'product'; // Default to product, AI will correct if it's a receipt
+                        typeInput.value = 'product';
+                        fileInput.removeAttribute('capture');
+                        fileInput.click();
+                    }
+                }}>
+                <i class="bi bi-images text-xl"></i>
+            </button>
+
+            <div class="relative">
+                <button type="button" class="btn btn-primary btn-circle h-28 w-28 shadow-xl hover:scale-105 active:scale-95 transition-transform overflow-hidden p-0" aria-label="Quick Take Photo"
+                on:click={() => {
+                    const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
+                    const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+                    const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
+                    const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
+                    if (fileInput && typeInput) {
+                        typeInput.value = 'product';
+                        fileInput.setAttribute('capture', 'environment');
                         fileInput.click();
                     }
                 }}>
@@ -179,12 +198,29 @@
                 {:else}
                     <i class="bi bi-camera text-5xl"></i>
                 {/if}
+                </button>
+                {#if photoCount > 0}
+                    <div class="absolute top-0 right-[calc(50%-4rem)] bg-success text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-md border-2 border-base-100 z-10 pointer-events-none">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                {/if}
+            </div>
+
+            <!-- File/Doc Button -->
+            <button type="button" class="btn btn-secondary btn-circle h-14 w-14 shadow-lg hover:scale-105 active:scale-95 transition-transform p-0 bg-base-100 text-base-content border-base-200" aria-label="Add Document"
+                on:click={() => {
+                    const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
+                    const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+                    const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
+                    const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
+                    if (fileInput && typeInput) {
+                        typeInput.value = 'information';
+                        fileInput.removeAttribute('capture');
+                        fileInput.click();
+                    }
+                }}>
+                <i class="bi bi-folder2-open text-xl"></i>
             </button>
-            {#if photoCount > 0}
-                <div class="absolute top-0 md:right-[35%] right-[25%] bg-success text-white rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-md border-2 border-base-100 z-10 pointer-events-none">
-                    <i class="bi bi-check-lg"></i>
-                </div>
-            {/if}
         </div>
 
         <!-- RECENT CAPTURES FILMSTRIP -->
@@ -292,7 +328,7 @@
 
         <!-- STICKY FOOTER -->
         <div class="sticky bottom-16 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] mt-6">
-            <button disabled={saving} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md">
+            <button disabled={saving || !isDirty} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md transition-all active:scale-95">
                 {#if saving}
                     <span class="loading loading-spinner"></span> Saving...
                 {:else}

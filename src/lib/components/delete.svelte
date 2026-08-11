@@ -4,9 +4,11 @@
 	let dialog: HTMLDialogElement;
 	export let action: string;
 	export let message: string;
+    export let btnClass: string = "text-gray-500 hover:text-error";
+    export let iconClass: string = "bi bi-trash";
 </script>
 
-<button title="Delete Item" class="text-gray-500" on:click={() => dialog.show()}><i class="bi bi-trash"></i></button>
+<button type="button" title="Delete Item" class={btnClass} on:click={() => dialog.show()}><i class={iconClass}></i></button>
 
 <dialog bind:this={dialog} class="modal">
     <form {action} method="post" class="modal-box" on:submit|preventDefault={() => dialog.close()} use:enhance>

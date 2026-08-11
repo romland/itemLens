@@ -36,16 +36,19 @@
             return;
         }
         saving = true;
-        isDirty = false;
         await saveToQueue('/add', formData);
         saving = false;
+        isDirty = false;
         notify("success", "Item queued for upload! Ready for next.");
         window.dispatchEvent(new CustomEvent('outbox-trigger'));
         
-        // Fast workflow: Reset form to allow immediate scanning of next item
-        const eltForm = document.getElementById('eltForm') as HTMLFormElement;
-        if (eltForm) eltForm.reset();
-        await goto('/add', { invalidateAll: true });
+        // // Fast workflow: Reset form to allow immediate scanning of next item
+        // const eltForm = document.getElementById('eltForm') as HTMLFormElement;
+        // if (eltForm) eltForm.reset();
+        // await goto('/add', { invalidateAll: true });
+
+        // Fast workflow: Return to home so user can seamlessly add another
+        await goto('/', { invalidateAll: true });
     }
     
     function notify(status: string, message: string, id: string | null = null) {
@@ -87,7 +90,8 @@
 <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
     <ItemHub 
         containers={data.containers} 
-        saving={saving} 
+        saving={saving}
+        isDirty={isDirty}
         on:success={(ev) => notify("success", ev.detail)} 
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}

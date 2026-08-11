@@ -81,6 +81,8 @@
         const hasFiles = Array.from(formData.values()).some(v => (v instanceof File || v instanceof Blob) && v.size > 0);
         
         if (!content.trim() && !hasFiles && !hasPasted) return;
+        if (isUploading) return;
+        isUploading = true;
 
         saveToQueue('/timeline?/capture', formData).then(() => {
             content = "";
@@ -90,6 +92,7 @@
             document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());
             dispatch('posted');
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
+            isUploading = false;
         });        
     }
 </script>

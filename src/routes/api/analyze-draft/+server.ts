@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
         try {
             aiData = await guessProductDetails(localPath);
         } catch (aiError) {
-            console.warn("Draft AI Analysis failed:", aiError);
+            console.warn("Draft Analysis failed:", aiError);
         }
 
         // 3. Kick off heavy processing in the background for ALL image types (Fire-and-forget)

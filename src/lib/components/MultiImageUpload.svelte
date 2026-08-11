@@ -50,7 +50,7 @@
             productPhotoFileCounter++;
 
             // ----------------------------------------------------
-            // Instant-On Background Upload for AI Analysis
+            // Instant-On Background Upload for LLM Analysis
             // ----------------------------------------------------
             const fileType = container.querySelector("input[type='hidden']").value;
             const localUrl = URL.createObjectURL(file);

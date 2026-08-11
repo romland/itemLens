@@ -120,14 +120,14 @@ $:  if(!done && invoicePhotos.length > 0) {
         <div class="title font-bold">
             {data.item?.title}
         </div>
-        <div class="inline-flex gap-3">
+        <div class="inline-flex gap-4 items-center">
             {#if isSavingPasted}
                 <span class="loading loading-spinner loading-sm text-primary"></span>
             {/if}
-            <a href="/{data.item?.id}/edit" title="Edit item" class="text-gray-500">
-                <i class="bi bi-pencil-square"></i>
+            <a href="/{data.item?.id}/edit" title="Edit item" class="btn btn-circle btn-ghost bg-base-200 shadow-sm text-gray-500 hover:text-primary">
+                <i class="bi bi-pencil-square text-xl"></i>
             </a>
-            <Delete message='Delete this item?' action='/{data.item?.id}/delete' />
+            <Delete message='Delete this item?' action='/{data.item?.id}/delete' btnClass="btn btn-circle btn-ghost bg-base-200 shadow-sm text-gray-500 hover:text-error" iconClass="bi bi-trash text-xl" />
         </div>
     </div>
 
