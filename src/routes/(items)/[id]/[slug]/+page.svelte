@@ -146,7 +146,7 @@ $:  if(!done && invoicePhotos.length > 0) {
     <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
         <div class="w-full md:w-2/3 pl-2">
             {#if productPhotos?.length > 0}
-                <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80" style="background: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%);">
+                <div class="carousel carousel-center max-w-md p-4 space-x-4 bg-neutral rounded-box max-h-80">
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
@@ -362,7 +362,7 @@ $:  if(!done && invoicePhotos.length > 0) {
             {#each data.item.documents as doc,i}
                 <div class="collapse collapse-arrow bg-base-200 mb-1">
                     <input type="radio" name="my-accordion-2" checked={i===0} />
-                    <div class="collapse-title bg-slate-800">
+                    <div class="collapse-title font-semibold bg-base-300">
                         {doc.title}
                     </div>
                     <div class="collapse-content prose prose-sm max-w-none"> 

@@ -1,6 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* Premium Corporate Default */
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sci-Fi / Westworld / Cyberpunk Stack */
+[data-theme="rehoboam"] body, 
+[data-theme="cyberpunk"] body, 
+[data-theme="synthwave"] body, 
+[data-theme="night"] body,
+[data-theme="matrix"] body {
+    font-family: 'Rajdhani', sans-serif;
+}
+
+/* Geometric / Space Stack */
+[data-theme="black"] body, 
+[data-theme="luxury"] body, 
+[data-theme="nebula"] body,
+[data-theme="abyss"] body {
+    font-family: 'Space Grotesk', sans-serif;
+}
 
 @keyframes fade-in {
     from {
