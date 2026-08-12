@@ -27,9 +27,14 @@
             productPhotos = []; invoicePhotos = []; otherPhotos = [];
         }
         
-        // Heuristic: If any photo lacks a thumbnail, or any web document lacks a downloaded path, we are still processing.
-        isProcessingItem = data.item?.photos?.some(p => !p.thumbPath) || 
-                           data.item?.documents?.some(d => !d.path && d.type !== 'note');
+        // // Heuristic: If any photo lacks a thumbnail, or any web document lacks a downloaded path, we are still processing.
+        // isProcessingItem = data.item?.photos?.some(p => !p.thumbPath) || 
+        //                    data.item?.documents?.some(d => !d.path && d.type !== 'note');
+        // Heuristic: If any RECENT photo/doc lacks a thumbnail/path, we are still processing.
+        // We ignore items older than 5 minutes so legacy/failed items don't hang the UI forever.
+        const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
+        isProcessingItem = data.item?.photos?.some(p => !p.thumbPath && new Date(p.createdAt).getTime() > fiveMinsAgo) || 
+                           data.item?.documents?.some(d => !d.path && d.type !== 'note' && new Date(d.createdAt).getTime() > fiveMinsAgo);
 
         // TODO: This should be done during initial processing (once), not every time rendering
         photoAttributes = [];
