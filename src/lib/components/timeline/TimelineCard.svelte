@@ -138,6 +138,7 @@
                     <option value="idea">💡 Idea</option>
                     <option value="todo">✅ Todo</option>
                     <option value="to buy">🛒 Buy</option>
+                    <option value="to read">🛒 Read</option>
                     <option value="archive">📁 Archive</option>
                     <option value="other">📌 Other</option>
                 </select>

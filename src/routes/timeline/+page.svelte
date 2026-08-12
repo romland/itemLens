@@ -52,8 +52,9 @@
         <div class="tabs tabs-boxed bg-base-200/50 flex-nowrap overflow-x-auto hide-scrollbar w-full sm:w-auto">
             <a href="/timeline?category=all" class="tab whitespace-nowrap {data.currentCategory === 'all' ? 'tab-active' : ''}">All</a>
             <a href="/timeline?category=idea" class="tab whitespace-nowrap {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
-            <a href="/timeline?category=todo" class="tab whitespace-nowrap {data.currentCategory === 'todo' ? 'tab-active' : ''}">Todo</a>
+            <a href="/timeline?category=todo" class="tab whitespace-nowrap {data.currentCategory === 'todo' ? 'tab-active' : ''}">To Do</a>
             <a href="/timeline?category=to buy" class="tab whitespace-nowrap {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
+            <a href="/timeline?category=to read" class="tab whitespace-nowrap {data.currentCategory === 'to read' ? 'tab-active' : ''}">To Read</a>
             <a href="/timeline?category=archive" class="tab whitespace-nowrap {data.currentCategory === 'archive' ? 'tab-active' : ''}">Archive</a>
             <a href="/timeline?category=other" class="tab whitespace-nowrap {data.currentCategory === 'other' ? 'tab-active' : ''}">Other</a>
         </div>
