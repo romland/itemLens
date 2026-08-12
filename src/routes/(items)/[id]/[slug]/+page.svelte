@@ -117,8 +117,11 @@ $:  if(!done && invoicePhotos.length > 0) {
 <article style="padding-bottom: 100px;" class="">
 
     <div class="flex justify-between items-center border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold">
-            {data.item?.title}
+        <div class="title font-bold flex items-center gap-3">
+            <span class="text-2xl">{data.item?.title}</span>
+            <a href="https://www.google.com/search?q={encodeURIComponent(data.item?.title)}" target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-xs btn-ghost text-gray-400 hover:text-primary transition-colors shadow-sm bg-base-200/50" title="Search Google for {data.item?.title}">
+                <i class="bi bi-google text-sm"></i>
+            </a>
         </div>
         <div class="inline-flex gap-4 items-center">
             {#if isSavingPasted}
