@@ -248,7 +248,7 @@
     -->
     <div class="hidden lg:flex items-center ml-1">
         <a href="/" class="btn btn-ghost normal-case text-xl flex items-center gap-3 px-2 hover:bg-base-200 transition-colors rounded-xl">
-            <img src="/itemlens-512.webp" alt="itemLens Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
+            <img src="/itemlens-512-white.webp" alt="itemLens Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
             <span class="font-bold tracking-tight">itemLens</span>
         </a>
     </div>
