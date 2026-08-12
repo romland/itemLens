@@ -152,8 +152,8 @@
             <textarea 
                 name="content"
                 bind:value={content}
-                placeholder="Type an idea, paste a link, or @mention an item..." 
-                class="textarea textarea-ghost w-full min-h-[44px] max-h-32 bg-transparent border-0 focus:ring-0 resize-none py-3 px-4 leading-tight text-base"
+                placeholder="Type an idea, paste a link/image, or @mention an item..." 
+                class="textarea textarea-ghost w-full min-h-[65px] max-h-32 bg-transparent border-0 focus:ring-0 resize-none py-3 px-4 leading-tight text-base"
                 rows="1"
                 on:input={handleInput}
                 on:keydown={(e) => {

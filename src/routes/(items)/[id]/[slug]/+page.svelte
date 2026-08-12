@@ -90,7 +90,7 @@ $:  if(!done && invoicePhotos.length > 0) {
     }
     
     import pageTitle from '$lib/stores';
-    pageTitle.set(data.item?.title);
+$:  pageTitle.set(data.item?.title || 'Item Details');
 </script>
 
 <PasteHandler 

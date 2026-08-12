@@ -244,9 +244,7 @@
 <svelte:head> 
   {#if mounted && webManifest}{@html webManifest}{/if}
   <title>{$pageTitle} | itemLens</title>
-  {#if themeColor}
-      <meta name="theme-color" content={themeColor} />
-  {/if}
+  <meta name="theme-color" content={themeColor || "#1d232a"} />
 </svelte:head>
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
