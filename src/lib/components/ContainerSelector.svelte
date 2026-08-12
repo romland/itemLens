@@ -25,7 +25,7 @@
         }
         return acc;
     }, []);
-    $: filteredContainers = flatContainers.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())));
+    $: filteredContainers = flatContainers.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) || (c.location && c.location.toLowerCase().includes(searchQuery.toLowerCase())));
 
     // // Combine QR-scanned containers and manually selected ones
     // // and dispatch back to MobileAddHub to show on badges
