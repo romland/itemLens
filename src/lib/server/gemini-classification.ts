@@ -118,3 +118,45 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
 
   return JSON.parse(response.text!);
 }
+
+export async function extractKVPsFromText(text: string): Promise<{kvps: {key: string, value: string}[]}> {
+  const promptText = `Extract key-value pairs (attributes and values) from the following text. It is a messy copy-paste from a PDF or a website.
+Correct obvious formatting issues and re-associate multi-line values to their keys, but preserve the data, numbers, and units accurately.
+
+TEXT:
+${text}`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.1-flash-lite',
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: promptText }
+        ]
+      }
+    ],
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          kvps: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                key: { type: 'string' },
+                value: { type: 'string' }
+              },
+              required: ['key', 'value']
+            }
+          }
+        },
+        required: ['kvps']
+      }
+    }
+  });
+
+  return JSON.parse(response.text!);
+}

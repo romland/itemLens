@@ -3,6 +3,7 @@
     import { tick }  from 'svelte';
 
     import { createEventDispatcher } from 'svelte';
+    import { parsePlainTextKVPs } from '$lib/client/kvpParser';
 
     const dispatch = createEventDispatcher();
 
@@ -22,12 +23,13 @@
     let keyColIndex = 0;
     let valColIndex = 1;
     let targetIndex = 0;
-	let tableModalDialog: HTMLDialogElement;
+    let tableModalDialog: HTMLDialogElement;
+    let isParsingLLM = false;
 
-	$: if (tableModalDialog) {
-		if (showTableModal && !tableModalDialog.open) tableModalDialog.showModal();
-		if (!showTableModal && tableModalDialog.open) tableModalDialog.close();
-	}
+    $: if (tableModalDialog) {
+        if (showTableModal && !tableModalDialog.open) tableModalDialog.showModal();
+        if (!showTableModal && tableModalDialog.open) tableModalDialog.close();
+    }
 
     if(values.length) {
         numKVPs = values.length;
@@ -102,98 +104,6 @@
         applyKVPs(pastedKVPs, targetIndex);
     }
 
-    function isOfTextFormat(str: string, regEx: RegExp)
-    {
-        str = str.replaceAll("\r\n", "\n");
-        const lines = str.split("\n");
-
-        if(lines.length === 0) {
-            return 0;
-        }
-
-        let matches = 0;
-        for(let i = 0; i < lines.length; i++) {
-            if(regEx.test(lines[i].trim())) {
-                matches++;
-            // } else {
-            //     console.log("no match:", lines[i])
-            }
-            regEx.lastIndex = 0;
-        }
-
-        return matches / lines.length;
-    }
-
-
-    /**
-       this format seems ... somewhat common:
-        – = NOT -
-
-        – Clock Speed: 80MHz/160MHz
-        – Flash: 4M bytes
-        – Microcontroller: ESP-8266EX
-        – Operating Voltage: 3.3V
-        – Digital I/O Pins: 11
-        – Analog Input Pins: 1(Max input: 3.2V)
-        – Lengte: 34.2mm
-        – Breedte: 25.6mm
-        – Gewicht: 10g
-    */
-    function convertDashKeyColonValueToTable(str: string)
-    {
-        str = str.replaceAll("\r\n", "\n");
-
-        // Trim first two characters (slice), split by \n and :
-        const kvps = str.split('\n').map(item => {
-            const [key, ...value] = item.split(':');
-            return {
-                "key":   key.slice(2).trim(),
-                "value": value.join(':').trim()
-            };
-        }).filter(kv => kv.key.length > 0 || kv.value.length > 0);
-        console.log(kvps);
-        return kvps;
-    }
-
-
-    /**
-        Clock Speed: 80MHz/160MHz
-        Flash: 4M bytes
-        Microcontroller: ESP-8266EX
-        Operating Voltage: 3.3V
-        Digital I/O Pins: 11
-        Analog Input Pins: 1(Max input: 3.2V)
-        Lengte: 34.2mm
-        Breedte: 25.6mm
-        Gewicht: 10g
-
-        --- AND ---
-
-        Sensor: Sony IMX219
-        Resolution: 3280 × 2464 (per camera)
-        Lens specifications:
-
-            CMOS size: 1/4inch
-            Focal Length: 2.6mm
-            Angle of View: 83/73/50 degree (diagonal/horizontal/vertical)
-            Distortion: <1%
-            Baseline Length: 60mm
-    */
-    function convertKeyColonValueToTable(str: string)
-    {
-        str = str.replaceAll("\r\n", "\n");
-
-        const kvps = str.split('\n').map(item => {
-            const [key, ...value] = item.split(':');
-            return {
-                "key":   key.trim(),
-                "value": value.join(':').trim()
-            };
-        }).filter(kv => kv.key.length > 0 || kv.value.length > 0);
-        console.log(kvps);
-        return kvps;
-    }
-
     function pasteTable(ev: any, ix: number)
     {
         let pastedHtml = ev.clipboardData.getData("text/html");
@@ -218,28 +128,44 @@
 
         // Fallback to plain text logic if no valid table structure was found
         if (rows.length === 0 && pastedText) {
-            // Excel / Google Sheets format (TSV)
-            if (pastedText.indexOf('\t') !== -1) {
-                rows = pastedText.split('\n')
-                    .map(r => r.split('\t').map(c => c.trim()))
-                    .filter(r => r.length > 1 || (r.length === 1 && r[0] !== ""));
-            } else {
-                // Check which format fits this "paste" best.
-                let formats = [
-                    { func: convertDashKeyColonValueToTable, ratio : isOfTextFormat(pastedText, /^[–|\-|*|#] (.+)[:] (.+)$/g) },
-                    // Note 'it should not start with' or will always return better than the one above since both will match
-                    { func: convertKeyColonValueToTable, ratio : isOfTextFormat(pastedText, /^(?![–|\-|\*|#])(.+)[:] (.+)$/g) },
-                ];
-                formats.sort((a, b) => b.ratio - a.ratio);
-
-                if(formats[0].ratio > 0.5) {
-                    console.log(`Best matching format (${formats[0].ratio}) is: `, formats[0].func);
-                    const pastedKVPs = formats[0].func(pastedText);
-                    applyKVPs(pastedKVPs, ix);
+            const parsed = parsePlainTextKVPs(pastedText);
+            
+            if (parsed) {
+                if (parsed.kvps) {
+                    applyKVPs(parsed.kvps, ix);
                     ev.stopPropagation();
                     ev.preventDefault();
                     return;
                 }
+                if (parsed.rows) {
+                    rows = parsed.rows;
+                }
+            } else if (pastedText.length > 20) {
+                // If local parsers fail, fallback to Gemini LLM for messy PDF/grid data
+                isParsingLLM = true;
+                ev.stopPropagation();
+                ev.preventDefault();
+                
+                fetch('/api/parse-kvp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: pastedText })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    isParsingLLM = false;
+                    if (data.success && data.kvps && data.kvps.length > 0) {
+                        applyKVPs(data.kvps, ix);
+                    } else {
+                        alert("Could not automatically parse pasted data.");
+                    }
+                })
+                .catch(() => {
+                    isParsingLLM = false;
+                    alert("Error reaching AI parser.");
+                });
+                
+                return;
             }
         }
 
@@ -297,8 +223,14 @@
         </div>
     {/each}
     <div class="mt-1 text-gray-400 text-xs">
+        {#if isParsingLLM}
+            <div class="alert alert-info bg-info/10 text-info border-none shadow-sm mb-3 mt-1 flex gap-3 p-3 rounded-lg">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="font-semibold">Please wait... organizing your pasted data.</span>
+            </div>
+        {/if}
         Attributes, e.g.: weight = 400g, width = 140mm.<br/>
-        <strong>Note:</strong> You can paste in HTML tables or Excel/Sheets data and we will import it.
+        <strong>Note:</strong> You can paste in CSV, TSV, HTML tables or Excel/Sheets data and we will import it.
     </div>
 
 <!-- Column Picker Modal -->
@@ -351,10 +283,6 @@
             <button type="button" class="btn btn-primary" on:click={handleTableConfirm}>Import</button>
         </div>
     </div>
-
-    <!--form method="dialog" class="modal-backdrop">
-        <button on:click={() => showTableModal = false}>close</button>
-    </form-->
 
     <div class="modal-backdrop">
         <button type="button" on:click={() => showTableModal = false}>close</button>
