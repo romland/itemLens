@@ -1,6 +1,6 @@
+# itemLens
 <img src="static/itemlens-512.webp" align="right" width="300" alt="itemLens Logo" />
 
-# itemLens
 Inventory management (for at home). There are many like it, but this one is mine.
 
 The primary use is:
