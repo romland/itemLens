@@ -36,14 +36,11 @@
     on:success={(ev) => {
         notify("success", ev.detail);
         setTimeout(() => (document.getElementById('timelineForm') as HTMLFormElement)?.requestSubmit(), 50);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }} 
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
     on:processingComplete={(ev) => {
-        notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
-        if (ev.detail.status === 'success') {
-            setTimeout(() => (document.getElementById('timelineForm') as HTMLFormElement)?.requestSubmit(), 50);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        if (ev.detail.message) notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
     }}
 />
 

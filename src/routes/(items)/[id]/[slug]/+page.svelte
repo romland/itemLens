@@ -96,11 +96,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
 <PasteHandler 
     formId="pasteForm"
     on:success={() => (document.getElementById('pasteForm') as HTMLFormElement)?.requestSubmit()}
-    on:processingComplete={(ev) => {
-        if (ev.detail.status === 'success') {
-            (document.getElementById('pasteForm') as HTMLFormElement)?.requestSubmit();
-        }
-    }}
+    on:processingComplete={() => {}}
 />
 
 <form id="pasteForm" action="?/addPasted" method="POST" class="hidden" enctype="multipart/form-data" use:enhance={() => {

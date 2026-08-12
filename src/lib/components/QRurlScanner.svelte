@@ -60,28 +60,8 @@
 		if (!url || !isURL(url) || processedUrls.has(url)) return;
 		processedUrls.add(url);
 		
-		const taskId = Math.random().toString(36);
-		dispatch('processingStart', { taskId, message: "Fetching link..." });
-		
-		fetch('/api/analyze-draft-document', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ type: 'url', payload: url })
-		}).then(r => r.json()).then(data => {
-			if (data.success) {
-				const form = document.getElementById("eltForm");
-				const preInput = document.createElement('input');
-				preInput.type = 'hidden';
-				preInput.name = 'preprocessed_docs[]';
-				preInput.value = JSON.stringify({ ...data, type: 'url' });
-				form?.appendChild(preInput);
-				dispatch('processingComplete', { taskId, status: 'success', message: "Link indexed!" });
-			} else {
-				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
-			}
-		}).catch(() => {
-			dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
-		});
+		// Replaced client-side background processing with fire-and-forget server processing
+		dispatch('processingComplete', { taskId: 'instant', status: 'success', message: '' });
 	}
 
     function scannedURL(ev, inputEltName)

@@ -139,60 +139,19 @@
             form.appendChild(textInput);
             clipboardQueue = [...clipboardQueue, { type: 'text', label: `Note: ${textDocumentTitle}` }];
 
-            // Background Process
-			dispatch('processingStart', { taskId, message: "Analyzing note..." });
-			fetch('/api/analyze-draft-document', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ type: 'text', payload: pastedText })
-			}).then(r => r.json()).then(data => {
-				if (data.success) {
-					document.getElementById(`raw_text_${taskId}`)?.remove();
-					const preInput = document.createElement('input');
-					preInput.type = 'hidden';
-					preInput.name = 'preprocessed_docs[]';
-					preInput.value = JSON.stringify({ ...data, type: 'text' });
-					form.appendChild(preInput);
-					dispatch('processingComplete', { taskId, status: 'success', message: "Note analyzed!" });
-				} else {
-					dispatch('processingComplete', { taskId, status: 'error', message: "Failed to analyze note." });
-				}
-			}).catch(() => {
-				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to analyze note." });
-			});
+			dispatch('success', `Added pasted note`);
+			dispatch('processingComplete', { taskId: 'instant', status: 'success', message: '' });
         } else if (pastedType === 'url') {
-            // Background Process
-			const taskId = Math.random().toString(36);
-
             const urlInput = document.createElement('input');
             urlInput.type = 'hidden';
             urlInput.name = 'pasted_urls[]';
-			urlInput.id = `raw_url_${taskId}`;
             urlInput.value = pastedUrl;
             form.appendChild(urlInput);
             
             clipboardQueue = [...clipboardQueue, { type: 'url', label: `URL: ${pastedUrl}` }];
 
-			dispatch('processingStart', { taskId, message: "Fetching link..." });
-			fetch('/api/analyze-draft-document', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ type: 'url', payload: pastedUrl })
-			}).then(r => r.json()).then(data => {
-				if (data.success) {
-					document.getElementById(`raw_url_${taskId}`)?.remove();
-					const preInput = document.createElement('input');
-					preInput.type = 'hidden';
-					preInput.name = 'preprocessed_docs[]';
-					preInput.value = JSON.stringify({ ...data, type: 'url' });
-					form.appendChild(preInput);
-					dispatch('processingComplete', { taskId, status: 'success', message: "Link indexed!" });
-				} else {
-					dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
-				}
-			}).catch(() => {
-				dispatch('processingComplete', { taskId, status: 'error', message: "Failed to fetch link." });
-			});
+			dispatch('success', `Added pasted link`);
+			dispatch('processingComplete', { taskId: 'instant', status: 'success', message: '' });
         }
         
         closeModal();
