@@ -312,22 +312,6 @@
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->      
       <ul class="mt-3 z-[1] p-2 shadow-xl border border-base-200 menu menu-sm dropdown-content bg-base-100 rounded-box w-52" on:click={(e) => { e.currentTarget.closest('details')?.removeAttribute('open'); }}>
-        <li>
-          <a href="/profile" class="between">
-            <i class="bi bi-gear"></i>
-            <span class="btm-nav-label">Profile</span>
-            <span class="badge">New</span>
-          </a>
-        </li>
-
-        <li>
-          <button type="button" class="text-error hover:bg-error/10" on:click={nukeAllCaches} title="Clear all offline data and caches">
-            <i class="bi bi-trash3"></i>
-            <span class="btm-nav-label">Clear Cache</span>
-          </button>
-        </li>
-        <li class="divider my-1 h-[1px] bg-base-300"></li>
-
         {#if $page.data.user}
             <li>
                 <a href="/container" title="Containers">
@@ -347,7 +331,26 @@
                     <span class="btm-nav-label">Settings</span>
                 </a>
             </li>
+
+            <li>
+              <a href="/profile" class="between">
+                <i class="bi bi-gear"></i>
+                <span class="btm-nav-label">Profile</span>
+                <span class="badge">You</span>
+              </a>
+            </li>
         {/if}
+
+        <li class="divider my-1 h-[1px] bg-base-300"></li>
+
+        <li>
+          <button type="button" class="text-error hover:bg-error/10" on:click={nukeAllCaches} title="Clear all offline data and caches">
+            <i class="bi bi-trash3"></i>
+            <span class="btm-nav-label">Clear Cache</span>
+          </button>
+        </li>
+
+        <li class="divider my-1 h-[1px] bg-base-300"></li>
 
         <li>
             {#if !$page.data.user}
