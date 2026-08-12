@@ -114,12 +114,7 @@
         }
     }
 
-    let hamburgerMenu: HTMLDetailsElement;
-    function closeHamburger(e: MouseEvent) {
-      if (hamburgerMenu && hamburgerMenu.hasAttribute('open') && !hamburgerMenu.contains(e.target as Node)) {
-        hamburgerMenu.removeAttribute('open');
-      }
-    }
+    let mobileMenuModal: HTMLDialogElement;
 
 	beforeNavigate(({ type, to, from }) => {
 		console.log(`[DEBUG-LAYOUT] beforeNavigate: from ${from?.url?.pathname} to ${to?.url?.pathname}, type: ${type}`);
@@ -244,7 +239,6 @@
 
 </script>
 
-<svelte:window on:click={closeHamburger} />
 <svelte:head> 
   {#if mounted && webManifest}{@html webManifest}{/if}
   <title>{$pageTitle} | itemLens</title>
@@ -307,72 +301,19 @@
         </span>
       </div>
     {/if}
-    <details bind:this={hamburgerMenu} class="dropdown dropdown-end">
-      <summary class="btn btn-ghost">
-        <div class="w-10 flex justify-center items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
-        </div>
-      </summary>
-      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->      
-      <ul class="mt-3 z-[1] p-2 shadow-xl border border-base-200 menu menu-sm dropdown-content bg-base-100 rounded-box w-52" on:click={(e) => { e.currentTarget.closest('details')?.removeAttribute('open'); }}>
+
+    <button type="button" class="btn btn-ghost btn-circle active:scale-95 transition-transform" on:click={() => mobileMenuModal.showModal()} aria-label="Open Menu">
         {#if $page.data.user}
-            <li>
-                <a href="/container" title="Containers">
-                    <i class="bi bi-box-seam"></i>
-                    <span class="btm-nav-label">Containers</span>
-                </a>
-            </li>
-            <li>
-                <a href="/categories" title="Categories">
-                    <i class="bi bi-tags"></i>
-                    <span class="btm-nav-label">Categories</span>
-                </a>
-            </li>            
-            <li>
-                <a href="/settings" title="Settings">
-                    <i class="bi bi-gear"></i>
-                    <span class="btm-nav-label">Settings</span>
-                </a>
-            </li>
-
-            <li>
-              <a href="/profile" class="between">
-                <i class="bi bi-gear"></i>
-                <span class="btm-nav-label">Profile</span>
-                <span class="badge">You</span>
-              </a>
-            </li>
+            <div class="avatar placeholder">
+                <div class="bg-base-200 text-base-content rounded-full w-9 shadow-sm border border-base-300">
+                    <span class="text-sm font-bold uppercase">{$page.data.user.name.charAt(0)}</span>
+                </div>
+            </div>
+        {:else}
+            <i class="bi bi-three-dots text-2xl"></i>
         {/if}
+    </button>
 
-        <li class="divider my-1 h-[1px] bg-base-300"></li>
-
-        <li>
-          <button type="button" class="text-error hover:bg-error/10" on:click={nukeAllCaches} title="Clear all offline data and caches">
-            <i class="bi bi-trash3"></i>
-            <span class="btm-nav-label">Clear Cache</span>
-          </button>
-        </li>
-
-        <li class="divider my-1 h-[1px] bg-base-300"></li>
-
-        <li>
-            {#if !$page.data.user}
-                <a href="/login" title="Sign In">
-                    <i class="bi bi-box-arrow-in-right"></i>
-                    <span class="btm-nav-label">Log in</span>
-                </a>
-            {:else}
-                <form method="POST" action="/logout" use:enhance>
-                    <button type="submit" title="Sign Out">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span class="p-1 btm-nav-label">Sign out</span>
-                    </button>
-                </form>
-            {/if}
-        </li>
-      </ul>
-    </details>
   </div>
 </div>
 
@@ -404,3 +345,86 @@
   </a>
 
 </div>
+
+<!-- Bottom Sheet Menu -->
+<dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
+        <div class="flex justify-between items-center mb-6 px-2">
+            <h3 class="font-bold text-2xl tracking-tight">Menu</h3>
+            <button type="button" class="btn btn-sm btn-circle btn-ghost bg-base-200/50" on:click={() => mobileMenuModal.close()}>✕</button>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <!-- Group 1: Navigation -->
+            <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm">
+                {#if $page.data.user}
+                    <a href="/container" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
+                            <i class="bi bi-box-seam-fill text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">Containers</div>
+                        <i class="bi bi-chevron-right text-gray-400"></i>
+                    </a>
+
+                    <a href="/categories" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-success/10 text-success flex items-center justify-center shrink-0">
+                            <i class="bi bi-tags-fill text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">Categories</div>
+                        <i class="bi bi-chevron-right text-gray-400"></i>
+                    </a>
+
+                    <div class="h-[1px] bg-base-300 ml-14"></div>
+
+                    <a href="/profile" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <i class="bi bi-person-fill text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">Profile</div>
+                        <span class="badge badge-sm badge-primary">You</span>
+                        <i class="bi bi-chevron-right text-gray-400"></i>
+                    </a>
+
+                    <a href="/settings" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                            <i class="bi bi-gear-fill text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">Settings</div>
+                        <i class="bi bi-chevron-right text-gray-400"></i>
+                    </a>
+                {/if}
+            </div>
+
+            <!-- Group 2: System / Danger Actions -->
+            <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
+                <button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 transition-colors active:bg-error/20 text-left" on:click={() => { nukeAllCaches(); mobileMenuModal.close(); }}>
+                    <div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
+                        <i class="bi bi-trash3-fill text-xl"></i>
+                    </div>
+                    <div class="flex-1 font-semibold text-lg text-error">Clear Offline Cache</div>
+                </button>
+                <div class="h-[1px] bg-base-300 ml-14"></div>
+                {#if !$page.data.user}
+                    <a href="/login" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">
+                            <i class="bi bi-box-arrow-in-right text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">Log in</div>
+                    </a>
+                {:else}
+                    <form method="POST" action="/logout" use:enhance on:submit={() => mobileMenuModal.close()} class="m-0">
+                        <button type="submit" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300 w-full text-left">
+                            <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">
+                                <i class="bi bi-box-arrow-right text-xl"></i>
+                            </div>
+                            <div class="flex-1 font-semibold text-lg">Sign out</div>
+                        </button>
+                    </form>
+                {/if}
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
