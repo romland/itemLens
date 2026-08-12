@@ -16,7 +16,8 @@
 		"services:build": "docker compose -f services/docker-compose.yml up -d --build",
 		"services:up": "docker compose -f services/docker-compose.yml up -d",
 		"services:down": "docker compose -f services/docker-compose.yml down",
-		"services:logs": "docker compose -f services/docker-compose.yml logs -f"
+		"services:logs": "docker compose -f services/docker-compose.yml logs -f",
+        "generate-icons": "node scripts/generate-icons.js"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
