@@ -331,10 +331,16 @@
         {#if $page.data.user}
             <li>
                 <a href="/container" title="Containers">
-                    <i class="bi bi-gear"></i>
+                    <i class="bi bi-box-seam"></i>
                     <span class="btm-nav-label">Containers</span>
                 </a>
             </li>
+            <li>
+                <a href="/categories" title="Categories">
+                    <i class="bi bi-tags"></i>
+                    <span class="btm-nav-label">Categories</span>
+                </a>
+            </li>            
             <li>
                 <a href="/settings" title="Settings">
                     <i class="bi bi-gear"></i>
