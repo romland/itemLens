@@ -119,9 +119,10 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
   return JSON.parse(response.text!);
 }
 
-export async function extractKVPsFromText(text: string): Promise<{kvps: {key: string, value: string}[]}> {
-  const promptText = `Extract key-value pairs (attributes and values) from the following text. It is a messy copy-paste from a PDF or a website.
-Correct obvious formatting issues and re-associate multi-line values to their keys, but preserve the data, numbers, and units accurately.
+export async function extractKVPsFromText(text: string): Promise<{ rows: string[][] }> {
+  const promptText = `Extract tabular data, specifications, or key-value structures from the following messy text. 
+Return the data as a 2D array of strings ('rows'), where each row represents an item or property line, and columns represent distinct data fields (e.g., Attribute, Value, Units, etc.). 
+If it is a simple list of attributes, structure each row with 2 columns: [Attribute, Value].
 
 TEXT:
 ${text}`;
@@ -141,19 +142,15 @@ ${text}`;
       responseSchema: {
         type: 'object',
         properties: {
-          kvps: {
+          rows: {
             type: 'array',
             items: {
-              type: 'object',
-              properties: {
-                key: { type: 'string' },
-                value: { type: 'string' }
-              },
-              required: ['key', 'value']
+              type: 'array',
+              items: { type: 'string' }
             }
           }
         },
-        required: ['kvps']
+        required: ['rows']
       }
     }
   });

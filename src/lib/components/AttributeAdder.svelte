@@ -25,10 +25,16 @@
     let targetIndex = 0;
     let tableModalDialog: HTMLDialogElement;
     let isParsingLLM = false;
+    let selectedRows: boolean[] = [];
 
     $: if (tableModalDialog) {
         if (showTableModal && !tableModalDialog.open) tableModalDialog.showModal();
         if (!showTableModal && tableModalDialog.open) tableModalDialog.close();
+    }
+
+    // Automatically initialize row selection state whenever pendingRows updates
+    $: if (pendingRows.length > 0 && selectedRows.length !== pendingRows.length) {
+        selectedRows = new Array(pendingRows.length).fill(true);
     }
 
     if(values.length) {
@@ -87,7 +93,10 @@
 
     function handleTableConfirm() {
         const pastedKVPs = [];
-        for (const row of pendingRows) {
+        for (let i = 0; i < pendingRows.length; i++) {
+            if (!selectedRows[i]) continue; // Skip unchecked rows
+            
+            const row = pendingRows[i];
             let keyCell = row[keyColIndex] || "";
             let valueCell = row[valColIndex] || "";
             
@@ -154,8 +163,22 @@
                 .then(res => res.json())
                 .then(data => {
                     isParsingLLM = false;
-                    if (data.success && data.kvps && data.kvps.length > 0) {
-                        applyKVPs(data.kvps, ix);
+                    if (data.success && data.rows && data.rows.length > 0) {
+                        let maxCols = 0;
+                        data.rows.forEach((r: string[]) => maxCols = Math.max(maxCols, r.length));
+                        
+                        // Normalize rows so all have same column count
+                        const normalizedRows = data.rows.map((r: string[]) => {
+                            while(r.length < maxCols) r.push("");
+                            return r;
+                        }).filter((r: string[]) => r.join("").trim().length > 0);
+
+                        // Trigger the Column Picker Modal seamlessly!
+                        pendingRows = normalizedRows;
+                        targetIndex = ix;
+                        keyColIndex = 0;
+                        valColIndex = maxCols > 1 ? 1 : 0;
+                        showTableModal = true;
                     } else {
                         alert("Could not automatically parse pasted data.");
                     }
@@ -243,6 +266,20 @@
             <table class="table table-sm table-zebra w-full">
                 <thead class="sticky top-0 bg-base-200 z-10">
                     <tr>
+                        <!-- Master Row Selection Checkbox -->
+                        <th class="w-12 text-center bg-base-200">
+                            <label class="cursor-pointer flex items-center justify-center" title="Toggle All Rows">
+                                <input 
+                                    type="checkbox" 
+                                    class="checkbox checkbox-xs checkbox-primary" 
+                                    checked={selectedRows.length > 0 && selectedRows.every(Boolean)} 
+                                    on:change={(e) => {
+                                        const checked = (e.currentTarget as HTMLInputElement).checked;
+                                        selectedRows = new Array(pendingRows.length).fill(checked);
+                                    }} 
+                                />
+                            </label>
+                        </th>                    
                         {#each pendingRows[0] || [] as _, colIndex}
                             <th class="text-center bg-base-200">
                                 <div class="flex flex-col gap-2 items-center">
@@ -260,8 +297,14 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each pendingRows.slice(0, 10) as row}
+                    <!-- Render all rows inside the scrollable container -->
+                    {#each pendingRows as row, rowIndex}
                         <tr>
+                            <td class="text-center bg-base-200/20">
+                                <label class="cursor-pointer flex items-center justify-center">
+                                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" bind:checked={selectedRows[rowIndex]} />
+                                </label>
+                            </td>
                             {#each row as cell, colIndex}
                                 <td class:bg-primary={keyColIndex === colIndex}
                                     class:bg-secondary={valColIndex === colIndex}
@@ -274,10 +317,7 @@
                 </tbody>
             </table>
         </div>
-        {#if pendingRows.length > 10}
-            <div class="text-xs text-gray-500 mt-2 text-center">Showing first 10 of {pendingRows.length} rows.</div>
-        {/if}
-        
+
         <div class="modal-action">
             <button type="button" class="btn" on:click={() => showTableModal = false}>Cancel</button>
             <button type="button" class="btn btn-primary" on:click={handleTableConfirm}>Import</button>

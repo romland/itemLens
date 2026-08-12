@@ -18,8 +18,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const result = await extractKVPsFromText(text);
         
-        if (result && result.kvps) {
-            return json({ success: true, kvps: result.kvps });
+        if (result && result.rows) {
+            return json({ success: true, rows: result.rows });
         }
         
         return json({ success: false, error: 'LLM failed to parse' });
