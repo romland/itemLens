@@ -1,82 +1,140 @@
 <script lang="ts">
-    import { Html5Qrcode } from 'html5-qrcode'
-    import { onMount } from 'svelte'
-    import { createEventDispatcher } from 'svelte'
+    import jsQR from 'jsqr';
+    import { onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
 
-    let scanning = true;
+    let scanning = false;
     let showingError: { message: any } | null = null;
     let scanSuccessResult: string | null = null;
     let isProcessing = false;
     let modal: HTMLDialogElement;
-    var html5Qrcode;
+
+    let videoElement: HTMLVideoElement;
+    let canvasElement: HTMLCanvasElement;
+    let stream: MediaStream | null = null;
+    let scanFrameId: number;
+
     const dispatch = createEventDispatcher();
-    export let validator = null;
-    export let title = "Scan QR-code"
+    export let validator: any = null;
+    export let title = "Scan QR-code";
 
-    onMount(init)
+    onMount(init);
 
-    function init()
-    {
+    function init() {
         if (typeof window !== 'undefined') {
-            html5Qrcode = new Html5Qrcode('reader');
-            console.log("Initialized QR reader");
             start();
         }
     }
 
-    function start()
-    {
+    // Called by the parent component or button click
+    export async function start() {
         scanSuccessResult = null;
         isProcessing = false;
+        showingError = null;
         modal.showModal();
-        html5Qrcode.start(
-            { facingMode: 'environment' },
-            {
-                fps: 30,
-                qrbox: { width: 250, height: 250 },
-                showTorchButtonIfSupported: true,
-                // aspectRatio: "1.0",
-            },
-            onScanSuccess,
-            onScanFailure
-        )
-        scanning = true;
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            
+            // 1. Hardware-level Focus/Zoom
+            const track = stream.getVideoTracks()[0];
+            const caps = track.getCapabilities() as any;
+            if (caps.zoom) {
+                const zoomLvl = Math.max(caps.zoom.min, Math.min(caps.zoom.max, 2.0));
+                await track.applyConstraints({ advanced: [{ zoom: zoomLvl }] }).catch(() => {});
+            }
+
+            videoElement.srcObject = stream;
+            await videoElement.play();
+            scanning = true;
+            scanLoop();
+        } catch (e) {
+            showingError = { message: "Camera access denied or unavailable." };
+        }
     }
 
-    async function stop()
-    {
+    export function stop() {
         if (!scanning) return;
-        try {
-            if (html5Qrcode && html5Qrcode.isScanning) {
-                await html5Qrcode.stop();
-            }
-        } catch(e) { console.warn(e); }
         scanning = false;
         scanSuccessResult = null;
         isProcessing = false;
+        cancelAnimationFrame(scanFrameId);
+        
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        if (videoElement) videoElement.srcObject = null;
+        
         modal.close();
-        dispatch('stop', { });
+        dispatch('stop', {});
     }
 
-    function onScanSuccess(decodedText, decodedResult)
-    {
+    async function scanLoop() {
+        if (!scanning || isProcessing) return;
+
+        if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+            try {
+                let decodedText = null;
+
+                // Tier 1: Apple/Google Native BarcodeDetector (Zero JS processing cost)
+                if ('BarcodeDetector' in window) {
+                    // @ts-ignore
+                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    const barcodes = await detector.detect(videoElement);
+                    if (barcodes.length > 0) decodedText = barcodes[0].rawValue;
+                } 
+                // Tier 2: Highly Optimized jsQR Fallback
+                else if (canvasElement) {
+                    const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
+                    if (ctx) {
+                        // Only grab the center 60% of the video to process
+                        const size = Math.min(videoElement.videoWidth, videoElement.videoHeight) * 0.6;
+                        const sX = (videoElement.videoWidth - size) / 2;
+                        const sY = (videoElement.videoHeight - size) / 2;
+                        
+                        canvasElement.width = size;
+                        canvasElement.height = size;
+                        ctx.drawImage(videoElement, sX, sY, size, size, 0, 0, size, size);
+                        const imgData = ctx.getImageData(0, 0, size, size);
+                        
+                        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+                        if (code) decodedText = code.data;
+                    }
+                }
+
+                if (decodedText) {
+                    onScanSuccess(decodedText);
+                    return;
+                }
+            } catch (e) {
+                // Ignore errors during scan frame
+            }
+        }
+        scanFrameId = requestAnimationFrame(scanLoop);
+    }
+
+    function onScanSuccess(decodedText: string) {
         if (isProcessing) return;
         isProcessing = true;
 
         let allowed: any = true;
 
-        if(validator) {
+        if (validator) {
             allowed = validator(decodedText);
         }
 
-        if(allowed !== true) {
-            if(showingError) {
+        if (allowed !== true) {
+            if (showingError) {
                 isProcessing = false;
+                scanFrameId = requestAnimationFrame(scanLoop);
                 return;
             }
 
             showingError = { message: allowed };
-            setTimeout(() => { showingError = null; isProcessing = false; }, 3000);
+            setTimeout(() => { showingError = null; isProcessing = false; scanFrameId = requestAnimationFrame(scanLoop); }, 3000);
             if (navigator.vibrate) navigator.vibrate([50, 100, 50]); // Error haptic
             return;
         }
@@ -85,19 +143,13 @@
         scanSuccessResult = decodedText;
         if (navigator.vibrate) navigator.vibrate(150); // Success haptic
         
-        try { html5Qrcode.pause(); } catch(e) {}
+        if (videoElement) videoElement.pause();
 
         setTimeout(() => {
             stop();
             dispatch('scan', decodedText);
         }, 1200); // Wait for animation to finish
     }
-
-    function onScanFailure(error)
-    {
-        console.warn(`Code scan error = ${error}`);
-    }
-
 </script>
 
 <style>
@@ -123,21 +175,17 @@
         0% { transform: scale(0.5); opacity: 0; }
         100% { transform: scale(1); opacity: 1; }
     }
-    /* Hide html5-qrcode's ugly default border/UI quirks if possible */
-    :global(#reader video) {
-        border-radius: 1.5rem !important;
-        object-fit: cover;
-    }
 </style>
 
-<dialog bind:this={modal} on:close={()=>stop()} id="modal" class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+<dialog bind:this={modal} on:close={() => stop()} id="modal" class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
   <div class="modal-box sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
     <div class="flex justify-between items-center mb-4 px-2">
       <h3 class="font-bold text-xl tracking-tight">{title}</h3>
       <button type="button" class="btn btn-sm btn-circle btn-ghost bg-base-200/50" on:click={stop}>✕</button>
     </div>
 
-    <main class="relative w-full rounded-3xl overflow-hidden bg-black shadow-inner aspect-[4/5] sm:aspect-square flex items-center justify-center">
+    <main class="relative w-full rounded-3xl overflow-hidden bg-black shadow-inner aspect-[4/5] sm:aspect-square flex items-center justify-center isolate">
+        
         {#if showingError !== null}
             <div class="absolute top-4 left-4 right-4 z-50 animate-fade-in">
                 <div class="alert alert-error shadow-lg rounded-2xl text-white text-sm py-2 bg-error/90 backdrop-blur-md border-none">
@@ -146,8 +194,15 @@
                 </div>
             </div>
         {/if}
-    
-        <reader id="reader" class="w-full h-full object-cover"></reader>
+        
+        <div class="w-full h-full relative flex items-center justify-center">
+            <!-- playsinline is critical for iOS Safari -->
+            <video bind:this={videoElement} class="w-full h-full object-cover rounded-3xl" autoplay playsinline muted></video>
+            <canvas bind:this={canvasElement} class="hidden"></canvas>
+            
+            <!-- Center framing guide -->
+            <div class="absolute w-3/5 aspect-square border-2 border-primary/40 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] z-0 pointer-events-none transition-all duration-300 {scanSuccessResult ? 'border-success scale-105 shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]' : ''}"></div>
+        </div>
 
         {#if scanning && !scanSuccessResult}
             <div class="absolute inset-0 z-10 pointer-events-none">
@@ -166,7 +221,6 @@
         {/if}
     </main>
   </div>
-
   <div class="modal-backdrop">
     <button type="button" on:click={stop}>close</button>
   </div>

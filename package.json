@@ -17,7 +17,7 @@
 		"services:up": "docker compose -f services/docker-compose.yml up -d",
 		"services:down": "docker compose -f services/docker-compose.yml down",
 		"services:logs": "docker compose -f services/docker-compose.yml logs -f",
-        "generate-icons": "node scripts/generate-icons.js"
+		"generate-icons": "node scripts/generate-icons.js"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
@@ -66,7 +66,6 @@
 		"dompurify": "^3.0.9",
 		"form-data": "^4.0.0",
 		"groq-sdk": "^0.3.2",
-		"html5-qrcode": "^2.3.8",
 		"image-thumbnail": "^1.0.15",
 		"jsdom": "^25.0.0",
 		"jsqr": "^1.4.0",

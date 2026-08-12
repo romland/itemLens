@@ -105,6 +105,12 @@
         const urlRegExp = /^(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:\/[^\s]*)?$/i;
         return urlRegExp.test(url);
     }
+
+    function removeScannedUrl(urlToRemove) {
+        if (confirm(`Remove URL "${urlToRemove}"?`)) {
+            addedURLs = addedURLs.filter(u => u !== urlToRemove);
+        }
+    }    
 </script>
 
 <div class="flex flex-col w-full">
@@ -157,9 +163,9 @@
                             <span class="text-sm text-gray-500 block mb-2">Ready to fetch:</span>
                             <div class="flex flex-wrap gap-2 justify-center">
                                 {#each addedURLs as url}
-                                    <div class="badge badge-primary badge-outline gap-1 p-3">
-                                        <i class="bi bi-link"></i> {url}
-                                    </div>
+                                    <button type="button" class="badge badge-primary badge-outline gap-1 p-3 hover:bg-error hover:border-error hover:text-error-content transition-colors cursor-pointer text-left" on:click={() => removeScannedUrl(url)} title="Remove URL">
+                                        <i class="bi bi-link"></i> <span class="truncate max-w-[200px]">{url}</span> <i class="bi bi-x ml-1 opacity-70 text-lg leading-none -mr-1"></i>
+                                    </button>
                                 {/each}
                             </div>
                         </div>

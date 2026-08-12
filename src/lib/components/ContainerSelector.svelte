@@ -81,6 +81,13 @@
             dispatch("success", `Added container: ${ev.detail}`);
         }
     }
+
+    function removeScannedContainer(containerToRemove) {
+        if (confirm(`Remove container "${containerToRemove}"?`)) {
+            addedContainers = addedContainers.filter(c => c !== containerToRemove);
+            dispatch("success", `Removed container: ${containerToRemove}`);
+        }
+    }    
 </script>
 
 <div class="flex flex-col w-full">
@@ -132,9 +139,9 @@
                     <span class="text-sm text-gray-500 block mb-2">Located in:</span>
                     <div class="flex flex-wrap gap-2 justify-center">
                         {#each addedContainers as container}
-                            <div class="badge badge-primary badge-outline gap-1 p-3 font-mono">
-                                <i class="bi bi-box"></i> {container}
-                            </div>
+                            <button type="button" class="badge badge-primary badge-outline gap-1 p-3 font-mono hover:bg-error hover:border-error hover:text-error-content transition-colors cursor-pointer" on:click={() => removeScannedContainer(container)} title="Remove {container}">
+                                <i class="bi bi-box"></i> {container} <i class="bi bi-x ml-1 opacity-70 text-lg leading-none -mr-1"></i>
+                            </button>
                         {/each}
                     </div>
                 </div>
