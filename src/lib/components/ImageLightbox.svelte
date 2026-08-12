@@ -41,6 +41,7 @@
         scaleVal = 1;
         translateX = 0;
         translateY = 0;
+        rotation = 0;
         isDragging = false;
         initialPinchDistance = null;
     }
@@ -107,6 +108,11 @@
         showOriginal = !showOriginal;
     }
 
+    // Rotation State
+    let rotation = 0;
+    function rotateLeft() { rotation -= 90; }
+    function rotateRight() { rotation += 90; }
+
     $: ai = photo?.llmAnalysis ? JSON.parse(photo.llmAnalysis) : null;
     $: cols = photo?.colors && photo.colors.length > 2 ? Object.keys(JSON.parse(photo.colors)) : [];
     $: colNames = photo?.colors && photo.colors.length > 2 ? Object.values(JSON.parse(photo.colors)) : [];
@@ -167,14 +173,19 @@
             on:touchend={endDrag}
             on:dblclick={() => { scaleVal = scaleVal > 1 ? 1 : 2.5; translateX = 0; translateY = 0; }}
         >
-            <img 
-                src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
-                alt="Product preview" 
-                class="object-contain max-w-full max-h-full origin-center select-none shadow-2xl"
+            <div 
+                class="w-full h-full flex items-center justify-center origin-center"
                 style="transform: translate({translateX}px, {translateY}px) scale({scaleVal}); will-change: transform;"
-                draggable="false"
                 in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
-            />
+            >
+                <img 
+                    src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
+                    alt="Product preview" 
+                    class="object-contain max-w-full max-h-full origin-center select-none shadow-2xl transition-transform duration-300 ease-out"
+                    style="transform: rotate({rotation}deg);"
+                    draggable="false"
+                />
+            </div>
         </div>
 
         <!-- Footer (Controls & Swatches) -->
@@ -215,11 +226,16 @@
                     </div>
                 {/if}
 
-                <!-- Zoom Controls (Desktop fallback) -->
-                <div class="hidden sm:flex items-center gap-1 px-2 text-white/80">
-                    <button class="btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { scaleVal = Math.max(1, scaleVal - 0.5); if(scaleVal===1){translateX=0; translateY=0;} }}><i class="bi bi-zoom-out"></i></button>
-                    <button class="btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={resetZoom}><i class="bi bi-arrows-collapse"></i></button>
-                    <button class="btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal = Math.min(5, scaleVal + 0.5)}><i class="bi bi-zoom-in"></i></button>
+                <!-- Tools (Rotate & Zoom) -->
+                <div class="flex items-center gap-1 px-2 text-white/80">
+                    <button class="btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={rotateLeft} aria-label="Rotate Left"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    <button class="btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={rotateRight} aria-label="Rotate Right"><i class="bi bi-arrow-clockwise"></i></button>
+                    
+                    <div class="w-px h-4 bg-white/20 mx-1 hidden sm:block"></div>
+                    
+                    <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { scaleVal = Math.max(1, scaleVal - 0.5); if(scaleVal===1){translateX=0; translateY=0;} }} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+                    <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={resetZoom} aria-label="Reset"><i class="bi bi-arrows-collapse"></i></button>
+                    <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal = Math.min(5, scaleVal + 0.5)} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
                 </div>
             </div>
         </div>
