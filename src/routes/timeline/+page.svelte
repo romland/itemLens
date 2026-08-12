@@ -47,14 +47,14 @@
 />
 
 <div class="flex flex-col h-full max-w-2xl mx-auto pb-32 box-border overflow-x-hidden">
-    <div class="flex justify-center pt-4 px-2">
-        <div class="tabs tabs-boxed bg-base-200/50">
-            <a href="/timeline?category=all" class="tab {data.currentCategory === 'all' ? 'tab-active' : ''}">All</a>
-            <a href="/timeline?category=idea" class="tab {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
-            <a href="/timeline?category=todo" class="tab {data.currentCategory === 'todo' ? 'tab-active' : ''}">Todo</a>
-            <a href="/timeline?category=to buy" class="tab {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
-            <a href="/timeline?category=archive" class="tab {data.currentCategory === 'archive' ? 'tab-active' : ''}">Archive</a>
-            <a href="/timeline?category=other" class="tab {data.currentCategory === 'other' ? 'tab-active' : ''}">Other</a>
+    <div class="flex justify-start sm:justify-center pt-4 px-2 w-full overflow-hidden">
+        <div class="tabs tabs-boxed bg-base-200/50 flex-nowrap overflow-x-auto hide-scrollbar w-full sm:w-auto">
+            <a href="/timeline?category=all" class="tab whitespace-nowrap {data.currentCategory === 'all' ? 'tab-active' : ''}">All</a>
+            <a href="/timeline?category=idea" class="tab whitespace-nowrap {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
+            <a href="/timeline?category=todo" class="tab whitespace-nowrap {data.currentCategory === 'todo' ? 'tab-active' : ''}">Todo</a>
+            <a href="/timeline?category=to buy" class="tab whitespace-nowrap {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
+            <a href="/timeline?category=archive" class="tab whitespace-nowrap {data.currentCategory === 'archive' ? 'tab-active' : ''}">Archive</a>
+            <a href="/timeline?category=other" class="tab whitespace-nowrap {data.currentCategory === 'other' ? 'tab-active' : ''}">Other</a>
         </div>
     </div>
 

@@ -224,12 +224,29 @@
         Full: {fullScreen}
     </div>
     */
+
+    let themeColor = "";
+    onMount(() => {
+        const updateThemeColor = () => {
+            const bodyBg = getComputedStyle(document.body).backgroundColor;
+            if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)') {
+                themeColor = bodyBg;
+            }
+        };
+        updateThemeColor();
+        const observer = new MutationObserver(updateThemeColor);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    });
+
 </script>
 
 <svelte:window on:click={closeHamburger} />
 <svelte:head> 
   {#if mounted && webManifest}{@html webManifest}{/if}
   <title>{$pageTitle} | itemLens</title>
+  {#if themeColor}
+      <meta name="theme-color" content={themeColor} />
+  {/if}
 </svelte:head>
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">

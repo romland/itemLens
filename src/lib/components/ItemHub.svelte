@@ -515,17 +515,6 @@
     </div>
 </div>
 
-<style>
-    /* Utility class for hiding scrollbars on the filmstrip */
-    .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    .hide-scrollbar {
-        -ms-overflow-style: none; 
-        scrollbar-width: none; 
-    }
-</style>
-
 <!-- The Bottom Drawer for AI Refinement -->
 <dialog bind:this={aiDialog} class="modal modal-top sm:modal-middle" on:close={() => showAiDrawer = false}>
     <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
