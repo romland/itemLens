@@ -116,21 +116,38 @@ $:  if(!done && invoicePhotos.length > 0) {
 
 <article style="padding-bottom: 100px;" class="">
 
-    <div class="flex justify-between items-center border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold flex items-center gap-3">
-            <span class="text-2xl">{data.item?.title}</span>
-            <a href="https://www.google.com/search?q={encodeURIComponent(data.item?.title)}" target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-xs btn-ghost text-gray-400 hover:text-primary transition-colors shadow-sm bg-base-200/50" title="Search Google for {data.item?.title}">
-                <i class="bi bi-google text-sm"></i>
-            </a>
-        </div>
-        <div class="inline-flex gap-4 items-center">
+    <div class="flex justify-between items-start gap-4 border-b border-base-200/60 pb-4 mb-4 mt-2">
+        <h1 class="text-3xl sm:text-4xl font-bold text-base-content break-words leading-tight tracking-tight flex-1">
+            {data.item?.title}
+        </h1>
+        <div class="inline-flex gap-2 items-center shrink-0 pt-1">
             {#if isSavingPasted}
                 <span class="loading loading-spinner loading-sm text-primary"></span>
             {/if}
-            <a href="/{data.item?.id}/edit" title="Edit item" class="btn btn-circle btn-ghost bg-base-200 shadow-sm text-gray-500 hover:text-primary">
-                <i class="bi bi-pencil-square text-xl"></i>
-            </a>
-            <Delete message='Delete this item?' action='/{data.item?.id}/delete' btnClass="btn btn-circle btn-ghost bg-base-200 shadow-sm text-gray-500 hover:text-error" iconClass="bi bi-trash text-xl" />
+            <div class="dropdown dropdown-end">
+                <button tabindex="0" class="btn btn-circle btn-ghost bg-base-200/50 border-base-300 shadow-sm text-gray-500 hover:text-primary transition-all active:scale-95" aria-label="Item Options">
+                    <i class="bi bi-three-dots text-xl"></i>
+                </button>
+                <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200 mt-2 gap-1">
+                    <li>
+                        <a href="/{data.item?.id}/edit" class="font-medium text-base-content hover:text-primary">
+                            <i class="bi bi-pencil-square text-lg opacity-70"></i> Edit
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.google.com/search?q={encodeURIComponent(data.item?.title)}" target="_blank" rel="noopener noreferrer" class="font-medium text-base-content hover:text-primary">
+                            <i class="bi bi-google text-lg opacity-70"></i> Search
+                        </a>
+                    </li>
+                    <li class="divider my-0 h-[1px] bg-base-200"></li>
+                    <li>
+                        <div class="p-0 hover:bg-transparent block">
+                            <!-- CSS injects the word "Delete" so we don't have to break the Delete component's isolation -->
+                            <Delete message='Delete this item?' action='/{data.item?.id}/delete' btnClass="menu-delete-btn btn btn-ghost w-full justify-start text-error hover:bg-error/10 hover:text-error px-4 py-2 h-auto min-h-0 rounded-lg font-medium" iconClass="bi bi-trash text-lg opacity-70" />
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -502,3 +519,10 @@ $:  if(!done && invoicePhotos.length > 0) {
     <button>close</button>
   </form>
 </dialog>
+
+<style>
+    :global(.menu-delete-btn::after) {
+        content: "Delete";
+        margin-left: 0.75rem;
+    }
+</style>
