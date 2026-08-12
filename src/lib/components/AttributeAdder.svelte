@@ -2,6 +2,10 @@
     import { onMount } from 'svelte'
     import { tick }  from 'svelte';
 
+    import { createEventDispatcher } from 'svelte';
+
+    const dispatch = createEventDispatcher();
+
 /*
     WARNING:
     You can not yet put several attribute-adders on the same page as it will all be messed
@@ -44,6 +48,7 @@
     function addKVP(ev: Event)
     {
         numKVPs = numKVPs + 1;
+        dispatch('change');
         // No idea why tick() does not work, cba to read up on it atm. Doing this:
         setTimeout(() => {
             (document.querySelector('input[name="kvpK-' + (numKVPs-1) + '"]') as HTMLElement | null)?.focus();
@@ -56,6 +61,7 @@
             ev.target.parentNode.remove("kvpK-"+ix);
             ev.target.parentNode.remove("kvpV-"+ix);
             numKVPs = numKVPs;
+            dispatch('change');
         }
     }
 
@@ -73,6 +79,7 @@
                 if (kInput) kInput.value = pastedKVPs[i].key;
                 if (vInput) vInput.value = pastedKVPs[i].value;
             }
+            dispatch('change');
         }, 10);
     }
 

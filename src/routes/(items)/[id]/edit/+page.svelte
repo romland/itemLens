@@ -75,7 +75,7 @@
     </div>
 {/if}
 
-<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit}>
+<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
     <input type="hidden" name="id" value={data.item?.id}>
     <ItemHub 
         item={data.item}

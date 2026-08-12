@@ -502,8 +502,8 @@
 
                 <div class="form-control w-full">
                     <div class="label"><span class="label-text font-semibold">Attributes</span></div>
-                    <div class="bg-base-200/50 p-3 rounded-xl border border-base-200">
-                        <AttributeAdder values={item?.attributes || []} />
+                    <div class="bg-base-200/50 p-3 rounded-xl border border-base-200" on:input={() => isDirty = true}>
+                        <AttributeAdder values={item?.attributes || []} on:change={() => isDirty = true} />
                     </div>
                 </div>
             </div>
