@@ -78,7 +78,10 @@ export default defineConfig({
 			},
 			workbox: {
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
+                navigateFallback: null, // CRITICAL: Stop SW from serving poisoned HTML shells on Ctrl+R
 				cleanupOutdatedCaches: true,
+                skipWaiting: true,      // Kills the old Service Worker instantly on update
+                clientsClaim: true,     // Takes control of the open tab immediately
 				runtimeCaching: [
 					{
 						// Cache API calls and __data.json with NetworkFirst.
@@ -108,7 +111,7 @@ export default defineConfig({
 				enabled: true,
 				suppressWarnings: process.env.SUPPRESS_WARNING === 'true',
 				type: 'module',
-                navigateFallback: '/',
+                // navigateFallback: '/',
 			},
 			// if you have shared info in svelte config file put in a separate module and use it also here
 			kit: {

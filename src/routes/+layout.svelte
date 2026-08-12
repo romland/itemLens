@@ -31,9 +31,10 @@
 
         const connectSync = () => {
             if (evtSource) return;
+            console.log("[DEBUG-CACHE] 🔌 Attempting to connect SSE...");
             evtSource = new EventSource('/api/events');
             evtSource.onmessage = () => {
-        				console.log("[DEBUG-LAYOUT] Remote database change detected. Firing sync event.");
+                console.log("[DEBUG-CACHE] 🔔 SSE Event received! DB mutated. Firing app-sync & invalidateAll().");
 
                 window.dispatchEvent(new CustomEvent('app-sync'));
 
@@ -54,10 +55,13 @@
             
             // Aggressive battery saving: Kill connection when app goes to background.
             document.addEventListener('visibilitychange', () => {
+                console.log(`[DEBUG-CACHE] 👁️ Visibility changed: ${document.visibilityState} | Network Online: ${navigator.onLine}`);
                 if (document.visibilityState === 'visible') {
+                    console.log(`[DEBUG-CACHE] 🚀 Waking up! Triggering connectSync & invalidateAll()...`);
                     connectSync();
                     invalidateAll(); // Fetch fresh data to catch up on what we missed while asleep
                 } else {
+                    console.log(`[DEBUG-CACHE] 💤 Going to sleep. Disconnecting SSE.`);
                     disconnectSync();
                 }
             });

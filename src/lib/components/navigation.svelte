@@ -18,6 +18,7 @@
     // This allows the browser to perfectly restore the Y-axis scroll position instantly.
 	$: cacheKey = `nav-cache-${href}`;
     if (browser && typeof sessionStorage !== 'undefined') {
+        console.log(`[DEBUG-SCROLL] 🛑 component init. Reading cache for: ${cacheKey}`);
         const cached = sessionStorage.getItem(`nav-cache-${href}`);
         if (cached) {
             try {
@@ -25,13 +26,13 @@
                 loadedPages = parsed.loadedPages || [];
                 nextPage = parsed.nextPage || 1;
                 reachedEnd = parsed.reachedEnd || false;
-                console.log(`[DEBUG-NAV] Synchronously initialized ${loadedPages.length} pages from cache.`);
-            } catch (e) {}
+                console.log(`[DEBUG-SCROLL] ✅ Synchronously restored ${loadedPages.length} pages. (This enables scroll restore)`);
+            } catch (e) { console.warn("Was a silenced exception", e); }
         }
     }
 
     const handleSync = async () => {
-		console.log("[DEBUG-NAV] handleSync received. Refreshing appended pages seamlessly to guarantee no old items!");
+        console.log(`[DEBUG-CACHE] 🔄 handleSync() triggered! Loaded pages to background-refresh: ${loadedPages.length}`);
         if (loadedPages.length === 0) return;
         
         let h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
@@ -39,33 +40,34 @@
             const p = i + 2; // SvelteKit natively handles page 1, so loadedPages[0] is page 2
             const url = `${h}c=10&page=${p}`;
             try {
-                console.log(`[DEBUG-NAV] Background refreshing page ${p} via ${url}`);
+                console.log(`[DEBUG-CACHE] 📡 Fetching fresh data for page ${p}: ${url}`);
                 const res = await fetch(url, { cache: 'no-store' });
                 const data = await res.json();
                 if (data && data.items) {
+                    console.log(`[DEBUG-CACHE] 🟢 Successfully received ${data.items.length} fresh items for page ${p}. Injecting to DOM.`);
                     loadedPages[i] = data.items;
                 }
             } catch (e) {
-                console.error(`[DEBUG-NAV] Failed to refresh page ${p}:`, e);
+                console.error(`[DEBUG-CACHE] 🔴 Failed to refresh page ${p}:`, e);
             }
         }
         // Re-assign to trigger Svelte reactivity
         loadedPages = [...loadedPages];
-        console.log("[DEBUG-NAV] Background refresh complete.");
+        console.log("[DEBUG-CACHE] ✨ Background refresh loop complete.");
 	};
 
 	beforeNavigate((nav) => {
-		console.log(`[DEBUG-NAV] beforeNavigate type: ${nav.type}`);
+        console.log(`[DEBUG-SCROLL] 🧭 beforeNavigate fired. Type: ${nav.type}, To: ${nav.to?.url?.pathname}`);
 		
 		// CRITICAL FIX: If the user is hard-reloading (Ctrl+R) or closing the tab, BURN the cache.
 		// NEVER save stale data on a reload.
 		if (nav.type === 'leave') {
-			console.log("[DEBUG-NAV] Hard reload detected! Nuking cache for a completely fresh start.");
+            console.log("[DEBUG-SCROLL] 💥 'leave' detected (Hard reload/Tab close). Nuking sessionStorage!");
 			sessionStorage.removeItem(cacheKey);
 			return;
 		}
 
-		console.log(`[DEBUG-NAV] Saving cache: ${loadedPages.length} appended pages.`);
+        console.log(`[DEBUG-SCROLL] 💾 Saving cache to sessionStorage: ${loadedPages.length} pages.`);
 
         if (typeof sessionStorage !== 'undefined') {
             sessionStorage.setItem(cacheKey, JSON.stringify({
@@ -112,6 +114,7 @@
     }
     
     onMount(async () => {
+        console.log("[DEBUG-SCROLL] 🏔️ onMount fired. Setting up sync listeners.");
 		window.addEventListener('app-sync', handleSync);
 
 		// Run the seamless sync instantly on mount.
