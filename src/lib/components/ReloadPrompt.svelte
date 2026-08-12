@@ -39,7 +39,7 @@
 			{/if}
 		-->
             <span>
-                New content available, click reload to update.
+                New content available.
             </span>
 		</div>
 		{#if $needRefresh}
