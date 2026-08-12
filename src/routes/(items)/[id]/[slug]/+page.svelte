@@ -6,14 +6,14 @@
     import { marked } from "marked";
     import { enhance } from "$app/forms";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
+    import ImageLightbox from "$lib/components/ImageLightbox.svelte";
 
     export let data: PageServerData;
     
     let productPhotos = [], invoicePhotos = [], otherPhotos = [];
     let photoAttributes = [];
-    let currentLightboxImage = null;
     let isSavingPasted = false;
-    let lightboxModal: HTMLDialogElement;
+    let lightbox: ImageLightbox;
     let isProcessingItem = false;
 
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
@@ -162,7 +162,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
     <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
         <div class="w-full md:w-2/3 pl-2">
             {#if productPhotos?.length > 0}
-                <div class="carousel carousel-center max-w-md p-4 space-x-4 rounded-box max-h-80 bg-gradient-to-br from-primary/10 via-base-200 to-base-300 shadow-inner border border-base-300/50">
+                <div class="carousel carousel-center w-full max-w-md p-4 space-x-4 rounded-box max-h-80 bg-gradient-to-br from-primary/10 via-base-200 to-base-300 shadow-inner border border-base-300/50">
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
@@ -173,22 +173,22 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                                         <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'}"></i>
                                     </button>
                                 </form>                            
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => lightbox.open(productPhotos[i])}>
                                     <img 
                                         src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}"
                                         class="object-scale-down max-h-full max-w-full">
                                 </button>
                             {:else}
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => { currentLightboxImage = productPhotos[i]; lightboxModal.showModal(); }}>
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => lightbox.open(productPhotos[i])}>
                                     <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
                                 </button>
                             {/if}
                         </div> 
                     {/each}
                 </div>
-                <div class="flex justify-start w-full py-2 gap-1">
+                <div class="flex justify-start w-full py-2 gap-2 overflow-x-auto hide-scrollbar">
                     {#each productPhotos as photo, i}
-                        <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn ">
+                        <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn shrink-0">
                             <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                         </button>
                     {/each}
@@ -358,9 +358,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                 More information
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3 flex flex-wrap gap-3">
                 {#each otherPhotos as photo}
-                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = photo; lightboxModal.showModal(); }}>
+                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => lightbox.open(photo)}>
                         <img 
                             src="{photo.thumbPath || photo.orgPath}"
                             alt="Additional detail view"
@@ -404,9 +404,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                 Purchase Information
             </div>
 
-            <div class="justify-between items-center w-full">
+            <div class="flex flex-wrap gap-3 items-center w-full">
                 {#each invoicePhotos as photo}
-                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => { currentLightboxImage = photo; lightboxModal.showModal(); }}>
+                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => lightbox.open(photo)}>
                         <img
                             src="{photo.orgPath}"
                             alt="Invoice attachment"
@@ -421,18 +421,20 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
         <div class="title font-bold">
             Colors in product photos
         </div>
-        {#each productPhotos as photo}
-            {#if photo.colors?.length > 2}
-                {@const cols=Object.keys(JSON.parse(photo.colors))}
-                {@const names=Object.values(JSON.parse(photo.colors))}
-                {#each cols as col, i}
-                    <div class="tooltip m-1 shadow text-xs items-center text-center p-1" data-tip="{names[i]} ({col})">
-                        <div class="w-10 h-10" style="background-color:{col}">
+        <div class="flex flex-wrap gap-2 mt-2">
+            {#each productPhotos as photo}
+                {#if photo.colors?.length > 2}
+                    {@const cols=Object.keys(JSON.parse(photo.colors))}
+                    {@const names=Object.values(JSON.parse(photo.colors))}
+                    {#each cols as col, i}
+                        <div class="tooltip shadow text-xs items-center text-center rounded" data-tip="{names[i]} ({col})">
+                            <div class="w-8 h-8 rounded border border-base-200/50" style="background-color:{col}">
+                            </div>
                         </div>
-                    </div>
-                {/each}
-            {/if}
-        {/each}
+                    {/each}
+                {/if}
+            {/each}
+        </div>
     </div>
 
     <!-- Background Activity Log -->
@@ -461,60 +463,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
             {/if}
         </div>
     </div>
-
 </article>
 
-
-<dialog bind:this={lightboxModal} id="lightboxModal" class="modal">
-  <div class="modal-box max-w-none w-8/10">
-    <form method="dialog">
-      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-    </form>
-
-    {#if currentLightboxImage}
-        {@const ai = currentLightboxImage.llmAnalysis ? JSON.parse(currentLightboxImage.llmAnalysis) : null}
-        <h3 class="font-bold text-lg">
-            {ai?.description || data.item.title}
-            <span class="text-xs">
-                <a href="{currentLightboxImage.orgPath}" target="_blank">-- Show original</a>
-            </span>
-    
-        </h3>
-        <p class="py-4 text-center ">
-            {#if currentLightboxImage.cropPath && currentLightboxImage.type === "product"}
-                <img src="{currentLightboxImage.cropPath}" alt="Enlarged view" class="object-scale-down h-full w-full"/>
-            {:else}
-                <img src="{currentLightboxImage.orgPath}" alt="Enlarged view" class="object-scale-down h-full w-full"/>
-            {/if}
-            <span class="text-xs">
-                Tap x, press ESC key or click outside to close.
-            </span>
-        </p>
-
-        <span class="text-xs">
-            Type: {currentLightboxImage.type},
-            Category: <span class="badge badge-sm badge-ghost">{ai?.subCategory || 'Unknown'}</span>
-        </span>
-        <br/>
-        {#if currentLightboxImage.colors?.length > 2}
-            {@const cols=Object.keys(JSON.parse(currentLightboxImage.colors))}
-            {@const colNames=Object.values(JSON.parse(currentLightboxImage.colors))}
-            {#each cols as col, i}
-                <div class="tooltip m-1 shadow text-xs items-center text-center p-1" data-tip="{colNames[i]} ({col})">
-                    <div class="w-10 h-10" style="background-color:{col}">
-                    </div>
-                    <!--{colNames[i]}-->
-                </div>
-            {/each}
-            <br/>
-        {/if}
-    {/if}
-
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
+<ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} />
 
 <style>
     :global(.menu-delete-btn::after) {
