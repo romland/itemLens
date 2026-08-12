@@ -1,5 +1,5 @@
 import { db } from '$lib/server/database';
-import { redirect } from '@sveltejs/kit';
+import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load = (async ({ locals }) => {
@@ -18,6 +18,22 @@ export const load = (async ({ locals }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
+    create: async ({ request }) => {
+        const data = await request.formData();
+        const rawName = data.get('name')?.toString();
+        
+        if (!rawName || !rawName.trim()) {
+            return fail(400, { message: 'Category name is required.' });
+        }
+        
+        const name = rawName.trim().toLowerCase();
+
+        await db.category.upsert({
+            where: { name },
+            update: {},
+            create: { name }
+        });
+    },
     delete: async ({ request }) => {
         const data = await request.formData();
         const id = Number(data.get('id'));

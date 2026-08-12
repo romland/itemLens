@@ -16,6 +16,10 @@
     let confirmModal: HTMLDialogElement;
     let isDeleting = false;
     let notifications: any[] = [];
+    
+    let addModal: HTMLDialogElement;
+    let isAdding = false;
+    let newCategoryName = "";
 
     $: if (confirmModal) {
         if (categoryToDelete && !confirmModal.open) confirmModal.showModal();
@@ -31,14 +35,22 @@
 </script>
 
 <div class="max-w-2xl mx-auto pt-4 pb-20 px-4 sm:px-0">
-    <h1 class="text-3xl font-bold mb-6 tracking-tight">Categories</h1>
+    <div class="flex items-center justify-between mb-2">
+        <h1 class="text-3xl font-bold tracking-tight">Categories</h1>
+        <button type="button" class="btn btn-circle btn-primary shadow-sm" on:click={() => addModal.showModal()} aria-label="Add Category">
+            <i class="bi bi-plus-lg text-xl"></i>
+        </button>
+    </div>
+    <p class="text-gray-500 text-sm mb-6 leading-relaxed">
+        This list serves as a preferred set to guide the LLM when organizing your items. If a newly scanned item doesn't fit into an existing category, a new one is created automatically.
+    </p>
 
     <!-- Search Bar -->
     <div class="bg-base-200/50 rounded-xl p-2 flex items-center gap-2 mb-6 border border-base-200 shadow-inner">
         <i class="bi bi-search text-gray-400 ml-2"></i>
         <input type="text" bind:value={searchQuery} placeholder="Search categories..." class="bg-transparent border-none focus:outline-none w-full text-base" />
         {#if searchQuery}
-            <button class="btn btn-ghost btn-circle btn-xs mr-1" on:click={() => searchQuery = ""}><i class="bi bi-x-circle-fill text-gray-400"></i></button>
+            <button class="btn btn-ghost btn-circle btn-xs mr-1" on:click={() => searchQuery = ""} aria-label="Clear search"><i class="bi bi-x-circle-fill text-gray-400"></i></button>
         {/if}
     </div>
     
@@ -105,6 +117,41 @@
     </div>
     <form method="dialog" class="modal-backdrop">
         <button disabled={isDeleting}>close</button>
+    </form>
+</dialog>
+
+<!-- Add Category Modal -->
+<dialog bind:this={addModal} class="modal modal-bottom sm:modal-middle" on:close={() => newCategoryName = ""}>
+    <div class="modal-box sm:rounded-[2rem] p-6">
+        <h3 class="font-bold text-xl mb-4 text-center sm:text-left">Add Category</h3>
+        <form method="POST" action="?/create" class="flex flex-col gap-6" use:enhance={() => {
+            isAdding = true;
+            return async ({ update, result }) => {
+                await update();
+                isAdding = false;
+                if (result.type === 'success') {
+                    addModal.close();
+                    notify('success', 'Category added.');
+                } else if (result.type === 'failure') {
+                    notify('error', result.data?.message || 'Failed to add category.');
+                }
+            };
+        }}>
+            <input type="text" name="name" bind:value={newCategoryName} placeholder="e.g. electronics" class="input input-bordered w-full rounded-xl bg-base-50 focus:bg-base-100 transition-colors" required autocomplete="off" />
+            <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
+                <button type="submit" class="btn btn-primary w-full sm:w-auto flex-1 rounded-xl shadow-sm" disabled={!newCategoryName.trim() || isAdding}>
+                    {#if isAdding}
+                        <span class="loading loading-spinner"></span>
+                    {:else}
+                        Add Category
+                    {/if}
+                </button>
+                <button type="button" class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => addModal.close()} disabled={isAdding}>Cancel</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button disabled={isAdding}>close</button>
     </form>
 </dialog>
 

@@ -2,10 +2,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 
-export const load = (async ({ locals, url, setHeaders }) => {
-	setHeaders({
-		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
-	});
+export const load = (async ({ locals, url }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
 
     const unassignedCount = await db.item.count({
