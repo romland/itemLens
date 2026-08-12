@@ -133,7 +133,7 @@
             name="file.0" 
             accept="image/*" 
             class="hidden" 
-            on:change={() => { if (fileInput.files?.length) document.forms[0].requestSubmit(); }}
+            on:change={() => { if (fileInput.files?.length) fileInput.form?.requestSubmit(); }}
         >
         <input type="hidden" name="file.type.0" value="information">
 

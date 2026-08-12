@@ -33,14 +33,30 @@ export async function initDB() {
 /**
  * Serializes FormData (including files and array keys) into a storable object.
  */
-export function serializeFormData(formData: FormData): Record<string, any> {
+export async function serializeFormData(formData: FormData): Promise<Record<string, any>> {
     const obj: Record<string, any> = {};
     for (const [key, value] of formData.entries()) {
+        let storedValue: any = value;
+        
+        // CRITICAL FIX: Lock files into memory via ArrayBuffer.
+        // Mobile WebKit destroys File pointers immediately upon DOM teardown.
+        if (value instanceof File && value.size > 0) {
+            const buffer = await value.arrayBuffer();
+            storedValue = {
+                _isFile: true,
+                name: value.name,
+                type: value.type,
+                buffer: buffer
+            };
+        } else if (value instanceof File && value.size === 0) {
+            continue; // Skip the empty template file input entirely
+        }
+
         if (obj.hasOwnProperty(key)) {
             if (!Array.isArray(obj[key])) obj[key] = [obj[key]];
-            obj[key].push(value);
+            obj[key].push(storedValue);
         } else {
-            obj[key] = value;
+            obj[key] = storedValue;
         }
     }
     return obj;
@@ -52,24 +68,30 @@ export function serializeFormData(formData: FormData): Record<string, any> {
 export function deserializeToFormData(obj: Record<string, any>): FormData {
     const fd = new FormData();
     for (const key in obj) {
-        if (Array.isArray(obj[key])) {
-            obj[key].forEach(val => fd.append(key, val));
-        } else {
-            fd.append(key, obj[key]);
-        }
+        const values = Array.isArray(obj[key]) ? obj[key] : [obj[key]];
+        values.forEach(val => {
+            if (val && val._isFile) {
+                // Reconstitute the Blob from the frozen ArrayBuffer
+                const blob = new Blob([val.buffer], { type: val.type });
+                fd.append(key, blob, val.name);
+            } else {
+                fd.append(key, val);
+            }
+        });
     }
     return fd;
 }
 
 export async function saveToQueue(endpoint: string, formData: FormData) {
     const db = await initDB();
+    const payload = await serializeFormData(formData);
     return new Promise<void>((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         
         const item: OutboxItem = {
             endpoint,
-            payload: serializeFormData(formData),
+            payload,
             timestamp: Date.now(),
             status: 'pending',
             retries: 0
