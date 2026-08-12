@@ -42,6 +42,7 @@
         notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
         if (ev.detail.status === 'success') {
             setTimeout(() => (document.getElementById('timelineForm') as HTMLFormElement)?.requestSubmit(), 50);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }}
 />
@@ -74,6 +75,6 @@
 </div>
 
 <!-- Fixed Input Bar Component -->
-<TimelineInput on:posted={() => pasteHandler?.clearQueue()} />
+<TimelineInput on:posted={() => { pasteHandler?.clearQueue(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
 
 <Notifications bind:notifications />

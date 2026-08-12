@@ -75,16 +75,6 @@
     </div>
 </div>
 
-    <form method="post" use:enhance>
-        <div class="mb-3">
-            <input type="password" name="password" placeholder="Password"  class="input input-bordered w-full">
-        </div>
-        <div class="inline-flex items-center gap-3">
-            <button type="submit" class="btn btn-primary">Change Password</button>
-        </div>
-    </form>
-
-    
     <form method="post" class="form-control" use:enhance={updateTheme}>
         <ul class="p-2">
             <li><button formaction="/?theme=light&redirectTo={$page.url.pathname}">Light</button></li> 

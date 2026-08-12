@@ -13,6 +13,9 @@ model User {
   username  String   @unique
   password  String
   token     String?  @unique
+  email     String?  @unique
+  name      String?
+  avatar    String?
   items     Item[]
   timelineNotes TimelineNote[]
 

@@ -1,4 +1,4 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/database';
 import { fail, redirect } from "@sveltejs/kit";
 
@@ -39,3 +39,14 @@ export const load = (async ({ locals, params }) => {
         containers: containers
     };
 }) satisfies PageServerLoad;
+
+export const actions = {
+    delete: async ({ request }) => {
+        const data = await request.formData();
+        const name = data.get('name') as string;
+        
+        if (name) {
+            await db.container.delete({ where: { name } });
+        }
+    }
+} satisfies Actions;

@@ -304,9 +304,13 @@
 
     <button type="button" class="btn btn-ghost btn-circle active:scale-95 transition-transform" on:click={() => mobileMenuModal.showModal()} aria-label="Open Menu">
         {#if $page.data.user}
-            <div class="avatar placeholder">
-                <div class="bg-base-200 text-base-content rounded-full w-9 shadow-sm border border-base-300">
-                    <span class="text-sm font-bold uppercase">{$page.data.user.name.charAt(0)}</span>
+            <div class="avatar {$page.data.user.avatar ? '' : 'placeholder'}">
+                <div class="bg-base-200 text-base-content rounded-full w-9 shadow-sm border border-base-300 overflow-hidden">
+                    {#if $page.data.user.avatar}
+                        <img src={$page.data.user.avatar} alt="Profile" class="object-cover w-full h-full" />
+                    {:else}
+                        <span class="text-sm font-bold uppercase">{$page.data.user.name.charAt(0)}</span>
+                    {/if}
                 </div>
             </div>
         {:else}
@@ -377,8 +381,12 @@
                     <div class="h-[1px] bg-base-300 ml-14"></div>
 
                     <a href="/profile" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                            <i class="bi bi-person-fill text-xl"></i>
+                        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 overflow-hidden border border-primary/20">
+                          {#if $page.data.user?.avatar}
+                              <img src={$page.data.user.avatar} alt="Profile" class="object-cover w-full h-full" />
+                          {:else}
+                              <i class="bi bi-person-fill text-xl"></i>
+                          {/if}
                         </div>
                         <div class="flex-1 font-semibold text-lg">Profile</div>
                         <span class="badge badge-sm badge-primary">You</span>

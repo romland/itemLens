@@ -18,13 +18,16 @@ export const handle = (async ({ event, resolve }) => {
 	if (session) {
         const user = await db.user.findUnique({
             where: { token: session },
-            select: { id: true, username: true }
+            select: { id: true, username: true, name: true, email: true, avatar: true }
         });
 
         if (user) {
             event.locals.user = {
                 id: user.id,
-                name: user.username
+                username: user.username,
+                name: user.name || user.username,
+                email: user.email,
+                avatar: user.avatar
             };
         } else {
             // Destroy the invalid cookie so we don't keep querying a dead token
