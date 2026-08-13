@@ -18,9 +18,9 @@
 <div class="max-w-4xl mx-auto flex flex-col gap-6 animate-fade-in pb-12">
     <!-- Header Stats -->
     <div class="grid grid-cols-2 gap-4">
-        <div class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-center relative overflow-hidden">
+        <div class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between items-start relative overflow-hidden h-36">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-            <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-1">Active Tasks</div>
+            <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 relative z-10 w-full">Active Tasks</div>
             <div class="text-5xl font-bold tracking-tight text-base-content flex items-center gap-3">
                 {data.activeTasks.length}
                 {#if data.activeTasks.length > 0}
@@ -31,13 +31,13 @@
                 {/if}
             </div>
         </div>
-        <a href="/activity/logs" class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-center group hover:border-primary transition-colors cursor-pointer relative overflow-hidden">
+        <a href="/activity/logs" class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-primary transition-colors cursor-pointer relative overflow-hidden h-36 w-full">
             <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-secondary/10 rounded-full blur-2xl"></div>
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center w-full relative z-10">
                 <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-1">System Log</div>
                 <i class="bi bi-arrow-right-short text-2xl text-gray-400 group-hover:text-primary transition-transform group-hover:translate-x-1"></i>
             </div>
-            <div class="text-xl font-bold tracking-tight text-base-content mt-2 flex items-center gap-2">
+            <div class="text-xl font-bold tracking-tight text-base-content flex items-center gap-2 relative z-10">
                 <i class="bi bi-database"></i> View History
             </div>
         </a>
