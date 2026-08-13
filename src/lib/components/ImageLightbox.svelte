@@ -113,9 +113,23 @@
     function rotateLeft() { rotation -= 90; }
     function rotateRight() { rotation += 90; }
 
-    $: ai = photo?.llmAnalysis ? JSON.parse(photo.llmAnalysis) : null;
-    $: cols = photo?.colors && photo.colors.length > 2 ? Object.keys(JSON.parse(photo.colors)) : [];
-    $: colNames = photo?.colors && photo.colors.length > 2 ? Object.values(JSON.parse(photo.colors)) : [];
+    $: ai = (() => {
+        if (!photo?.llmAnalysis) return null;
+        try {
+            const cleanJson = photo.llmAnalysis.replace(/```json/gi, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanJson);
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    $: parsedColors = (() => {
+        if (!photo?.colors || photo.colors.length <= 2) return null;
+        try { return JSON.parse(photo.colors); } catch(e) { return null; }
+    })();
+    
+    $: cols = parsedColors ? Object.keys(parsedColors) : [];
+    $: colNames = parsedColors ? Object.values(parsedColors) : [];
 </script>
 
 <svelte:window on:keydown={(e) => e.key === 'Escape' && close()} />
