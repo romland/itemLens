@@ -36,7 +36,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
       const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
       const analysis = await apiQueue.add(
           () => analyzePhoto(targetPath, existingCategories),
-          tracking ? { ...tracking, description: 'Classifying image via AI' } : undefined
+          tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
       );
       llmAnalysis = JSON.stringify(analysis);
       categoryName = analysis.subCategory;
