@@ -9,7 +9,12 @@ import { processFormDocuments } from '$lib/server/services';
 export const load = (async ({ locals, url }) => {
     const category = url.searchParams.get('category') || 'all';
     const whereClause: any = { authorId: locals.user.id };
-    if (category !== 'all') whereClause.category = category;
+
+    if (category !== 'all') {
+        whereClause.category = category;
+    } else {
+        whereClause.category = { not: 'archive' };
+    }
 
     const notes = await db.timelineNote.findMany({
         where: whereClause,
