@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { guessProductDetails } from '$lib/server/gemini-classification';
 import { uploadsDiskFolder } from '$lib/server/constants';
 import path from 'path';
+import { apiQueue } from '$lib/server/queue/index';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
@@ -16,7 +17,10 @@ export const POST: RequestHandler = async ({ request }) => {
         const filename = path.basename(draftPath);
         const localPath = `${uploadsDiskFolder}/${filename}`;
 
-        const aiData = await guessProductDetails(localPath, hint);
+        const aiData = await apiQueue.add(
+            () => guessProductDetails(localPath, hint),
+            { targetType: 'global', targetId: 0, description: 'Refining draft details via AI' }
+        );
 
         return json({
             success: true,

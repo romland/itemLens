@@ -400,6 +400,16 @@
                         <div class="flex-1 font-semibold text-lg">Settings</div>
                         <i class="bi bi-chevron-right text-gray-400"></i>
                     </a>
+
+                    <div class="h-[1px] bg-base-300 ml-14"></div>
+
+                    <a href="/activity" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                        <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
+                            <i class="bi bi-activity text-xl"></i>
+                        </div>
+                        <div class="flex-1 font-semibold text-lg">System Activity</div>
+                        <i class="bi bi-chevron-right text-gray-400"></i>
+                    </a>                    
                 {/if}
             </div>
 

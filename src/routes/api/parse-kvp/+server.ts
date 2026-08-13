@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { extractKVPsFromText } from '$lib/server/gemini-classification';
+import { apiQueue } from '$lib/server/queue/index';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     // Basic auth check
@@ -16,8 +17,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             return json({ success: false, error: 'Text too short' });
         }
 
-        const result = await extractKVPsFromText(text);
-        
+        const result = await apiQueue.add(
+            () => extractKVPsFromText(text),
+            { targetType: 'global', targetId: 0, description: 'Extracting table data via AI' }
+        );
+
         if (result && result.rows) {
             return json({ success: true, rows: result.rows });
         }

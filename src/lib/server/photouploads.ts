@@ -9,6 +9,7 @@ import { apiQueue, ioQueue } from '$lib/server/queue/index';
 import { logActivity } from '$lib/server/logger';
 import { db } from '$lib/server/database';
 import { autoFill } from '$lib/server/autofill';
+import { taskManager, type TaskContext } from '$lib/server/taskManager';
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
@@ -16,12 +17,12 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
-export async function enrichPhotoData(localPath: string, webPath: string, type: string): Promise<any> {
+export async function enrichPhotoData(localPath: string, webPath: string, type: string, tracking?: TaskContext): Promise<any> {
   const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
   const [ocrResult, imgUpdates] = await Promise.all([
-    getOCRdata(localPath).catch(() => null),
-    generatePhotoDerivatives(tempPhoto, localPath, true)
+    getOCRdata(localPath, tracking).catch(() => null),
+    generatePhotoDerivatives(tempPhoto, localPath, true, tracking)
   ]);
 
   let categoryName = null;
@@ -33,14 +34,17 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
       const { getExistingCategoryNames } = await import('$lib/server/categories');
       const existingCategories = await getExistingCategoryNames();
       const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
-      const analysis = await apiQueue.add(() => analyzePhoto(targetPath, existingCategories));
+      const analysis = await apiQueue.add(
+          () => analyzePhoto(targetPath, existingCategories),
+          tracking ? { ...tracking, description: 'Classifying image via AI' } : undefined
+      );
       llmAnalysis = JSON.stringify(analysis);
       categoryName = analysis.subCategory;
     } catch (e) { console.error("[Background Task] LLM classification failed:", e); }
   } else if (type === 'invoice or receipt') {
     try {
       const { extractInvoiceData } = await import('$lib/server/llm');
-      if (ocrResult) llmAnalysis = await apiQueue.add(() => extractInvoiceData(ocrResult));
+      if (ocrResult) llmAnalysis = await extractInvoiceData(ocrResult, tracking);
     } catch (e) { console.error("[Background Task] Invoice extraction failed:", e); }
   }
 
@@ -55,68 +59,74 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 }
 
 export async function processDraftPhotoBackground(webPath: string, type: string) {
-  console.log(`[Background Task] Starting heavy processing for draft image: ${webPath}`);
+  const tracking = { targetType: 'global' as const, targetId: 0 };
   const localPath = `static${webPath}`;
-  const data = await enrichPhotoData(localPath, webPath, type);
+  const data = await enrichPhotoData(localPath, webPath, type, tracking);
   fs.writeFileSync(`${localPath}.json`, JSON.stringify(data), 'utf8');
   console.log(`[Background Task] Finished heavy processing for draft image: ${webPath}`);
 }
 
 export async function processItemPhotosBackground(item: any) {
-  let itemNeedsTitleUpdate = item.title === "Default product" || item.title === "";
-  for (const photo of item.photos) {
-    if (!photo.orgPath) continue;
-    
-    if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
-      console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
-      continue;
+  const taskId = taskManager.start('item', item.id, 'Running ML analysis on photos');
+  try {
+    let itemNeedsTitleUpdate = item.title === "Default product" || item.title === "";
+    for (const photo of item.photos) {
+      if (!photo.orgPath) continue;
+      
+      if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
+        console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
+        continue;
+      }
+
+      console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
+      await logActivity(item.id, 'Image Processing', `Started ML pipeline for photo ID ${photo.id}`);
+      const webPath = photo.orgPath;
+      const localPath = `static${webPath}`;
+      const tracking = { targetType: 'item' as const, targetId: item.id };
+
+      const enriched = await enrichPhotoData(localPath, webPath, photo.type, tracking);
+
+      if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
+      if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
+      if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
+
+      photo.ocr = enriched.ocr || photo.ocr;
+      photo.colors = enriched.colors || photo.colors;
+      photo.cropPath = enriched.cropPath || photo.cropPath;
+      photo.thumbPath = enriched.thumbPath || photo.thumbPath;
+      photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
+
+      // If the user used the "Fast Workflow" and hit save before the title was generated, do it now
+      if (itemNeedsTitleUpdate && photo.type === 'product') {
+        try {
+          await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
+          const details = await apiQueue.add(() => autoFill(localPath));
+          if (details && details.title) {
+              await db.item.update({
+                  where: { id: item.id },
+                  data: { title: details.title, slug: slugify(details.title.toLowerCase()) }
+              });
+              await logActivity(item.id, 'Analysis', `Auto-assigned title: ${details.title}`, 'success');
+              itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
+          }
+        } catch (e) { console.error("Auto-fill failed:", e); }
+      }
+
+      if (enriched.categoryName) {
+          const { getOrCreateCategory } = await import('$lib/server/categories');
+          const cat = await getOrCreateCategory(enriched.categoryName);
+          photo.categoryId = cat.id;
+      }
+
+      await updatePhoto(photo.id, photo);
+
+      if (photo.type !== 'invoice or receipt') {
+        await processQRcodeThenDownload(photo.orgPath, photo, item);
+      }
     }
-
-    console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
-    await logActivity(item.id, 'Image Processing', `Started ML pipeline for photo ID ${photo.id}`);
-    const webPath = photo.orgPath;
-    const localPath = `static${webPath}`;
-
-    const enriched = await enrichPhotoData(localPath, webPath, photo.type);
-
-    if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
-    if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
-    if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
-
-    photo.ocr = enriched.ocr || photo.ocr;
-    photo.colors = enriched.colors || photo.colors;
-    photo.cropPath = enriched.cropPath || photo.cropPath;
-    photo.thumbPath = enriched.thumbPath || photo.thumbPath;
-    photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
-
-    // If the user used the "Fast Workflow" and hit save before the title was generated, do it now
-    if (itemNeedsTitleUpdate && photo.type === 'product') {
-      try {
-        await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
-        const details = await apiQueue.add(() => autoFill(localPath));
-        if (details && details.title) {
-            await db.item.update({
-                where: { id: item.id },
-                data: { title: details.title, slug: slugify(details.title.toLowerCase()) }
-            });
-            await logActivity(item.id, 'Analysis', `Auto-assigned title: ${details.title}`, 'success');
-            itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
-        }
-      } catch (e) { console.error("Auto-fill failed:", e); }
-    }
-
-    if (enriched.categoryName) {
-        const { getOrCreateCategory } = await import('$lib/server/categories');
-        const cat = await getOrCreateCategory(enriched.categoryName);
-        photo.categoryId = cat.id;
-    }
-
-    await updatePhoto(photo.id, photo);
-
-    if (photo.type !== 'invoice or receipt') {
-      await processQRcodeThenDownload(photo.orgPath, photo, item);
-    }
-  }
+  } finally {
+    taskManager.end(taskId);
+  }  
 }
 
 

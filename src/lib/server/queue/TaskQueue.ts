@@ -1,3 +1,5 @@
+import { taskManager, type TaskTrackingMeta } from '../taskManager';
+
 /**
  * A generic, promise-based concurrency queue.
  * Prevents server overload by limiting simultaneous task execution.
@@ -5,7 +7,7 @@
 export class TaskQueue {
     private concurrency: number;
     private running: number = 0;
-    private queue: { task: () => Promise<any>, resolve: (val: any) => void, reject: (err: any) => void }[] = [];
+    private queue: { task: () => Promise<any>, resolve: (val: any) => void, reject: (err: any) => void, taskId?: string }[] = [];
 
     constructor(concurrency: number) {
         this.concurrency = concurrency;
@@ -14,9 +16,13 @@ export class TaskQueue {
     /**
      * Adds a task to the queue. Returns a Promise that resolves when the task naturally completes.
      */
-    public add<T>(task: () => Promise<T>): Promise<T> {
+      public add<T>(task: () => Promise<T>, tracking?: TaskTrackingMeta): Promise<T> {
         return new Promise<T>((resolve, reject) => {
-            this.queue.push({ task, resolve, reject });
+            let taskId: string | undefined;
+            if (tracking) {
+                taskId = taskManager.start(tracking.targetType, tracking.targetId, tracking.description);
+            }
+            this.queue.push({ task, resolve, reject, taskId });
             this.processNext();
         });
     }
@@ -35,6 +41,7 @@ export class TaskQueue {
             } catch (error) {
                 job.reject(error);
             } finally {
+                if (job.taskId) taskManager.end(job.taskId);
                 this.running--;
                 this.processNext();
             }

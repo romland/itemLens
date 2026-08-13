@@ -8,170 +8,178 @@ import { summarizeWebpageExtract } from './llm';
 import { PDFParse } from 'pdf-parse';
 import { ioQueue } from './queue/index';
 import { logActivity } from '$lib/server/logger';
+import { taskManager } from '$lib/server/taskManager';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
-    //
-    // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
-    // (this is largely obsolete after I started using client-side QR code scanner)
-    //
-    await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, target.itemId ? { id: target.itemId } : { id: target.timelineNoteId });
+    const targetType = target.itemId ? 'item' : 'note';
+    const targetId = target.itemId || target.timelineNoteId || 0;
+    const taskId = taskManager.start(targetType, targetId, 'Fetching and parsing linked documents');
+    try {  
+      //
+      // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
+      // (this is largely obsolete after I started using client-side QR code scanner)
+      //
+      await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, target.itemId ? { id: target.itemId } : { id: target.timelineNoteId });
 
-    //
-    // Download all URLs in the URLs field (TODO: SECURITY?)
-    //
-    const lines = (data.urls as string).split("\n");
+      //
+      // Download all URLs in the URLs field (TODO: SECURITY?)
+      //
+      const lines = (data.urls as string).split("\n");
 
-    for(let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if(!QRUrlDownloader.isURL(line)) {
-        if(line !== "") {
-          console.log(`not an URL: ${line}`);
-        }
-        continue;
-      }
-
-      let document;
-      try {
-        document = await db.document.findFirst({
-            where: {
-                source: line,
-                itemId: target.itemId || null,
-                timelineNoteId: target.timelineNoteId || null
-            }
-        });
-
-        if (!document) {
-            document = await db.document.create({
-              data: {
-                itemId: target.itemId || null,
-                timelineNoteId: target.timelineNoteId || null,
-                type: "uncategorized",
-                title: "",
-                source: line,
-                path: "",
-                extracts: "[]"
-              }
-            });
-        }        
-      } catch (ex) {
-        console.error("Error creating document in DB:", ex);
-      }
-
-      // Divert to PDF handler if needed
-      if (await isPdfUrl(line)) {
-        try {
-          await handlePdfDownload(line, target, document?.id, diskFolder, webFolder);
-          await logActivity(target.itemId, 'PDF Download', `Successfully parsed PDF: ${line}`, 'success');
-        } catch (e) {
-          console.error(`Error downloading PDF ${line}:`, e);
-          await logActivity(target.itemId, 'PDF Download', `Failed to download PDF: ${line}`, 'error');
-        }
-        continue; // Skip SingleFile logic
-      }
-
-      await logActivity(target.itemId, 'Web Scraper', `Started downloading webpage: ${line}`, 'info');
-      const str: string|null = await QRUrlDownloader.downloadURL(line);
-      if(!str) {
-        console.log(`Did not get any result when downloading: ${line}`);
-        await logActivity(target.itemId, 'Web Scraper', `Failed to fetch webpage: ${line}`, 'warning');
-        // return;
-        continue;
-      }
-
-      const pageData = JSON.parse(str);
-      const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
-      const docFilename = getSafeFilename(`${idStr}-doc`);
-
-      fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
-      await logActivity(target.itemId, 'Web Scraper', `Downloaded webpage: ${pageData.title || line}`, 'success');
-
-      console.log("Creating document from explicit URL", docFilename);
-
-      // Fallback: If SingleFile failed to grab the title, manually extract it from HTML
-      if (!pageData.title && pageData.html) {
-          const titleMatch = pageData.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-          const h1Match = pageData.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-          pageData.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
-      }
-
-      let extractText = pageData.extracts?.[0] || "";
-      
-      // Fallback: If SingleFile extraction failed, aggressively strip HTML tags
-      if (extractText.length <= 50 && pageData.html) {
-          extractText = pageData.html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                                     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                                     .replace(/<[^>]+>/g, ' ')
-                                     .replace(/\s+/g, ' ').trim();
-          pageData.extracts = [extractText.substring(0, 10000)];
-      }
-
-      try {
-        await db.document.update({
-          where: {
-            id : document?.id
-          },
-          data: {
-            itemId: target.itemId || null,
-            timelineNoteId: target.timelineNoteId || null,
-            type: "uncategorized",
-            title: pageData.title || line, // Fallback to URL if title is blank
-            source: pageData.url || line,
-            path: `${webFolder}/${docFilename}.html`,
-            extracts: JSON.stringify(pageData.extracts || [])
+      for(let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if(!QRUrlDownloader.isURL(line)) {
+          if(line !== "") {
+            console.log(`not an URL: ${line}`);
           }
-        });
-      } catch (ex) {
-        console.error(`Error updating document in DB (${line}):`, ex);
-        continue;
-      }
+          continue;
+        }
 
-      console.log(`[LLM CHECK] Extracts found: ${pageData.extracts?.length || 0} | First extract length: ${extractText.length} chars`);
-
-      if (extractText.length > 50) {
+        let document;
         try {
-          const summary = await summarizeWebpageExtract(extractText);
+          document = await db.document.findFirst({
+              where: {
+                  source: line,
+                  itemId: target.itemId || null,
+                  timelineNoteId: target.timelineNoteId || null
+              }
+          });
+
+          if (!document) {
+              document = await db.document.create({
+                data: {
+                  itemId: target.itemId || null,
+                  timelineNoteId: target.timelineNoteId || null,
+                  type: "uncategorized",
+                  title: "",
+                  source: line,
+                  path: "",
+                  extracts: "[]"
+                }
+              });
+          }        
+        } catch (ex) {
+          console.error("Error creating document in DB:", ex);
+        }
+
+        // Divert to PDF handler if needed
+        if (await isPdfUrl(line)) {
+          try {
+            await handlePdfDownload(line, target, document?.id, diskFolder, webFolder);
+            await logActivity(target.itemId, 'PDF Download', `Successfully parsed PDF: ${line}`, 'success');
+          } catch (e) {
+            console.error(`Error downloading PDF ${line}:`, e);
+            await logActivity(target.itemId, 'PDF Download', `Failed to download PDF: ${line}`, 'error');
+          }
+          continue; // Skip SingleFile logic
+        }
+
+        await logActivity(target.itemId, 'Web Scraper', `Started downloading webpage: ${line}`, 'info');
+        const str: string|null = await QRUrlDownloader.downloadURL(line);
+        if(!str) {
+          console.log(`Did not get any result when downloading: ${line}`);
+          await logActivity(target.itemId, 'Web Scraper', `Failed to fetch webpage: ${line}`, 'warning');
+          // return;
+          continue;
+        }
+
+        const pageData = JSON.parse(str);
+        const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+        const docFilename = getSafeFilename(`${idStr}-doc`);
+
+        fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });
+        await logActivity(target.itemId, 'Web Scraper', `Downloaded webpage: ${pageData.title || line}`, 'success');
+
+        console.log("Creating document from explicit URL", docFilename);
+
+        // Fallback: If SingleFile failed to grab the title, manually extract it from HTML
+        if (!pageData.title && pageData.html) {
+            const titleMatch = pageData.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            const h1Match = pageData.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+            pageData.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
+        }
+
+        let extractText = pageData.extracts?.[0] || "";
+        
+        // Fallback: If SingleFile extraction failed, aggressively strip HTML tags
+        if (extractText.length <= 50 && pageData.html) {
+            extractText = pageData.html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                      .replace(/<[^>]+>/g, ' ')
+                                      .replace(/\s+/g, ' ').trim();
+            pageData.extracts = [extractText.substring(0, 10000)];
+        }
+
+        try {
           await db.document.update({
             where: {
               id : document?.id
             },
             data: {
-              summary: summary
+              itemId: target.itemId || null,
+              timelineNoteId: target.timelineNoteId || null,
+              type: "uncategorized",
+              title: pageData.title || line, // Fallback to URL if title is blank
+              source: pageData.url || line,
+              path: `${webFolder}/${docFilename}.html`,
+              extracts: JSON.stringify(pageData.extracts || [])
             }
           });
-          console.log("Have summary of webpage:", summary);
-          await logActivity(target.itemId, 'Analysis', `Generated summary for: ${pageData.title || line}`, 'success');
         } catch (ex) {
           console.error(`Error updating document in DB (${line}):`, ex);
           continue;
         }
-      } else {
-        console.warn(`[LLM SKIPPED] Text extract too short (${extractText.length} chars) for URL: ${line}`);
-        await logActivity(target.itemId, 'Web Scraper', `Skipped summary for ${line}, content too short.`, 'warning');
-      }
 
-      // DEEP SCRAPE LOGIC (Consolidated)
-      const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
-      const keywords = /datasheet|manual|schematic|user guide|instructions|specs|pinout|wiring|\.pdf$/i;
-      let match;
-      let deepLinksFound = 0;
-      
-      while ((match = linkRegex.exec(pageData.html)) !== null && deepLinksFound < 3) {
-          const href = match[1];
-          const text = match[2].replace(/<[^>]+>/g, '').trim(); 
-          
-          if (keywords.test(href) || keywords.test(text)) {
-              try {
-                  const absUrl = new URL(href, line).href;
-                  await db.document.create({
-                      data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', itemId: target.itemId || null, timelineNoteId: target.timelineNoteId || null }
-                  });
-                  await logActivity(target.itemId, 'Web Scraper', `Deep link discovered: ${absUrl}`, 'info');
-                  deepLinksFound++;
-              } catch (e) { /* ignore invalid urls */ }
+        console.log(`[LLM CHECK] Extracts found: ${pageData.extracts?.length || 0} | First extract length: ${extractText.length} chars`);
+
+        if (extractText.length > 50) {
+          try {
+            const summary = await summarizeWebpageExtract(extractText);
+            await db.document.update({
+              where: {
+                id : document?.id
+              },
+              data: {
+                summary: summary
+              }
+            });
+            console.log("Have summary of webpage:", summary);
+            await logActivity(target.itemId, 'Analysis', `Generated summary for: ${pageData.title || line}`, 'success');
+          } catch (ex) {
+            console.error(`Error updating document in DB (${line}):`, ex);
+            continue;
           }
-      }      
-      console.log("Downloaded explicitly stated URL:", line);
+        } else {
+          console.warn(`[LLM SKIPPED] Text extract too short (${extractText.length} chars) for URL: ${line}`);
+          await logActivity(target.itemId, 'Web Scraper', `Skipped summary for ${line}, content too short.`, 'warning');
+        }
+
+        // DEEP SCRAPE LOGIC (Consolidated)
+        const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+        const keywords = /datasheet|manual|schematic|user guide|instructions|specs|pinout|wiring|\.pdf$/i;
+        let match;
+        let deepLinksFound = 0;
+        
+        while ((match = linkRegex.exec(pageData.html)) !== null && deepLinksFound < 3) {
+            const href = match[1];
+            const text = match[2].replace(/<[^>]+>/g, '').trim(); 
+            
+            if (keywords.test(href) || keywords.test(text)) {
+                try {
+                    const absUrl = new URL(href, line).href;
+                    await db.document.create({
+                        data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', itemId: target.itemId || null, timelineNoteId: target.timelineNoteId || null }
+                    });
+                    await logActivity(target.itemId, 'Web Scraper', `Deep link discovered: ${absUrl}`, 'info');
+                    deepLinksFound++;
+                } catch (e) { /* ignore invalid urls */ }
+            }
+        }      
+        console.log("Downloaded explicitly stated URL:", line);
+      }
+    } finally {
+        taskManager.end(taskId);
     }
 }
 

@@ -6,8 +6,9 @@ import imageThumbnail from 'image-thumbnail';
 import { getTopColorsNamed } from '$lib/server/colors';
 import { heavyMlQueue } from './queue/index';
 import type { Photo } from '@prisma/client';
+import type { TaskContext } from '$lib/server/taskManager';
 
-export async function removeBackground(imgUrl: string, outputFileNoBkg: string): Promise<string> {
+export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext): Promise<string> {
     return heavyMlQueue.add(async () => {
         const localPath = outputFileNoBkg.replace(/_crop\.png$/, '');
         let response;
@@ -35,34 +36,46 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string):
             fileStream.on('finish', () => resolve(true));
         });
         return outputFileNoBkg;
-    });
+    }, tracking ? { ...tracking, description: 'Removing image background' } : undefined);
 }
 
-export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true): Promise<Partial<Photo>> {
+export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext): Promise<Partial<Photo>> {
     const updates: Partial<Photo> = {};
     const thumbOptions = { width: 256, responseType: 'buffer' as const, jpegOptions: { force: true, quality: 90 } };
     
     try {
-        const orgThumbnail = await heavyMlQueue.add(() => imageThumbnail(`static${photo.orgPath}`, thumbOptions as any));
+        const orgThumbnail = await heavyMlQueue.add(
+            () => imageThumbnail(`static${photo.orgPath}`, thumbOptions as any),
+            tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
+        );
         fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
         // updates.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
     } catch (ex) { console.error("Error generating original thumbnail", ex); }
 
     const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
     try {
-        await removeBackground(imgUrl, outputFileNoBkg);
-        const cropped = await heavyMlQueue.add(() => crop(outputFileNoBkg, { outputFormat: "png" }));
+        await removeBackground(imgUrl, outputFileNoBkg, tracking);
+        const cropped: any = await heavyMlQueue.add(
+            () => crop(outputFileNoBkg, { outputFormat: "png" }),
+            tracking ? { ...tracking, description: 'Cropping image' } : undefined
+        );
         fs.writeFileSync(outputFileNoBkg, cropped);
         updates.cropPath = `${photo.orgPath}_crop.png`;
 
-        const thumbnail = await heavyMlQueue.add(() => imageThumbnail(outputFileNoBkg, thumbOptions as any));
+        const thumbnail = await heavyMlQueue.add(
+            () => imageThumbnail(outputFileNoBkg, thumbOptions as any),
+            tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
+        );
         fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
         updates.thumbPath = `${photo.orgPath}_thumb.jpg`;
 
         if (getColors) {
-            const colors = await heavyMlQueue.add(() => new Promise((resolve, reject) => {
-                getTopColorsNamed(outputFileNoBkg, (err: any, res: any) => err ? reject(err) : resolve(res));
-            }));
+            const colors = await heavyMlQueue.add(
+                () => new Promise((resolve, reject) => {
+                    getTopColorsNamed(outputFileNoBkg, (err: any, res: any) => err ? reject(err) : resolve(res));
+                }),
+                tracking ? { ...tracking, description: 'Extracting color palette' } : undefined
+            );
             updates.colors = JSON.stringify(colors);
         }
     } catch (err) { console.error("Background/Crop pipeline failed:", err); }

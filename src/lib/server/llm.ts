@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { apiQueue } from './queue/index';
+import type { TaskContext } from '$lib/server/taskManager';
 
 // Get available models:
 //  export APIKEY=gsk-...
@@ -16,10 +17,10 @@ const groq = new Groq({
 });
 
 
-export async function extractInvoiceData(ocrData)
+export async function extractInvoiceData(ocrData, tracking?: TaskContext)
 {
     // return extractInvoiceDataOpenAI(ocrData);
-    return extractInvoiceDataGroq(ocrData);
+    return extractInvoiceDataGroq(ocrData, tracking);
 }
 
 // https://www.npmjs.com/package/openai
@@ -59,7 +60,7 @@ async function extractInvoiceDataOpenAI(ocrData)
 
 
 // https://www.npmjs.com/package/groq-sdk
-async function extractInvoiceDataGroq(ocrData)
+async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {    
         const prompt = `From the document (invoice or receipt) below, extract data and put it in this new structure:\n` +
@@ -107,54 +108,11 @@ async function extractInvoiceDataGroq(ocrData)
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    });
+    }, tracking ? { ...tracking, description: 'Parsing invoice data via AI' } : undefined);
 }
-/*
-export async function summarizeWebpageExtract(extract)
-{
-    const prompt = `Below is an extract of a webpage. Give me a brief view of the important details (it's usually about a product or a guide to do something).
-Say what product it is about.
-Leave out:
-- user-generated content such as comments
-- navigation elements
-- sale/stock information
-- reviews
-- never give me JSON, I want plain text
-and other irrelevant (to the product or guide) stuff that you might find on a webpage.`;
 
-    try {
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: 'system',
-                    content: 'Please try to provide useful, helpful and actionable answers. If user asks for JSON, give only JSON, NOTHING else.'
-                },
-                {
-                    role: "user",
-                    content: prompt + "\n\n" + extract,
-                    // content: prompt + "\n\n" + JSON.stringify(ocrData),
-                },
-            ],
-            response_format: {"type": "json_object"},
-            // model: "mixtral-8x7b-32768",
-            // model: "llama3-70b-8192",
-            model: "llama-3.3-70b-versatile",
-            temperature: 0.2,
-            top_p: 0.8,
-            // top K 40
-        });
 
-        console.log("Groq summary prompt:", prompt + "\n\n" + extract);
-        console.log("===========================");
-        console.log("Groq summary result:", JSON.stringify(chatCompletion, null, 4));
-        return chatCompletion.choices[0]?.message?.content || "";
-    } catch(ex) {
-        console.error("Error contacting Groq:", ex);
-        return null;
-    }
-}
-*/
-export async function summarizeWebpageExtract(extract)
+export async function summarizeWebpageExtract(extract, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {
         const prompt = `Below is an extract of a webpage. Give me a brief view of the important details (it's usually about a product or a guide to do something).
@@ -194,7 +152,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    });
+    }, tracking ? { ...tracking, description: 'Summarizing document via AI' } : undefined);
 }
 
 /*
@@ -202,7 +160,7 @@ Input:
 Example 1 : "MB102 Breadboard Power Supply Module 3.3V 5V Solderless Breadboard Voltage Regulator for Arduino Diy Kit"
 Example 2 : "HiLetgo power supply for prototype board PCB Universal Breadboard 5V/3.3V output"
 */
-export async function getProductFromReverseImageSearch(searchResults)
+export async function getProductFromReverseImageSearch(searchResults, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {
         const prompt = `Below is a list of examples of titles of product pages. They all describe the same product. 
@@ -250,5 +208,5 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    });
+    }, tracking ? { ...tracking, description: 'Analyzing reverse search results via AI' } : undefined);
 }

@@ -2,8 +2,9 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import FormData from 'form-data';
 import { lightMlQueue } from './queue/index';
+import type { TaskContext } from '$lib/server/taskManager';
 
-export async function getOCRdata(imageUrl : string): Promise<any>
+export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Promise<any>
 {
   return lightMlQueue.add(async () => {
     let localPath = imageUrl;
@@ -59,5 +60,5 @@ export async function getOCRdata(imageUrl : string): Promise<any>
       console.log('OCR Error:', err.message);
       throw err;
     }
-  });
+  }, tracking ? { ...tracking, description: 'Extracting text via OCR' } : undefined);
 }

@@ -31,11 +31,13 @@
         // // Heuristic: If any photo lacks a thumbnail, or any web document lacks a downloaded path, we are still processing.
         // isProcessingItem = data.item?.photos?.some(p => !p.thumbPath) || 
         //                    data.item?.documents?.some(d => !d.path && d.type !== 'note');
-        // Heuristic: If any RECENT photo/doc lacks a thumbnail/path, we are still processing.
-        // We ignore items older than 5 minutes so legacy/failed items don't hang the UI forever.
-        const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
-        isProcessingItem = data.item?.photos?.some(p => !p.thumbPath && new Date(p.createdAt).getTime() > fiveMinsAgo) || 
-                           data.item?.documents?.some(d => !d.path && d.type !== 'note' && new Date(d.createdAt).getTime() > fiveMinsAgo);
+        // // Heuristic: If any RECENT photo/doc lacks a thumbnail/path, we are still processing.
+        // // We ignore items older than 5 minutes so legacy/failed items don't hang the UI forever.
+        // const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
+        // isProcessingItem = data.item?.photos?.some(p => !p.thumbPath && new Date(p.createdAt).getTime() > fiveMinsAgo) || 
+        //                    data.item?.documents?.some(d => !d.path && d.type !== 'note' && new Date(d.createdAt).getTime() > fiveMinsAgo);
+        // Driven completely by centralized server state now!
+        isProcessingItem = data.activeTasks && data.activeTasks.length > 0;
 
         // TODO: This should be done during initial processing (once), not every time rendering
         photoAttributes = [];
@@ -158,8 +160,12 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
         <div class="alert bg-base-200/50 border border-base-300 shadow-sm mb-6 rounded-xl flex items-start gap-3 animate-fade-in">
             <span class="loading loading-spinner text-primary mt-0.5"></span>
             <div>
-                <h3 class="font-bold text-sm">Enhancing item details&hellip;</h3>
-                <p class="text-xs text-gray-500 mt-0.5">We're polishing up the details in the background. Images and summaries will appear automatically once they're ready.</p>
+                <h3 class="font-bold text-sm">Processing background tasks ({data.activeTasks.length})&hellip;</h3>
+                <ul class="text-xs text-gray-500 mt-0.5 list-disc list-inside ml-1">
+                    {#each data.activeTasks as task}
+                        <li class="line-clamp-1">{task.description}</li>
+                    {/each}
+                </ul>
             </div>
         </div>
     {/if}

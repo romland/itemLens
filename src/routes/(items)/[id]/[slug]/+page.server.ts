@@ -8,6 +8,7 @@ import { savePhotos, processItemPhotosBackground } from '$lib/server/photoupload
 import { processFormDocuments } from '$lib/server/services';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
+import { taskManager } from '$lib/server/taskManager';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -47,7 +48,8 @@ export const load = (async ({ locals, params }) => {
             ...item,
             // https://marked.js.org/using_advanced
             contentToHtml: purify.sanitize(await marked.parse(item.description!, {gfm:true,breaks:true}))
-        }
+        },
+        activeTasks: taskManager.getTasks('item', item.id)
     };
 }) satisfies PageServerLoad;
 

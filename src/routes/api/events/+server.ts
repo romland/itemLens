@@ -1,4 +1,5 @@
 import { dbEvents } from '$lib/server/database';
+import { taskEvents } from '$lib/server/taskManager';
 
 export function GET() {
     let listener: () => void;
@@ -24,13 +25,15 @@ export function GET() {
                 }, 500); // Wait 500ms for DB mutations to settle before notifying client
             };
             
-            // Listen for the Prisma extension triggers
+            // Listen for the Prisma extension triggers and active Task updates
             dbEvents.on('mutation', listener);
+            taskEvents.on('update', listener);
         },
         cancel() {
             clearTimeout(debounceTimeout);
             // Clean up memory the instant the client disconnects
             dbEvents.off('mutation', listener);
+            taskEvents.off('update', listener);
         }
     });
 

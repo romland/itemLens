@@ -5,6 +5,7 @@ import { guessProductDetails } from '$lib/server/gemini-classification';
 import { getSafeFilename, processDraftPhotoBackground } from '$lib/server/photouploads';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
+import { apiQueue } from '$lib/server/queue/index';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
@@ -27,7 +28,10 @@ export const POST: RequestHandler = async ({ request }) => {
         // 2. Run the fast Gemini analysis for the UI
         let aiData = null;
         try {
-            aiData = await guessProductDetails(localPath);
+            aiData = await apiQueue.add(
+                () => guessProductDetails(localPath),
+                { targetType: 'global', targetId: 0, description: 'Analyzing initial draft image' }
+            );
         } catch (aiError) {
             console.warn("Draft Analysis failed:", aiError);
         }
