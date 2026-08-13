@@ -34,6 +34,7 @@ If feeling particularly ambitious on a day, you can also:
 - Download-and-store documents (link-rot no more)
 - Image processing (background removal, thumbnail, etc)
 - Color extraction
+- Collection (bulk) import of CDs, DVDs, books, what have you
 - Multiple inventories (i.e. one for shoes, another for clothes, and yet another for electronics)
 - ...and more
 

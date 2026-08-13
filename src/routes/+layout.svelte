@@ -330,22 +330,22 @@
   <ReloadPrompt />
 {/if}
 
-<div class="btm-nav" style="z-index: 1;">
-  <a class="active:scale-95 transition-transform duration-200 {$page.url.pathname==='/' ? 'active' : ''}" href="/">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-    <span class="btm-nav-label">Home</span>
+<div class="btm-nav" style="z-index: 1; padding-bottom: env(safe-area-inset-bottom); height: calc(5rem + env(safe-area-inset-bottom));">
+  <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname==='/' ? 'active' : ''}" href="/">
+    <i class="bi bi-house-door text-xl"></i>
+    <span class="btm-nav-label text-[10px]">Home</span>
   </a>
 
   {#if $page.data.user}
-      <a class="active:scale-95 transition-transform duration-200 {$page.url.pathname==='/add' ? 'active' : ''}" href="/add" title="Add new item">
-          <i class="bi bi-plus-circle"></i>
-          <span class="btm-nav-label">Add new</span>
+      <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname==='/add' ? 'active' : ''}" href="/add" title="Add new item">
+          <i class="bi bi-plus-circle text-xl"></i>
+          <span class="btm-nav-label text-[10px]">Add new</span>
       </a>
   {/if}
 
-  <a class="active:scale-95 transition-transform duration-200 {$page.url.pathname.startsWith('/timeline') ? 'active' : ''}" href="/timeline">
+  <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname.startsWith('/timeline') ? 'active' : ''}" href="/timeline">
     <i class="bi bi-journal-bookmark text-xl"></i>
-    <span class="btm-nav-label">Notebook</span>
+    <span class="btm-nav-label text-[10px]">Notebook</span>
   </a>
 
 </div>

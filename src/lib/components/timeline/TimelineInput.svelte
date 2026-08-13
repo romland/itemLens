@@ -88,7 +88,7 @@
             content = "";
             if (fileInput) fileInput.value = "";
             linkedItemIds.clear();
-            locationStatus = "Queued";
+            locationStatus = ""; //"Queued";
             document.querySelectorAll('#timelineForm input[name^="pasted_"], #timelineForm input[name^="preprocessed_"]').forEach(el => el.remove());
             dispatch('posted');
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
