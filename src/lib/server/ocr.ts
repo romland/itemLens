@@ -3,6 +3,8 @@ import fs from 'fs';
 import FormData from 'form-data';
 import { lightMlQueue } from './queue/index';
 import type { TaskContext } from '$lib/server/taskManager';
+import sharp from 'sharp';
+import path from 'path';
 
 export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Promise<any>
 {
@@ -17,8 +19,24 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
     
     if (fs.existsSync(localPath)) {
       const url = 'http://localhost:8000/ocr/predict-by-file';
+
+      const ext = path.extname(localPath).toLowerCase();
+      const unsupportedMLFormats = ['.webp', '.avif', '.heic'];
+      
+      let filePayload: Buffer | fs.ReadStream;
+      let fileOptions: any = undefined;
+
+      if (unsupportedMLFormats.includes(ext)) {
+        // Convert unsupported modern web formats to lossless PNG for crisp OCR text
+        filePayload = await sharp(localPath).png().toBuffer();
+        fileOptions = { filename: 'image.png', contentType: 'image/png' };
+      } else {
+        // Pass JPEGs and PNGs directly from disk with zero overhead
+        filePayload = fs.createReadStream(localPath);
+      }
+
       const form = new FormData();
-      form.append('file', fs.createReadStream(localPath));
+      form.append('file', filePayload, fileOptions);
       try {
         const response = await fetch(url, {
           method: 'POST',
