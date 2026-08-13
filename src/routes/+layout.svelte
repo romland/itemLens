@@ -8,6 +8,9 @@
     import ReloadPrompt from "$lib/components/ReloadPrompt.svelte";
     import pageTitle from '$lib/stores';
 
+    // Demo only (show where taps are for recording purposes)
+    import TouchIndicator from '$lib/components/TouchIndicator.svelte';
+
     import "../app.css";
 
     // Check out the virtual:pwa-info documentation to learn more about the virtually exposed module pwa-info.
@@ -184,7 +187,7 @@
       }
     }
 
-    $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
+    $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : '';
 
     // TOOD:
     // Testing for more 'live' check of whether we are installed on homescreen or not.
@@ -237,6 +240,11 @@
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     });
 
+    // Dynamically enable tap visibility
+    // Use the classic $: reactive statement instead of $derived
+$:  isDemoMode = 
+        $page.url.hostname === 'localhost' || 
+        $page.url.hostname.startsWith('192.168.178.');
 </script>
 
 <svelte:head> 
@@ -244,6 +252,8 @@
   <title>{$pageTitle} | itemLens</title>
   <meta name="theme-color" content={themeColor || "#1d232a"} />
 </svelte:head>
+
+<TouchIndicator enabled={isDemoMode} />
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
   <!-- Mobile menu -->

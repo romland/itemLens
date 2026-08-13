@@ -164,7 +164,7 @@
                 <i class="bi bi-collection text-4xl"></i>
             </div>
             <h2 class="text-2xl font-bold mb-3 tracking-tight">New Collection</h2>
-            <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, stamps, coins or CDs/DVDs. I'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
+            <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, whiskys, stamps, coins or CDs/DVDs. I'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
 
             {#if isUploading}
                 <div class="btn btn-primary btn-lg w-full max-w-sm rounded-2xl opacity-80 cursor-not-allowed flex-nowrap whitespace-nowrap">
