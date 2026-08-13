@@ -108,7 +108,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    }, tracking ? { ...tracking, description: 'Parsing invoice data via AI' } : undefined);
+    }, tracking ? { ...tracking, description: 'Parsing invoice data via LLM' } : undefined);
 }
 
 
@@ -152,7 +152,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    }, tracking ? { ...tracking, description: 'Summarizing document via AI' } : undefined);
+    }, tracking ? { ...tracking, description: 'Summarizing document via LLM/vision model' } : undefined);
 }
 
 /*
@@ -208,5 +208,5 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
             console.error("Error contacting Groq:", ex);
             return null;
         }
-    }, tracking ? { ...tracking, description: 'Analyzing reverse search results via AI' } : undefined);
+    }, tracking ? { ...tracking, description: 'Analyzing reverse search results via LLM' } : undefined);
 }

@@ -19,7 +19,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const result = await apiQueue.add(
             () => extractKVPsFromText(text),
-            { targetType: 'global', targetId: 0, description: 'Extracting table data via AI' }
+            { targetType: 'global', targetId: 0, description: 'Extracting table data via LLM' }
         );
 
         if (result && result.rows) {

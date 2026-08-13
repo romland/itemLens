@@ -13,7 +13,7 @@
     // View state for tabs
     let activeTab = 'device'; // 'device' | 'web'
 
-    // Map existing photos to extract AI category and format it cleanly
+    // Map existing photos to extract vision/LLM category and format it cleanly
     $: displayValues = photoValues.map(photo => {
         let category = "";
         

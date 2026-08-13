@@ -31,10 +31,9 @@
     // // and dispatch back to MobileAddHub to show on badges
     // $: allContainers = Array.from(new Set([...addedContainers, ...manualSelected]));
 
-    // Prevent Svelte string-spread bug by forcing array, 
-    // and strip spaces so "A 001" displays as "A001" on the pill
+    // Prevent Svelte string-spread bug by forcing array
     $: safeManualSelected = Array.isArray(manualSelected) ? manualSelected : (manualSelected ? [manualSelected] : []);
-    $: allContainers = Array.from(new Set([...addedContainers, ...safeManualSelected])).map(c => c.replace(/\s+/g, ''));
+    $: allContainers = Array.from(new Set([...addedContainers, ...safeManualSelected]));
     $: dispatch('change', { containers: allContainers });
 
     onMount(async () => {

@@ -9,10 +9,12 @@
     import Notifications from "$lib/components/Notifications.svelte";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
+    import BulkTriage from "$lib/components/add/BulkTriage.svelte";
     import pageTitle from '$lib/stores';
     import { saveToQueue } from '$lib/client/offlineQueue';
     import { goto } from '$app/navigation';
 
+    let mode: 'single' | 'collection' = 'single';
     let saving = false;
     let isDirty = false;
     let pastedDocCount = 0;
@@ -73,6 +75,8 @@
     }
 
     pageTitle.set("Add new product");
+$:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
+
 </script>
 
 <PasteHandler 
@@ -94,16 +98,39 @@
     </div>
 {/if}
 
-<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
-    <ItemHub 
+<div class="bg-base-200 p-1 rounded-xl flex w-full max-w-xs mx-auto mb-6 mt-2 relative z-10">
+    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
+        if (mode !== 'single' && isDirty && !confirm('You have unsaved Magic Shelf items. Switch modes and lose them?')) return;
+        isDirty = false;
+        mode = 'single';
+    }}>Single Item</button>
+    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'collection' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
+        if (mode !== 'collection' && isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
+        isDirty = false;
+        mode = 'collection';
+    }}>Collection</button>
+
+</div>
+
+{#if mode === 'single'}
+    <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
+        <ItemHub 
+            containers={data.containers} 
+            saving={saving}
+            bind:isDirty
+            pastedDocCount={pastedDocCount}
+            on:success={(ev) => notify("success", ev.detail)} 
+            on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+            on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+        />
+    </form>
+{:else}
+    <BulkTriage 
         containers={data.containers} 
-        saving={saving}
         bind:isDirty
-        pastedDocCount={pastedDocCount}
-        on:success={(ev) => notify("success", ev.detail)} 
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
     />
-</form>
+{/if}
 
 <Notifications bind:notifications />

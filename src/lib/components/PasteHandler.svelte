@@ -94,7 +94,7 @@
                     if (typeInput) typeInput.value = selectedPhotoType;
                 }
 
-                // Trigger standard component reaction (adds to pending queue, runs AI draft, etc.)
+                // Trigger standard component reaction (adds to pending queue, runs LLM draft, etc.)
                 lastInput.dispatchEvent(new Event('change', { bubbles: true }));
             } else {
                 // Fallback (e.g. no empty input exists)

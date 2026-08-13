@@ -192,13 +192,23 @@
                 style="transform: translate({translateX}px, {translateY}px) scale({scaleVal}); will-change: transform;"
                 in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
             >
-                <img 
-                    src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
-                    alt="Product preview" 
-                    class="object-contain max-w-full max-h-full origin-center select-none shadow-2xl transition-transform duration-300 ease-out"
-                    style="transform: rotate({rotation}deg);"
-                    draggable="false"
-                />
+                <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
+                <div class="relative inline-flex max-w-full max-h-full shadow-2xl transition-transform duration-300 ease-out {photo?.box ? 'overflow-hidden rounded-xl' : ''}" style="transform: rotate({rotation}deg);">
+                    <img 
+                        src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
+                        alt="Product preview" 
+                        class="object-contain max-w-full max-h-full origin-center select-none"
+                        draggable="false"
+                    />
+                    {#if photo?.box}
+                        <!-- The massive box-shadow dims everything OUTSIDE the bounding box -->
+                        <div class="absolute border-4 border-primary z-10 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]"
+                             style="top: {photo.box[0]/10}%; left: {photo.box[1]/10}%; width: {(photo.box[3]-photo.box[1])/10}%; height: {(photo.box[2]-photo.box[0])/10}%;">
+                            <!-- Inner pulsing reticle -->
+                            <div class="absolute inset-0 border-2 border-white/60 animate-pulse"></div>
+                        </div>
+                    {/if}
+                </div>
             </div>
         </div>
 

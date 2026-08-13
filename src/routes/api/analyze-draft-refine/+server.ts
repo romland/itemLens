@@ -19,7 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
         const aiData = await apiQueue.add(
             () => guessProductDetails(localPath, hint),
-            { targetType: 'global', targetId: 0, description: 'Refining draft details via AI' }
+            { targetType: 'global', targetId: 0, description: 'Refining draft details via LLM' }
         );
 
         return json({

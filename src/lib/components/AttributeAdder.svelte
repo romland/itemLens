@@ -185,7 +185,7 @@
                 })
                 .catch(() => {
                     isParsingLLM = false;
-                    alert("Error reaching AI parser.");
+                    alert("Error reaching LLM.");
                 });
                 
                 return;

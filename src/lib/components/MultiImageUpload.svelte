@@ -77,7 +77,7 @@
                     container.appendChild(draftInput);
                 }
 
-                // AI Overrides Type (e.g. catches a receipt uploaded via the Hero generic button)
+                // LLM/vision model overrides Type (e.g. catches a receipt uploaded via the Hero generic button)
                 if (data.success && data.aiData?.photoType) {
                     let aiType = data.aiData.photoType.toLowerCase();
                     // Match the database standard format

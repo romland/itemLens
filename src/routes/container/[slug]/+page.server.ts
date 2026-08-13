@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/database';
-import { fail, redirect } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 
 export const load = (async ({ locals, params }) => {
     console.log(params)
@@ -23,10 +23,7 @@ export const load = (async ({ locals, params }) => {
     });
 
     if (!item) {
-        return fail(400, {
-            error: true,
-            message: '<strong>Container</strong> not found.'
-        });
+        error(404, 'Container not found.');
     }
 
     return {

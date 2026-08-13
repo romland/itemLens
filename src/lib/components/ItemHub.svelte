@@ -149,7 +149,7 @@
                 if (aiData.description) currentDescription = aiData.description;
                 showAiDrawer = false;
                 userHint = "";
-                dispatch('success', 'Item details enhanced by AI!');
+                dispatch('success', 'Item details enhanced by model!');
             } else {
                 alert("AI Refinement failed. Check server logs.");
                 showAiDrawer = false;
@@ -458,7 +458,7 @@
                         </span>
                     </div>
                     <div class="relative w-full">
-                        <input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for AI auto-fill..." class="input input-bordered w-full pr-12 rounded-xl" class:input-primary={isAnalyzing}>
+                        <input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for auto-fill..." class="input input-bordered w-full pr-12 rounded-xl" class:input-primary={isAnalyzing}>
                         {#if previewImagePath}
                             <button type="button" class="absolute right-3 top-3 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => showAiDrawer = true}>
                                 <i class="bi bi-stars text-xl"></i>
@@ -515,7 +515,7 @@
     </div>
 </div>
 
-<!-- The Bottom Drawer for AI Refinement -->
+<!-- The Bottom Drawer for LLM Refinement -->
 <dialog bind:this={aiDialog} class="modal modal-top sm:modal-middle" on:close={() => showAiDrawer = false}>
     <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
         <h3 class="font-bold text-xl mb-2 flex items-center gap-2">

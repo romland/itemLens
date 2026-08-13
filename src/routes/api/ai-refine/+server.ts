@@ -21,11 +21,11 @@ export async function POST({ request }) {
     try {
         const result = await apiQueue.add(
             () => guessProductDetails(`static${photo.orgPath}`, hint),
-            { targetType: 'item', targetId: Number(itemId), description: 'Refining product details via AI' }
+            { targetType: 'item', targetId: Number(itemId), description: 'Refining product details via LLM' }
         );
         return json(result);
     } catch (e: any) {
         console.error("AI Refine Error:", e);
-        return json({ error: "Failed to process image with AI." }, { status: 500 });
+        return json({ error: "Failed to process image with LLM." }, { status: 500 });
     }
 }
