@@ -147,7 +147,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                     <li>
                         <div class="p-0 hover:bg-transparent block">
                             <!-- CSS injects the word "Delete" so we don't have to break the Delete component's isolation -->
-                            <Delete message='Delete this item?' action='/{data.item?.id}/delete' btnClass="menu-delete-btn btn btn-ghost w-full justify-start text-error hover:bg-error/10 hover:text-error px-4 py-2 h-auto min-h-0 rounded-lg font-medium" iconClass="bi bi-trash text-lg opacity-70" />
+                            <Delete message='Delete this item?' action='/{data.item?.id}/delete' btnClass="menu-delete-btn btn btn-ghost w-full justify-start hover:bg-error/10 hover:text-error px-4 py-2 h-auto min-h-0 rounded-lg font-medium" iconClass="bi bi-trash text-lg opacity-70" />
                         </div>
                     </li>
                 </ul>

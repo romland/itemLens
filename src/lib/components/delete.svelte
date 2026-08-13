@@ -20,3 +20,9 @@
         </div>
     </form>
 </dialog>
+
+<style>
+    .menu-delete-btn::after {
+        margin-left: 0;
+    }
+</style>
