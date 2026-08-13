@@ -139,8 +139,8 @@
                     <option value="todo">✅ Todo</option>
                     <option value="to buy">🛒 Buy</option>
                     <option value="to read">🛒 Read</option>
-                    <option value="archive">📁 Archive</option>
                     <option value="other">📌 Other</option>
+                    <option value="archive">📁 Archive</option>
                 </select>
             </form>
             <form action="/timeline?/promote" method="POST" use:enhance class="m-0 p-0">
