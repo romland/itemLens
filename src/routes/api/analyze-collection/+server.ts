@@ -38,17 +38,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         });
 
-        const promptText = `
-        Identify the collection of items in this image (e.g. Books, CDs, Vinyl, Board Games).
-        Extract EVERY single item visible on the shelf.
-        For each item:
-        - title: The main title. If the text is completely unreadable, supply a generic placeholder (e.g., 'Unknown CD', 'Unreadable Book').
-        - subtitle: Secondary info like Author, Artist, or Brand.
-        - category: The type of item (e.g., 'book', 'cd', 'dvd', 'stamp', 'game').
-        - box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
-        - low_confidence: Set to true if the text is blurry, occluded, or hard to read.
-        CRITICAL: Do not omit physical items just because you cannot read their labels. We need a 100% complete physical count of the items.
-        `;
+        const promptText = `Identify the collection of items in this image (e.g. Books, CDs, Vinyl, Board Games).
+Extract EVERY single item visible on the shelf.
+For each item:
+- title: The main title. If the text is completely unreadable, supply a generic placeholder (e.g., 'Unknown CD', 'Unreadable Book').
+- subtitle: Secondary info like Author, Artist, or Brand.
+- category: The type of item (e.g., 'book', 'cd', 'dvd', 'stamp', 'game').
+- box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
+- low_confidence: Set to true if the text is blurry, occluded, or hard to read.
+CRITICAL: Do not omit physical items just because you cannot read their labels. We need a 100% complete physical count of the items.
+`;
 
         const base64Data = buffer.toString('base64');
         const ext = file.name.split('.').pop()?.toLowerCase();
@@ -111,6 +110,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         return json({ success: true, draftPath: webPath, noteId: note.id, collectionType: aiResponse.collectionType, items: aiResponse.items });
     } catch (e) {
         console.error("Collection analysis error:", e);
-        return json({ error: 'Internal Server Error' }, { status: 500 });
+        const err = e as any;
+        const is503 = err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('demand');
+        const errorMessage = is503 
+            ? "Vision service is currently experiencing high demand. Please wait a few moments and try again." 
+            : "An unexpected error occurred while analyzing the image. Please try another photo.";
+
+        return json({ success: false, error: errorMessage }, { status: is503 ? 503 : 500 });
     }
 };

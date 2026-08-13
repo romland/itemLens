@@ -5,6 +5,7 @@
     import pageTitle from '$lib/stores';
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
 
     export let isDirty = false;
     export let containers = [];
@@ -14,7 +15,8 @@
     let fileInputGallery: HTMLInputElement;
     let isUploading = false;
     let isUploadingMessage = "";
-    
+    let uploadError = "";
+
     let draftPath = "";
     let draftNoteId: number | null = null;
     let collectionType = "";
@@ -37,7 +39,8 @@
     async function handleFileSelect(e: Event) {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;
-        
+
+        uploadError = "";
         isUploading = true;
         isUploadingMessage = "Analyzing collection...";
         dispatch('processingStart', { message: isUploadingMessage, taskId: 'bulk' });
@@ -47,8 +50,11 @@
         
         try {
             const res = await fetch('/api/analyze-collection', { method: 'POST', body: fd });
-            const data = await res.json();
-            if (data.success) {
+
+            let data;
+            try { data = await res.json(); } catch (err) { data = null; }
+
+            if (res.ok && data?.success) {
                 draftPath = data.draftPath;
                 draftNoteId = data.noteId;
                 collectionType = data.collectionType;
@@ -70,13 +76,13 @@
                 isDirty = true;
 
             } else {
-                alert("Failed to analyze image: " + data.error);
+                uploadError = data?.error || "We couldn't process the image. Please try again.";
             }
         } catch (err) {
-            alert("Upload error.");
+            uploadError = "Network connection lost. Please check your internet and try again.";
         } finally {
             isUploading = false;
-            dispatch('processingComplete', { taskId: 'bulk', status: 'success' });
+            dispatch('processingComplete', { taskId: 'bulk', status: uploadError ? 'error' : 'success' });
         }
     }
 
@@ -142,12 +148,21 @@
 </script>
 
 <div class="max-w-md mx-auto w-full pt-2 pb-32 px-4">
-    {#if !draftPath}
+    {#if uploadError}
+        <ContentUnavailable 
+            type="warning"
+            icon="bi-robot"
+            title="Analysis Interrupted" 
+            message={uploadError} 
+            actionLabel="Dismiss" 
+            on:click={() => uploadError = ""} 
+        />
+    {:else if !draftPath}
         <div class="flex flex-col items-center justify-center p-6 text-center animate-fade-in mt-10">
             <div class="bg-primary/10 text-primary w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-sm">
                 <i class="bi bi-collection text-4xl"></i>
             </div>
-            <h2 class="text-2xl font-bold mb-3 tracking-tight">Collection</h2>
+            <h2 class="text-2xl font-bold mb-3 tracking-tight">New Collection</h2>
             <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, stamps, coins or CDs/DVDs. I'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
 
             {#if isUploading}
