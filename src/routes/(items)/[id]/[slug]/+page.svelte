@@ -7,6 +7,7 @@
     import { enhance } from "$app/forms";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import InvoiceViewer from "$lib/components/InvoiceViewer.svelte";
 
     export let data: PageServerData;
     
@@ -409,14 +410,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                 Purchase Information
             </div>
 
-            <div class="flex flex-wrap gap-3 items-center w-full">
+            <div class="flex flex-col gap-4 w-full">
                 {#each invoicePhotos as photo}
-                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => lightbox.open(photo)}>
-                        <img
-                            src="{photo.orgPath}"
-                            alt="Invoice attachment"
-                            class="h-32 w-32 cursor-zoom-in">
-                    </button>
+                    <InvoiceViewer {photo} onOpenLightbox={() => lightbox.open(photo)} />
                 {/each}
             </div>
         </div>
