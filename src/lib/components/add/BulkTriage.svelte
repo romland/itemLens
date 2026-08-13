@@ -130,6 +130,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 draftPath,
+                noteId: draftNoteId,
                 containers: selectedContainers,
                 globalCategory,
                 tagcsv: globalTags,

@@ -24,12 +24,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             const tagIds = tagcsv ? await getTagIds(tagcsv) : [];
 
             // 1. Context Preservation: Update the pre-created notebook entry
-            const note = await db.timelineNote.update({
-                where: { id: noteId },
-                data: {
-                    content: `Bulk Scan - ${containers?.length ? containers.join(', ') : 'Unassigned Location'}`,
-                }
-            });
+            if (noteId) {
+                await db.timelineNote.update({
+                    where: { id: noteId },
+                    data: {
+                        content: `Collection Scan - ${containers?.length ? containers.join(', ') : 'Unassigned Location'}`,
+                    }
+                });
+            }
 
             // 2. Load high-res panorama
             const localDraftPath = `static${draftPath}`;
@@ -81,7 +83,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         photos: { create: [{ type: 'product', orgPath: cropWebPath, cropPath: cropWebPath, thumbPath: cropWebPath, categoryId: cat.id }] },
                         attributes: { create: attributesToCreate },
                         locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { name: c } } })) } : undefined,
-                        timelineNotes: { connect: [{ id: note.id }] },
+                        timelineNotes: noteId ? { connect: [{ id: noteId }] } : undefined,
                         tags: tagIds.length > 0 ? { connect: tagIds } : undefined
                     }
                 });
