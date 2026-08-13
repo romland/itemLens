@@ -2,6 +2,7 @@
     import type { ActionData } from "./$types";
     import { enhance } from "$app/forms";
     import type { SubmitFunction } from "@sveltejs/kit";
+    import { onMount } from "svelte";
     import Alert from "$lib/components/alert.svelte";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
@@ -43,6 +44,18 @@
 
     import pageTitle from '$lib/stores';
     pageTitle.set("Settings");
+
+    let currentTheme = "";
+    onMount(() => {
+        currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const observer = new MutationObserver(() => {
+            currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        
+        return () => observer.disconnect();
+    });
+
 </script>
 
 {#if form?.error}
@@ -65,7 +78,7 @@
                         await update({ reset: false });
                     };
                 }}>
-                    <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border border-base-300 hover:border-primary bg-base-200 hover:bg-base-300 transition-all">
+                    <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border transition-all {currentTheme === theme.id ? 'border-primary ring-2 ring-primary/30 bg-base-300' : 'border-base-300 hover:border-primary/50 bg-base-200 hover:bg-base-300'}">
                         <i class="bi {theme.icon} text-2xl"></i>
                         <span class="font-semibold text-sm">{theme.name}</span>
                     </button>
