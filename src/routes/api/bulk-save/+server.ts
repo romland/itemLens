@@ -72,6 +72,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 const { getOrCreateCategory } = await import('$lib/server/categories');
                 const cat = await getOrCreateCategory(finalCategoryName);
 
+                // Mock the ML response so the UI recognizes the category without needing an expensive API call per item
+                const simulatedLlmAnalysis = JSON.stringify({
+                    photoType: 'product',
+                    subCategory: finalCategoryName.toLowerCase(),
+                    isNewCategory: false,
+                    description: item.title || 'Collection item'
+                });
+
                 // Assemble the item
                 await db.item.create({
                     data: {
@@ -80,7 +88,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         amount: 1,
                         authorId: userId,
                         description: item.subtitle || "",
-                        photos: { create: [{ type: 'product', orgPath: cropWebPath, cropPath: cropWebPath, thumbPath: cropWebPath, categoryId: cat.id }] },
+                        photos: { 
+                            create: [{ type: 'product', orgPath: cropWebPath, cropPath: cropWebPath, thumbPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis }] 
+                        },
                         attributes: { create: attributesToCreate },
                         locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { name: c } } })) } : undefined,
                         timelineNotes: noteId ? { connect: [{ id: noteId }] } : undefined,
