@@ -45,7 +45,7 @@
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     
                     <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover cursor-pointer transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
-                        <td>
+                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12 bg-base-200">
@@ -57,17 +57,19 @@
                             </div>
                         </td>
 
-                        <td class="hidden sm:table-cell">
-                            {#if item.locations}
-                                {#each item.locations as loc}
-                                    <div class="badge badge-ghost badge-sm whitespace-nowrap">
-                                        <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
-                                    </div>
-                                {/each}
-                            {/if}
+                        <td class="hidden sm:table-cell w-20 min-w-[5rem]">
+                            <div class="flex flex-col gap-1 min-w-[4rem]">
+                                {#if item.locations}
+                                    {#each item.locations as loc}
+                                        <div class="badge badge-ghost badge-sm w-16 overflow-hidden shrink-0">
+                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.containerName}">{loc.containerName}</a>
+                                        </div>
+                                    {/each}
+                                {/if}
+                            </div>
                         </td>
 
-                        <td>
+                        <td class="w-full">
                             <div class="flex items-center gap-2">
                                 <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
                                 <!-- Show a loading spinner right next to the title while we wait -->
