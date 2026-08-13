@@ -7,9 +7,15 @@
     y: number;
     startX: number;
     startY: number;
+    prevX: number;
+    prevY: number;
+    angle: number;
+    stretchX: number;
+    stretchY: number;
     pressing: boolean;
     swiping: boolean;
     fading: boolean;
+    moveTimeout?: ReturnType<typeof setTimeout>;
   };
 
   let touches = $state<Touch[]>([]);
@@ -20,11 +26,13 @@
       return;
     }
 
-    // --- Core Logic ---
     const handleStart = (id: string, x: number, y: number) => {
       if (!touches.find(t => t.id === id)) {
         touches.push({
-          id, x, y, startX: x, startY: y,
+          id, x, y, 
+          startX: x, startY: y,
+          prevX: x, prevY: y,
+          angle: 0, stretchX: 1, stretchY: 1,
           pressing: true, swiping: false, fading: false
         });
       }
@@ -36,21 +44,54 @@
         touch.x = x;
         touch.y = y;
 
+        // Calculate total distance from where they first touched down
         if (!touch.swiping) {
-          const distanceMoved = Math.hypot(touch.x - touch.startX, touch.y - touch.startY);
-          
-          // Lowered to 10px so it triggers slightly faster on mobile
-          if (distanceMoved > 10) {
+          const totalDistance = Math.hypot(touch.x - touch.startX, touch.y - touch.startY);
+          if (totalDistance > 10) {
             touch.swiping = true;
             touch.pressing = false; 
           }
         }
+
+        // If they are swiping, calculate the elasticity
+        if (touch.swiping) {
+          const dx = x - touch.prevX;
+          const dy = y - touch.prevY;
+
+          // Only update angle/stretch if they actually moved coordinates
+          if (dx !== 0 || dy !== 0) {
+            // Find the angle of movement
+            touch.angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            // Speed = distance moved between this frame and the last frame
+            const velocity = Math.hypot(dx, dy);
+            
+            // Squash & Stretch Math: Max stretch of 1.6x, Max squish of 0.7x
+            touch.stretchX = 1 + Math.min(velocity / 15, 0.6); 
+            touch.stretchY = 1 - Math.min(velocity / 40, 0.3);
+
+            // If they hold their finger still, snap back to a perfect circle
+            if (touch.moveTimeout) clearTimeout(touch.moveTimeout);
+            touch.moveTimeout = setTimeout(() => {
+              const t = touches.find(t => t.id === id);
+              if (t) {
+                t.stretchX = 1;
+                t.stretchY = 1;
+              }
+            }, 80); 
+          }
+        }
+
+        touch.prevX = x;
+        touch.prevY = y;
       }
     };
 
     const handleEnd = (id: string) => {
       const touch = touches.find(t => t.id === id);
       if (touch && !touch.fading) {
+        if (touch.moveTimeout) clearTimeout(touch.moveTimeout);
+        
         touch.pressing = false;
         touch.swiping = false;
         touch.fading = true;
@@ -61,11 +102,7 @@
       }
     };
 
-    // --- iOS Touch Events ---
-    // We track this flag so we don't accidentally double-draw dots 
-    // if a device fires both touch AND mouse events.
     let isTouchDevice = false; 
-
     const onTouchStart = (e: TouchEvent) => {
       isTouchDevice = true;
       for (let i = 0; i < e.changedTouches.length; i++) {
@@ -73,14 +110,12 @@
         handleStart(`touch-${t.identifier}`, t.clientX, t.clientY);
       }
     };
-
     const onTouchMove = (e: TouchEvent) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
         handleMove(`touch-${t.identifier}`, t.clientX, t.clientY);
       }
     };
-
     const onTouchEnd = (e: TouchEvent) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
@@ -88,29 +123,21 @@
       }
     };
 
-    // --- Desktop Mouse Fallback ---
     let isMouseDown = false;
-
     const onMouseDown = (e: MouseEvent) => {
-      if (isTouchDevice) return; // Ignore if using a real touchscreen
+      if (isTouchDevice) return;
       isMouseDown = true;
       handleStart('mouse', e.clientX, e.clientY);
     };
-
     const onMouseMove = (e: MouseEvent) => {
-      if (isMouseDown && !isTouchDevice) {
-        handleMove('mouse', e.clientX, e.clientY);
-      }
+      if (isMouseDown && !isTouchDevice) handleMove('mouse', e.clientX, e.clientY);
     };
-
     const onMouseUp = () => {
       if (isTouchDevice) return;
       isMouseDown = false;
       handleEnd('mouse');
     };
 
-    // { passive: true } is the magic trick here. It tells iOS: 
-    // "I'm just watching the coordinates, I won't block the scroll."
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('touchend', onTouchEnd);
@@ -125,7 +152,6 @@
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('touchcancel', onTouchEnd);
-      
       window.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -140,20 +166,28 @@
       class:pressing={touch.pressing}
       class:swiping={touch.swiping}
       class:fading={touch.fading}
-      style="left: {touch.x}px; top: {touch.y}px;"
+      style="
+        left: {touch.x}px; 
+        top: {touch.y}px;
+        --angle: {touch.angle}deg;
+        --stretch-x: {touch.stretchX};
+        --stretch-y: {touch.stretchY};
+      "
     ></div>
   {/each}
 {/if}
 
 <style>
-  /* Base state */
   .demo-touch-indicator {
     position: fixed;
     width: 60px;
     height: 60px;
     background: rgba(255, 255, 255, 0.4);
     border-radius: 50%;
-    transform: translate(-50%, -50%);
+    
+    /* We use CSS variables for dynamic stretching! */
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scaleX(1) scaleY(1);
+    
     pointer-events: none; 
     z-index: 2147483647; 
     transition: transform 0.15s cubic-bezier(0.17, 0.67, 0.83, 0.67), 
@@ -162,27 +196,31 @@
                 border 0.15s;
   }
   
-  /* TAP STATE */
+  /* TAP STATE: Ignore angle, just shrink */
   .pressing {
-    transform: translate(-50%, -50%) scale(0.6);
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.6);
     background: rgba(255, 255, 255, 0.7);
     border: 2px solid rgba(0, 0, 0, 0.2);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(2px);
   }
 
-  /* SWIPE STATE */
+  /* SWIPE STATE: Apply the math variables */
   .swiping {
-    transform: translate(-50%, -50%) scale(1.1);
+    /* Base scale is 1.1, multiplied by our dynamic stretch factors */
+    transform: translate(-50%, -50%) rotate(var(--angle)) scaleX(calc(1.1 * var(--stretch-x))) scaleY(calc(1.1 * var(--stretch-y)));
+    
+    /* We use a much faster transition here so the rotation tracks your finger instantly without "wobbling" */
+    transition: transform 0.05s linear, background 0.15s, border 0.15s;
+    
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid transparent;
     box-shadow: none;
     backdrop-filter: none;
   }
   
-  /* LETTING GO */
   .fading {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(1.3);
+    transform: translate(-50%, -50%) rotate(var(--angle)) scale(1.3);
   }
 </style>
