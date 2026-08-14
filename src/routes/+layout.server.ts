@@ -1,8 +1,24 @@
 import type { LayoutServerLoad } from "./$types";
+import { db } from '$lib/server/database';
 
 export const load = (async ({ locals, setHeaders }) => {
     setHeaders({
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
     });
-    return { user: locals.user };
+
+    let inventories: any[] = [];
+    if (locals.user) {
+        const access = await db.userInventoryAccess.findMany({
+            where: { userId: locals.user.id },
+            include: { inventory: true }
+        });
+        inventories = access.map(a => a.inventory);
+    }
+
+    return { 
+        user: locals.user, 
+        activeInventoryId: locals.activeInventoryId,
+        inventories 
+    };
+
 }) satisfies LayoutServerLoad;

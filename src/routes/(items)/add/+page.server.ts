@@ -46,7 +46,7 @@ export const actions = {
 
         const photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
-        const ids = await getTagIds(tagcsv);
+        const ids = await getTagIds(tagcsv, locals.activeInventoryId);
 
 /*
 console.log("formData:", orgData);
@@ -62,6 +62,7 @@ return fail(400, {
         const item : Item = await db.item.create({
             data: {
         				title: safeTitle,
+                inventoryId: locals.activeInventoryId,
                 reason: data.reason as string || "",
                 // amount: parseInt(data.amount as string, 10) || null,
         				amount: isNaN(parsedAmount) ? null : parsedAmount,
@@ -76,7 +77,7 @@ return fail(400, {
                   create: containers.map((cont) => {
                     return {
                       container : {
-                          connect: { name : String(cont) },
+                          connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: String(cont) } },
                       }
                     }
                   })
@@ -139,9 +140,8 @@ export const load = (async ({ locals, params }) => {
         },
       },
       where: {
-          AND: [
-              { parentId: null }
-          ]
+          inventoryId: locals.activeInventoryId,
+          parentId: null
       },
       orderBy: {
         name : "asc"

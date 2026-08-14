@@ -4,110 +4,215 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  // https://github.com/prisma/prisma/issues/11789#issuecomment-1900773221
-  url      = "file:./dev.db?connection_limit=1" //env("DATABASE_URL")
+  url      = "file:./dev.db?connection_limit=1"
+//url      = "file:./v2.db?connection_limit=1"
 }
 
+
+// ==========================================
+// 1. IDENTITY & ACCESS MANAGEMENT (IAM)
+// ==========================================
+
 model User {
-  id        Int      @id @unique @default(autoincrement())
-  username  String   @unique
-  password  String
-  token     String?  @unique
-  email     String?  @unique
-  name      String?
-  avatar    String?
-  items     Item[]
+  id       Int     @id @unique @default(autoincrement())
+  username String  @unique
+  password String
+  token    String? @unique
+  email    String? @unique
+  name     String?
+  avatar   String?
+  isAdmin  Boolean @default(false) // Determines if user can create other local accounts
+
+  // Auditing: Who created what
+  items         Item[]
   timelineNotes TimelineNote[]
+
+  // Security: Which vaults this user can open
+  inventoryAccess UserInventoryAccess[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// E.g. "Electronics", "DIY", "Clothes", "Shoes", ...
-// Every class in ML model should be assigned to an inventory
-model Inventory {
-  id          Int        @id @unique @default(autoincrement())
-  name        String
-  description String
-  classes     String     // NOTE: JSON array, E.g. [ shoes, clothes, *, O, R]
-  items       Item[]
-  categories  Category[]
+model UserInventoryAccess {
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  
+  // Roles: "OWNER" (can delete inventory, manage users), "EDITOR" (can add/edit items), "VIEWER" (read-only)
+  role        String    @default("EDITOR") 
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  // A user can only have one specific role per inventory
+  @@id([inventoryId, userId])
 }
 
+// ==========================================
+// 2. THE VAULT (THE INVENTORY)
+// ==========================================
+// Everything below this point MUST trace back to an Inventory.
+
+model Inventory {
+  id          Int      @id @unique @default(autoincrement())
+  name        String
+  description String
+  classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
+
+  users       UserInventoryAccess[]
+  items       Item[]
+  categories  Category[]
+  containers  Container[]
+  tags        Tag[]
+  notes       TimelineNote[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// 3. ORGANIZATIONAL ENTITIES
+// ==========================================
+
 model Category {
-  id          Int        @id @unique @default(autoincrement())
-  name        String     @unique
-  slug        String     @unique
+  id          Int      @id @unique @default(autoincrement())
+  name        String
+  slug        String
   description String?
 
-  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
-  inventoryId Int?
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
 
   photos      Photo[]
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  // Security: Category names are only unique *inside* their specific vault
+  @@unique([inventoryId, name])
+  @@unique([inventoryId, slug])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// TODO: "Item" is _actually_ "Product" or "ItemType". This table actually describe _many_
-//       items, which becomes confusing.
+model Container {
+  id          Int      @id @unique @default(autoincrement())
+  name        String   // e.g. "A 001"
+  description String
+  location    String?
+  photoPath   String?
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+
+  parentId    Int?
+  parent      Container?  @relation("ParentRelation", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Container[] @relation("ParentRelation")
+
+  items       ItemsInContainer[]
+
+  // Security: Container names are only unique *inside* their specific vault
+  @@unique([inventoryId, name])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id          Int      @id @unique @default(autoincrement())
+  name        String
+  slug        String
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+
+  items       Item[]
+
+  // Security: Tag slugs are only unique *inside* their specific vault
+  @@unique([inventoryId, name])
+  @@unique([inventoryId, slug])
+}
+
+// ==========================================
+// 4. CORE DATA (ITEMS & NOTES)
+// ==========================================
+
 model Item {
-  id          Int        @id @unique @default(autoincrement())
+  id          Int      @id @unique @default(autoincrement())
   slug        String
   amount      Int?
   title       String?
   description String?
   reason      String?
 
-  // TODO in app: Inventory _can_ be determined by ML model classification (running on Jetson)
-  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
-  inventoryId Int?
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
 
-  author      User       @relation(fields: [authorId], references: [id])
+  author      User      @relation(fields: [authorId], references: [id])
   authorId    Int
 
   photos      Photo[]
   documents   Document[]
   tags        Tag[]
   locations   ItemsInContainer[]
-  attributes  KVP[]      // e.g. width, height, color (should override colors of photo, I guess), etc
+  attributes  KVP[]
   usage       InUse[]
   logs        ActivityLog[]
   timelineNotes TimelineNote[] @relation("TimelineNoteToItem")
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model ActivityLog {
-  id        Int      @id @unique @default(autoincrement())
-  level     String   @default("info") // 'info', 'success', 'warning', 'error'
-  action    String
-  message   String
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId    Int
+model TimelineNote {
+  id          Int      @id @unique @default(autoincrement())
+  content     String?  
+  latitude    Float?   
+  longitude   Float?
+  category    String?  @default("idea") // 'idea', 'todo', 'to buy', 'other', 'archive'
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    Int
+
+  photos      Photo[]
+  documents   Document[]
+  linkedItems Item[]   @relation("TimelineNoteToItem")
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 5. JOINS & SUB-ENTITIES
+// ==========================================
+// These don't need direct Inventory IDs because they are inextricably linked 
+// to an Item or Note, which guarantees their silo.
+
+model ItemsInContainer {
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      Int       
+  container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  containerId Int
+
+  // Replaced string references with strict Integer IDs
+  @@id([itemId, containerId])
 }
 
 model Photo {
-  id          Int       @id @unique @default(autoincrement())
-  type        String    @default("product")
+  id          Int      @id @unique @default(autoincrement())
+  type        String   @default("product")
   orgPath     String?
   cropPath    String?
   thumbPath   String?
   ocr         String?
   showOriginal Boolean @default(false)
-  colors      String?   // NOTE: JSON array
+  colors      String?  
+  classBlip   String?  
+  classTrash  String?  
+  llmAnalysis String?  
 
   category    Category? @relation(fields: [categoryId], references: [id])
   categoryId  Int?
-
-  classBlip   String?   // NOTE: JSON
-  classTrash  String?   // NOTE: JSON
-  llmAnalysis String?   // NOTE: JSON
 
   item        Item?     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId      Int?
@@ -120,49 +225,22 @@ model Photo {
 }
 
 model Document {
-  id        Int      @id @unique @default(autoincrement())
-  type      String?  // E.g. invoice, information, product-page, ...
-  title     String
-  source    String   // AKA url
-  path      String
-  extracts  String   // AKA extracts
-  summary   String?  // Comes from LLM based on extract
+  id          Int      @id @unique @default(autoincrement())
+  type        String?  
+  title       String
+  source      String   
+  path        String
+  extracts    String   
+  summary     String?  
 
-  item      Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId    Int?
+  item        Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      Int?
 
   timelineNote TimelineNote? @relation(fields: [timelineNoteId], references: [id], onDelete: Cascade)
   timelineNoteId Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Container {
-  // Name must be unique. The simplest way is to include its parent containers as prefix (e.g. 'A 001' and 'B 001').
-  name        String @unique    // A or A 001 (Note: sub-containers must be denoted with space)
-  
-  parentId    String?
-  parent      Container?  @relation("ParentRelation", fields: [parentId], references: [name])
-  children    Container[] @relation("ParentRelation")
-
-  description String            // closet with door
-  location    String?           // top of desk (JR)
-  photoPath   String?
-
-  items       ItemsInContainer[]
-
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-model ItemsInContainer {
-  item          Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId        Int    
-  container     Container @relation(fields: [containerName], references: [name])
-  containerName String
-
-  @@id([itemId, containerName])
 }
 
 model KVP {
@@ -174,43 +252,28 @@ model KVP {
   itemId Int
 }
 
-model Tag {
-  id    Int    @id @unique @default(autoincrement())
-  name  String @unique
-  slug  String @unique
-  items Item[]
-}
-
-model TimelineNote {
-  id        Int      @id @unique @default(autoincrement())
-  content   String?  // The raw text of the note/idea
-  latitude  Float?   // GPS tracking
-  longitude Float?
-
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  category  String?  @default("idea") // 'idea', 'todo', 'to buy', 'other', 'archive'
-
-  photos    Photo[]
-  documents Document[]
-
-  linkedItems Item[] @relation("TimelineNoteToItem")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-
 // Be able to tag items that are in use by/on something
 // TODO: I believe this needs to be redefined to many->many as we can have several individual items
 model InUse {
   id          Int      @id @unique @default(autoincrement())
-  title       String?  // e.g. By VidensiVision
-  description String?  // e.g. ...mounted in shed to check presence of Ery
+  title       String?  
+  description String?  
 
   item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId      Int
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        Int      @id @unique @default(autoincrement())
+  level     String   @default("info")
+  action    String
+  message   String
+  
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    Int
+  
+  createdAt DateTime @default(now())
 }

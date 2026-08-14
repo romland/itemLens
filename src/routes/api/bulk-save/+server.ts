@@ -15,18 +15,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const { draftPath, noteId, containers, items, globalCategory, tagcsv } = await request.json();
     const userId = locals.user.id;
+    const inventoryId = locals.activeInventoryId;
     
     // Fire and forget background worker
     ioQueue.add(async () => {
         const taskId = taskManager.start('global', 0, `Saving ${items.length} items from collection...`);
         try {
             // Pre-process tags
-            const tagIds = tagcsv ? await getTagIds(tagcsv) : [];
+            const tagIds = tagcsv ? await getTagIds(tagcsv, inventoryId) : [];
 
             // 1. Context Preservation: Update the pre-created notebook entry
             if (noteId) {
                 await db.timelineNote.update({
-                    where: { id: noteId },
+                    where: { id: noteId, inventoryId },
                     data: {
                         content: `Collection Scan - ${containers?.length ? containers.join(', ') : 'Unassigned Location'}`,
                     }
@@ -70,7 +71,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 
                 // Formally categorize it like the standard upload pipeline does
                 const { getOrCreateCategory } = await import('$lib/server/categories');
-                const cat = await getOrCreateCategory(finalCategoryName);
+                const cat = await getOrCreateCategory(finalCategoryName, inventoryId);
 
                 // Mock the ML response so the UI recognizes the category without needing an expensive API call per item
                 const simulatedLlmAnalysis = JSON.stringify({
@@ -84,6 +85,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 await db.item.create({
                     data: {
                         title: item.title,
+                        inventoryId,
                         slug: slugify((item.title || 'item').toLowerCase(), { lower: true }),
                         amount: 1,
                         authorId: userId,
@@ -92,7 +94,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                             create: [{ type: 'product', orgPath: cropWebPath, cropPath: cropWebPath, thumbPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis }] 
                         },
                         attributes: { create: attributesToCreate },
-                        locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { name: c } } })) } : undefined,
+                        locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { inventoryId_name: { inventoryId, name: c } } } })) } : undefined,
                         timelineNotes: noteId ? { connect: [{ id: noteId }] } : undefined,
                         tags: tagIds.length > 0 ? { connect: tagIds } : undefined
                     }

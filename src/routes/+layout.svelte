@@ -274,6 +274,17 @@ $:  isDemoMode =
             <img src="/itemlens-512-white-outline.webp" alt="itemLens Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
             <span class="font-bold tracking-tight">itemLens</span>
         </a>
+
+        {#if $page.data.inventories && $page.data.inventories.length > 0}
+            <form action="/?/switchVault" method="POST" data-sveltekit-reload class="ml-4">
+                <select name="inventoryId" class="select select-sm select-ghost font-bold bg-base-200/50" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={$page.data.activeInventoryId}>
+                    {#each $page.data.inventories as inv}
+                        <option value={inv.id}>{inv.name}</option>
+                    {/each}
+                </select>
+            </form>
+        {/if}
+
     </div>
   </div>
 
@@ -369,6 +380,26 @@ $:  isDemoMode =
         </div>
 
         <div class="flex flex-col gap-3">
+            {#if $page.data.inventories && $page.data.inventories.length > 1}
+                <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mb-1">
+                    <div class="flex items-center gap-4 p-4">
+                        <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                            <i class="bi bi-safe2-fill text-xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Vault</div>
+                            <form action="/?/switchVault" method="POST" data-sveltekit-reload>
+                                <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={$page.data.activeInventoryId}>
+                                    {#each $page.data.inventories as inv}
+                                        <option value={inv.id}>{inv.name}</option>
+                                    {/each}
+                                </select>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
             <!-- Group 1: Navigation -->
             <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm">
                 {#if $page.data.user}
@@ -410,16 +441,17 @@ $:  isDemoMode =
                         <div class="flex-1 font-semibold text-lg">Settings</div>
                         <i class="bi bi-chevron-right text-gray-400"></i>
                     </a>
+                    {#if $page.data.user?.isAdmin}
+                        <div class="h-[1px] bg-base-300 ml-14"></div>
 
-                    <div class="h-[1px] bg-base-300 ml-14"></div>
-
-                    <a href="/activity" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
-                            <i class="bi bi-activity text-xl"></i>
-                        </div>
-                        <div class="flex-1 font-semibold text-lg">System Activity</div>
-                        <i class="bi bi-chevron-right text-gray-400"></i>
-                    </a>                    
+                        <a href="/activity" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                            <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
+                                <i class="bi bi-activity text-xl"></i>
+                            </div>
+                            <div class="flex-1 font-semibold text-lg">System Activity</div>
+                            <i class="bi bi-chevron-right text-gray-400"></i>
+                        </a>
+                    {/if}
                 {/if}
             </div>
 

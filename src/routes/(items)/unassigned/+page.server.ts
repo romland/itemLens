@@ -4,7 +4,7 @@ import { db } from '$lib/server/database';
 export const load = (async ({ locals }) => {
     const items = await db.item.findMany({
         where: {
-            authorId: locals.user.id,
+            inventoryId: locals.activeInventoryId,
             locations: { none: {} }
         },
         orderBy: [{ id: 'desc' }],

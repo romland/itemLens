@@ -3,12 +3,14 @@ import { guessProductDetails } from '$lib/server/gemini-classification';
 import { db } from '$lib/server/database';
 import { apiQueue } from '$lib/server/queue/index';
 
-export async function POST({ request }) {
+export async function POST({ request, locals }) {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
     const { itemId, hint } = await request.json();
     
     // Get the item's first product photo
-    const item = await db.item.findUnique({
-        where: { id: Number(itemId) },
+    const item = await db.item.findFirst({
+        where: { id: Number(itemId), inventoryId: locals.activeInventoryId },
         include: { photos: true }
     });
     

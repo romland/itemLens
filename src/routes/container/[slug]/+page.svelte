@@ -9,7 +9,7 @@
     pageTitle.set("Container " + data.item?.name);
 
     // Calculate tray breakdown
-    $: childItemCount = data.items.filter(i => i.locations.some(l => l.containerName !== data.item?.name)).length;
+    $: childItemCount = data.items.filter(i => i.locations.some(l => l.container?.name !== data.item?.name)).length;
     $: directItemCount = data.items.length - childItemCount;
 </script>
 

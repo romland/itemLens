@@ -16,8 +16,8 @@ export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
         where: {
             AND: [
-                { author: { id: locals.user.id } },
                 { id: Number(params.id) },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
         include: {
@@ -55,9 +55,8 @@ export const load = (async ({ locals, params }) => {
           },
         },
         where: {
-            AND: [
-                { parentId: null }
-            ]
+            inventoryId: locals.activeInventoryId,
+            parentId: null
         },
         orderBy: {
           name : "asc"
@@ -84,7 +83,7 @@ x delete all containers (to be re-inserted)
 x delete all attributes (to be re-inserted)
 */
 export const actions = {
-    default: async ({ request, params }) => {
+    default: async ({ request, params, locals }) => {
         const orgData = await request.formData();
         const data = Object.fromEntries(orgData);
         const containers = orgData.getAll("containers");
@@ -113,7 +112,7 @@ export const actions = {
   
           let photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
 		  const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
-          const tagIds = await getTagIds(tagcsv);
+          const tagIds = await getTagIds(tagcsv, locals.activeInventoryId);
 
 
 console.log("formData:", orgData);
@@ -126,7 +125,7 @@ console.log("formData:", orgData);
 
         let item = await db.item.findUnique({
             where: {
-                id: Number(params.id)
+                id: Number(params.id),
             },
             include: {
                 photos: true,
@@ -140,7 +139,7 @@ console.log("formData:", orgData);
 
         // TODO: Wrap this in a Prisma transaction so we don't delete stuff without filling things back in.
         await db.item.update({
-          where: { id: Number(params.id) },
+          where: { id: Number(params.id), inventoryId: locals.activeInventoryId },
           data: {
             attributes: {
               deleteMany: {}
@@ -156,7 +155,7 @@ console.log("formData:", orgData);
         // Note: We overwrite the initial version of item here so that we have the new ID's
         //       of images, etc.
         item = await db.item.update({
-            where: { id: Number(params.id) },
+            where: { id: Number(params.id), inventoryId: locals.activeInventoryId },
             data: {
 				title: safeTitle,
                 reason: data.reason as string || "",
@@ -172,7 +171,7 @@ console.log("formData:", orgData);
                   create: containers.map((cont) => {
                     return {
                       container : {
-                          connect: { name : String(cont) },     // CHECK: set? on add: connect
+                          connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: String(cont) } },
                       }
                     }
                   }),

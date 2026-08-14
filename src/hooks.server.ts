@@ -18,7 +18,7 @@ export const handle = (async ({ event, resolve }) => {
 	if (session) {
         const user = await db.user.findUnique({
             where: { token: session },
-            select: { id: true, username: true, name: true, email: true, avatar: true }
+            select: { id: true, username: true, name: true, email: true, avatar: true, isAdmin: true, inventoryAccess: true }
         });
 
         if (user) {
@@ -27,8 +27,23 @@ export const handle = (async ({ event, resolve }) => {
                 username: user.username,
                 name: user.name || user.username,
                 email: user.email,
-                avatar: user.avatar
+                avatar: user.avatar,
+                isAdmin: user.isAdmin
             };
+
+            // Vault Routing Logic
+            const cookieInvId = event.cookies.get('activeInventoryId');
+            const allowedIds = user.inventoryAccess.map(ia => ia.inventoryId);
+            
+            if (cookieInvId && allowedIds.includes(Number(cookieInvId))) {
+                event.locals.activeInventoryId = Number(cookieInvId);
+            } else if (allowedIds.length > 0) {
+                event.locals.activeInventoryId = allowedIds[0];
+                event.cookies.set('activeInventoryId', allowedIds[0].toString(), { path: '/' });
+            } else {
+                event.locals.activeInventoryId = 0;
+            }
+
         } else {
             // Destroy the invalid cookie so we don't keep querying a dead token
             event.cookies.delete('session', { path: '/' }); 

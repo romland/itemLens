@@ -8,7 +8,8 @@ export const load = (async ({ locals, params }) => {
         where: {
             AND: [
                 // { author: { id: locals.user.id } },
-                { name: params.slug.replace("-", " ") }
+                { name: params.slug.replace("-", " ") },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
         include: {
@@ -27,13 +28,14 @@ export const load = (async ({ locals, params }) => {
     }
 
     // Gather this container + all its child trays to fetch their items
-    const containerNames = [item.name, ...item.children.map(c => c.name)];
+    const containerIds = [item.id, ...item.children.map(c => c.id)];
 
     const items = await db.item.findMany({
         where: {
+            inventoryId: locals.activeInventoryId,
             locations: {
                 some: {
-                    containerName: { in: containerNames }
+                    containerId: { in: containerIds }
                 }
             }
         },

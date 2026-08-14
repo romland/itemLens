@@ -25,6 +25,7 @@ export const load = (async ({ locals, params }) => {
             AND: [
                 // { author: { id: locals.user.id } },
                 { name: params.slug },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
     });
@@ -55,7 +56,7 @@ export const actions = {
 
         const post = await db.container.findUnique({
             where: {
-                name: data.id as string
+                inventoryId_name: { inventoryId: locals.activeInventoryId, name: data.id as string }
             }
         });
 
@@ -83,7 +84,7 @@ export const actions = {
         }
 
         await db.container.update({
-            where: { name: data.id as string },
+            where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: data.id as string } },
             data: {
                 photoPath: filename,
                 description: description.trim(),

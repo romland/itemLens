@@ -5,7 +5,7 @@ import fs from 'fs';
 import { getSafeFilename } from '$lib/server/photouploads';
 import { logActivity } from '$lib/server/logger';
 
-export const getTagIds = async (tagcsv: string) => {
+export const getTagIds = async (tagcsv: string, inventoryId: number) => {
     const ids: { id: number }[] = [];
 
     if (tagcsv) {
@@ -16,12 +16,12 @@ export const getTagIds = async (tagcsv: string) => {
             const slug = slugify(name);
 
             let tag = await db.tag.findFirst({
-                where: { slug: slug }
+                where: { slug: slug, inventoryId }
             });
 
             if (!tag) {
                 tag = await db.tag.create({
-                    data: { name, slug }
+                    data: { name, slug, inventoryId }
                 });
             }
 

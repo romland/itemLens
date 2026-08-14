@@ -1,11 +1,13 @@
 import { db } from '$lib/server/database';
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import slugify from 'slugify';
 
 export const load = (async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
 
     const categories = await db.category.findMany({
+        where: { inventoryId: locals.activeInventoryId },
         include: {
             _count: {
                 select: { photos: true }
@@ -18,7 +20,7 @@ export const load = (async ({ locals }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    create: async ({ request }) => {
+    create: async ({ request, locals }) => {
         const data = await request.formData();
         const rawName = data.get('name')?.toString();
         
@@ -27,19 +29,20 @@ export const actions = {
         }
         
         const name = rawName.trim().toLowerCase();
+        const slug = slugify(name);
 
         await db.category.upsert({
-            where: { name },
+            where: { inventoryId_slug: { inventoryId: locals.activeInventoryId, slug } },
             update: {},
-            create: { name }
+            create: { name, slug, inventoryId: locals.activeInventoryId }
         });
     },
-    delete: async ({ request }) => {
+    delete: async ({ request, locals }) => {
         const data = await request.formData();
         const id = Number(data.get('id'));
         if (id) {
             const category = await db.category.findUnique({
-                where: { id },
+                where: { id, inventoryId: locals.activeInventoryId },
                 include: { photos: true }
             });
 

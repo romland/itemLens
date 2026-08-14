@@ -22,7 +22,7 @@
 
     // State for the Hub Badges
     let photoCount = item?.photos?.length || 0;
-    let selectedLocations = item?.locations?.map(l => l.containerName) || [];
+    let selectedLocations = item?.locations?.map(l => l.container?.name) || [];
     let qrScannerCount = 0;
     $: linkCount = (item?.documents?.length || 0) + qrScannerCount + pastedDocCount;
 
@@ -49,7 +49,7 @@
         if (qrScannerCount > 0) dirty = true;
         if (pastedDocCount > 0) dirty = true;
         
-        const initialLocations = item?.locations?.map(l => l.containerName).sort().join(',') || "";
+        const initialLocations = item?.locations?.map(l => l.container?.name).sort().join(',') || "";
         const currentLocs = [...selectedLocations].sort().join(',');
         if (initialLocations !== currentLocs) dirty = true;
         

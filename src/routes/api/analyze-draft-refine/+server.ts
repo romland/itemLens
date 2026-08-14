@@ -5,7 +5,9 @@ import { uploadsDiskFolder } from '$lib/server/constants';
 import path from 'path';
 import { apiQueue } from '$lib/server/queue/index';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
     try {
         const { draftPath, hint } = await request.json();
         

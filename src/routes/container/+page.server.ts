@@ -20,7 +20,8 @@ export const load = (async ({ locals, params }) => {
         },
         where: {
             AND: [
-                { parentId: null }
+                { parentId: null },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
         orderBy: {
@@ -41,12 +42,12 @@ export const load = (async ({ locals, params }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    delete: async ({ request }) => {
+    delete: async ({ request, locals }) => {
         const data = await request.formData();
         const name = data.get('name') as string;
         
         if (name) {
-            await db.container.delete({ where: { name } });
+            await db.container.delete({ where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name } } });
         }
     }
 } satisfies Actions;

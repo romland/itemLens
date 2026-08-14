@@ -27,12 +27,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const webPath = `${uploadsWebFolder}/${filename}`;
 
         fs.writeFileSync(localPath, buffer);
-        processDraftPhotoBackground(webPath, 'information').catch(e => console.error(e));
+        processDraftPhotoBackground(webPath, 'information', locals.activeInventoryId).catch(e => console.error(e));
 
         const note = await db.timelineNote.create({
             data: {
                 content: "Collection capture (Pending triage)",
                 authorId: locals.user.id,
+                inventoryId: locals.activeInventoryId,
                 category: 'archive',
                 photos: { create: [{ type: 'information', orgPath: webPath }] }
             }

@@ -8,7 +8,7 @@ import { processFormDocuments } from '$lib/server/services';
 
 export const load = (async ({ locals, url }) => {
     const category = url.searchParams.get('category') || 'all';
-    const whereClause: any = { authorId: locals.user.id };
+    const whereClause: any = { inventoryId: locals.activeInventoryId };
 
     if (category !== 'all') {
         whereClause.category = category;
@@ -86,6 +86,7 @@ export const actions = {
                 latitude: isNaN(lat) ? null : lat,
                 longitude: isNaN(lng) ? null : lng,
                 authorId: locals.user.id,
+                inventoryId: locals.activeInventoryId,
                 photos: { create: photosToConnect },
                 linkedItems: { connect: linkedIds }
             }
@@ -109,24 +110,24 @@ export const actions = {
         return { success: true };
     },
     
-    updateCategory: async ({ request }) => {
+    updateCategory: async ({ request, locals }) => {
         const data = await request.formData();
-        await db.timelineNote.update({ where: { id: Number(data.get('id')) }, data: { category: data.get('category') as string } });
+        await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: data.get('category') as string } });
     },
-    delete: async ({ request }) => {
+    delete: async ({ request, locals }) => {
         const data = await request.formData();
-        await db.timelineNote.delete({ where: { id: Number(data.get('id')) } });
+        await db.timelineNote.delete({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId } });
     },
-    edit: async ({ request }) => {
+    edit: async ({ request, locals }) => {
         const data = await request.formData();
-        await db.timelineNote.update({ where: { id: Number(data.get('id')) }, data: { content: data.get('content') as string } });
+        await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { content: data.get('content') as string } });
     },
-    promote: async ({ request }) => {
+    promote: async ({ request, locals }) => {
         const data = await request.formData();
         const noteId = Number(data.get('id'));
         
         const note = await db.timelineNote.findUnique({
-            where: { id: noteId },
+            where: { id: noteId, inventoryId: locals.activeInventoryId },
             include: { photos: true, documents: true }
         });
         
@@ -139,6 +140,7 @@ export const actions = {
                 slug: "promoted-from-notebook",
                 description: note.content || "",
                 authorId: note.authorId,
+                inventoryId: locals.activeInventoryId
             }
         });
 

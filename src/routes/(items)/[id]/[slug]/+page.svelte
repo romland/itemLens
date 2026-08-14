@@ -234,7 +234,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                             </div>
                             <div class="flex flex-col justify-center min-w-0">
                                 <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold leading-none mb-0.5">Location</div>
-                                <div class="font-bold text-sm leading-tight truncate">{loc.containerName}</div>
+                                <div class="font-bold text-sm leading-tight truncate">{loc.container.name}</div>
                                 <div class="text-xs text-gray-500 leading-snug line-clamp-1 mt-0.5">{loc.container?.parent?.description || loc.container?.description || 'No description'}</div>
                             </div>
                         </div>
@@ -251,7 +251,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                             <div class="text-gray-500 font-semibold uppercase text-[10px] mt-0.5">Other Locations:</div>
                             <div class="flex flex-wrap gap-1">
                                 {#each data.item.locations.slice(1) as loc}
-                                    <div class="badge badge-ghost badge-sm">{loc.containerName}</div>
+                                    <div class="badge badge-ghost badge-sm">{loc.container.name}</div>
                                 {/each}
                             </div>
                         {/if}
@@ -295,7 +295,7 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                         {/if}
                         <div class="card-body p-4 gap-1">
                             <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
-                            <h3 class="card-title text-lg m-0">{loc.containerName}</h3>
+                            <h3 class="card-title text-lg m-0">{loc.container.name}</h3>
                             <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
                         </div>
                     </div>

@@ -62,7 +62,7 @@
                                 {#if item.locations}
                                     {#each item.locations as loc}
                                         <div class="badge badge-ghost badge-sm w-16 overflow-hidden shrink-0">
-                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.containerName}">{loc.containerName}</a>
+                                            <a href="/container/{loc.container.name.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
                                         </div>
                                     {/each}
                                 {/if}
@@ -83,7 +83,7 @@
                                 {#if item.locations}
                                     {#each item.locations as loc}
                                         <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
-                                            <a href="/container/{loc.containerName.replace(/ /g, '-')}">{loc.containerName}</a>
+                                            <a href="/container/{loc.container.name.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
                                         </div>
                                     {/each}
                                 {/if}

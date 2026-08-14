@@ -9,7 +9,8 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url, setHeaders }) {
+export async function GET({ url, setHeaders, locals }) {
+    if (!locals.user) return new Response('Unauthorized', { status: 401 });
 	setHeaders({
 		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
 	});
@@ -21,6 +22,9 @@ export async function GET({ url, setHeaders }) {
         take: count,
         skip: page == 1 ? 0 : (page - 1) * count,
         orderBy: [{ id: 'desc'}],
+        where: {
+            inventoryId: locals.activeInventoryId
+        },
         include: {
             locations: {
                 include: {  
@@ -35,14 +39,12 @@ export async function GET({ url, setHeaders }) {
 
     if(q && q.length > 0) {
         query.where = {
+            ...query.where,
             OR: [
                 { title: { contains: q }},
                 { description: { contains: q }},
-                { locations: { some: { containerName: { contains: q } } } }
-            ],
-            // AND: [
-            //     { authorId: locals.user.id },
-            // ]
+                { locations: { some: { container: { name: { contains: q } } } } }
+            ]
         };
     }
 

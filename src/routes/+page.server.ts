@@ -7,13 +7,13 @@ export const load = (async ({ locals, url }) => {
 
     const unassignedCount = await db.item.count({
         where: {
-            authorId: locals.user.id,
+            inventoryId: locals.activeInventoryId,
             locations: { none: {} }
         }
     });
 
     const items = await db.item.findMany({
-        where: { author: { id: locals.user.id } },
+        where: { inventoryId: locals.activeInventoryId },
         take: 10,
         skip: page == 1 ? 0 : (page - 1) * 10,
         orderBy: [{ id: 'desc' }],
@@ -36,7 +36,7 @@ export const load = (async ({ locals, url }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    default: async ({ url, cookies }) => {
+    setTheme: async ({ url, cookies }) => {
         const theme = url.searchParams.get('theme');
         const redirectTo = url.searchParams.get('redirectTo');
 
@@ -48,5 +48,14 @@ export const actions = {
         }
 
         redirect(303, redirectTo ?? '/');
+    },
+    switchVault: async ({ request, cookies }) => {
+        const data = await request.formData();
+        const newVaultId = data.get('inventoryId')?.toString();
+        
+        if (newVaultId) {
+            cookies.set('activeInventoryId', newVaultId, { path: '/', maxAge: 60 * 60 * 24 * 365 });
+        }
+        redirect(303, '/');
     }
 } satisfies Actions;

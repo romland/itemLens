@@ -15,7 +15,7 @@ export const load = (async ({ locals, url, setHeaders }) => {
                 { description: { contains: q }}
             ],
             AND: [
-                { authorId: locals.user.id },
+                { inventoryId: locals.activeInventoryId },
             ]
         },
         take: 10,

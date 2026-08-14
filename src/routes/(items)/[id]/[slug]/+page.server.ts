@@ -14,8 +14,8 @@ export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
         where: {
             AND: [
-                { author: { id: locals.user.id } },
-                { id: Number(params.id) }
+                { id: Number(params.id) },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
         include: {

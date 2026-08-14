@@ -20,7 +20,8 @@ export async function GET({ url, setHeaders }) {
         where: {
             AND: [
                 // { author: { id: locals.user.id } },
-                { id: Number(url.searchParams.get('id')) }
+                { id: Number(url.searchParams.get('id')) },
+                { inventoryId: locals.activeInventoryId }
             ]
         },
         include: {

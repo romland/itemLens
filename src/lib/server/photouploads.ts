@@ -17,7 +17,7 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
-export async function enrichPhotoData(localPath: string, webPath: string, type: string, tracking?: TaskContext): Promise<any> {
+export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext): Promise<any> {
   const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
   const [ocrResult, imgUpdates] = await Promise.all([
@@ -32,7 +32,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     try {
       const { analyzePhoto } = await import('$lib/server/gemini-classification');
       const { getExistingCategoryNames } = await import('$lib/server/categories');
-      const existingCategories = await getExistingCategoryNames();
+      const existingCategories = await getExistingCategoryNames(inventoryId);
       const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
       const analysis = await apiQueue.add(
           () => analyzePhoto(targetPath, existingCategories),
@@ -58,10 +58,10 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
   };
 }
 
-export async function processDraftPhotoBackground(webPath: string, type: string) {
+export async function processDraftPhotoBackground(webPath: string, type: string, inventoryId: number) {
   const tracking = { targetType: 'global' as const, targetId: 0 };
   const localPath = `static${webPath}`;
-  const data = await enrichPhotoData(localPath, webPath, type, tracking);
+  const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking);
   fs.writeFileSync(`${localPath}.json`, JSON.stringify(data), 'utf8');
   console.log(`[Background Task] Finished heavy processing for draft image: ${webPath}`);
 }
@@ -84,7 +84,7 @@ export async function processItemPhotosBackground(item: any) {
       const localPath = `static${webPath}`;
       const tracking = { targetType: 'item' as const, targetId: item.id };
 
-      const enriched = await enrichPhotoData(localPath, webPath, photo.type, tracking);
+      const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking);
 
       if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
       if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
@@ -114,7 +114,7 @@ export async function processItemPhotosBackground(item: any) {
 
       if (enriched.categoryName) {
           const { getOrCreateCategory } = await import('$lib/server/categories');
-          const cat = await getOrCreateCategory(enriched.categoryName);
+          const cat = await getOrCreateCategory(enriched.categoryName, item.inventoryId);
           photo.categoryId = cat.id;
       }
 

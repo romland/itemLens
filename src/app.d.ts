@@ -10,8 +10,10 @@ declare global {
 		interface Locals {
 			user: {
 				id: number,
-				name: string
+                name: string,
+                isAdmin: boolean
 			}
+            activeInventoryId: number;
 		}
 		// interface PageData {}
 		// interface Platform {}

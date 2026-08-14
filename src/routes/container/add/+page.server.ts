@@ -43,6 +43,7 @@ export const actions = {
                 photoPath: filename,
                 description: description.trim(),
                 location : (data.location as string)?.trim(),
+                inventoryId: locals.activeInventoryId
             }
         });
 
@@ -54,9 +55,10 @@ export const actions = {
                 const trayId = i.toString().padStart(3, '0')
                 await db.container.create({
                     data: {
-                        parentId: container.name,
+                        parentId: container.id,
                         name: `${name} ${trayId}`,
                         description: "",
+                        inventoryId: locals.activeInventoryId
                     }
                 });
             }

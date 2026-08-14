@@ -3,10 +3,11 @@ import { redirect } from "@sveltejs/kit";
 import { db } from '$lib/server/database';
 
 export const actions = {
-    default: async ({ params }) => {
-        await db.item.delete({
+    default: async ({ params, locals }) => {
+        await db.item.deleteMany({
             where: {
-                id: Number(params.id)
+                id: Number(params.id),
+                inventoryId: locals.activeInventoryId
             }
         });
 
