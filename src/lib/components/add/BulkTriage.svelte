@@ -314,4 +314,4 @@
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
-<ImageLightbox bind:this={lightbox} itemTitle="Magic Shelf Scan" />
+<ImageLightbox bind:this={lightbox} itemTitle="Collection Scan" />

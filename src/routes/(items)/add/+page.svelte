@@ -100,7 +100,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
 
 <div class="bg-base-200 p-1 rounded-xl flex w-full max-w-xs mx-auto mb-6 mt-2 relative z-10">
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
-        if (mode !== 'single' && isDirty && !confirm('You have unsaved Magic Shelf items. Switch modes and lose them?')) return;
+        if (mode !== 'single' && isDirty && !confirm('You have unsaved Collection Items. Switch modes and lose them?')) return;
         isDirty = false;
         mode = 'single';
     }}>Single Item</button>
