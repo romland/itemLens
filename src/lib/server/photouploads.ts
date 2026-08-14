@@ -67,7 +67,7 @@ export async function processDraftPhotoBackground(webPath: string, type: string)
 }
 
 export async function processItemPhotosBackground(item: any) {
-  const taskId = taskManager.start('item', item.id, 'Running ML analysis on photos');
+  const taskId = taskManager.start('item', item.id, 'Analyzing photos');
   try {
     let itemNeedsTitleUpdate = item.title === "Default product" || item.title === "";
     for (const photo of item.photos) {
