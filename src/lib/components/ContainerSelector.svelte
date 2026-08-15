@@ -52,6 +52,9 @@
         // const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
         // return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
         if (!txt || txt.trim() === '') return "Empty QR code";
+
+        const exists = flatContainers.some(c => c.name === txt);
+        if (!exists) return `Container "${txt}" not found in this inventory.`;
         return true;
     }
 

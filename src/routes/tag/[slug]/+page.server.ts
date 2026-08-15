@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/database';
 
-export const load = (async ({ params, url }) => {
+export const load = (async ({ params, url, locals }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
 
     const tag = await db.tag.findFirst({

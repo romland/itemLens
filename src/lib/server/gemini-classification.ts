@@ -14,7 +14,8 @@ export interface ImageAnalysisResult {
 
 export async function analyzePhoto(
   localFilePath: string,
-  existingCategories: string[] = []
+  existingCategories: string[] = [],
+  allowNewCategories: boolean = true
 ): Promise<ImageAnalysisResult> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const base64Data = fileBuffer.toString('base64');
@@ -33,8 +34,7 @@ export async function analyzePhoto(
     TASKS:
     1. photoType: Identify if this photo is a 'product' (physical item), 'invoice' (receipt/bill), 'information' (pinout/diagram/spec sheet), or 'other'.
     2. subCategory: Assign a sub-category. 
-       - CRITICAL: If the image fits ANY string in EXISTING SUB-CATEGORIES, you MUST reuse that exact string.
-       - If none fit, create a new standardized short lowercase string (e.g., 'power_tool', 't_shirt', 'circuit_board').
+       ${allowNewCategories ? "- CRITICAL: If the image fits ANY string in EXISTING SUB-CATEGORIES, you MUST reuse that exact string.\n       - If none fit, create a new standardized short lowercase string (e.g., 'power_tool', 't_shirt', 'circuit_board')." : "- CRITICAL RESTRICTION: You MUST ONLY select a string EXACTLY as it appears in the EXISTING SUB-CATEGORIES list. Do NOT invent or create new categories under any circumstances. Pick the closest match."}
     3. isNewCategory: Set to true ONLY if you created a subCategory not in the existing list.
     4. description: A brief visual summary of the image.
   `;

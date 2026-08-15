@@ -93,6 +93,22 @@ module.exports = {
           "success": "#10b981",
           "warning": "#fbbf24",
           "error": "#ef4444",
+        },
+        manhattan: { // Industrial / Engraved aesthetic
+          "primary": "#d97706",      // Amber/Gold engraving fill
+          "secondary": "#4b5563",    // Brushed steel / Charcoal
+          "accent": "#f59e0b",
+          "neutral": "#1f2937",
+          "base-100": "#27272a",     // Slate background
+          "base-200": "#1e1e24",     // Darker slate
+          "base-300": "#0f172a",     // Deepest slate
+          "base-content": "#e2e8f0",
+          "info": "#0ea5e9",
+          "success": "#10b981",
+          "warning": "#fbbf24",
+          "error": "#ef4444",
+          "--rounded-box": "0.2rem", // Slightly rounded but firm
+          "--rounded-btn": "0.2rem",
         }
       }
     ]

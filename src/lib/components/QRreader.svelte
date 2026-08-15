@@ -8,6 +8,8 @@
     let scanSuccessResult: string | null = null;
     let isProcessing = false;
     let modal: HTMLDialogElement;
+    let autoScan = true;
+    let manualTrigger = false;
 
     let videoElement: HTMLVideoElement;
     let canvasElement: HTMLCanvasElement;
@@ -30,6 +32,7 @@
     export async function start() {
         scanSuccessResult = null;
         isProcessing = false;
+        manualTrigger = false;
         showingError = null;
         modal.showModal();
 
@@ -76,41 +79,48 @@
         if (!scanning || isProcessing) return;
 
         if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-            try {
-                let decodedText = null;
+            if (autoScan || manualTrigger) {
+                try {
+                    let decodedText = null;
 
-                // Tier 1: Apple/Google Native BarcodeDetector (Zero JS processing cost)
-                if ('BarcodeDetector' in window) {
-                    // @ts-ignore
-                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-                    const barcodes = await detector.detect(videoElement);
-                    if (barcodes.length > 0) decodedText = barcodes[0].rawValue;
-                } 
-                // Tier 2: Highly Optimized jsQR Fallback
-                else if (canvasElement) {
-                    const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        // Only grab the center 60% of the video to process
-                        const size = Math.min(videoElement.videoWidth, videoElement.videoHeight) * 0.6;
-                        const sX = (videoElement.videoWidth - size) / 2;
-                        const sY = (videoElement.videoHeight - size) / 2;
-                        
-                        canvasElement.width = size;
-                        canvasElement.height = size;
-                        ctx.drawImage(videoElement, sX, sY, size, size, 0, 0, size, size);
-                        const imgData = ctx.getImageData(0, 0, size, size);
-                        
-                        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
-                        if (code) decodedText = code.data;
+                    // Tier 1: Apple/Google Native BarcodeDetector (Zero JS processing cost)
+                    if ('BarcodeDetector' in window) {
+                        // @ts-ignore
+                        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                        const barcodes = await detector.detect(videoElement);
+                        if (barcodes.length > 0) decodedText = barcodes[0].rawValue;
+                    } 
+                    // Tier 2: Highly Optimized jsQR Fallback
+                    else if (canvasElement) {
+                        const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
+                        if (ctx) {
+                            // Only grab the center 60% of the video to process
+                            const size = Math.min(videoElement.videoWidth, videoElement.videoHeight) * 0.6;
+                            const sX = (videoElement.videoWidth - size) / 2;
+                            const sY = (videoElement.videoHeight - size) / 2;
+                            
+                            canvasElement.width = size;
+                            canvasElement.height = size;
+                            ctx.drawImage(videoElement, sX, sY, size, size, 0, 0, size, size);
+                            const imgData = ctx.getImageData(0, 0, size, size);
+                            
+                            const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+                            if (code) decodedText = code.data;
+                        }
                     }
-                }
 
-                if (decodedText) {
-                    onScanSuccess(decodedText);
-                    return;
+                    if (decodedText) {
+                        manualTrigger = false;
+                        onScanSuccess(decodedText);
+                        return;
+                    } else if (manualTrigger) {
+                        showingError = { message: "No valid QR code detected." };
+                        setTimeout(() => showingError = null, 2000);
+                        manualTrigger = false;
+                    }
+                } catch (e) {
+                    // Ignore errors during scan frame
                 }
-            } catch (e) {
-                // Ignore errors during scan frame
             }
         }
         scanFrameId = requestAnimationFrame(scanLoop);
@@ -219,6 +229,19 @@
                 </div>
             </div>
         {/if}
+
+        <!-- Control Overlay -->
+        <div class="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4 z-50 pointer-events-auto">
+            {#if !autoScan}
+                <button type="button" class="btn btn-primary btn-circle h-16 w-16 shadow-xl hover:scale-105 active:scale-95 transition-transform border-4 border-base-100" on:click={() => manualTrigger = true}>
+                    <i class="bi bi-camera text-2xl"></i>
+                </button>
+            {/if}
+            <label class="cursor-pointer label bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2 shadow-lg border border-white/10">
+                <span class="label-text text-white/90 mr-3 font-medium text-xs uppercase tracking-wider">Auto-Scan</span>
+                <input type="checkbox" class="toggle toggle-primary toggle-sm" bind:checked={autoScan} />
+            </label>
+        </div>
     </main>
   </div>
   <div class="modal-backdrop">

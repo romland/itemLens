@@ -18,6 +18,7 @@ export const load = async ({ locals }) => {
             select: { 
                 id: true, 
                 name: true,
+                allowNewCategories: true,
                 _count: { select: { items: true, notes: true, containers: true } }
             } 
         });
@@ -166,6 +167,16 @@ export const actions = {
             where: { inventoryId, userId }
         });
         return { success: true, message: "Access revoked." };
+    },
+
+    toggleAutoCategories: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('allowNewCategories') === 'true';
+        await db.inventory.update({ where: { id }, data: { allowNewCategories: allow } });
+        return { success: true, message: "Category generation settings updated." };
     },
 
 	deleteInventory: async ({ request, locals }) => {

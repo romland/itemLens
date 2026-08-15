@@ -43,7 +43,8 @@
         { id: 'luxury', name: 'Luxury', icon: 'bi-gem' },
         { id: 'coffee', name: 'Coffee', icon: 'bi-cup-hot' },
         { id: 'dark', name: 'Default Dark', icon: 'bi-moon' },
-        { id: 'light', name: 'Default Light', icon: 'bi-sun' }
+        { id: 'light', name: 'Default Light', icon: 'bi-sun' },
+        { id: 'manhattan', name: 'Manhattan', icon: 'bi-building' }
     ];
 
 	function notify(status: string, message: string, id: string | null = null) {
@@ -335,6 +336,12 @@
                                     {#if deleteConfirmId === v.id}
                                         <div class="text-[10px] text-error mt-0.5">Type <strong>{v.name}</strong> to confirm</div>
                                     {/if}
+									<form method="POST" action="?/toggleAutoCategories" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+										<input type="hidden" name="id" value={v.id}>
+										<input type="hidden" name="allowNewCategories" value={(!v.allowNewCategories).toString()}>
+										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowNewCategories} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+										<span class="text-xs text-gray-500 font-medium">Allow automated creation of categories</span>
+									</form>
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}

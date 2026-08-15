@@ -8,6 +8,8 @@
     let isOpen = false;
     let photo: any = null;
     let showOriginal = false;
+	let showMenu = false;
+	let fileDetails = { size: '...', type: '...' };
 
     // Pan & Zoom State
 	// Tuned for a buttery, slight-bounce iOS feel
@@ -34,10 +36,27 @@
         photo = p;
         showOriginal = p.showOriginal || false;
         resetZoom();
+		showMenu = false;
         isOpen = true;
         // Lock body scrolling
         if (typeof document !== 'undefined') document.body.style.overflow = 'hidden';
+		fetchDetails();
     }
+
+	async function fetchDetails() {
+		if (!photo?.orgPath) return;
+		try {
+			const res = await fetch(photo.orgPath, { method: 'HEAD' });
+			const bytes = res.headers.get('content-length');
+			const type = res.headers.get('content-type');
+			let sizeStr = 'Unknown';
+			if (bytes) {
+				const mb = parseInt(bytes) / (1024 * 1024);
+				sizeStr = mb > 1 ? `${mb.toFixed(2)} MB` : `${(parseInt(bytes) / 1024).toFixed(0)} KB`;
+			}
+			fileDetails = { size: sizeStr, type: type || 'Unknown' };
+		} catch (e) {}
+	}
 
     export function close() {
         isOpen = false;
@@ -194,6 +213,29 @@
 		close();
 	}
 
+	async function downloadImage() {
+		try {
+			const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
+			const res = await fetch(path);
+			const blob = await res.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.style.display = 'none';
+			a.href = url;
+			a.download = path.split('/').pop() || 'download.png';
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			showMenu = false;
+		} catch (e) { console.error('Download failed', e); }
+	}
+
+	function copyLink() {
+		const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
+		navigator.clipboard.writeText(window.location.origin + path);
+		showMenu = false;
+	}
+
     // Rotation State
     let rotation = 0;
     function rotateLeft() { rotation -= 90; }
@@ -251,13 +293,37 @@
                     {/if}
                 </div>
             </div>
-            <button 
-                class="btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md pointer-events-auto shrink-0" 
-                on:click={close}
-                aria-label="Close lightbox"
-            >
-                <i class="bi bi-x-lg text-xl"></i>
-            </button>
+			<div class="flex items-center gap-2 pointer-events-auto shrink-0 relative">
+				<button 
+					class="btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md" 
+					on:click={() => showMenu = !showMenu}
+					aria-label="More Actions"
+				>
+					<i class="bi bi-three-dots-vertical text-xl"></i>
+				</button>
+				{#if showMenu}
+					<div class="absolute top-14 right-0 w-56 bg-black/60 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden flex flex-col p-1 animate-fade-in z-50">
+						<div class="px-3 py-2 border-b border-white/10 flex flex-col mb-1">
+							<span class="text-xs text-white/50 uppercase tracking-wider font-semibold mb-1">Details</span>
+							<span class="text-xs text-white/90 truncate"><i class="bi bi-file-earmark mr-1"></i> {fileDetails.type}</span>
+							<span class="text-xs text-white/90"><i class="bi bi-hdd mr-1"></i> {fileDetails.size}</span>
+						</div>
+						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
+							<i class="bi bi-download text-lg w-5 opacity-70"></i> Save to Device
+						</button>
+						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={copyLink}>
+							<i class="bi bi-link-45deg text-lg w-5 opacity-70"></i> Copy Direct Link
+						</button>
+					</div>
+				{/if}
+				<button 
+					class="btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md hidden sm:inline-flex" 
+					on:click={close}
+					aria-label="Close lightbox"
+				>
+					<i class="bi bi-x-lg text-xl"></i>
+				</button>
+			</div>
         </div>
 
         <!-- Interactive Image Canvas -->

@@ -33,9 +33,12 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
       const { analyzePhoto } = await import('$lib/server/gemini-classification');
       const { getExistingCategoryNames } = await import('$lib/server/categories');
       const existingCategories = await getExistingCategoryNames(inventoryId);
+      const inv = await db.inventory.findUnique({ where: { id: inventoryId } });
+      const allowNew = inv?.allowNewCategories ?? true;
+
       const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
       const analysis = await apiQueue.add(
-          () => analyzePhoto(targetPath, existingCategories),
+          () => analyzePhoto(targetPath, existingCategories, allowNew),
           tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
       );
       llmAnalysis = JSON.stringify(analysis);

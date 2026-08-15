@@ -58,6 +58,7 @@ model Inventory {
   name        String
   description String
   classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
+  allowNewCategories Boolean @default(true) // Whether AI is allowed to invent new sub-categories
 
   users       UserInventoryAccess[]
   items       Item[]
