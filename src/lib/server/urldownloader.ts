@@ -9,6 +9,7 @@ import { PDFParse } from 'pdf-parse';
 import { ioQueue } from './queue/index';
 import { logActivity } from '$lib/server/logger';
 import { taskManager } from '$lib/server/taskManager';
+  import { fetchVideoIfSupported } from './ytdlp';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
@@ -75,7 +76,33 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
           continue; // Skip SingleFile logic
         }
 
-        await logActivity(target.itemId, 'Web Scraper', `Started downloading webpage: ${line}`, 'info');
+          const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+
+          await logActivity(target.itemId, 'Link Analysis', `Inspecting URL for media content: ${line}`, 'info');
+
+          // Divert to Video handler if yt-dlp supports the site
+          try {
+            const videoData = await fetchVideoIfSupported(line, diskFolder, webFolder, idStr, async (title) => {
+                await logActivity(target.itemId, 'Video Archiver', `Detected video: "${title}". Starting heavy download...`, 'info');
+            });
+            if (videoData) {
+              await db.document.update({
+                where: { id: document?.id },
+                data: {
+                  type: "video",
+                  title: videoData.title,
+                  path: videoData.path,
+                  extracts: JSON.stringify([videoData.description.substring(0, 1000)])
+                }
+              });
+              await logActivity(target.itemId, 'Video Archiver', `Successfully archived video: ${videoData.title}`, 'success');
+              continue; // Skip SingleFile logic
+            }
+          } catch(e) {
+            console.error("Video processing error:", e);
+          }
+
+          await logActivity(target.itemId, 'Web Scraper', `No video found. Scraping as standard webpage: ${line}`, 'info');
         const str: string|null = await QRUrlDownloader.downloadURL(line);
         if(!str) {
           console.log(`Did not get any result when downloading: ${line}`);
@@ -85,7 +112,6 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
         }
 
         const pageData = JSON.parse(str);
-        const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
         const docFilename = getSafeFilename(`${idStr}-doc`);
 
         fs.writeFileSync(`${diskFolder}/${docFilename}.html`, pageData.html, { encoding: "utf8" });

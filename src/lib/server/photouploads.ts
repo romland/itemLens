@@ -76,6 +76,8 @@ export async function processItemPhotosBackground(item: any) {
     for (const photo of item.photos) {
       if (!photo.orgPath) continue;
       
+      if (photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)) continue; // Bypass ML processing for videos
+
       if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
         console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
         continue;
@@ -310,7 +312,10 @@ function hasImageExtension(url: string)
       || url.toLowerCase().trim().endsWith(".jpeg")
       || url.toLowerCase().trim().endsWith(".png")
       || url.toLowerCase().trim().endsWith(".svg")
-      || url.toLowerCase().trim().endsWith(".webp");
+      || url.toLowerCase().trim().endsWith(".webp")
+      || url.toLowerCase().trim().endsWith(".mp4")
+      || url.toLowerCase().trim().endsWith(".mov")
+      || url.toLowerCase().trim().endsWith(".webm");
 }
 
 

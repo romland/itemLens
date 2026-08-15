@@ -187,14 +187,27 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                                         <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'}"></i>
                                     </button>
                                 </form>                            
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => lightbox.open(productPhotos[i])}>
-                                    <img 
-                                        src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}"
-                                        class="object-scale-down max-h-full max-w-full">
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
+                                    {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl" muted playsinline></video>
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl">
+                                            <i class="bi bi-play-circle-fill text-5xl text-white drop-shadow-md"></i>
+                                        </div>
+                                    {:else}
+                                        <img src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}" class="object-scale-down max-h-full max-w-full">
+                                    {/if}
                                 </button>
+
                             {:else}
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center" on:click={() => lightbox.open(productPhotos[i])}>
-                                    <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
+                                    {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl" muted playsinline></video>
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl">
+                                            <i class="bi bi-play-circle-fill text-5xl text-white drop-shadow-md"></i>
+                                        </div>
+                                    {:else}
+                                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
+                                    {/if}
                                 </button>
                             {/if}
                         </div> 
@@ -203,14 +216,18 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                 <div class="flex justify-start w-full py-2 gap-2 overflow-x-auto hide-scrollbar">
                     {#each productPhotos as photo, i}
                         <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn shrink-0">
-                            <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                            {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                                <video class="object-cover w-10 h-10 bg-black rounded" src="{photo.orgPath}#t=0.1" muted playsinline></video>
+                            {:else}
+                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                            {/if}
                         </button>
                     {/each}
                 </div>
             {/if}
         </div>
 
-<div class="w-full md:w-1/3 flex flex-col gap-4">
+        <div class="w-full md:w-1/3 flex flex-col gap-4">
             
             <!-- MOBILE ONLY: Compact Side-by-Side Row -->
             <div class="md:hidden bg-base-100 shadow-sm border border-base-200 rounded-xl p-3 flex flex-col gap-3">

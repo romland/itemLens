@@ -49,57 +49,62 @@
             const currentPhotoIndex = productPhotoFileCounter - 1;
             productPhotoFileCounter++;
 
-            // ----------------------------------------------------
-            // Instant-On Background Upload for LLM Analysis
-            // ----------------------------------------------------
             const fileType = container.querySelector("input[type='hidden']").value;
             const localUrl = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith('video/');            
             
-            pendingPhotos = [...pendingPhotos, { index: currentPhotoIndex, localUrl, type: fileType, isAnalyzing: true, name: file.name }];
-            dispatch('pendingChange', pendingPhotos);
-            dispatch('analyzingStart', { localUrl });
+            if (isVideo) {
+                pendingPhotos = [...pendingPhotos, { index: currentPhotoIndex, localUrl, type: fileType, isAnalyzing: false, name: file.name, isVideo }];
+                dispatch('pendingChange', pendingPhotos);
+                dispatch('success', `Added video: ${file.name}`);
+            } else {
+                pendingPhotos = [...pendingPhotos, { index: currentPhotoIndex, localUrl, type: fileType, isAnalyzing: true, name: file.name, isVideo }];
+                dispatch('pendingChange', pendingPhotos);
+                dispatch('analyzingStart', { localUrl });
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('type', fileType);
+                // ----------------------------------------------------
+                // Instant-On Background Upload for LLM Analysis
+                // ----------------------------------------------------
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', fileType);
 
-            fetch('/api/analyze-draft', {
-                method: 'POST',
-                body: formData
-            }).then(res => res.json()).then(data => {
-                let finalType = fileType;
-                
-                if (data.success && data.draftPath) {
-                    const draftInput = document.createElement('input');
-                    draftInput.type = 'hidden';
-                    draftInput.name = `file.draft.${currentPhotoIndex}`;
-                    draftInput.value = data.draftPath;
-                    container.appendChild(draftInput);
-                }
-
-                // LLM/vision model overrides Type (e.g. catches a receipt uploaded via the Hero generic button)
-                if (data.success && data.aiData?.photoType) {
-                    let aiType = data.aiData.photoType.toLowerCase();
-                    // Match the database standard format
-                    if (aiType === 'invoice') aiType = 'invoice or receipt';
+                fetch('/api/analyze-draft', {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json()).then(data => {
+                    let finalType = fileType;
                     
-                    finalType = aiType;
-                    const typeInput = container.querySelector("input[type='hidden']");
-                    if (typeInput) typeInput.value = finalType;
-                }
+                    if (data.success && data.draftPath) {
+                        const draftInput = document.createElement('input');
+                        draftInput.type = 'hidden';
+                        draftInput.name = `file.draft.${currentPhotoIndex}`;
+                        draftInput.value = data.draftPath;
+                        container.appendChild(draftInput);
+                    }
 
-                pendingPhotos = pendingPhotos.map(p => p.index === currentPhotoIndex ? { ...p, isAnalyzing: false, type: finalType } : p);
-                dispatch('pendingChange', pendingPhotos);
-                dispatch('analyzingComplete', data);
+                    // LLM/vision model overrides Type (e.g. catches a receipt uploaded via the Hero generic button)
+                    if (data.success && data.aiData?.photoType) {
+                        let aiType = data.aiData.photoType.toLowerCase();
+                        // Match the database standard format
+                        if (aiType === 'invoice') aiType = 'invoice or receipt';
+                        
+                        finalType = aiType;
+                        const typeInput = container.querySelector("input[type='hidden']");
+                        if (typeInput) typeInput.value = finalType;
+                    }
 
-            }).catch(err => {
-                console.error("Draft analysis failed", err);
-                pendingPhotos = pendingPhotos.map(p => p.index === currentPhotoIndex ? { ...p, isAnalyzing: false } : p);
-                dispatch('pendingChange', pendingPhotos);
-                dispatch('analyzingComplete', { error: true });
-            });
+                    pendingPhotos = pendingPhotos.map(p => p.index === currentPhotoIndex ? { ...p, isAnalyzing: false, type: finalType } : p);
+                    dispatch('pendingChange', pendingPhotos);
+                    dispatch('analyzingComplete', data);
 
-            dispatch('success', `Added photo: ${file.name}`);
+                }).catch(err => {
+                    console.error("Draft analysis failed", err);
+                    pendingPhotos = pendingPhotos.map(p => p.index === currentPhotoIndex ? { ...p, isAnalyzing: false } : p);
+                    dispatch('pendingChange', pendingPhotos);
+                    dispatch('analyzingComplete', { error: true });
+                });
+            }
         }
     }
 
@@ -112,7 +117,7 @@
 </script>
 
 <div class="group-container">
-    <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*" class="file-input mb-3">
+    <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*,video/*" class="file-input mb-3">
     <input type="hidden" name="file.type.0" value="">
 
     <div class="flex justify-center w-full">
@@ -153,7 +158,11 @@
                         </div>
                     {/if}
                     <div class="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-base-300">
-                        <img src={photo.localUrl} alt="Preview" class="w-full h-full object-cover" />
+                        {#if photo.isVideo}
+                            <video src="{photo.localUrl}#t=0.1" class="w-full h-full object-cover" muted playsinline></video>
+                        {:else}
+                            <img src={photo.localUrl} alt="Preview" class="w-full h-full object-cover" />
+                        {/if}
                     </div>
                     <div class="flex flex-col flex-1 min-w-0">
                         <span class="text-sm font-semibold truncate">{photo.name}</span>

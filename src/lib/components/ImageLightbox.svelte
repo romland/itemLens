@@ -348,12 +348,21 @@
             >
                 <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
                 <div class="relative inline-flex max-w-full max-h-full shadow-2xl transition-transform duration-300 ease-out {photo?.box ? 'overflow-hidden rounded-xl' : ''}" style="transform: rotate({rotation}deg);">
-                    <img 
-                        src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
-                        alt="Product preview" 
-                        class="object-contain max-w-full max-h-full origin-center select-none"
-                        draggable="false"
-                    />
+                    {#if photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                        <video 
+                            src="{photo?.orgPath}" 
+                            class="object-contain max-w-full max-h-full origin-center select-none rounded-xl"
+                            controls autoplay
+                            draggable="false"
+                        ></video>
+                    {:else}
+                        <img 
+                            src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
+                            alt="Product preview" 
+                            class="object-contain max-w-full max-h-full origin-center select-none"
+                            draggable="false"
+                        />
+                    {/if}
                     {#if photo?.box}
                         <!-- The massive box-shadow dims everything OUTSIDE the bounding box -->
                         <div class="absolute border-4 border-primary z-10 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]"

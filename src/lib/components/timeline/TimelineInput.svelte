@@ -131,7 +131,7 @@
             bind:this={fileInput} 
             type="file" 
             name="file.0" 
-            accept="image/*" 
+            accept="image/*,video/*" 
             class="hidden" 
             on:change={() => { if (fileInput.files?.length) fileInput.form?.requestSubmit(); }}
         >

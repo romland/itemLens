@@ -22,13 +22,14 @@ If feeling particularly ambitious on a day, you can also:
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
+- **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
 ### Features
 - Paste-parser for key-value-pairs
 - QR-code reading (server and client)
 - Optical Character Reading (OCR)
-- Image classification (Blip)
+- Image classification (Blip, Vision Models like Gemini)
 - LLM Summaries (Llama3, Groq)
 - Invoice/receipt data extraction
 - Download-and-store documents (link-rot no more)
@@ -133,6 +134,11 @@ If you want to share things directly into itemLens on an iPhone, the best workar
 4. Add an action to **URL Encode** the shortcut input.
 5. Add an action to **Open URLs**, and construct the URL to point to your app's capture route with the encoded input attached as a query parameter (e.g., `[https://dev.providi.nl/timeline?pasteText=](https://dev.providi.nl/timeline?pasteText=)[Encoded Input]`).
 
+### Dependencies (Optional but highly recommended)
+To enable the automatic downloading and archiving of videos from YouTube, Twitter, and hundreds of other sites, you must install `yt-dlp` on your server host.
+- **Ubuntu/Debian:** `sudo apt install yt-dlp` (or use pip/brew for the latest version)
+- If `yt-dlp` is not found, itemLens will silently fall back to downloading the site as a static HTML page.
+
 It's a bit of a hack, but once you set it up, "Send to itemLens" will sit right there in your iOS share sheet.
 
 
@@ -144,6 +150,12 @@ containers-start.sh
 On the Jetson on my desktop:
     For object classification:
     ...
+
+# Latest yt-dlp
+```
+sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
+sudo chmod a+rx /usr/local/bin/yt-dlp
+```
 
 # Prototype-y
 - Right now the code very JavaScripty while it should be TypeScripty. A lot of it is still very much a prototype.

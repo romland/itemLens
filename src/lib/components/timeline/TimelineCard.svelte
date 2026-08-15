@@ -72,8 +72,15 @@
     {#if note.photos && note.photos.length > 0}
         <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64" style="-ms-overflow-style: none; scrollbar-width: none;">
             {#each note.photos as photo}
-				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in" aria-label="View Attachment" on:click={() => lightbox.open(photo)}>
-                    <img src={photo.thumbPath || photo.orgPath} alt="Attachment" class="w-full h-full object-cover" />
+				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in relative" aria-label="View Attachment" on:click={() => lightbox.open(photo)}>
+                    {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                        <video src="{photo.orgPath}#t=0.1" class="w-full h-full object-cover" muted playsinline></video>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
+                            <i class="bi bi-play-circle-fill text-4xl text-white drop-shadow-md"></i>
+                        </div>
+                    {:else}
+                        <img src={photo.thumbPath || photo.orgPath} alt="Attachment" class="w-full h-full object-cover" />
+                    {/if}
 				</button>
             {/each}
         </div>
