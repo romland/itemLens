@@ -8,6 +8,12 @@ export const load = (async ({ locals, url }) => {
 	const tag = (url.searchParams.get('tag') || '').trim();
 	const container = (url.searchParams.get('container') || '').trim();
 	const unassigned = url.searchParams.get('unassigned') === 'true';
+	const titleStr = (url.searchParams.get('title') || '').trim();
+	const descStr = (url.searchParams.get('desc') || '').trim();
+	const docStr = (url.searchParams.get('doc') || '').trim();
+	const reasonStr = (url.searchParams.get('reason') || '').trim();
+	const minAmount = url.searchParams.get('minAmount') || '';
+	const maxAmount = url.searchParams.get('maxAmount') || '';
     const page = Number(url.searchParams.get('page') ?? '1');
 
 	const whereClause: any = { inventoryId: locals.activeInventoryId };
@@ -31,28 +37,55 @@ export const load = (async ({ locals, url }) => {
 	if (unassigned) {
 		whereClause.locations = { none: {} };
 	}
+	if (titleStr) whereClause.title = { contains: titleStr };
+	if (descStr) whereClause.description = { contains: descStr };
+	if (reasonStr) whereClause.reason = { contains: reasonStr };
+	if (docStr) {
+		whereClause.documents = {
+			some: {
+				OR: [
+					{ title: { contains: docStr } },
+					{ extracts: { contains: docStr } },
+					{ summary: { contains: docStr } }
+				]
+			}
+		};
+	}
+	if (minAmount || maxAmount) {
+		whereClause.amount = {};
+		if (minAmount) whereClause.amount.gte = Number(minAmount);
+		if (maxAmount) whereClause.amount.lte = Number(maxAmount);
+	}
 
-    const items = await db.item.findMany({
-		where: whereClause,
-        take: 10,
-        skip: page == 1 ? 0 : (page - 1) * 10,
-        orderBy: [{ id: 'desc'}],
-        include: {
-            locations: {
-                include: {  
-                    container: true,
-                }
-            },
-            "photos" : true,
-            "tags" : true,
-            "documents": true,      // a bit wasteful as I really only need the count()
-        }
-    });
+	const [items, totalCount] = await Promise.all([
+		db.item.findMany({
+			where: whereClause,
+			take: 10,
+			skip: page == 1 ? 0 : (page - 1) * 10,
+			orderBy: [{ id: 'desc'}],
+			include: {
+				locations: {
+					include: { 	
+						container: true,
+					}
+				},
+				"photos" : true,
+				"tags" : true,
+				"documents": true,      // a bit wasteful as I really only need the count()
+			}
+		}),
+		db.item.count({ where: whereClause })
+	]);
 
+	const categories = await db.category.findMany({
+		where: { inventoryId: locals.activeInventoryId },
+		orderBy: { name: 'asc' }
+	});
+	
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 10 ? 0 : page + 1;
 
-	return { q, cat, tag, container, unassigned, items, prevPage, nextPage };
+	return { q, cat, tag, container, unassigned, titleStr, descStr, docStr, reasonStr, minAmount, maxAmount, items, totalCount, prevPage, nextPage, categories };
 }) satisfies PageServerLoad;
 
 export const actions = {

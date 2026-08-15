@@ -13,19 +13,63 @@
 	let bulkAction = 'addTag';
 	let bulkValue = '';
 	let isSubmitting = false;
+	let navLoadedPages: any[] = [];
+	$: allLoadedItems = [...data.items, ...(navLoadedPages || []).flat()];
+
+	// Check if EVERY visible item on the screen is currently in the selected list
+	$: isAllSelected = allLoadedItems.length > 0 && allLoadedItems.every(item => selectedIds.includes(item.id));
+
+	$: {
+		console.log('[DEBUG-BULK] State Update ->', {
+			dataItems: data.items.length, 
+			navPages: navLoadedPages.length, 
+			allLoaded: allLoadedItems.length, 
+			selected: selectedIds.length, 
+			isAllSelected
+		});
+	}
 
 	// Helper for slot-safe checkbox binding
 	function toggleSelection(id, checked) {
-		if (checked) selectedIds = [...selectedIds, id];
+		console.log(`[DEBUG-BULK] Toggling item ${id} to ${checked}`);
+		if (checked) {
+			if (!selectedIds.includes(id)) selectedIds = [...selectedIds, id];
+		}
 		else selectedIds = selectedIds.filter(x => x !== id);
 	}
+
+	function toggleAll(checked) {
+		console.log(`[DEBUG-BULK] Toggling ALL visible items to ${checked}`);
+		if (checked) {
+			// Add all visible items to the selection without duplicating
+			const newIds = new Set(selectedIds);
+			allLoadedItems.forEach(item => newIds.add(item.id));
+			selectedIds = Array.from(newIds);
+		} else {
+			// Remove ONLY the visible items from the selection
+			const visibleIds = new Set(allLoadedItems.map(i => i.id));
+			selectedIds = selectedIds.filter(id => !visibleIds.has(id));
+		}
+	}
+
+	// Cleanly build the query string for pagination, omitting blanks
+	$: searchParamsStr = new URLSearchParams(
+		Object.entries({
+			q: data.q, category: data.cat, tag: data.tag, container: data.container,
+			title: data.titleStr, desc: data.descStr, doc: data.docStr, reason: data.reasonStr,
+			minAmount: data.minAmount, maxAmount: data.maxAmount,
+			unassigned: data.unassigned ? 'true' : ''
+		}).filter(([_, v]) => v) 
+	).toString();
 
     import pageTitle from '$lib/stores';
 	$: pageTitle.set(data.cat ? "Category: " + data.cat : (data.q ? "Search for " + data.q : "Search"));
 </script>
 
 <div class="flex justify-between items-center mb-6 px-2">
-	<h1 class="text-2xl font-bold tracking-tight">Results</h1>
+	<h1 class="text-2xl font-bold tracking-tight flex items-center gap-3">
+		Results <span class="text-sm text-gray-500 font-medium bg-base-200 px-3 py-1 rounded-full">{data.totalCount} found</span>
+	</h1>
 	<button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; }}>
 		{#if bulkMode}
 			Cancel Bulk
@@ -35,13 +79,12 @@
 	</button>
 </div>
 
-<!-- Advanced Filters -->
+<!-- Filters -->
 <details class="collapse collapse-arrow bg-base-100 mb-6 border border-base-200 shadow-sm rounded-xl">
-	<summary class="collapse-title text-sm font-semibold text-gray-600 px-4 min-h-0 h-auto py-3">Advanced Filters</summary>
+	<summary class="collapse-title text-sm font-semibold text-gray-600 px-4 min-h-0 h-auto py-3">Filters</summary>
 	<div class="collapse-content px-4 pb-4 flex flex-col gap-3 border-t border-base-100 pt-3 bg-base-50/50">
 		<form method="GET" action="/search" class="flex flex-col gap-3">
 			<input type="hidden" name="q" value={data.q}>
-			{#if data.cat}<input type="hidden" name="category" value={data.cat}>{/if}
 			
 			<div class="flex gap-4 flex-col sm:flex-row">
 				<div class="form-control w-full">
@@ -51,6 +94,43 @@
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">In Container</span>
 					<input type="text" name="container" value={data.container || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. A 001" />
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
+				<div class="form-control w-full">
+					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Category</span>
+					<select name="category" class="select select-sm select-bordered rounded-lg font-normal capitalize">
+						<option value="">Any Category</option>
+						{#each data.categories as c}
+							<option value={c.name} selected={data.cat === c.name} class="capitalize">{c.name}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="form-control w-full">
+					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Title</span>
+					<input type="text" name="title" value={data.titleStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Exact name match..." />
+				</div>
+				<div class="form-control w-full">
+					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Description</span>
+					<input type="text" name="desc" value={data.descStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Description content..." />
+				</div>
+				<div class="form-control w-full">
+					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Document Contains</span>
+					<input type="text" name="doc" value={data.docStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Search manuals, notes, extracts..." />
+				</div>
+				<div class="form-control w-full">
+					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Reason</span>
+					<input type="text" name="reason" value={data.reasonStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. Curiosity" />
+				</div>
+				<div class="form-control w-full flex flex-row gap-2 items-end">
+					<div class="w-1/2">
+						<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider block">Min Qty</span>
+						<input type="number" name="minAmount" value={data.minAmount || ''} class="input input-sm input-bordered rounded-lg w-full" placeholder="0" />
+					</div>
+					<div class="w-1/2">
+						<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider block">Max Qty</span>
+						<input type="number" name="maxAmount" value={data.maxAmount || ''} class="input input-sm input-bordered rounded-lg w-full" placeholder="10" />
+					</div>
 				</div>
 			</div>
 			<label class="flex items-center gap-2 cursor-pointer mt-1">
@@ -75,13 +155,7 @@
 		<!-- Master Checkbox Bar -->
 		<div class="flex items-center justify-between bg-base-200/50 p-3 rounded-xl border border-base-200 shadow-inner mb-3">
 			<label class="flex items-center gap-3 cursor-pointer">
-				<input type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked={selectedIds.length > 0 && selectedIds.length >= data.items.length} on:change={(e) => {
-					if (e.currentTarget.checked) {
-						selectedIds = Array.from(document.querySelectorAll('input[name="itemIds[]"]')).map(el => Number((el as HTMLInputElement).value));
-					} else {
-						selectedIds = [];
-					}
-				}} />
+				<input type="checkbox" class="checkbox checkbox-sm checkbox-primary" checked={isAllSelected} on:change={(e) => toggleAll(e.currentTarget.checked)} />
 				<span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Select All Loaded</span>
 			</label>
 			<span class="text-xs font-bold bg-base-100 px-2 py-1 rounded-md shadow-sm text-gray-500">{selectedIds.length} selected</span>
@@ -106,7 +180,7 @@
 			{/each}
 		</div>
 
-		<Navigation href="/search?q={encodeURIComponent(data.q)}{data.cat ? `&category=${encodeURIComponent(data.cat)}` : ''}{data.tag ? `&tag=${encodeURIComponent(data.tag)}` : ''}{data.container ? `&container=${encodeURIComponent(data.container)}` : ''}{data.unassigned ? '&unassigned=true' : ''}&" prevPage={data.prevPage} nextPage={data.nextPage} let:items={pageItems}>
+		<Navigation href="/search?{searchParamsStr}&" prevPage={data.prevPage} nextPage={data.nextPage} on:pagesUpdated={(e) => navLoadedPages = e.detail} let:items={pageItems}>
 			<div class="flex flex-col gap-2 mt-2">
 				{#each pageItems as item}
 					<label class="flex items-center gap-4 p-3 bg-base-100 border border-base-200 shadow-sm rounded-xl cursor-pointer hover:border-primary transition-colors">
@@ -147,6 +221,6 @@
 	</form>
 {:else}
 	<Items items={data.items} />
-	<Navigation href="/search?q={encodeURIComponent(data.q)}{data.cat ? `&category=${encodeURIComponent(data.cat)}` : ''}&" prevPage={data.prevPage} nextPage={data.nextPage} />
+	<Navigation href="/search?{searchParamsStr}&" prevPage={data.prevPage} nextPage={data.nextPage} />
 {/if}
 

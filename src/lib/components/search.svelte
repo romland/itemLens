@@ -26,9 +26,7 @@
 
     function focus(ev: Event)
     {
-        if(items.length > 0) {
-            resultsAsYouType.classList.add("dropdown-open");
-        }
+		resultsAsYouType.classList.add("dropdown-open");
     }
 
     function blur()
@@ -36,7 +34,7 @@
         // console.log("SHOULD BLUR") return;
         setTimeout(() => {
             resultsAsYouType.classList.remove("dropdown-open");
-        }, 75);
+		}, 200);
     }
 </script>
 
@@ -54,7 +52,7 @@
                 placeholder="Search" 
                 class="input input-bordered md:w-auto w-full join-item"
             />
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-8 pr-2 absolute" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-8 pr-2 absolute pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
         <!-- search as you type -->
@@ -66,14 +64,18 @@
                   other content)
         -->
         <div bind:this={resultsAsYouType} id="resultsAsYouType"
-            class:hidden={items.length === 0}
-			class="dropdown border-solid dropdown-open dropdown-end z-[100]"
+			class="dropdown border-solid dropdown-end z-[100]"
             style="position: absolute; right: 0; bottom: 0;"
         >
             <div class="dropdown-content z-[1] border border-base-200 menu p-2 shadow-xl bg-base-100 rounded-box grow w-96">
                 {#if items?.length > 0}
                     <Items items={items} brief={true}/>
                 {/if}
+				<div class="p-1 {items?.length > 0 ? 'mt-2 border-t border-base-200 pt-2' : ''}">
+					<a href="/search" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-lg" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
+						<i class="bi bi-sliders"></i> Advanced Search & Bulk Edit
+					</a>
+				</div>
             </div>
         </div>
 
