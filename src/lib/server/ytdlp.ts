@@ -46,7 +46,8 @@ export async function fetchVideoIfSupported(
         const finalWebPath = `${webFolder}/${safeName}.mp4`;
         
         // 2. Download the best available MP4 configuration
-        await execAsync(`yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "${finalDiskPath}" --no-playlist "${url}"`);
+        // We strictly prefer H.264 (avc) video to ensure 100% cross-browser web playback, avoiding HEVC/H.265 blind spots.
+        await execAsync(`yt-dlp -f "bestvideo+bestaudio/best" -S "vcodec:h264,res,acodec:m4a" --merge-output-format mp4 -o "${finalDiskPath}" --no-playlist "${url}"`);
         
         return {
             title: meta.title,

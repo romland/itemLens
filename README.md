@@ -22,7 +22,7 @@ If feeling particularly ambitious on a day, you can also:
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
-- **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
+- **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
 ### Features
@@ -153,8 +153,10 @@ On the Jetson on my desktop:
 
 # Latest yt-dlp
 ```
-sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
+which yt-dlp
+    > make sure wget puts it here THAT_PATH
+sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O THAT_PATH/yt-dlp
+sudo chmod a+rx THAT_PATH/yt-dlp
 ```
 
 # Prototype-y

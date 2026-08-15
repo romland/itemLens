@@ -9,7 +9,7 @@
     let photo: any = null;
     let showOriginal = false;
 	let showMenu = false;
-	let fileDetails = { size: '...', type: '...' };
+	let fileDetails = { size: '...', type: '...', dimensions: '...' };
 
     // Pan & Zoom State
 	// Tuned for a buttery, slight-bounce iOS feel
@@ -45,6 +45,8 @@
 
 	async function fetchDetails() {
 		if (!photo?.orgPath) return;
+		fileDetails = { size: '...', type: '...', dimensions: '...' };
+
 		try {
 			const res = await fetch(photo.orgPath, { method: 'HEAD' });
 			const bytes = res.headers.get('content-length');
@@ -54,8 +56,23 @@
 				const mb = parseInt(bytes) / (1024 * 1024);
 				sizeStr = mb > 1 ? `${mb.toFixed(2)} MB` : `${(parseInt(bytes) / 1024).toFixed(0)} KB`;
 			}
-			fileDetails = { size: sizeStr, type: type || 'Unknown' };
+			fileDetails = { ...fileDetails, size: sizeStr, type: type || 'Unknown' };
 		} catch (e) {}
+
+		const isVideo = photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
+		if (isVideo) {
+			const vid = document.createElement('video');
+			vid.onloadedmetadata = () => {
+				fileDetails = { ...fileDetails, dimensions: `${vid.videoWidth} × ${vid.videoHeight}` };
+			};
+			vid.src = photo.orgPath;
+		} else {
+			const img = new Image();
+			img.onload = () => {
+				fileDetails = { ...fileDetails, dimensions: `${img.naturalWidth} × ${img.naturalHeight}` };
+			};
+			img.src = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
+		}
 	}
 
     export function close() {
@@ -306,6 +323,7 @@
 						<div class="px-3 py-2 border-b border-white/10 flex flex-col mb-1">
 							<span class="text-xs text-white/50 uppercase tracking-wider font-semibold mb-1">Details</span>
 							<span class="text-xs text-white/90 truncate"><i class="bi bi-file-earmark mr-1"></i> {fileDetails.type}</span>
+							<span class="text-xs text-white/90"><i class="bi bi-aspect-ratio mr-1"></i> {fileDetails.dimensions}</span>
 							<span class="text-xs text-white/90"><i class="bi bi-hdd mr-1"></i> {fileDetails.size}</span>
 						</div>
 						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
