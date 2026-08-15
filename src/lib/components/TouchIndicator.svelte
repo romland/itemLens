@@ -66,9 +66,9 @@
             // Speed = distance moved between this frame and the last frame
             const velocity = Math.hypot(dx, dy);
             
-            // Squash & Stretch Math: Max stretch of 1.6x, Max squish of 0.7x
-            touch.stretchX = 1 + Math.min(velocity / 15, 0.6); 
-            touch.stretchY = 1 - Math.min(velocity / 40, 0.3);
+			// Squash & Stretch Math: Max stretch of 2.2x, Max squish of 0.4x (High Velocity)
+			touch.stretchX = 1 + Math.min(velocity / 8, 1.2); 
+			touch.stretchY = 1 - Math.min(velocity / 20, 0.6);
 
             // If they hold their finger still, snap back to a perfect circle
             if (touch.moveTimeout) clearTimeout(touch.moveTimeout);

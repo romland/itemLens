@@ -7,6 +7,7 @@ import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
+import sharp from 'sharp';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -21,7 +22,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             return json({ error: 'No file provided' }, { status: 400 });
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
+		// Ensure EXIF orientation is permanently baked into the pixel data 
+		// so Gemini's bounding boxes match the UI rendering exactly.
+		let rawBuffer = Buffer.from(await file.arrayBuffer());
+		const buffer = await sharp(rawBuffer).rotate().toBuffer();
+		
         const filename = getSafeFilename(file.name, 'collection');
         const localPath = `${uploadsDiskFolder}/${filename}`;
         const webPath = `${uploadsWebFolder}/${filename}`;
@@ -39,7 +44,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         });
 
-        const promptText = `Identify the collection of items in this image (e.g. Books, CDs, Vinyl, Board Games).
+		let promptText = `Identify the collection of items in this image (e.g. Books, CDs, Vinyl, Board Games).
 Extract EVERY single item visible on the shelf.
 For each item:
 - title: The main title. If the text is completely unreadable, supply a generic placeholder (e.g., 'Unknown CD', 'Unreadable Book').
@@ -49,6 +54,11 @@ For each item:
 - low_confidence: Set to true if the text is blurry, occluded, or hard to read.
 CRITICAL: Do not omit physical items just because you cannot read their labels. We need a 100% complete physical count of the items.
 `;
+
+		const hint = data.get('hint') as string;
+		if (hint && hint.trim()) {
+			promptText += `\n\nUSER HINT: The user noted this collection is: "${hint.trim()}". Prioritize identifying the items within this context.`;
+		}
 
         const base64Data = buffer.toString('base64');
         const ext = file.name.split('.').pop()?.toLowerCase();

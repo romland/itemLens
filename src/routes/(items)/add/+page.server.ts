@@ -12,13 +12,14 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { autoFill } from '$lib/server/autofill';
 import { processFormDocuments } from '$lib/server/services';
+import { logActivity } from '$lib/server/logger';
 
 export const actions = {
     default: async ({ locals, request }) => {
         const orgData = await request.formData();
         const data = Object.fromEntries(orgData);
 
-        const containers = orgData.getAll("containers");
+		const containers = orgData.getAll("containers").map(String).filter(c => c.trim().length > 0 && c !== 'undefined');
         const title = data.title as string;
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
@@ -114,6 +115,10 @@ return fail(400, {
         processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder).catch(e => console.error(e));
         downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
         processItemPhotosBackground(item).catch(e => console.error(e));
+
+        if (data.llm_attributes_used === 'true') {
+          await logActivity(item.id, 'Attributes', 'Automatically structured messy attribute data using AI', 'success');
+        }
 
         redirect(302, `/${item.id}/${item.slug}`);
     }

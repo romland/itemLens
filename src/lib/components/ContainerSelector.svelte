@@ -41,7 +41,8 @@
     onMount(async () => {
         if(typeof window !== 'undefined' && values.length) {
             for(let i = 0; i < values.length; i++) {
-                scannedContainer({detail: values[i].containerName}, "containers", false);
+				const cName = values[i].container?.name || values[i].containerName;
+				if (cName) scannedContainer({detail: cName}, "containers", false);
             }
         }
     });
@@ -119,7 +120,7 @@
 
 <div class="flex flex-col w-full">
     <!-- Hidden inputs to ensure scanned containers are submitted with the form -->
-    {#each addedContainers as container}
+	{#each allContainers as container}
         <input type="hidden" name="containers" value="{container}" />
     {/each}
 
@@ -208,7 +209,7 @@
             <div class="bg-base-100 border border-base-200 rounded-xl overflow-y-auto max-h-64 p-2 flex flex-col gap-1 shadow-inner">
                 {#each filteredContainers as container}
                     <label class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-base-300">
-                        <input type="checkbox" name="containers" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" />
+						<input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" />
                         <div class="flex flex-col {container.isChild ? 'ml-6' : ''}">
                             <span class="font-semibold text-sm leading-none flex items-center gap-2">
                                 {#if container.isChild}<i class="bi bi-arrow-return-right text-gray-400 text-xs"></i>{/if}

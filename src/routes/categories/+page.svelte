@@ -64,7 +64,9 @@
                             <i class="bi bi-tag-fill"></i>
                         </div>
                         <div>
-                            <div class="font-semibold text-lg capitalize tracking-tight">{cat.name}</div>
+							<a href="/search?category={encodeURIComponent(cat.name)}" class="font-semibold text-lg capitalize tracking-tight hover:underline text-base-content block">
+								{cat.name}
+							</a>
                             <div class="text-xs text-gray-500 font-medium">{cat._count.photos} {cat._count.photos === 1 ? 'photo' : 'photos'} linked</div>
                         </div>
                     </div>

@@ -26,6 +26,8 @@
     let globalCategory = "";
     let globalTags = "";
     let settingsExpanded = true;
+	let collectionHint = "";
+	let showHintInput = false;
 
     // Edit Modal State
     let editModal: HTMLDialogElement;
@@ -47,7 +49,8 @@
         
         const fd = new FormData();
         fd.append('file', file);
-        
+		if (collectionHint.trim()) fd.append('hint', collectionHint.trim());
+
         try {
             const res = await fetch('/api/analyze-collection', { method: 'POST', body: fd });
 
@@ -166,10 +169,23 @@
             <h2 class="text-2xl font-bold mb-3 tracking-tight">New Collection</h2>
             <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, whiskys, stamps, coins or CDs/DVDs. Sky's the limit. We'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
 
+			{#if !showHintInput}
+				<button type="button" class="btn btn-ghost btn-sm text-gray-400 hover:text-primary mb-6 rounded-xl" on:click={() => showHintInput = true}>
+					<i class="bi bi-lightbulb"></i> Add a hint
+				</button>
+			{:else}
+				<div class="w-full max-w-sm mb-6 animate-fade-in text-left">
+					<div class="flex justify-between items-center mb-1 px-1"><span class="text-[10px] font-semibold uppercase text-gray-500 tracking-wider">Optional Hint</span><button type="button" class="text-[10px] text-gray-400 hover:text-error uppercase tracking-wider font-bold" on:click={() => {showHintInput = false; collectionHint = "";}}>Remove</button></div>
+					<input type="text" bind:value={collectionHint} placeholder="e.g. 'Games' 'Signs', or 'Books'" class="input input-bordered w-full rounded-2xl bg-base-100/50 focus:bg-base-100 transition-colors shadow-sm" />
+				</div>
+			{/if}
+
             {#if isUploading}
-                <div class="btn btn-primary btn-lg w-full max-w-sm rounded-2xl opacity-80 cursor-not-allowed flex-nowrap whitespace-nowrap">
-                    <span class="loading loading-spinner shrink-0"></span> 
-                    <span class="truncate">{isUploadingMessage}</span>
+				<div class="btn btn-primary btn-lg w-full max-w-sm rounded-2xl opacity-80 cursor-not-allowed h-auto min-h-[4rem] py-3 flex flex-col justify-center leading-tight">
+					<div class="flex items-center gap-3">
+						<span class="loading loading-spinner shrink-0"></span> 
+						<span class="whitespace-normal break-words">{isUploadingMessage}</span>
+					</div>
                 </div>
             {:else}
                 <div class="flex gap-3 w-full max-w-sm justify-center">
@@ -230,7 +246,7 @@
                     >
                         <!-- The Magic Zoom -->
                         <button type="button" class="relative w-16 h-20 overflow-hidden rounded-lg shrink-0 bg-base-300 border-none p-0 cursor-zoom-in block" on:click|stopPropagation={() => lightbox.open({ orgPath: draftPath, thumbPath: draftPath, showOriginal: true, box: item.box })}>
-                            <img src="{draftPath}" class="absolute max-w-none origin-top-left" 
+							<img src="{draftPath}" class="absolute max-w-none origin-top-left object-cover"
                                  style="width: {100000 / w}%; height: {100000 / h}%; left: -{(xmin / w) * 100}%; top: -{(ymin / h) * 100}%;" 
                                  alt="{item.title}" />
                         </button>

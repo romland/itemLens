@@ -15,6 +15,7 @@ export async function GET({ url, setHeaders, locals }) {
 		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
 	});
     const q = String(url.searchParams.get('q') || "").trim();
+	const cat = String(url.searchParams.get('category') || "").trim();
     const page = Number(url.searchParams.get('page') ?? '1');
     const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
 
@@ -47,6 +48,13 @@ export async function GET({ url, setHeaders, locals }) {
             ]
         };
     }
+
+	if (cat && cat.length > 0) {
+		query.where = {
+			...query.where,
+			photos: { some: { category: { name: cat } } }
+		};
+	}
 
     const items = await db.item.findMany(query);
 

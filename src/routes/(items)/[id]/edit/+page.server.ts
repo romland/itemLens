@@ -11,6 +11,7 @@ import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/ser
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { processFormDocuments } from '$lib/server/services';
+import { logActivity } from '$lib/server/logger';
 
 export const load = (async ({ locals, params }) => {
     const item = await db.item.findFirst({
@@ -86,7 +87,7 @@ export const actions = {
     default: async ({ request, params, locals }) => {
         const orgData = await request.formData();
         const data = Object.fromEntries(orgData);
-        const containers = orgData.getAll("containers");
+		const containers = orgData.getAll("containers").map(String).filter(c => c.trim().length > 0 && c !== 'undefined');
 
         const title = data.title as string;
         const description = data.description as string;
@@ -221,6 +222,10 @@ console.log("formData:", orgData);
         // Fire and forget heavy background scraping and ML analysis (Fast Ack)
 		downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
 		processItemPhotosBackground(item).catch(e => console.error(e));
+
+		if (data.llm_attributes_used === 'true') {
+			await logActivity(item.id, 'Attributes', 'Automatically structured messy attribute data using AI', 'success');
+		}
 
         console.log("=== Done updating ===");
 

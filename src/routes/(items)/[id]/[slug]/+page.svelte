@@ -99,6 +99,8 @@ $:  if(!done && invoicePhotos.length > 0) {
     
     import pageTitle from '$lib/stores';
 $:  pageTitle.set(data.item?.title || 'Item Details');
+
+$:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category).map(p => p.category.name) || []));
 </script>
 
 <PasteHandler 
@@ -234,7 +236,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                             </div>
                             <div class="flex flex-col justify-center min-w-0">
                                 <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold leading-none mb-0.5">Location</div>
-                                <div class="font-bold text-sm leading-tight truncate">{loc.container.name}</div>
+								<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="font-bold text-sm leading-tight truncate hover:text-primary hover:underline">
+									{loc.container.name}
+								</a>
                                 <div class="text-xs text-gray-500 leading-snug line-clamp-1 mt-0.5">{loc.container?.parent?.description || loc.container?.description || 'No description'}</div>
                             </div>
                         </div>
@@ -251,7 +255,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                             <div class="text-gray-500 font-semibold uppercase text-[10px] mt-0.5">Other Locations:</div>
                             <div class="flex flex-wrap gap-1">
                                 {#each data.item.locations.slice(1) as loc}
-                                    <div class="badge badge-ghost badge-sm">{loc.container.name}</div>
+									<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="badge badge-ghost badge-sm hover:border-primary hover:text-primary transition-colors">
+										{loc.container.name}
+									</a>
                                 {/each}
                             </div>
                         {/if}
@@ -295,7 +301,9 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                         {/if}
                         <div class="card-body p-4 gap-1">
                             <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
-                            <h3 class="card-title text-lg m-0">{loc.container.name}</h3>
+							<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="card-title text-lg m-0 hover:text-primary hover:underline w-max">
+								{loc.container.name}
+							</a>
                             <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
                         </div>
                     </div>
@@ -308,11 +316,16 @@ $:  pageTitle.set(data.item?.title || 'Item Details');
                 {/if}
             </div>
 
-            <!-- Tags (Shared) -->
-            {#if data.item?.tags && data.item.tags.length > 0}
+			<!-- Tags & Categories -->
+			{#if (data.item?.tags && data.item.tags.length > 0) || itemCategories.length > 0}
                 <div class="flex flex-wrap justify-start gap-2 mt-1">
+					{#each itemCategories as cat}
+						<div class="badge badge-primary badge-outline badge-sm shadow-sm">
+							<a href="/search?category={encodeURIComponent(cat)}">{cat}</a>
+						</div>
+					{/each}
                     {#each data.item?.tags as tag}
-                        <div class="badge badge-ghost badge-sm">
+						<div class="badge badge-ghost badge-sm hover:border-primary hover:text-primary transition-colors">
                             <a href="/tag/{tag.slug}">{tag.name}</a>
                         </div>
                     {/each}

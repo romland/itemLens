@@ -26,6 +26,7 @@
     let tableModalDialog: HTMLDialogElement;
     let isParsingLLM = false;
     let selectedRows: boolean[] = [];
+	let llmUsedForAttributes = false;
 
     $: if (tableModalDialog) {
         if (showTableModal && !tableModalDialog.open) tableModalDialog.showModal();
@@ -111,6 +112,7 @@
         }
         showTableModal = false;
         applyKVPs(pastedKVPs, targetIndex);
+		if (isParsingLLM) { llmUsedForAttributes = true; isParsingLLM = false; }
     }
 
     function pasteTable(ev: any, ix: number)
@@ -232,6 +234,8 @@
 </script>
 
     <svelte:window onkeydown={handleKeydown} />
+
+	<input type="hidden" name="llm_attributes_used" value={llmUsedForAttributes.toString()} />
 
     {#each {length:numKVPs} as _, i}
         <div>

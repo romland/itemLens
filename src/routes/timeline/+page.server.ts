@@ -13,7 +13,7 @@ export const load = (async ({ locals, url }) => {
     if (category !== 'all') {
         whereClause.category = category;
     } else {
-        whereClause.category = { not: 'archive' };
+		whereClause.category = { notIn: ['archive', 'trash'] };
     }
 
     const notes = await db.timelineNote.findMany({
@@ -116,7 +116,7 @@ export const actions = {
     },
     delete: async ({ request, locals }) => {
         const data = await request.formData();
-        await db.timelineNote.delete({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId } });
+		await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: 'trash' } });
     },
     edit: async ({ request, locals }) => {
         const data = await request.formData();

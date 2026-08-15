@@ -20,7 +20,7 @@ export const load = (async ({ locals, params }) => {
         },
         include: {
             inventory: true,
-            photos: true,
+			photos: { include: { category: true } },
             documents: true,
             tags: true,
             locations: {

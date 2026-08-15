@@ -145,7 +145,9 @@
 </script>
 
 {#each loadedPages as page}
-    <Items items={page} />
+	<slot items={page}>
+		<Items items={page} />
+	</slot>
 {/each}
 
 <div id="postScrollArea" class="flex justify-center gap-3 py-6">

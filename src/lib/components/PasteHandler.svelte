@@ -17,6 +17,8 @@
     let pastedText: string = "";
     let pastedUrl: string = "";
 
+	let isDraggingOver = false;
+	let dragCount = 0;
     let selectedPhotoType = photoTypes[0].toLowerCase();
     let textDocumentTitle = "Pasted Note";
     let clipboardQueue: { type: string, label: string }[] = [];
@@ -64,6 +66,35 @@
             }
         }
     }
+
+	function handleDragEnter(e: DragEvent) {
+		e.preventDefault();
+		dragCount++;
+		isDraggingOver = true;
+	}
+	function handleDragLeave(e: DragEvent) {
+		e.preventDefault();
+		dragCount--;
+		if (dragCount === 0) isDraggingOver = false;
+	}
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		dragCount = 0;
+		isDraggingOver = false;
+
+		// Mock a clipboard event object so we can pipe drops straight into the paste logic
+		if (e.dataTransfer?.files?.length) {
+			const file = e.dataTransfer.files[0];
+			if (file.type.startsWith("image/")) {
+				pastedFile = file;
+				pastedImageUrl = URL.createObjectURL(file);
+				pastedType = 'image';
+				modalOpen = true;
+			} else if (file.type === "text/plain") {
+				file.text().then(text => { pastedText = text; pastedType = 'text'; modalOpen = true; });
+			}
+		}
+	}
     
     function isURL(url: string) {
         const urlRegExp = /^(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:\/[^\s]*)?$/i;
@@ -181,7 +212,23 @@
     }    
 </script>
 
-    <svelte:window onpaste={handlePaste} onkeydown={handleKeydown} />
+<svelte:window 
+	onpaste={handlePaste} 
+	onkeydown={handleKeydown} 
+	ondragenter={handleDragEnter}
+	ondragleave={handleDragLeave}
+	ondragover={(e) => e.preventDefault()}
+	ondrop={handleDrop}
+/>
+
+{#if isDraggingOver}
+	<div class="fixed inset-0 z-[9999] bg-primary/20 backdrop-blur-sm border-8 border-primary border-dashed flex items-center justify-center pointer-events-auto transition-all animate-fade-in">
+		<div class="bg-base-100/90 text-base-content px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
+			<i class="bi bi-cloud-arrow-up text-6xl text-primary"></i>
+			<h2 class="text-3xl font-bold tracking-tight">Drop files to attach</h2>
+		</div>
+	</div>
+{/if}
 
     {#if clipboardQueue.length > 0}
         <div class="alert alert-info shadow-sm mb-4 flex flex-col items-start gap-2">
