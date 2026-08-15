@@ -268,7 +268,6 @@
             <div class="collapse-content flex flex-col gap-4">
                 <div class="bg-base-100 rounded-xl p-1 border border-base-200">
                     <ContainerSelector {containers} on:change={(e) => selectedContainers = e.detail.containers} />
-                    <div class="px-3 pb-3 text-right"><a href="/container/add" target="_blank" class="text-xs font-bold text-primary hover:underline uppercase tracking-wider"><i class="bi bi-plus-circle"></i> Create New Container</a></div>
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Global Category</span></label>

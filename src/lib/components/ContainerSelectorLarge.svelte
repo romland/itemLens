@@ -1,6 +1,46 @@
 <script>
+    import { createEventDispatcher } from 'svelte';
+    
+    const dispatch = createEventDispatcher();
     export let containers = [];
+
+    let newContainerName = "";
+    let isCreating = false;
+
+    async function createContainer() {
+        if (!newContainerName.trim()) return;
+        isCreating = true;
+        try {
+            const res = await fetch('/api/containers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newContainerName })
+            });
+            if (res.ok) {
+                const newC = await res.json();
+                newC.children = []; // Ensure children array exists for the template
+                containers = [newC, ...containers];
+                newContainerName = "";
+                dispatch('success', `Created location: ${newC.name}`);
+            } else {
+                dispatch('error', 'Failed to create location.');
+            }
+        } finally {
+            isCreating = false;
+        }
+    }
 </script>
+
+<div class="flex items-center gap-2 mb-4 bg-base-200/50 p-2 rounded-xl border border-base-200">
+    <input type="text" placeholder="Quick create new container..." class="input input-sm border-none shadow-inner bg-base-100 w-full max-w-xs" bind:value={newContainerName} on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), createContainer())} />
+    <button type="button" class="btn btn-sm btn-primary shadow-sm" disabled={isCreating || !newContainerName.trim()} on:click={createContainer}>
+        {#if isCreating}
+            <span class="loading loading-spinner loading-xs"></span>
+        {:else}
+            <i class="bi bi-plus-lg"></i> Create
+        {/if}
+    </button>
+</div>
 
     <table class="table">
         <tbody>

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { fade, scale } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
+	import { spring } from 'svelte/motion';
 
     export let itemTitle = "";
 
@@ -9,9 +10,10 @@
     let showOriginal = false;
 
     // Pan & Zoom State
-    let scaleVal = 1;
-    let translateX = 0;
-    let translateY = 0;
+	// Tuned for a buttery, slight-bounce iOS feel
+	let scaleVal = spring(1, { stiffness: 0.15, damping: 0.65 });
+	let translateX = spring(0, { stiffness: 0.15, damping: 0.65 });
+	let translateY = spring(0, { stiffness: 0.15, damping: 0.65 });
     let isDragging = false;
     let startX = 0;
     let startY = 0;
@@ -19,6 +21,14 @@
     // Touch pinch state
     let initialPinchDistance: number | null = null;
     let initialScale = 1;
+	let dragHasMoved = false;
+
+	// Momentum (Gliding) Trackers
+	let lastDragX = 0;
+	let lastDragY = 0;
+	let lastDragTime = 0;
+	let velocityX = 0;
+	let velocityY = 0;
 
     export function open(p: any) {
         photo = p;
@@ -38,30 +48,40 @@
     }
 
     function resetZoom() {
-        scaleVal = 1;
-        translateX = 0;
-        translateY = 0;
+		scaleVal.set(1);
+		translateX.set(0);
+		translateY.set(0);
         rotation = 0;
         isDragging = false;
         initialPinchDistance = null;
+		dragHasMoved = false;
+		velocityX = 0;
+		velocityY = 0;
     }
 
     function handleWheel(e: WheelEvent) {
         e.preventDefault();
         const delta = e.deltaY * -0.005;
-        scaleVal = Math.min(Math.max(1, scaleVal + delta), 5);
-        if (scaleVal === 1) { translateX = 0; translateY = 0; }
+		const newScale = Math.min(Math.max(1, $scaleVal + delta), 5);
+		scaleVal.set(newScale);
+		if (newScale === 1) { translateX.set(0); translateY.set(0); }
     }
 
     function startDrag(e: MouseEvent | TouchEvent) {
-        if (scaleVal <= 1) return;
         isDragging = true;
+		dragHasMoved = false;
         
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         
-        startX = clientX - translateX;
-        startY = clientY - translateY;
+		startX = clientX - $translateX;
+		startY = clientY - $translateY;
+
+		lastDragX = clientX;
+		lastDragY = clientY;
+		lastDragTime = performance.now();
+		velocityX = 0;
+		velocityY = 0;
     }
 
     function onDrag(e: MouseEvent | TouchEvent) {
@@ -69,13 +89,65 @@
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
         
-        translateX = clientX - startX;
-        translateY = clientY - startY;
+		// Calculate velocity for gliding (pixels per millisecond)
+		const now = performance.now();
+		const dt = now - lastDragTime;
+		if (dt > 0) {
+			velocityX = (clientX - lastDragX) / dt;
+			velocityY = (clientY - lastDragY) / dt;
+		}
+		lastDragX = clientX;
+		lastDragY = clientY;
+		lastDragTime = now;
+
+		let rawX = clientX - startX;
+		let rawY = clientY - startY;
+
+		// Determine bounds based on scale
+		const maxTx = Math.max(0, (window.innerWidth * ($scaleVal - 1)) / 2);
+		const maxTy = Math.max(0, (window.innerHeight * ($scaleVal - 1)) / 2);
+
+		// Apply rubber-band resistance if dragging past the edges
+		if (rawX > maxTx) rawX = maxTx + (rawX - maxTx) * 0.3;
+		else if (rawX < -maxTx) rawX = -maxTx + (rawX + maxTx) * 0.3;
+
+		if (rawY > maxTy) rawY = maxTy + (rawY - maxTy) * 0.3;
+		else if (rawY < -maxTy) rawY = -maxTy + (rawY + maxTy) * 0.3;
+
+		if (Math.abs(rawX - $translateX) > 3 || Math.abs(rawY - $translateY) > 3) dragHasMoved = true;
+
+		translateX.set(rawX, { hard: true });
+		translateY.set(rawY, { hard: true });
     }
 
     function endDrag() {
         isDragging = false;
         initialPinchDistance = null;
+		
+		if ($scaleVal < 1) {
+			scaleVal.set(1);
+			translateX.set(0);
+			translateY.set(0);
+			return;
+		}
+
+		const maxTx = Math.max(0, (window.innerWidth * ($scaleVal - 1)) / 2);
+		const maxTy = Math.max(0, (window.innerHeight * ($scaleVal - 1)) / 2);
+		
+		let targetTx = $translateX;
+		let targetTy = $translateY;
+
+		// Momentum Glide: If released while in motion (less than 50ms since last movement), throw it forward
+		if (performance.now() - lastDragTime < 50) {
+			const momentumMultiplier = 200; // Adjust for more/less slide distance
+			targetTx += velocityX * momentumMultiplier;
+			targetTy += velocityY * momentumMultiplier;
+		}
+
+		// Clamp the projected target to the boundaries. 
+		// The spring will naturally decelerate and glide smoothly into these limits.
+		translateX.set(Math.max(-maxTx, Math.min(maxTx, targetTx)));
+		translateY.set(Math.max(-maxTy, Math.min(maxTy, targetTy)));
     }
 
     function handleTouchStart(e: TouchEvent) {
@@ -84,7 +156,7 @@
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-            initialScale = scaleVal;
+			initialScale = $scaleVal;
         } else {
             startDrag(e);
         }
@@ -97,8 +169,13 @@
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-            scaleVal = Math.min(Math.max(1, initialScale * (currentDistance / initialPinchDistance)), 5);
-            if (scaleVal === 1) { translateX = 0; translateY = 0; }
+			const newScale = Math.min(Math.max(1, initialScale * (currentDistance / initialPinchDistance)), 5);
+			
+			let elasticScale = newScale;
+			// Apply rubber-band resistance if pinching out smaller than original size
+			if (elasticScale < 1) elasticScale = 1 - (1 - elasticScale) * 0.5;
+
+			scaleVal.set(elasticScale, { hard: true });
         } else {
             onDrag(e);
         }
@@ -107,6 +184,15 @@
     function toggleOriginal() {
         showOriginal = !showOriginal;
     }
+
+	function handleBackgroundClick() {
+		// Prevent closing if the user was simply flicking/dragging the image and let go on the background
+		if (dragHasMoved) {
+			dragHasMoved = false;
+			return;
+		}
+		close();
+	}
 
     // Rotation State
     let rotation = 0;
@@ -139,6 +225,7 @@
     <div 
         class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center overscroll-none touch-none"
         transition:fade={{ duration: 250, easing: cubicOut }}
+		on:click|self={handleBackgroundClick}
     >
         <!-- Header (Glassmorphic) -->
         <div class="absolute top-0 inset-x-0 p-4 sm:p-6 flex justify-between items-start bg-gradient-to-b from-black/60 to-transparent z-50 pointer-events-none">
@@ -176,7 +263,7 @@
         <!-- Interactive Image Canvas -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div 
-            class="w-full h-full flex items-center justify-center overflow-hidden {scaleVal > 1 ? 'cursor-move' : ''}"
+			class="w-full h-full flex items-center justify-center overflow-hidden {$scaleVal > 1 ? 'cursor-move' : ''}"
             on:wheel|nonpassive={handleWheel}
             on:mousedown={startDrag}
             on:mousemove={onDrag}
@@ -185,11 +272,12 @@
             on:touchstart|nonpassive={handleTouchStart}
             on:touchmove|nonpassive={handleTouchMove}
             on:touchend={endDrag}
-            on:dblclick={() => { scaleVal = scaleVal > 1 ? 1 : 2.5; translateX = 0; translateY = 0; }}
+			on:dblclick={() => { const target = $scaleVal > 1 ? 1 : 2.5; scaleVal.set(target); translateX.set(0); translateY.set(0); }}
+			on:click|self={handleBackgroundClick}
         >
             <div 
                 class="w-full h-full flex items-center justify-center origin-center"
-                style="transform: translate({translateX}px, {translateY}px) scale({scaleVal}); will-change: transform;"
+				style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal}); will-change: transform;"
                 in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
             >
                 <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
@@ -257,9 +345,9 @@
                     
                     <div class="w-px h-4 bg-white/20 mx-1 hidden sm:block"></div>
                     
-                    <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { scaleVal = Math.max(1, scaleVal - 0.5); if(scaleVal===1){translateX=0; translateY=0;} }} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { const newS = Math.max(1, $scaleVal - 0.5); scaleVal.set(newS); if(newS===1){translateX.set(0); translateY.set(0);} }} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
                     <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={resetZoom} aria-label="Reset"><i class="bi bi-arrows-collapse"></i></button>
-                    <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal = Math.min(5, scaleVal + 0.5)} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
+					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal.set(Math.min(5, $scaleVal + 0.5))} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
                 </div>
             </div>
         </div>

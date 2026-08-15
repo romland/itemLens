@@ -60,8 +60,7 @@ export const handle = (async ({ event, resolve }) => {
             path.startsWith('/tag') ||
             path.startsWith('/timeline') ||
             path.startsWith('/add') ||
-            path.startsWith('/settings') ||
-            path.startsWith('/profile')
+			path.startsWith('/settings')
         ) {
             redirect(303, '/login');
         }

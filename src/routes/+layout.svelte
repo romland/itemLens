@@ -387,7 +387,7 @@ $:  isDemoMode =
                             <i class="bi bi-safe2-fill text-xl"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Vault</div>
+							<div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Inventory</div>
                             <form action="/?/switchVault" method="POST" data-sveltekit-reload>
                                 <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={$page.data.activeInventoryId}>
                                     {#each $page.data.inventories as inv}
@@ -418,52 +418,19 @@ $:  isDemoMode =
                         <div class="flex-1 font-semibold text-lg">Categories</div>
                         <i class="bi bi-chevron-right text-gray-400"></i>
                     </a>
+                {/if}
+            </div>
 
-                    <div class="h-[1px] bg-base-300 ml-14"></div>
-
-                    <a href="/profile" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 overflow-hidden border border-primary/20">
-                          {#if $page.data.user?.avatar}
-                              <img src={$page.data.user.avatar} alt="Profile" class="object-cover w-full h-full" />
-                          {:else}
-                              <i class="bi bi-person-fill text-xl"></i>
-                          {/if}
-                        </div>
-                        <div class="flex-1 font-semibold text-lg">Profile</div>
-                        <span class="badge badge-sm badge-primary">You</span>
-                        <i class="bi bi-chevron-right text-gray-400"></i>
-                    </a>
-
+            <!-- Group 2: Sign out -->
+            <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
                     <a href="/settings" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
                         <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
                             <i class="bi bi-gear-fill text-xl"></i>
                         </div>
-                        <div class="flex-1 font-semibold text-lg">Settings</div>
+						<div class="flex-1 font-semibold text-lg">Settings & Profile</div>
                         <i class="bi bi-chevron-right text-gray-400"></i>
                     </a>
-                    {#if $page.data.user?.isAdmin}
-                        <div class="h-[1px] bg-base-300 ml-14"></div>
 
-                        <a href="/activity" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                            <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
-                                <i class="bi bi-activity text-xl"></i>
-                            </div>
-                            <div class="flex-1 font-semibold text-lg">System Activity</div>
-                            <i class="bi bi-chevron-right text-gray-400"></i>
-                        </a>
-                    {/if}
-                {/if}
-            </div>
-
-            <!-- Group 2: System / Danger Actions -->
-            <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
-                <button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 transition-colors active:bg-error/20 text-left" on:click={() => { nukeAllCaches(); mobileMenuModal.close(); }}>
-                    <div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
-                        <i class="bi bi-trash3-fill text-xl"></i>
-                    </div>
-                    <div class="flex-1 font-semibold text-lg text-error">Clear Offline Cache</div>
-                </button>
-                <div class="h-[1px] bg-base-300 ml-14"></div>
                 {#if !$page.data.user}
                     <a href="/login" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
                         <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">

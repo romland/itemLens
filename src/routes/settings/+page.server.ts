@@ -1,18 +1,20 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 import bcrypt from 'bcrypt';
-import crypto from "crypto";
+import crypto from 'crypto';
+import fs from 'fs';
+import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 
 export const load = async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
 
     let allUsers = [];
-    let allVaults = [];
+	let allInventories = [];
     let accessMap = [];
 
     if (locals.user.isAdmin) {
         allUsers = await db.user.findMany({ select: { id: true, username: true, name: true, email: true, isAdmin: true } });
-        allVaults = await db.inventory.findMany({ 
+		allInventories = await db.inventory.findMany({ 
             select: { 
                 id: true, 
                 name: true,
@@ -24,28 +26,67 @@ export const load = async ({ locals }) => {
         });
     }
 
-    return { allUsers, allVaults, accessMap };
+	return { allUsers, allInventories, accessMap };
 };
 
 export const actions = {
-    createVault: async ({ request, locals }) => {
+	updateProfile: async ({ locals, request }) => {
+		const data = await request.formData();
+		const name = data.get('name') as string;
+		const email = data.get('email') as string;
+		const avatarFile = data.get('avatar') as File;
+
+		let updateData: any = { name, email };
+
+		if (avatarFile && avatarFile.size > 0) {
+			const buffer = Buffer.from(await avatarFile.arrayBuffer());
+			const filename = `avatar-${locals.user.id}-${Date.now()}.jpg`;
+			fs.writeFileSync(`${uploadsDiskFolder}/${filename}`, buffer);
+			updateData.avatar = `${uploadsWebFolder}/${filename}`;
+		}
+
+		await db.user.update({
+			where: { id: locals.user.id },
+			data: updateData
+		});
+
+		return { success: true, message: 'Profile updated successfully.' };
+	},
+
+	updatePassword: async ({ locals, request }) => {
+		const data = await request.formData();
+		const password = data.get('password') as string;
+
+		if (!password || password.length < 6) {
+			return fail(400, { error: true, message: 'Password must be at least 6 characters.' });
+		}
+
+		await db.user.update({
+			where: { id: locals.user.id },
+			data: { password: await bcrypt.hash(password, 10) }
+		});
+
+		return { success: true, message: 'Password changed successfully.' };
+	},
+
+	createInventory: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
         
         const data = await request.formData();
         const name = data.get('name') as string;
         
-        if (!name || name.trim() === '') return fail(400, { error: true, message: "Vault name required." });
+		if (!name || name.trim() === '') return fail(400, { error: true, message: "Inventory name required." });
 
         const inventory = await db.inventory.create({
             data: {
                 name: name.trim(),
-                description: "User created vault",
+				description: "User created inventory",
                 classes: "[]",
                 users: { create: { userId: locals.user.id, role: "OWNER" } }
             }
         });
 
-        return { success: true, message: `Vault '${inventory.name}' created!` };
+		return { success: true, message: `Inventory '${inventory.name}' created!` };
     },
 
     createUser: async ({ request, locals }) => {
@@ -127,7 +168,7 @@ export const actions = {
         return { success: true, message: "Access revoked." };
     },
 
-    deleteVault: async ({ request, locals }) => {
+	deleteInventory: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
 
         const data = await request.formData();
@@ -137,13 +178,13 @@ export const actions = {
         if (!id) return fail(400, { error: true, message: "Invalid ID." });
 
         const vault = await db.inventory.findUnique({ where: { id } });
-        if (!vault) return fail(404, { error: true, message: "Vault not found." });
+		if (!vault) return fail(404, { error: true, message: "Inventory not found." });
 
         if (vault.name !== confirmName) return fail(400, { error: true, message: "Confirmation name did not match." });
 
 
         await db.inventory.delete({ where: { id } });
-        return { success: true, message: `Vault '${vault.name}' and all its contents completely deleted.` };
+		return { success: true, message: `Inventory '${vault.name}' and all its contents completely deleted.` };
     },
 
     setTheme: async ({ url, cookies }) => {

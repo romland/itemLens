@@ -12,7 +12,9 @@
     let scanningContainers = false;
     let addedContainers = [];
     let manualSelected = [];
-    
+	let isCreatingContainer = false;
+	let explicitNewName = "";
+
     // View state for tabs
     let activeTab = 'scan'; // 'scan' | 'select'
     let searchQuery = '';
@@ -87,6 +89,32 @@
             dispatch("success", `Removed container: ${containerToRemove}`);
         }
     }    
+
+	async function createContainer(nameToCreate) {
+		if (!nameToCreate.trim()) return;
+		isCreatingContainer = true;
+		try {
+			const res = await fetch('/api/containers', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: nameToCreate })
+			});
+			if (res.ok) {
+				const newC = await res.json();
+				newC.isChild = false;
+				containers = [...containers, newC];
+				manualSelected = [...manualSelected, newC.name];
+				dispatch('success', `Created location: ${newC.name}`);
+				if (searchQuery === nameToCreate) searchQuery = '';
+				explicitNewName = '';
+			} else {
+				dispatch('error', 'Failed to create location.');
+			}
+		} finally {
+			isCreatingContainer = false;
+		}
+	}
+
 </script>
 
 <div class="flex flex-col w-full">
@@ -158,6 +186,18 @@
                 </div>
             </div>
             
+			<!-- Persistent Inline Create -->
+			<div class="flex items-center gap-2 mb-3 bg-base-200/50 p-2 rounded-xl border border-base-200">
+				<input type="text" placeholder="Quick create new container..." class="input input-sm border-none shadow-inner bg-base-100 flex-1" bind:value={explicitNewName} on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), createContainer(explicitNewName))} />
+				<button type="button" class="btn btn-sm btn-primary shadow-sm" disabled={isCreatingContainer || !explicitNewName.trim()} on:click={() => createContainer(explicitNewName)}>
+					{#if isCreatingContainer && explicitNewName.trim()}
+						<span class="loading loading-spinner loading-xs"></span>
+					{:else}
+						<i class="bi bi-plus-lg"></i> Create
+					{/if}
+				</button>
+			</div>
+
             <div class="form-control mb-3">
                 <div class="input input-bordered flex items-center gap-2 rounded-xl shadow-sm">
                     <i class="bi bi-search text-gray-400"></i>
@@ -183,6 +223,16 @@
                     <div class="p-6 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
                         <i class="bi bi-inbox text-2xl"></i>
                         No containers found matching "{searchQuery}"
+
+						{#if searchQuery.trim().length > 0}
+							<button type="button" class="btn btn-primary btn-sm mt-3 shadow-sm rounded-xl" disabled={isCreatingContainer} on:click={() => createContainer(searchQuery)}>
+								{#if isCreatingContainer && searchQuery.trim()}
+									<span class="loading loading-spinner loading-xs"></span>
+								{:else}
+									Create "{searchQuery}"
+								{/if}
+							</button>
+						{/if}
                     </div>
                 {/each}
             </div>

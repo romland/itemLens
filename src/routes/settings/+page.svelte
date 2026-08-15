@@ -6,8 +6,12 @@
     import Alert from "$lib/components/alert.svelte";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
+	import Notifications from "$lib/components/Notifications.svelte";
 
     export let form: ActionData;
+
+	let notifications: any[] = [];
+	let avatarPreview: string | null = null;
 
     const updateTheme: SubmitFunction = ({ action }) => {
         const theme = action.searchParams.get('theme');
@@ -42,6 +46,53 @@
         { id: 'light', name: 'Default Light', icon: 'bi-sun' }
     ];
 
+	function notify(status: string, message: string, id: string | null = null) {
+		const newId = id || Math.random().toString(36);
+		notifications = [...notifications, { id: newId, status, message }];
+		if (status !== 'loading') setTimeout(() => { notifications = notifications.filter(n => n.id !== newId); }, 3000);
+		return newId;
+	}
+
+	function createEnhancer() {
+		return async ({ result, update }: any) => {
+			if (result.type === 'success' || result.type === 'redirect') {
+				notify('success', result.data?.message || 'Saved successfully');
+				if (result.data?.message?.includes('Profile')) avatarPreview = null; // drop preview to show real avatar
+			} else if (result.type === 'failure' || result.type === 'error') {
+				notify('error', result.data?.message || 'An error occurred');
+			}
+			await update({ reset: false });
+		};
+	}
+
+	function handleFileChange(event: Event) {
+		const target = event.target as HTMLInputElement;
+		if (target.files && target.files.length > 0) {
+			avatarPreview = URL.createObjectURL(target.files[0]);
+		}
+	}
+
+	async function nukeAllCaches() {
+		if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
+		if (typeof window !== 'undefined') {
+			try { sessionStorage.clear(); localStorage.clear(); } catch(e) { }
+			try {
+				if ('caches' in window) {
+					const keys = await caches.keys();
+					await Promise.all(keys.map(key => caches.delete(key)));
+				}
+			} catch(e) { }
+			try {
+				if ('serviceWorker' in navigator) {
+					const regs = await navigator.serviceWorker.getRegistrations();
+					for (const r of regs) await r.unregister();
+				}
+			} catch(e) { }
+			window.location.reload();
+		}
+	}
+
+
     import pageTitle from '$lib/stores';
     pageTitle.set("Settings");
 
@@ -62,11 +113,70 @@
 
 </script>
 
-{#if form?.error}
-    <Alert>{@html form?.message}</Alert>
-{/if}
+<Notifications bind:notifications />
 
 <div class="max-w-2xl mx-auto">
+
+	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+		<h3 class="font-bold text-lg mb-4">Device Management</h3>
+		<button type="button" class="btn btn-outline border-base-300 hover:border-error hover:bg-error/10 hover:text-error flex items-center justify-between w-full h-auto py-4 rounded-xl" on:click={nukeAllCaches}>
+			<div class="flex items-center gap-3">
+				<i class="bi bi-trash3-fill text-xl text-error"></i>
+				<div class="text-left flex flex-col">
+					<span class="font-bold">Clear Offline Cache</span>
+					<span class="text-xs opacity-70 font-normal mt-0.5">Free up space and force a hard resync on this device.</span>
+				</div>
+			</div>
+			<i class="bi bi-arrow-clockwise opacity-50"></i>
+		</button>
+	</div>
+
+
+	<!-- PROFILE -->
+	<h2 class="text-2xl font-bold mb-6">Profile & Security</h2>
+	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+		<form method="POST" action="?/updateProfile" enctype="multipart/form-data" class="flex flex-col gap-5" use:enhance={createEnhancer}>
+			<div class="flex items-center gap-6 mb-2">
+				<div class="avatar relative group cursor-pointer" on:click={() => document.getElementById('avatarUpload')?.click()}>
+					<div class="w-20 rounded-full border-4 border-base-100 shadow-md bg-base-200">
+						{#if avatarPreview}
+							<img src={avatarPreview} alt="Preview" class="object-cover" />
+						{:else if $page.data.user?.avatar}
+							<img src={$page.data.user.avatar} alt="Current avatar" class="object-cover" />
+						{:else}
+							<div class="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
+								{$page.data.user?.name ? $page.data.user.name.charAt(0).toUpperCase() : '?'}
+							</div>
+						{/if}
+					</div>
+					<div class="absolute bottom-0 right-0 bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-base-100">
+						<i class="bi bi-camera-fill text-xs"></i>
+					</div>
+				</div>
+				<input type="file" id="avatarUpload" name="avatar" accept="image/*" class="hidden" on:change={handleFileChange} />
+				<div class="text-sm text-gray-500">Tap to upload a new profile picture.</div>
+			</div>
+			<div class="form-control w-full">
+				<label class="label"><span class="label-text font-semibold">Display Name</span></label>
+				<input type="text" name="name" value={$page.data.user?.name || ''} class="input input-bordered w-full" />
+			</div>
+			<div class="form-control w-full">
+				<label class="label"><span class="label-text font-semibold">Email Address</span></label>
+				<input type="email" name="email" value={$page.data.user?.email || ''} class="input input-bordered w-full" />
+			</div>
+			<button type="submit" class="btn btn-primary mt-2">Save Profile</button>
+		</form>
+		
+		<div class="divider my-6">Password</div>
+		<form method="POST" action="?/updatePassword" use:enhance={createEnhancer} class="flex flex-col gap-4">
+			<div class="flex flex-col sm:flex-row gap-2">
+				<input type="password" name="password" placeholder="New Password" class="input input-bordered w-full">
+				<button type="submit" class="btn btn-neutral sm:w-auto">Update Password</button>
+			</div>
+		</form>
+	</div>
+
+	<!-- APPEARANCE -->
     <h2 class="text-2xl font-bold mb-6">Appearance</h2>
     
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
@@ -92,9 +202,9 @@
     </div>
 
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
-        <h3 class="font-bold text-lg mb-4">Create New Vault</h3>
-        <form method="POST" action="?/createVault" use:enhance class="flex gap-2">
-            <input type="text" name="name" placeholder="Vault Name (e.g., Books)" class="input input-bordered w-full" required>
+		<h3 class="font-bold text-lg mb-4">Create New Inventory</h3>
+		<form method="POST" action="?/createInventory" use:enhance={createEnhancer} class="flex gap-2">
+			<input type="text" name="name" placeholder="Inventory Name (e.g., Books)" class="input input-bordered w-full" required>
             <button type="submit" class="btn btn-primary">Create</button>
         </form>
     </div>
@@ -102,15 +212,9 @@
     {#if $page.data.user?.isAdmin}
         <div class="bg-base-100 border border-error/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-error text-error-content text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Admin Only</div>
-<!--
-            <h3 class="font-bold text-lg mb-4">Create New Vault</h3>
-            <form method="POST" action="?/createVault" use:enhance class="flex gap-2 mb-8">
-                <input type="text" name="name" placeholder="Vault Name (e.g., Books)" class="input input-bordered w-full" required>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </form>
--->
+
             <h3 class="font-bold text-lg mb-4 text-error"><i class="bi bi-shield-lock"></i> Add User</h3>
-            <form method="POST" action="?/createUser" use:enhance class="flex flex-col sm:flex-row gap-2">
+			<form method="POST" action="?/createUser" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2">
                 <input type="text" name="username" placeholder="Username" class="input input-bordered w-full" required autocomplete="off">
                 <input type="password" name="password" placeholder="Password" class="input input-bordered w-full" required autocomplete="new-password">
                 <button type="submit" class="btn btn-error text-white">Create User</button>
@@ -126,7 +230,7 @@
                             {#if editUserId === u.id}
                                 <tr>
                                     <td colspan="4" class="p-4 bg-base-300">
-                                        <form method="POST" action="?/updateUser" use:enhance={() => { return async ({ update }) => { editUserId = null; update(); }; }} class="flex flex-col gap-3">
+										<form method="POST" action="?/updateUser" use:enhance={() => { return async ({ result, update }) => { if (result.type === 'success') { notify('success', 'User updated'); editUserId = null; } else { notify('error', result.data?.message || 'Error'); } update(); }; }} class="flex flex-col gap-3">
                                             <input type="hidden" name="id" value={u.id}>
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <div class="form-control">
@@ -172,9 +276,9 @@
                 </table>
             </div>
 
-            <div class="divider my-6">Vault Access</div>
+			<div class="divider my-6">Inventory Access</div>
 
-            <form method="POST" action="?/assignAccess" use:enhance class="flex flex-col sm:flex-row gap-2 mb-6">
+			<form method="POST" action="?/assignAccess" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2 mb-6">
                 <select name="userId" class="select select-bordered w-full" required>
                     <option value="" disabled selected>Select User</option>
                     {#each $page.data.allUsers || [] as u}
@@ -182,8 +286,8 @@
                     {/each}
                 </select>
                 <select name="inventoryId" class="select select-bordered w-full" required>
-                    <option value="" disabled selected>Select Vault</option>
-                    {#each $page.data.allVaults || [] as v}
+					<option value="" disabled selected>Select Inventory</option>
+					{#each $page.data.allInventories || [] as v}
                         <option value={v.id}>{v.name}</option>
                     {/each}
                 </select>
@@ -197,7 +301,7 @@
 
             <div class="overflow-x-auto bg-base-200 rounded-lg">
                 <table class="table table-sm">
-                    <thead><tr><th>User</th><th>Vault</th><th>Role</th><th></th></tr></thead>
+					<thead><tr><th>User</th><th>Inventory</th><th>Role</th><th></th></tr></thead>
                     <tbody>
                         {#each $page.data.accessMap || [] as access}
                             <tr>
@@ -205,7 +309,7 @@
                                 <td>{access.inventory.name}</td>
                                 <td><span class="badge badge-sm">{access.role}</span></td>
                                 <td class="text-right">
-                                    <form method="POST" action="?/revokeAccess" use:enhance>
+									<form method="POST" action="?/revokeAccess" use:enhance={createEnhancer}>
                                         <input type="hidden" name="userId" value={access.userId}>
                                         <input type="hidden" name="inventoryId" value={access.inventoryId}>
                                         <button type="submit" class="btn btn-ghost btn-xs text-error"><i class="bi bi-trash"></i></button>
@@ -217,13 +321,13 @@
                 </table>
             </div>
 
-            <div class="divider my-6">Manage Vaults</div>
+			<div class="divider my-6">Manage Inventories</div>
 
             <div class="overflow-x-auto bg-base-200 rounded-lg">
                 <table class="table table-sm">
-                    <thead><tr><th>Vault Name</th><th></th></tr></thead>
+					<thead><tr><th>Inventory Name</th><th></th></tr></thead>
                     <tbody>
-                        {#each $page.data.allVaults || [] as v}
+						{#each $page.data.allInventories || [] as v}
                             <tr>
                                 <td>
                                     <div class="font-bold {deleteConfirmId === v.id ? 'text-error' : ''}">{v.name}</div>
@@ -234,7 +338,7 @@
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}
-                                        <form method="POST" action="?/deleteVault" use:enhance={() => { return async ({ update }) => { deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
+										<form method="POST" action="?/deleteInventory" use:enhance={() => { return async ({ result, update }) => { if(result.type === 'success') notify('success', 'Inventory deleted'); deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
                                             <input type="hidden" name="id" value={v.id}>
                                             <input type="text" name="confirmName" bind:value={deleteConfirmText} class="input input-xs input-bordered border-error focus:border-error w-32 bg-base-100" placeholder="Type name..." autocomplete="off">
                                             <button type="submit" class="btn btn-error btn-xs" disabled={deleteConfirmText !== v.name}>Delete</button>
@@ -251,6 +355,25 @@
                     </tbody>
                 </table>
             </div>
+
+			<div class="divider my-6">System Management</div>
+			
+			<div class="flex flex-col gap-3">
+				<a href="/activity" class="btn btn-outline border-base-300 hover:border-primary flex items-center justify-between h-auto py-4 rounded-xl">
+					<div class="flex items-center gap-3">
+						<i class="bi bi-activity text-xl text-info"></i>
+						<span class="font-bold">System Activity Log</span>
+					</div>
+					<i class="bi bi-chevron-right text-gray-400"></i>
+				</a>
+				<a href="/api/backup" target="_blank" class="btn btn-outline border-base-300 hover:border-success flex items-center justify-between h-auto py-4 rounded-xl">
+					<div class="flex items-center gap-3">
+						<i class="bi bi-database-down text-xl text-success"></i>
+						<span class="font-bold">Backup Database</span>
+					</div>
+					<i class="bi bi-download text-gray-400"></i>
+				</a>
+			</div>
 
         </div>
     {/if}

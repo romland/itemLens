@@ -1,11 +1,13 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
     import { marked } from 'marked';
+	import ImageLightbox from "$lib/components/ImageLightbox.svelte";
 
     export let note;
     
     let isEditing = false;
     let editContent = "";
+	let lightbox: ImageLightbox;
 
     function formatTime(dateStr: string) {
         const d = new Date(dateStr);
@@ -70,9 +72,9 @@
     {#if note.photos && note.photos.length > 0}
         <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64" style="-ms-overflow-style: none; scrollbar-width: none;">
             {#each note.photos as photo}
-                <div class="shrink-0 w-full h-full snap-center">
+				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in" aria-label="View Attachment" on:click={() => lightbox.open(photo)}>
                     <img src={photo.thumbPath || photo.orgPath} alt="Attachment" class="w-full h-full object-cover" />
-                </div>
+				</button>
             {/each}
         </div>
     {/if}
@@ -152,3 +154,5 @@
         </div>
     </div>
 </div>
+
+<ImageLightbox bind:this={lightbox} itemTitle="Note Attachment" />
