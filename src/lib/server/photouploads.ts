@@ -18,7 +18,7 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
-export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext): Promise<any> {
+export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext, skipLlm: boolean = false): Promise<any> {
   const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
   let exifDataJson: string | null = null;
@@ -64,7 +64,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
   let categoryName = null;
   let llmAnalysis = null;
 
-  if (type === 'product' || type === 'information' || type === 'other') {
+  if (!skipLlm && (type === 'product' || type === 'information' || type === 'other')) {
     try {
       const { analyzePhoto } = await import('$lib/server/gemini-classification');
       const { getExistingCategoryNames } = await import('$lib/server/categories');
@@ -126,8 +126,9 @@ export async function processItemPhotosBackground(item: any) {
       const webPath = photo.orgPath;
       const localPath = `static${webPath}`;
       const tracking = { targetType: 'item' as const, targetId: item.id };
+      const skipLlm = !!photo.llmAnalysis; // Skip LLM if we already analyzed it (e.g. Bulk Import)
 
-      const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking);
+      const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking, skipLlm);
 
       if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
       photo.orgPath = enriched.orgPath || photo.orgPath;

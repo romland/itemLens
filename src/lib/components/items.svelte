@@ -67,6 +67,7 @@
                                     {#each item.locations as loc}
                                         <div class="badge badge-ghost badge-sm w-16 overflow-hidden shrink-0">
                                             <a href="/container/{loc.container.name.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
+                                            <a href="/container/{encodeURIComponent(loc.container.name)}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
                                         </div>
                                     {/each}
                                 {/if}
@@ -83,14 +84,19 @@
                             </div>
 
                             <!-- MOBILE ONLY LOCATIONS -->
-                            <div class="sm:hidden mt-1 flex flex-wrap gap-1">
-                                {#if item.locations}
-                                    {#each item.locations as loc}
-                                        <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
-                                            <a href="/container/{loc.container.name.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
-                                        </div>
-                                    {/each}
+                            <div class="sm:hidden mt-1 flex flex-col gap-1.5 w-full">
+                                {#if item.description && !brief}
+                                    <div class="text-[11px] text-gray-500 line-clamp-1 leading-tight">{item.description}</div>
                                 {/if}
+                                <div class="flex flex-wrap gap-1">
+                                    {#if item.locations}
+                                        {#each item.locations as loc}
+                                            <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
+                                                <a href="/container/{encodeURIComponent(loc.container.name)}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
+                                            </div>
+                                        {/each}
+                                    {/if}
+                                </div>
                             </div>
 
                             {#if !brief}
@@ -120,9 +126,9 @@
                                         </div>
                                     {/if}
 
-                                    {#if mainPhoto.llmAnalysis}
-                                        <span class="text-xs text-gray-400">
-                                            {JSON.parse(mainPhoto.llmAnalysis)?.subCategory || 'Unknown'}
+                                    {#if mainPhoto.category?.name || mainPhoto.llmAnalysis}
+                                        <span class="text-xs text-gray-400 capitalize">
+                                            {mainPhoto.category?.name || JSON.parse(mainPhoto.llmAnalysis || '{}')?.subCategory || 'Unknown'}
                                         </span>
                                     {/if}
                                 </div>

@@ -54,7 +54,7 @@
         <div class="flex flex-col divide-y divide-base-200">
             {#each filteredContainers as cont (cont.name)}
                 <div class="flex items-center justify-between p-3 sm:p-4 hover:bg-base-50 transition-colors" transition:slide|local={{ duration: 250 }}>
-                    <a href="/container/{cont.name.replace(/ /g, '-')}" class="flex items-center gap-4 flex-1 min-w-0">
+                    <a href="/container/{encodeURIComponent(cont.name)}" class="flex items-center gap-4 flex-1 min-w-0">
                         <div class="w-12 h-12 rounded-xl bg-base-200 overflow-hidden shrink-0 border border-base-300 flex items-center justify-center">
                             {#if cont.photoPath}
                                 <img class="w-full h-full object-cover" src="{cont.photoPath}" alt="{cont.name}"/>
@@ -76,7 +76,7 @@
                         </div>
                     </a>
                     <div class="flex items-center gap-1 shrink-0 ml-2">
-                        <a href="/container/{cont.name.replace(/ /g, '-')}/edit" class="btn btn-ghost btn-circle text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors" aria-label="Edit Container">
+                        <a href="/container/{encodeURIComponent(cont.name)}/edit" class="btn btn-ghost btn-circle text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors" aria-label="Edit Container">
                             <i class="bi bi-pencil text-lg"></i>
                         </a>
                         <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-error hover:bg-error/10 transition-colors" on:click={() => containerToDelete = cont} aria-label="Delete Container">

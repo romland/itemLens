@@ -53,8 +53,8 @@
         // return containerRegExp.test(txt) || `QR said ${txt}, QR should be ID such as 'B 003'`;
         if (!txt || txt.trim() === '') return "Empty QR code";
 
-        const exists = flatContainers.some(c => c.name === txt);
-        if (!exists) return `Container "${txt}" not found in this inventory.`;
+        // const exists = flatContainers.some(c => c.name === txt);
+        // if (!exists) return `Container "${txt}" not found in this inventory.`;
         return true;
     }
 
@@ -76,6 +76,16 @@
         if(option.selected === false) {
             addedContainers = [...addedContainers, ev.detail];
         */
+
+        const exists = flatContainers.some(c => c.name === ev.detail);
+        if (!exists) {
+            scanningContainers = false;
+            if (confirm(`Container "${ev.detail}" not found in this inventory. Create it now?`)) {
+                createContainer(ev.detail);
+            }
+            return;
+        }
+
         if(!addedContainers.includes(ev.detail) && !manualSelected.includes(ev.detail)) {
             addedContainers = [...addedContainers, ev.detail];
         }

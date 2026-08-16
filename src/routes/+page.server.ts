@@ -23,7 +23,7 @@ export const load = (async ({ locals, url }) => {
                     container: true,
                 }
             },
-            "photos" : true,
+            photos: { include: { category: true } },
             "tags" : true,
             "documents": true,      // a bit wasteful as I really only need the count()
         }

@@ -9,6 +9,8 @@ import DOMPurify from 'dompurify';
 import { json } from '@sveltejs/kit';
 import slugify from 'slugify';
 import { extractBoundingBox } from '$lib/server/imageProcessor';
+import { logActivity } from '$lib/server/logger';
+import { taskManager } from '$lib/server/taskManager';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -93,7 +95,10 @@ export async function POST({ request, locals }) {
         }
     });
 
+    await logActivity(item.id, 'Creation', `Item added from Quick Action (Compare Lens)`, 'success');
+
     if (draftPath) {
+        await logActivity(item.id, 'Extraction', `Cropped bounding box out of original scan`, 'info');
         let note = await db.timelineNote.findFirst({
             where: { inventoryId: locals.activeInventoryId, category: 'archive', photos: { some: { orgPath: draftPath } } }
         });

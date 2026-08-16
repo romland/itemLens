@@ -2,8 +2,11 @@
     import { fade, scale } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
 	import { spring } from 'svelte/motion';
+    import { enhance } from '$app/forms';
 
     export let itemTitle = "";
+    export let categories: any[] = [];
+    export let allowCategoryEdit = false;
 
     let isOpen = false;
     let photo: any = null;
@@ -337,6 +340,35 @@
 							<span class="text-xs text-white/90"><i class="bi bi-aspect-ratio mr-1"></i> {fileDetails.dimensions}</span>
 							<span class="text-xs text-white/90"><i class="bi bi-hdd mr-1"></i> {fileDetails.size}</span>
 						</div>
+
+                        {#if allowCategoryEdit && photo?.type === 'product' && photo?.id}
+                            <form method="POST" action="?/changeCategory" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="border-b border-white/10 pb-1 mb-1">
+                                <input type="hidden" name="photoId" value={photo.id} />
+                                <div class="relative w-full">
+                                    <i class="bi bi-tag text-lg w-5 opacity-70 absolute left-3 top-2 pointer-events-none text-white"></i>
+                                    <select name="categoryName" class="select select-sm bg-transparent text-white hover:bg-white/20 border-none font-medium text-sm h-10 min-h-0 pl-10 pr-8 w-full rounded-xl outline-none cursor-pointer appearance-none" 
+                                        value={photo.category?.name || ''} 
+                                        on:change={(e) => {
+                                            e.currentTarget.blur();
+                                            if (e.currentTarget.value === '_new') {
+                                                const newCat = prompt('Enter new category name:');
+                                                if (newCat && newCat.trim()) {
+                                                    const hi = document.createElement('input'); hi.type = 'hidden'; hi.name = 'categoryName'; hi.value = newCat;
+                                                    e.currentTarget.form?.appendChild(hi); e.currentTarget.name = '_ignore'; e.currentTarget.form?.requestSubmit();
+                                                } else e.currentTarget.value = photo.category?.name || '';
+                                            } else e.currentTarget.form?.requestSubmit();
+                                            showMenu = false;
+                                        }}>
+                                        <option value="" disabled>Category...</option>
+                                        {#each categories as c}
+                                            <option value={c.name} class="capitalize bg-base-100 text-base-content">{c.name}</option>
+                                        {/each}
+                                        <option value="_new" class="bg-base-100 text-base-content">+ New Category...</option>
+                                    </select>
+                                </div>
+                            </form>
+                        {/if}
+
 						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
 							<i class="bi bi-download text-lg w-5 opacity-70"></i> Save to Device
 						</button>
@@ -417,7 +449,7 @@
             </div>
 
             <!-- Toolbar Controls -->
-            <div class="flex items-center gap-2 sm:gap-4 bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-xl pointer-events-auto">
+            <div class="flex items-center gap-1 sm:gap-4 bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-xl pointer-events-auto max-w-full overflow-x-auto hide-scrollbar">
                 
                 <!-- Segmented Control for Cutout/Original -->
                 {#if photo?.cropPath && photo?.type === "product"}

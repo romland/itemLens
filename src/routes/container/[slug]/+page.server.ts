@@ -8,7 +8,7 @@ export const load = (async ({ locals, params }) => {
         where: {
             AND: [
                 // { author: { id: locals.user.id } },
-                { name: params.slug.replace("-", " ") },
+                { name: params.slug },
                 { inventoryId: locals.activeInventoryId }
             ]
         },

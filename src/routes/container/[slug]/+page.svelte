@@ -47,12 +47,12 @@
 
                 <!-- Action Buttons -->
                 <div class="flex gap-2 shrink-0">
-                    <a href="/container/{data.item?.name}/edit" class="btn btn-circle btn-ghost bg-base-100/50 backdrop-blur-md hover:bg-base-100 transition-colors" title="Edit Container">
+                    <a href="/container/{encodeURIComponent(data.item?.name || '')}/edit" class="btn btn-circle btn-ghost bg-base-100/50 backdrop-blur-md hover:bg-base-100 transition-colors" title="Edit Container">
                         <i class="bi bi-pencil-square text-lg"></i>
                     </a>
                     <!-- Delete wrapped safely -->
                     <div class="bg-base-100/50 backdrop-blur-md hover:bg-error/20 transition-colors rounded-full">
-                        <Delete message='Delete this container?' action='/container/{data.item?.name}/delete' btnClass="btn btn-circle btn-ghost text-error" iconClass="bi bi-trash text-lg" />
+                        <Delete message='Delete this container?' action='/container/{encodeURIComponent(data.item?.name || '')}/delete' btnClass="btn btn-circle btn-ghost text-error" iconClass="bi bi-trash text-lg" />
                     </div>
                 </div>
             </div>
@@ -65,7 +65,7 @@
             <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3 ml-2 flex items-center gap-2"><i class="bi bi-ui-checks"></i> Nested Trays</h3>
             <div class="flex flex-wrap gap-2">
                 {#each data.item.children as tray}
-                    <a href="/container/{tray.name.replace(/ /g, '-')}" class="badge badge-lg p-4 bg-base-200 hover:bg-primary hover:text-primary-content border border-base-300 transition-colors shadow-sm cursor-pointer font-mono text-sm">
+                    <a href="/container/{encodeURIComponent(tray.name)}" class="badge badge-lg p-4 bg-base-200 hover:bg-primary hover:text-primary-content border border-base-300 transition-colors shadow-sm cursor-pointer font-mono text-sm">
                         {tray.name}
                     </a>
                 {/each}

@@ -46,17 +46,39 @@ export const load = (async ({ locals, params }) => {
     const window = new JSDOM('').window;
     const purify = DOMPurify(window);
 
+    const categories = await db.category.findMany({
+        where: { inventoryId: locals.activeInventoryId },
+        orderBy: { name: 'asc' }
+    });
+
     return {
         item: {
             ...item,
             // https://marked.js.org/using_advanced
             contentToHtml: purify.sanitize(await marked.parse(item.description!, {gfm:true,breaks:true}))
         },
-        activeTasks: taskManager.getTasks('item', item.id)
+        activeTasks: taskManager.getTasks('item', item.id),
+        categories
     };
 }) satisfies PageServerLoad;
 
 export const actions = {
+    changeCategory: async ({ request, locals }) => {
+        const data = await request.formData();
+        const photoId = Number(data.get('photoId'));
+        const categoryName = (data.get('categoryName') as string)?.trim().toLowerCase();
+        
+        if (photoId && categoryName) {
+            const { getOrCreateCategory } = await import('$lib/server/categories');
+            const cat = await getOrCreateCategory(categoryName, locals.activeInventoryId);
+            await db.photo.update({
+                where: { id: photoId },
+                data: { categoryId: cat.id }
+            });
+        }
+        return { success: true };
+    },
+
     toggleBackground: async ({ request }) => {
         const data = await request.formData();
         const photoId = Number(data.get('photoId'));

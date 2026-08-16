@@ -187,6 +187,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                                        <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'} text-lg"></i>
                                     </button>
                                 </form>                            
+
                                 <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
                                     {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                                         <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl" muted playsinline></video>
@@ -253,7 +254,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                             </div>
                             <div class="flex flex-col justify-center min-w-0">
                                 <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold leading-none mb-0.5">Location</div>
-								<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="font-bold text-sm leading-tight truncate hover:text-primary hover:underline">
+								<a href="/container/{encodeURIComponent(loc.container.name)}" class="font-bold text-sm leading-tight truncate hover:text-primary hover:underline">
 									{loc.container.name}
 								</a>
                                 <div class="text-xs text-gray-500 leading-snug line-clamp-1 mt-0.5">{loc.container?.parent?.description || loc.container?.description || 'No description'}</div>
@@ -272,7 +273,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                             <div class="text-gray-500 font-semibold uppercase text-[10px] mt-0.5">Other Locations:</div>
                             <div class="flex flex-wrap gap-1">
                                 {#each data.item.locations.slice(1) as loc}
-									<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="badge badge-ghost badge-sm hover:border-primary hover:text-primary transition-colors">
+									<a href="/container/{encodeURIComponent(loc.container.name)}" class="badge badge-ghost badge-sm hover:border-primary hover:text-primary transition-colors">
 										{loc.container.name}
 									</a>
                                 {/each}
@@ -318,7 +319,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                         {/if}
                         <div class="card-body p-4 gap-1">
                             <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
-							<a href="/container/{loc.container.name.replace(/ /g, '-')}" class="card-title text-lg m-0 hover:text-primary hover:underline w-max">
+							<a href="/container/{encodeURIComponent(loc.container.name)}" class="card-title text-lg m-0 hover:text-primary hover:underline w-max">
 								{loc.container.name}
 							</a>
                             <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
@@ -368,7 +369,13 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                     {#each data.item.attributes as attrib}
                         <div class="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-base-200/50 last:border-0">
                             <span class="text-sm text-gray-500 font-medium">{attrib.key}</span>
-                            <span class="text-sm font-bold text-base-content break-words">{attrib.value}</span>
+                            {#if attrib.value.startsWith('/images/')}
+                                <button type="button" class="text-sm font-bold text-primary hover:underline break-all text-left sm:text-right" on:click={() => lightbox.open({ orgPath: attrib.value, showOriginal: true })}>
+                                    {attrib.value}
+                                </button>
+                            {:else}
+                                <span class="text-sm font-bold text-base-content break-words text-left sm:text-right">{attrib.value}</span>
+                            {/if}
                         </div>
                     {/each}
                 </div>
@@ -527,7 +534,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
     </div>
 </article>
 
-<ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} />
+<ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} categories={data.categories} allowCategoryEdit={true} />
 
 <style>
     :global(.menu-delete-btn::after) {

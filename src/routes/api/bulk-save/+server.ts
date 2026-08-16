@@ -72,7 +72,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         authorId: userId,
                         description: item.subtitle || "",
                         photos: { 
-                            create: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis }] 
+                            create: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis, showOriginal: true }] 
                         },
                         attributes: { create: attributesToCreate },
                         locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { inventoryId_name: { inventoryId, name: c } } } })) } : undefined,

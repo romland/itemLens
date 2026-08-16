@@ -151,6 +151,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
     <BulkTriage 
        bind:this={bulkTriageComponent}
         containers={data.containers} 
+        categories={data.categories}
         bind:isDirty
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}

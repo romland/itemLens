@@ -9,6 +9,7 @@
 
     export let isDirty = false;
     export let containers = [];
+    export let categories = [];
     const dispatch = createEventDispatcher();
     
    export async function processPastedFile(file: File) {
@@ -298,6 +299,9 @@
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Global Category</span></label>
                     <input type="text" bind:value={globalCategory} placeholder="e.g. book, dvd, cd" class="input input-bordered w-full bg-base-100 rounded-xl" />
+                    {#if globalCategory && !categories.some(c => c.name.toLowerCase() === globalCategory.toLowerCase())}
+                        <div class="label pt-1 pb-0"><span class="label-text-alt text-warning font-semibold"><i class="bi bi-exclamation-triangle"></i> New category will be created</span></div>
+                    {/if}
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Global Tags</span></label>

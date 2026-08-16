@@ -15,12 +15,12 @@
 
     // Map existing photos to extract vision/LLM category and format it cleanly
     $: displayValues = photoValues.map(photo => {
-        let category = "";
+        let category = photo.category?.name || "";
         
         // Try to pull the category from the LLM analysis or legacy ML classification
-        if (photo.llmAnalysis) {
+        if (!category && photo.llmAnalysis) {
             try { category = JSON.parse(photo.llmAnalysis).subCategory || ""; } catch(e) {}
-        } else if (photo.classTrash) {
+        } else if (!category && photo.classTrash) {
             try { category = JSON.parse(photo.classTrash).predicted_classes?.[0] || ""; } catch(e) {}
         }
         

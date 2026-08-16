@@ -136,7 +136,17 @@
             quickNoteFired = true;
            quickNoteReady = true;
             // Optional haptic feedback to let you know the long-press registered
-            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+            if (typeof navigator !== 'undefined') {
+                if (navigator.vibrate) navigator.vibrate(50);
+                else {
+                    try {
+                        const cb = document.createElement('input');
+                        cb.type = 'checkbox'; cb.setAttribute('switch', '');
+                        cb.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
+                        document.body.appendChild(cb); cb.click(); cb.remove();
+                    } catch (e) {}
+                }
+            }
        }, 500); // 500ms long press
    }
    function quickNoteTouchEnd(e: Event) {
@@ -145,6 +155,8 @@
        if (quickNoteFired) {
             e.preventDefault(); // stops the href from firing if long press was triggered
             quickNoteModal.showModal();
+            const ta = quickNoteModal.querySelector('textarea');
+            if (ta) setTimeout(() => ta.focus(), 50);
             // Keep the flag true for a split second to swallow the subsequent click event
             setTimeout(() => { quickNoteFired = false; }, 300);
        }
@@ -417,7 +429,7 @@ $:  isDemoMode =
            quickNoteModal.close();
            return async ({ result }) => { if (result.type === 'success') formElement.reset(); };
        }}>
-           <textarea name="content" autofocus placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
+           <textarea name="content" placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
            <div class="modal-action mt-0 flex gap-2">
                <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => quickNoteModal.close()}>Cancel</button>
                <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md">Save Note</button>

@@ -153,7 +153,13 @@ export const load = (async ({ locals, params }) => {
       }
   });
 
+  const categories = await db.category.findMany({
+      where: { inventoryId: locals.activeInventoryId },
+      orderBy: { name: 'asc' }
+  });
+
   return {
-    containers: containers
+    containers,
+    categories
   };
 }) satisfies PageServerLoad;

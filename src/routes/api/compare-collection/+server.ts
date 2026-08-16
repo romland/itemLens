@@ -7,11 +7,15 @@ import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { getSafeFilename } from '$lib/server/photouploads';
 import fs from 'fs';
 import sharp from 'sharp';
+import { taskManager } from '$lib/server/taskManager';
+import { apiQueue } from '$lib/server/queue/index';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+    const taskId = taskManager.start('global', 0, 'Analyzing comparison image');
 
     try {
         const formData = await request.formData();
@@ -42,9 +46,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             prompt += `\nUser hint for context: "${hint.trim()}". Use this to improve detection accuracy.`;
         }
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite',
-            contents: [
+        const response = await apiQueue.add(
+            () => ai.models.generateContent({
+                model: 'gemini-3.1-flash-lite',
+                contents: [
                 {
                     role: 'user',
                     parts: [{ text: prompt }, { inlineData: { mimeType: 'image/webp', data: base64Data } }]
@@ -76,8 +81,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     },
                     required: ['detectedItems']
                 }
-            }
-        });
+            }),
+            { targetType: 'global', targetId: 0, description: 'Matching physical items against inventory database' }
+        );
 
         const parsed = JSON.parse(response.text || '{"detectedItems":[]}');
         const detected = parsed.detectedItems || [];
@@ -171,5 +177,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         return json({ success: true, draftPath: webPath, totalDetected: detected.length, inCollection, newToYou, missingFromScope });
     } catch (e: any) {
         return json({ error: e.message || 'Comparison scan failed' }, { status: 500 });
+    }
+    finally {
+        taskManager.end(taskId);
     }
 };

@@ -1,4 +1,3 @@
-// src/routes/api/analyze-draft/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guessProductDetails } from '$lib/server/gemini-classification';
@@ -6,6 +5,7 @@ import { getSafeFilename, processDraftPhotoBackground } from '$lib/server/photou
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { apiQueue } from '$lib/server/queue/index';
+import sharp from 'sharp';
 
   export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -18,8 +18,9 @@ import { apiQueue } from '$lib/server/queue/index';
         }
 
         // 1. Save to the staging area immediately
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = getSafeFilename(file.name, 'draft');
+        const rawBuffer = Buffer.from(await file.arrayBuffer());
+        const buffer = await sharp(rawBuffer).rotate().withMetadata().webp({ quality: 85 }).toBuffer();
+        const filename = getSafeFilename(file.name, 'draft') + '.webp';
         const localPath = `${uploadsDiskFolder}/${filename}`;
         const webPath = `${uploadsWebFolder}/${filename}`;
 
