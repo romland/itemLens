@@ -40,6 +40,9 @@ If feeling particularly ambitious on a day, you can also:
 - Reminder to self: long-tap on notebook button to add a quick note without going to notebook
 - ...and more
 
+### Scanning collections
+`Tip: count the items before scanning. Gives you an idea if you had a good enough picture`
+
 ### Bulk Import & The Comparison Lens (Set Operations)
 
 If bulk import is how you ingest a mountain of data into itemLens in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
