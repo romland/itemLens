@@ -38,6 +38,7 @@ export const actions = {
         const sharedUrl = formData.get('url') as string;
         const lat = parseFloat(formData.get('latitude') as string);
         const lng = parseFloat(formData.get('longitude') as string);
+        const category = (formData.get('category') as string) || 'idea';
 
         const linkedIds = formData.getAll('linkedItemIds[]').map(id => ({ id: Number(id) }));
         const pastedUrls = formData.getAll("pasted_urls[]") as string[];
@@ -83,6 +84,7 @@ export const actions = {
         const note = await db.timelineNote.create({
             data: {
                 content,
+                category,
                 latitude: isNaN(lat) ? null : lat,
                 longitude: isNaN(lng) ? null : lng,
                 authorId: locals.user.id,

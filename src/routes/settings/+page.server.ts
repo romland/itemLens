@@ -20,6 +20,7 @@ export const load = async ({ locals }) => {
                 id: true, 
                 name: true,
                 allowNewCategories: true,
+                extractExif: true,
                 _count: { select: { items: true, notes: true, containers: true } }
             } 
         });
@@ -178,6 +179,16 @@ export const actions = {
         const allow = data.get('allowNewCategories') === 'true';
         await db.inventory.update({ where: { id }, data: { allowNewCategories: allow } });
         return { success: true, message: "Category generation settings updated." };
+    },
+
+    toggleExtractExif: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('extractExif') === 'true';
+        await db.inventory.update({ where: { id }, data: { extractExif: allow } });
+        return { success: true, message: "EXIF extraction settings updated." };
     },
 
 	deleteInventory: async ({ request, locals }) => {

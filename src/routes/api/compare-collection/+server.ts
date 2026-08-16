@@ -27,7 +27,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const localDiskPath = `${uploadsDiskFolder}/${filename}`;
         const webPath = `${uploadsWebFolder}/${filename}`;
 
-        await sharp(buffer).resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 85 }).toFile(localDiskPath);
+        await sharp(buffer).rotate().withMetadata().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 85 }).toFile(localDiskPath);
         const base64Data = fs.readFileSync(localDiskPath).toString('base64');
 
         let prompt = `Analyze this image containing a collection of items (such as books, CDs, DVDs, groceries, or tools). Extract every distinct identifiable item. Return a JSON object with:

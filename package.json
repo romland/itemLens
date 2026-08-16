@@ -67,6 +67,7 @@
 		"colorthief": "^2.4.0",
 		"crop-node": "^2.1.0",
 		"dompurify": "^3.0.9",
+		"exif-reader": "^2.0.3",
 		"form-data": "^4.0.0",
 		"groq-sdk": "^0.3.2",
 		"jsdom": "^25.0.0",

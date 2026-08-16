@@ -2,13 +2,11 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/database';
 import { ioQueue } from '$lib/server/queue/index';
-import sharp from 'sharp';
 import slugify from 'slugify';
-import fs from 'fs';
-import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
-  import { getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
+import { processItemPhotosBackground } from '$lib/server/photouploads';
 import { taskManager } from '$lib/server/taskManager';
 import { getTagIds } from '$lib/server/services';
+import { extractBoundingBox } from '$lib/server/imageProcessor';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,33 +32,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 });
             }
 
-            // 2. Load high-res panorama
             const localDraftPath = `static${draftPath}`;
-            const img = sharp(localDraftPath);
-            const metadata = await img.metadata();
-            const { width, height } = metadata;
             
             // 3. Process approved items
             for (const item of items) {
-                // Normalize coordinates to actual px dimensions
-                const [ymin, xmin, ymax, xmax] = item.box;
-                let top = Math.max(0, Math.floor((ymin / 1000) * height!));
-                let left = Math.max(0, Math.floor((xmin / 1000) * width!));
-                let boxW = Math.max(1, Math.floor(((xmax - xmin) / 1000) * width!));
-                let boxH = Math.max(1, Math.floor(((ymax - ymin) / 1000) * height!));
-                
-                // Enforce sharp boundary limits
-                if (left + boxW > width!) boxW = width! - left;
-                if (top + boxH > height!) boxH = height! - top;
-                
-                const cropFilename = getSafeFilename(item.title || 'item', 'org');
-                const cropLocalPath = `${uploadsDiskFolder}/${cropFilename}.webp`;
-                const cropWebPath = `${uploadsWebFolder}/${cropFilename}.webp`;
-                
-                // Extract the physical spine and save as pure WebP
-                await img.clone().extract({ left, top, width: boxW, height: boxH }).webp({quality: 85}).toFile(cropLocalPath);
+                let cropWebPath = draftPath;
+                if (item.box) {
+                    const extracted = await extractBoundingBox(localDraftPath, item.box, item.title || 'item');
+                    if (extracted) cropWebPath = extracted;
+                }
 
-               
                 // Build KVP array dynamically
                 const attributesToCreate = [];
                 if (item.subtitle) attributesToCreate.push({ key: "Subtitle", value: item.subtitle });

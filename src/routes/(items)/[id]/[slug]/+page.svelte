@@ -388,6 +388,37 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
         </div>
     {/if}
     
+    {#if productPhotos.some(p => p.exifData)}
+        <div class="border-b border-base-300 pb-3 mb-3">
+            <div class="title font-bold mb-3 flex items-center gap-2">
+                <i class="bi bi-camera"></i> EXIF & Image Data
+            </div>
+            <div class="flex flex-col gap-2 mt-2">
+                {#each productPhotos.filter(p => p.exifData) as photo}
+                    {@const exif = JSON.parse(photo.exifData)}
+                    <div class="bg-base-200/50 p-3 rounded-xl border border-base-200 text-xs font-mono break-all max-h-48 overflow-y-auto">
+                        {#if exif.gps && exif.gps.GPSLatitude && exif.gps.GPSLongitude}
+                            <div class="text-primary font-bold mb-2">GPS Location Found</div>
+                            <div class="mb-2 text-gray-500">
+                                Lat: {exif.gps.GPSLatitude.join(', ')} {exif.gps.GPSLatitudeRef} <br/>
+                                Lon: {exif.gps.GPSLongitude.join(', ')} {exif.gps.GPSLongitudeRef}
+                            </div>
+                        {/if}
+                        {#if exif.image?.Make || exif.image?.Model}
+                            <div class="mb-2 text-gray-500">
+                                Camera: {exif.image?.Make} {exif.image?.Model}
+                            </div>
+                        {/if}
+                        <details>
+                            <summary class="cursor-pointer text-gray-400 font-bold">View Raw EXIF JSON</summary>
+                            <pre class="mt-2 text-[10px] bg-base-300 p-2 rounded-lg">{JSON.stringify(exif, null, 2)}</pre>
+                        </details>
+                    </div>
+                {/each}
+            </div>
+        </div>
+    {/if}
+
     <div class="border-b border-base-300 pb-3 mb-3">
         {#if otherPhotos.length > 0}
             <div class="title font-bold  mb-3">

@@ -59,6 +59,7 @@ model Inventory {
   description String
   classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
   allowNewCategories Boolean @default(true) // Whether AI is allowed to invent new sub-categories
+  extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
 
   users       UserInventoryAccess[]
   items       Item[]
@@ -212,6 +213,7 @@ model Photo {
   classBlip   String?  
   classTrash  String?  
   llmAnalysis String?  
+  exifData    String?
 
   category    Category? @relation(fields: [categoryId], references: [id])
   categoryId  Int?

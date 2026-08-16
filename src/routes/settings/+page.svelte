@@ -342,6 +342,12 @@
 										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowNewCategories} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
 										<span class="text-xs text-gray-500 font-medium">Allow automated creation of categories</span>
 									</form>
+									<form method="POST" action="?/toggleExtractExif" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+										<input type="hidden" name="id" value={v.id}>
+										<input type="hidden" name="extractExif" value={(!v.extractExif).toString()}>
+										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.extractExif} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+										<span class="text-xs text-gray-500 font-medium">Extract EXIF data (including GPS) from photos</span>
+									</form>
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}

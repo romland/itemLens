@@ -28,6 +28,8 @@
             if (target === 'inventory') {
                 fd.append('title', item.title);
                 if (item.subtitle) fd.append('description', item.subtitle);
+                if (results.draftPath) fd.append('draftPath', results.draftPath);
+                if (item.box) fd.append('box', JSON.stringify(item.box));
                 res = await fetch('/api/item', { method: 'POST', body: fd });
             } else {
                 fd.append('content', `${target === 'to buy' ? 'Buy: ' : 'Task: '} ${item.title} ${item.subtitle ? `(${item.subtitle})` : ''}`);

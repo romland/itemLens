@@ -82,3 +82,38 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
     } catch (err) { console.error("Background/Crop pipeline failed:", err); }
     return updates;
 }
+
+export async function extractBoundingBox(
+    sourceLocalPath: string,
+    box: number[],
+    filenamePrefix: string = 'crop'
+): Promise<string | null> {
+    try {
+        const { getSafeFilename } = await import('$lib/server/photouploads');
+        const { uploadsDiskFolder, uploadsWebFolder } = await import('$lib/server/constants');
+
+        const metadata = await sharp(sourceLocalPath).metadata();
+        if (!metadata.width || !metadata.height) return null;
+
+        let top = Math.max(0, Math.floor((box[0] / 1000) * metadata.height));
+        let left = Math.max(0, Math.floor((box[1] / 1000) * metadata.width));
+        let boxW = Math.max(1, Math.floor(((box[3] - box[1]) / 1000) * metadata.width));
+        let boxH = Math.max(1, Math.floor(((box[2] - box[0]) / 1000) * metadata.height));
+
+        if (left + boxW > metadata.width) boxW = metadata.width - left;
+        if (top + boxH > metadata.height) boxH = metadata.height - top;
+
+        const filename = getSafeFilename(filenamePrefix, 'crop') + '.webp';
+        
+        await sharp(sourceLocalPath)
+            .extract({ left, top, width: boxW, height: boxH })
+            .withMetadata()
+            .webp({ quality: 85 })
+            .toFile(`${uploadsDiskFolder}/${filename}`);
+
+        return `${uploadsWebFolder}/${filename}`;
+    } catch (e) {
+        console.error("Bounding box extraction failed", e);
+        return null;
+    }
+}

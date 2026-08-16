@@ -6,8 +6,9 @@ import { db } from '$lib/server/database';
 import { marked } from "marked";
 import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
-   import { json } from '@sveltejs/kit';
-   import slugify from 'slugify';
+import { json } from '@sveltejs/kit';
+import slugify from 'slugify';
+import { extractBoundingBox } from '$lib/server/imageProcessor';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -66,6 +67,21 @@ export async function POST({ request, locals }) {
     const formData = await request.formData();
     const title = (formData.get('title') as string) || 'Untitled Item';
     const description = (formData.get('description') as string) || '';
+    const draftPath = formData.get('draftPath') as string;
+    const boxStr = formData.get('box') as string;
+
+    let finalPathForProduct = draftPath;
+
+    if (draftPath && boxStr) {
+        try {
+            const box = JSON.parse(boxStr);
+            const localDraftPath = `static${draftPath}`;
+            const extracted = await extractBoundingBox(localDraftPath, box, title);
+            if (extracted) finalPathForProduct = extracted;
+        } catch (e) {
+            console.error("Failed to crop image from box", e);
+        }
+    }
 
     const item = await db.item.create({
         data: {
@@ -76,5 +92,29 @@ export async function POST({ request, locals }) {
             authorId: locals.user.id
         }
     });
+
+    if (draftPath) {
+        let note = await db.timelineNote.findFirst({
+            where: { inventoryId: locals.activeInventoryId, category: 'archive', photos: { some: { orgPath: draftPath } } }
+        });
+
+        if (!note) {
+            note = await db.timelineNote.create({
+                data: { content: `Comparison Scan Source`, category: 'archive', inventoryId: locals.activeInventoryId, authorId: locals.user.id, photos: { create: [{ type: 'information', orgPath: draftPath }] } }
+            });
+        }
+
+        await db.item.update({
+            where: { id: item.id },
+            data: { timelineNotes: { connect: [{ id: note.id }] }, photos: { create: [{ type: 'product', orgPath: finalPathForProduct }] } }
+        });
+
+        const itemWithPhotos = await db.item.findUnique({ where: { id: item.id }, include: { photos: true } });
+        if (itemWithPhotos) {
+            const { processItemPhotosBackground } = await import('$lib/server/photouploads');
+            processItemPhotosBackground(itemWithPhotos).catch(e => console.error(e));
+        }
+    }
+
     return json({ success: true, id: item.id });
 }

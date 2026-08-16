@@ -21,6 +21,30 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext): Promise<any> {
   const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 
+  let exifDataJson: string | null = null;
+  try {
+      const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true }});
+      if (vault?.extractExif) {
+          const metadata = await sharp(localPath).metadata();
+          if (metadata.exif) {
+              const exifReader = (await import('exif-reader')).default;
+              const parsedExif = exifReader(metadata.exif);
+              
+              // Strip out thumbnails and huge proprietary binary blobs
+              delete parsedExif.thumbnail;
+              if (parsedExif.exif?.MakerNote) delete parsedExif.exif.MakerNote;
+              if (parsedExif.exif?.UserComment) delete parsedExif.exif.UserComment;
+
+              exifDataJson = JSON.stringify(parsedExif, (key, value) => {
+                  // Drop any remaining raw buffers or huge byte arrays
+                  if (Buffer.isBuffer(value) || (value && value.type === 'Buffer')) return undefined;
+                  if (Array.isArray(value) && value.length > 50 && typeof value[0] === 'number') return undefined;
+                  return value;
+              });
+          }
+      }
+  } catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
+
   const [ocrResult, imgUpdates] = await Promise.all([
     getOCRdata(localPath, tracking).catch(() => null),
     generatePhotoDerivatives(tempPhoto, localPath, true, tracking)
@@ -70,7 +94,8 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     thumbPath: imgUpdates.thumbPath,
     llmAnalysis,
     categoryName,
-    orgPath: finalOrgPath
+    orgPath: finalOrgPath,
+    exifData: exifDataJson
   };
 }
 
@@ -114,6 +139,7 @@ export async function processItemPhotosBackground(item: any) {
       photo.cropPath = enriched.cropPath || photo.cropPath;
       photo.thumbPath = enriched.thumbPath || photo.thumbPath;
       photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
+      photo.exifData = enriched.exifData || photo.exifData;
 
       // If the user used the "Fast Workflow" and hit save before the title was generated, do it now
       if (itemNeedsTitleUpdate && photo.type === 'product') {

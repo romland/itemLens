@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		// Ensure EXIF orientation is permanently baked into the pixel data 
 		// so Gemini's bounding boxes match the UI rendering exactly.
 		let rawBuffer = Buffer.from(await file.arrayBuffer());
-		const buffer = await sharp(rawBuffer).rotate().toBuffer();
+        const buffer = await sharp(rawBuffer).rotate().withMetadata().toBuffer();
 		
         const filename = getSafeFilename(file.name, 'collection');
         const localPath = `${uploadsDiskFolder}/${filename}`;
