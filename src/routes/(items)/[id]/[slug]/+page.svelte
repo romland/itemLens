@@ -220,7 +220,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                             {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                                 <video class="object-cover w-10 h-10 bg-black rounded" src="{photo.orgPath}#t=0.1" muted playsinline></video>
                             {:else}
-                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                             {/if}
                         </button>
                     {/each}

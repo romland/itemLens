@@ -51,7 +51,7 @@
                                    <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center">
                                        <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent">
                                            {#if mainPhoto.thumbPath || mainPhoto.orgPath}
-                                               <img class="object-contain w-full h-full p-1 rounded-xl" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                                               <img class="object-contain w-full h-full p-1 rounded-xl" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                            {:else}
                                                <i class="bi bi-box text-2xl text-gray-300"></i>
                                            {/if}
