@@ -163,6 +163,8 @@ To enable the automatic downloading and archiving of videos from YouTube, Twitte
 
 It's a bit of a hack, but once you set it up, "Send to itemLens" will sit right there in your iOS share sheet.
 
+Not downloading? `yt-dlp -U`.
+
 
 ### External services
 _Notes to self for now_:  

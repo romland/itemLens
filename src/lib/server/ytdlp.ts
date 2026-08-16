@@ -33,8 +33,12 @@ export async function fetchVideoIfSupported(
     try {
         // 1. Ask yt-dlp to dump the JSON metadata. If it succeeds, the site is supported!
         // We use a timeout to prevent hanging on unsupported/slow sites.
-        const { stdout: jsonOut } = await execAsync(`yt-dlp --dump-json --no-playlist "${url}"`, { timeout: 15000 });
-        const meta = JSON.parse(jsonOut);
+        const { stdout: jsonOut } = await execAsync(`yt-dlp --dump-json --no-playlist --playlist-items 1 --js-runtimes node "${url}"`, { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
+        
+        // Extract the first valid JSON object to avoid crashing on Newline Delimited JSON (NDJSON) or warnings
+        const jsonLine = jsonOut.split('\n').find(line => line.trim().startsWith('{'));
+        if (!jsonLine) return null;
+        const meta = JSON.parse(jsonLine);
         
         if (!meta || !meta.title) return null;
         
@@ -47,7 +51,7 @@ export async function fetchVideoIfSupported(
         
         // 2. Download the best available MP4 configuration
         // We strictly prefer H.264 (avc) video to ensure 100% cross-browser web playback, avoiding HEVC/H.265 blind spots.
-        await execAsync(`yt-dlp -f "bestvideo+bestaudio/best" -S "vcodec:h264,res,acodec:m4a" --merge-output-format mp4 -o "${finalDiskPath}" --no-playlist "${url}"`);
+        await execAsync(`yt-dlp -f "bestvideo+bestaudio/best" -S "vcodec:h264,res,acodec:m4a" --merge-output-format mp4 -o "${finalDiskPath}" --no-playlist --playlist-items 1 --js-runtimes node "${url}"`);
         
         return {
             title: meta.title,
