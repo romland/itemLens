@@ -180,11 +180,11 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
                             {#if productPhotos[i].cropPath}
-                                <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <input type="hidden" name="photoId" value={productPhotos[i].id} />
                                     <input type="hidden" name="showOriginal" value={productPhotos[i].showOriginal ? 'false' : 'true'} />
-                                    <button type="submit" class="btn btn-circle btn-sm btn-ghost bg-base-100/70 shadow-sm" title={productPhotos[i].showOriginal ? "Show Cutout" : "Show Original"}>
-                                        <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'}"></i>
+                                   <button type="submit" class="btn btn-circle btn-sm btn-ghost bg-base-100/80 shadow-md backdrop-blur-sm" title={productPhotos[i].showOriginal ? "Show Cutout" : "Show Original"}>
+                                       <i class="bi {productPhotos[i].showOriginal ? 'bi-scissors' : 'bi-image'} text-lg"></i>
                                     </button>
                                 </form>                            
                                 <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
@@ -357,39 +357,33 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
         </div>
     {/if}
 
-    {#if data.item.attributes.length > 0}
-        <div class="title font-bold  mb-3">
-            Attributes
-        </div>
+    {#if data.item.attributes.length > 0 || photoAttributes.length > 0}
+        <div class="bg-base-100 rounded-3xl border border-base-200 shadow-sm p-4 sm:p-6 mb-6">
+            <div class="font-bold text-lg mb-4 flex items-center gap-2">
+                <i class="bi bi-list-columns-reverse text-primary"></i> Attributes
+            </div>
 
-        <div class="flex flex-col md:flex-row w-full">
-
-            <div class="overflow-x-auto">
-                <table class="table content prose max-w-none">
-                    <tbody>
-                        {#each data.item.attributes as attrib}
-                            <tr>
-                                <td>
-                                    {attrib.key}
-                                </td>
-                                <td>
-                                    {attrib.value}
-                                </td>
-                            </tr>
-                        {/each}
-
-                        {#each photoAttributes as attrib}
-                            <tr>
-                                <td>
-                                    {attrib.key}
-                                </td>
-                                <td>
-                                    {attrib.value}
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    {#each data.item.attributes as attrib}
+                        <div class="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-base-200/50 last:border-0">
+                            <span class="text-sm text-gray-500 font-medium">{attrib.key}</span>
+                            <span class="text-sm font-bold text-base-content break-words">{attrib.value}</span>
+                        </div>
+                    {/each}
+                </div>
+                {#if photoAttributes.length > 0}
+                    <div class="flex flex-col gap-2 bg-base-200/40 p-4 rounded-2xl border border-base-200">
+                        <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-2">
+                            <i class="bi bi-upc-scan"></i> Detected Text (OCR)
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            {#each photoAttributes as attrib}
+                                <span class="badge badge-ghost text-xs py-3 font-mono opacity-80 border-base-300 shadow-sm">{attrib.value}</span>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
             </div>
         </div>
     {/if}

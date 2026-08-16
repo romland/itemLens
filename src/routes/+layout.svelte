@@ -124,6 +124,32 @@
 
     let mobileMenuModal: HTMLDialogElement;
 
+   let quickNoteModal: HTMLDialogElement;
+   let quickNoteTimer: any;
+   let quickNoteFired = false;
+   let quickNoteReady = false;
+
+   function quickNoteTouchStart(e: Event) {
+       quickNoteFired = false;
+       quickNoteReady = false;
+       quickNoteTimer = setTimeout(() => {
+            quickNoteFired = true;
+           quickNoteReady = true;
+            // Optional haptic feedback to let you know the long-press registered
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+       }, 500); // 500ms long press
+   }
+   function quickNoteTouchEnd(e: Event) {
+       clearTimeout(quickNoteTimer);
+       quickNoteReady = false;
+       if (quickNoteFired) {
+            e.preventDefault(); // stops the href from firing if long press was triggered
+            quickNoteModal.showModal();
+            // Keep the flag true for a split second to swallow the subsequent click event
+            setTimeout(() => { quickNoteFired = false; }, 300);
+       }
+   }
+
 	beforeNavigate(({ type, to, from }) => {
 		console.log(`[DEBUG-LAYOUT] beforeNavigate: from ${from?.url?.pathname} to ${to?.url?.pathname}, type: ${type}`);
 		
@@ -369,12 +395,37 @@ $:  isDemoMode =
       </a>
   {/if}
 
-  <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname.startsWith('/timeline') ? 'active' : ''}" href="/timeline">
+  <a class="active:scale-95 transition-all duration-200 flex flex-col items-center justify-center gap-1 select-none {$page.url.pathname.startsWith('/timeline') ? 'active' : ''} {quickNoteReady ? 'text-primary scale-125 drop-shadow-md' : ''}" href="/timeline"
+     style="-webkit-touch-callout: none;"
+     on:click={(e) => { if (quickNoteFired) e.preventDefault(); }}
+     on:touchstart={(e) => quickNoteTouchStart(e)}
+     on:touchend={quickNoteTouchEnd}
+     on:touchcancel={quickNoteTouchEnd}
+     on:mousedown={(e) => quickNoteTouchStart(e)}
+     on:mouseup={quickNoteTouchEnd}
+     on:mouseleave={quickNoteTouchEnd}>
     <i class="bi bi-journal-bookmark text-xl"></i>
     <span class="btm-nav-label text-[10px]">Notebook</span>
   </a>
 
 </div>
+
+<dialog bind:this={quickNoteModal} class="modal modal-top sm:modal-middle backdrop-blur-sm" on:paste|stopPropagation>
+   <div class="modal-box mt-8 sm:mt-0 rounded-3xl sm:rounded-[2.5rem] p-6 bg-base-100 shadow-2xl border border-base-200">
+       <h3 class="font-bold text-lg mb-4">Quick Note</h3>
+       <form method="POST" action="/timeline?/capture" use:enhance={({ formElement }) => {
+           quickNoteModal.close();
+           return async ({ result }) => { if (result.type === 'success') formElement.reset(); };
+       }}>
+           <textarea name="content" autofocus placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
+           <div class="modal-action mt-0 flex gap-2">
+               <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => quickNoteModal.close()}>Cancel</button>
+               <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md">Save Note</button>
+           </div>
+       </form>
+   </div>
+   <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <!-- Bottom Sheet Menu -->
 <dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">

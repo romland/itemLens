@@ -44,15 +44,19 @@
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     
-                    <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover cursor-pointer transition-opacity duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none' : ''}">
-                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0">
+                   <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}">
+                       <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
-                                    <div class="mask mask-squircle w-12 h-12 bg-base-200">
-                                        <a href="/{item.id}/{item.slug}">
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16 bg-transparent" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
-                                        </a>
-                                    </div>
+                                   <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center">
+                                       <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent">
+                                           {#if mainPhoto.thumbPath || mainPhoto.orgPath}
+                                               <img class="object-contain w-full h-full p-1 rounded-xl" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                                           {:else}
+                                               <i class="bi bi-box text-2xl text-gray-300"></i>
+                                           {/if}
+                                       </a>
+                                   </div>
                                 </div>
                             </div>
                         </td>

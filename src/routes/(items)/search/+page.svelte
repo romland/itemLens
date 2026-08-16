@@ -16,8 +16,19 @@
 	let navLoadedPages: any[] = [];
 	$: allLoadedItems = [...data.items, ...(navLoadedPages || []).flat()];
 
+   let isAllSelectedGlobally = false;
 	// Check if EVERY visible item on the screen is currently in the selected list
 	$: isAllSelected = allLoadedItems.length > 0 && allLoadedItems.every(item => selectedIds.includes(item.id));
+
+   // Auto-select new items if we are in "select all" mode
+   $: if (isAllSelectedGlobally && allLoadedItems.length > 0) {
+       const newIds = new Set(selectedIds);
+       let added = false;
+       allLoadedItems.forEach(item => {
+           if (!newIds.has(item.id)) { newIds.add(item.id); added = true; }
+       });
+       if (added) selectedIds = Array.from(newIds);
+   }
 
 	$: {
 		console.log('[DEBUG-BULK] State Update ->', {
@@ -35,18 +46,21 @@
 		if (checked) {
 			if (!selectedIds.includes(id)) selectedIds = [...selectedIds, id];
 		}
-		else selectedIds = selectedIds.filter(x => x !== id);
+       else {
+           selectedIds = selectedIds.filter(x => x !== id);
+           isAllSelectedGlobally = false;
+       }
 	}
 
 	function toggleAll(checked) {
 		console.log(`[DEBUG-BULK] Toggling ALL visible items to ${checked}`);
 		if (checked) {
-			// Add all visible items to the selection without duplicating
+           isAllSelectedGlobally = true;
 			const newIds = new Set(selectedIds);
 			allLoadedItems.forEach(item => newIds.add(item.id));
 			selectedIds = Array.from(newIds);
 		} else {
-			// Remove ONLY the visible items from the selection
+           isAllSelectedGlobally = false;
 			const visibleIds = new Set(allLoadedItems.map(i => i.id));
 			selectedIds = selectedIds.filter(id => !visibleIds.has(id));
 		}

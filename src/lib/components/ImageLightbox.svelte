@@ -32,14 +32,15 @@
 	let velocityX = 0;
 	let velocityY = 0;
 
+   // Tap tracking for manual double-tap
+   let lastTapTime = 0;
+
     export function open(p: any) {
         photo = p;
         showOriginal = p.showOriginal || false;
         resetZoom();
 		showMenu = false;
         isOpen = true;
-        // Lock body scrolling
-        if (typeof document !== 'undefined') document.body.style.overflow = 'hidden';
 		fetchDetails();
     }
 
@@ -79,7 +80,6 @@
         isOpen = false;
         setTimeout(() => {
             photo = null;
-            if (typeof document !== 'undefined') document.body.style.overflow = '';
         }, 300); // Matches transition duration
     }
 
@@ -194,7 +194,18 @@
             );
 			initialScale = $scaleVal;
         } else {
-            startDrag(e);
+           const now = Date.now();
+           if (now - lastTapTime < 300) {
+               // Double tap detected
+               const target = $scaleVal > 1 ? 1 : 2.5; 
+               scaleVal.set(target); 
+               translateX.set(0); translateY.set(0);
+               lastTapTime = 0; // reset
+               e.preventDefault();
+           } else {
+               lastTapTime = now;
+               startDrag(e);
+           }
         }
     }
 
@@ -282,7 +293,7 @@
 {#if isOpen}
     <!-- Backdrop & Container -->
     <div 
-        class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center overscroll-none touch-none"
+        class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center overscroll-none touch-none overflow-y-scroll"
         transition:fade={{ duration: 250, easing: cubicOut }}
 		on:click|self={handleBackgroundClick}
     >
@@ -335,7 +346,7 @@
 					</div>
 				{/if}
 				<button 
-					class="btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md hidden sm:inline-flex" 
+                   class="btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md hidden sm:inline-flex"
 					on:click={close}
 					aria-label="Close lightbox"
 				>
@@ -406,7 +417,7 @@
             </div>
 
             <!-- Toolbar Controls -->
-            <div class="flex items-center gap-4 bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-xl pointer-events-auto">
+            <div class="flex items-center gap-2 sm:gap-4 bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-xl pointer-events-auto">
                 
                 <!-- Segmented Control for Cutout/Original -->
                 {#if photo?.cropPath && photo?.type === "product"}
@@ -441,17 +452,11 @@
 					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { const newS = Math.max(1, $scaleVal - 0.5); scaleVal.set(newS); if(newS===1){translateX.set(0); translateY.set(0);} }} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
                     <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={resetZoom} aria-label="Reset"><i class="bi bi-arrows-collapse"></i></button>
 					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal.set(Math.min(5, $scaleVal + 0.5))} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
+                     <!-- Mobile close button inside the toolbar to prevent overlap -->
+                     <button class="sm:hidden btn btn-circle btn-sm btn-ghost bg-white/20 text-white border-none ml-1" on:click={close} aria-label="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
         </div>
-        <!-- Mobile Close Button (Bottom Right) -->
-        <button 
-            class="absolute bottom-6 right-4 sm:hidden btn btn-circle btn-ghost bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md shadow-2xl pointer-events-auto z-[60]"
-            on:click={close}
-            aria-label="Close lightbox"
-        >
-            <i class="bi bi-x-lg text-lg"></i>
-        </button>
 
     </div>
 {/if}

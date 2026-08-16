@@ -37,6 +37,7 @@ If feeling particularly ambitious on a day, you can also:
 - Color extraction
 - Collection (bulk) import of CDs, DVDs, books, what have you
 - Multiple inventories (i.e. one for shoes, another for clothes, and yet another for electronics)
+- Reminder to self: long-tap on notebook button to add a quick note without going to notebook
 - ...and more
 
 ### Info how I use it

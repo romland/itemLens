@@ -20,6 +20,8 @@
     let pastedDocCount = 0;
     let notifications: any[] = [];
 
+   let bulkTriageComponent: BulkTriage;
+
     beforeNavigate(({ cancel }) => {
         if (isDirty && !saving) {
             if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
@@ -81,6 +83,11 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
 
 <PasteHandler 
     formId="eltForm" 
+   on:save={(ev) => {
+       if (mode === 'collection' && ev.detail.file) {
+           bulkTriageComponent?.processPastedFile(ev.detail.file);
+       }
+   }}
     on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
     on:processingComplete={(ev) => { 
@@ -126,6 +133,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
     </form>
 {:else}
     <BulkTriage 
+       bind:this={bulkTriageComponent}
         containers={data.containers} 
         bind:isDirty
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}

@@ -11,6 +11,16 @@
     export let containers = [];
     const dispatch = createEventDispatcher();
     
+   export async function processPastedFile(file: File) {
+       // Trigger the exact same logic as if it was selected from gallery
+       const dt = new DataTransfer();
+       dt.items.add(file);
+       if (fileInputGallery) {
+           fileInputGallery.files = dt.files;
+           fileInputGallery.dispatchEvent(new Event('change', { bubbles: true }));
+       }
+   }
+
     let fileInputCamera: HTMLInputElement;
     let fileInputGallery: HTMLInputElement;
     let isUploading = false;
@@ -297,7 +307,7 @@
             </div>
         </div>
 
-        <div class="fixed bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50">
+       <div class="fixed bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
             <button class="btn btn-primary btn-lg w-full max-w-md mx-auto block rounded-2xl shadow-lg active:scale-95 transition-transform" on:click={saveCollection} disabled={isSaving || activeItems.length === 0 || selectedContainers.length === 0}>
                 {#if isSaving}
                     <span class="loading loading-spinner"></span> Saving...
