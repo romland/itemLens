@@ -10,11 +10,13 @@
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import BulkTriage from "$lib/components/add/BulkTriage.svelte";
+    import CompareHub from "$lib/components/compare/CompareHub.svelte";
     import pageTitle from '$lib/stores';
     import { saveToQueue } from '$lib/client/offlineQueue';
     import { goto } from '$app/navigation';
+    import { onMount } from 'svelte';
 
-    let mode: 'single' | 'collection' = 'single';
+    let mode: 'single' | 'collection' | 'compare' = 'single';
     let saving = false;
     let isDirty = false;
     let pastedDocCount = 0;
@@ -72,12 +74,22 @@
         return newId;
     }
 
+    onMount(() => {
+        if (typeof sessionStorage !== 'undefined') {
+            const savedMode = sessionStorage.getItem('itemlens_add_mode');
+            if (savedMode === 'single' || savedMode === 'collection' || savedMode === 'compare') {
+                mode = savedMode;
+            }
+        }
+    });
+    $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('itemlens_add_mode', mode);
+
     function removeNotification(id: string) {
         notifications = notifications.filter(n => n.id !== id);
     }
 
     pageTitle.set("Add new product");
-$:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
+$:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : "Compare Collection");
 
 </script>
 
@@ -105,7 +117,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
     </div>
 {/if}
 
-<div class="bg-base-200 p-1 rounded-xl flex w-full max-w-xs mx-auto mb-6 mt-2 relative z-10">
+<div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         if (mode !== 'single' && isDirty && !confirm('You have unsaved Collection Items. Switch modes and lose them?')) return;
         isDirty = false;
@@ -117,6 +129,10 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
         mode = 'collection';
     }}>Collection</button>
 
+    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
+        isDirty = false;
+        mode = 'compare';
+    }}>Compare</button>
 </div>
 
 {#if mode === 'single'}
@@ -131,13 +147,20 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : "Add Collection");
             on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
         />
     </form>
-{:else}
+{:else if mode === 'collection'}
     <BulkTriage 
        bind:this={bulkTriageComponent}
         containers={data.containers} 
         bind:isDirty
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+    />
+{:else}
+    <CompareHub 
+        containers={data.containers}
+        on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+        on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+        on:success={(ev) => notify("success", ev.detail)}
     />
 {/if}
 

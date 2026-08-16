@@ -40,7 +40,28 @@ If feeling particularly ambitious on a day, you can also:
 - Reminder to self: long-tap on notebook button to add a quick note without going to notebook
 - ...and more
 
-### Info how I use it
+### Bulk Import & The Comparison Lens (Set Operations)
+
+If bulk import is how you ingest a mountain of data into itemLens in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
+
+It performs set math between what your camera sees (**Set A**) and what your database holds (**Set B**).
+
+#### Practical Examples & Workflows
+- **Discovery / Flea Market Scan (What do I not own? / $A \setminus B$):** 
+  - *Scenario:* You're at a record store or thrift shop looking at a crate of 40 CDs or John Sandford paperbacks. 
+  - *Action:* Snap one photo of the shelf.
+  - *Result:* The app cross-references your database and splits the items into **✨ New to You** (stuff you don't own yet) and **✓ In Your Collection** (stuff you already own, complete with its exact storage container).
+- **Audit / Kit Check (What am I missing from my baseline? / $B \setminus A$):** 
+  - *Scenario:* You're packing for a camping trip or checking your electronics workbench. 
+  - *Action:* Scope the comparison to tag `#camping-gear` or container `A 001`, dump your gear on the table, and snap a photo. 
+  - *Result:* The app flags what's **⚠️ Missing from List** and tells you where it was last logged.
+- **Subset Scoping:** Instead of checking against your entire database every time, you can scope comparisons to specific subsets:
+  - By Tag (e.g., `#canned-veggie`, `#ps2-games`)
+  - By Location/Container (e.g., `Box A 001`)
+- **Triage Actions:** When you spot something missing that you want to track, the **Add** menu lets you route it straight to **Inventory**, your **Shopping List**, or **To-Do List** in the Notebook (for current inventory).
+
+
+### Info how I use itemLens
 - TODO: 
     - Which label printer
     - Which cabinets

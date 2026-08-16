@@ -31,7 +31,7 @@ export const handle = (async ({ event, resolve }) => {
                 isAdmin: user.isAdmin
             };
 
-            // Vault Routing Logic
+            // Inventory Routing Logic
             const cookieInvId = event.cookies.get('activeInventoryId');
             const allowedIds = user.inventoryAccess.map(ia => ia.inventoryId);
             

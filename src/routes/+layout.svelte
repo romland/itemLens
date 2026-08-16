@@ -105,7 +105,7 @@
                         // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
                         invalidateAll();
                     } else if (res.status === 400 || res.status === 403 || res.status === 404) {
-                        // Unrecoverable error (e.g., item deleted, vault changed, validation failed).
+                        // Unrecoverable error (e.g., item deleted, inventory changed, validation failed).
                         // We drop the queue item to prevent an infinite sync loop.
                         console.warn(`[OFFLINE QUEUE] Unrecoverable error ${res.status}. Dropping payload for ${cleanEndpoint}`);
                         await clearQueueItem(item.id!);

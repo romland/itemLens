@@ -6,6 +6,8 @@ import { db } from '$lib/server/database';
 import { marked } from "marked";
 import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
+   import { json } from '@sveltejs/kit';
+   import slugify from 'slugify';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -56,4 +58,23 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
 	return new Response(JSON.stringify(ret));
+}
+
+export async function POST({ request, locals }) {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+    const formData = await request.formData();
+    const title = (formData.get('title') as string) || 'Untitled Item';
+    const description = (formData.get('description') as string) || '';
+
+    const item = await db.item.create({
+        data: {
+            title,
+            description,
+            slug: slugify(title.toLowerCase()),
+            inventoryId: locals.activeInventoryId,
+            authorId: locals.user.id
+        }
+    });
+    return json({ success: true, id: item.id });
 }
