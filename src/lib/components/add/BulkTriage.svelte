@@ -267,6 +267,9 @@
                             <div class="text-sm text-gray-500 truncate">{item.subtitle || 'Unknown Detail'}</div>
                             <div class="flex gap-2 mt-1">
                                 <span class="badge badge-ghost badge-sm text-[10px] uppercase font-bold border-base-300">{item.category}</span>
+                                {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
+                                    <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
+                                {/if}
                                 {#if item.low_confidence}
                                     <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry</span>
                                 {/if}
