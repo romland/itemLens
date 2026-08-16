@@ -2,11 +2,11 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import crop from "crop-node";
-import imageThumbnail from 'image-thumbnail';
 import { getTopColorsNamed } from '$lib/server/colors';
 import { heavyMlQueue } from './queue/index';
 import type { Photo } from '@prisma/client';
 import type { TaskContext } from '$lib/server/taskManager';
+import sharp from 'sharp';
 
 export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext): Promise<string> {
     return heavyMlQueue.add(async () => {
@@ -41,38 +41,39 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
 
 export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext): Promise<Partial<Photo>> {
     const updates: Partial<Photo> = {};
-    const thumbOptions = { width: 256, responseType: 'buffer' as const, jpegOptions: { force: true, quality: 90 } };
     
     try {
         const orgThumbnail = await heavyMlQueue.add(
-            () => imageThumbnail(`static${photo.orgPath}`, thumbOptions as any),
+            () => sharp(`static${photo.orgPath}`).resize({ width: 256 }).webp({ quality: 80 }).toBuffer(),
             tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
         );
-        fs.writeFileSync(`static${photo.orgPath}_org_thumb.jpg`, orgThumbnail);
-        // updates.thumbPath = `${photo.orgPath}_org_thumb.jpg`;
+        fs.writeFileSync(`static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_org_thumb.webp`, orgThumbnail);
     } catch (ex) { console.error("Error generating original thumbnail", ex); }
 
     const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
+    const finalCropPath = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
+    const finalThumbPath = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
+
     try {
         await removeBackground(imgUrl, outputFileNoBkg, tracking);
         const cropped: any = await heavyMlQueue.add(
             () => crop(outputFileNoBkg, { outputFormat: "png" }),
             tracking ? { ...tracking, description: 'Cropping image' } : undefined
         );
-        fs.writeFileSync(outputFileNoBkg, cropped);
-        updates.cropPath = `${photo.orgPath}_crop.png`;
+        await sharp(cropped).webp({ quality: 85 }).toFile(finalCropPath);
+        fs.unlinkSync(outputFileNoBkg); // Cleanup Rembg's PNG
+        updates.cropPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
 
         const thumbnail = await heavyMlQueue.add(
-            () => imageThumbnail(outputFileNoBkg, thumbOptions as any),
+            () => sharp(finalCropPath).resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath),
             tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
         );
-        fs.writeFileSync(`static${photo.orgPath}_thumb.jpg`, thumbnail);
-        updates.thumbPath = `${photo.orgPath}_thumb.jpg`;
+        updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
 
         if (getColors) {
             const colors = await heavyMlQueue.add(
                 () => new Promise((resolve, reject) => {
-                    getTopColorsNamed(outputFileNoBkg, (err: any, res: any) => err ? reject(err) : resolve(res));
+                    getTopColorsNamed(finalCropPath, (err: any, res: any) => err ? reject(err) : resolve(res));
                 }),
                 tracking ? { ...tracking, description: 'Extracting color palette' } : undefined
             );

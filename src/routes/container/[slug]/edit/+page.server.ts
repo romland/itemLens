@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from "./$types";
 import { writeFileSync } from "fs";
 import slugify from 'slugify';
 import { db } from '$lib/server/database';
-import imageThumbnail from 'image-thumbnail';
+import sharp from 'sharp';
 
 export const load = (async ({ locals, params }) => {
     console.log(params);
@@ -70,14 +70,12 @@ export const actions = {
                 .replace(/T/, '')
                 .replace(/\..+/, '');
 
-            filename = date + '-' + slugify(file.name.toLowerCase());
-
-			writeFileSync(`static/images/containers/${filename}`, buffer);
+            filename = date + '-' + slugify(file.name.toLowerCase()).replace(/\.[^/.]+$/, '') + '.webp';
 
 			try {
-				const thumb = await imageThumbnail(buffer, { width: 256, responseType: 'buffer', jpegOptions: { force: true, quality: 90 } } as any);
-				const thumbFilename = filename.replace(/\.[^/.]+$/, "_thumb.jpg");
-				writeFileSync(`static/images/containers/${thumbFilename}`, thumb);
+				await sharp(buffer).webp({ quality: 85 }).toFile(`static/images/containers/${filename}`);
+				const thumbFilename = filename.replace(/\.[^/.]+$/, "_thumb.webp");
+				await sharp(buffer).resize({ width: 256 }).webp({ quality: 80 }).toFile(`static/images/containers/${thumbFilename}`);
 			} catch (e) { console.error("Failed to generate container thumbnail", e); }
 
             filename = "/images/containers/" + filename;

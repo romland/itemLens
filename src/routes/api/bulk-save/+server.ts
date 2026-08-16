@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import slugify from 'slugify';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
-import { getSafeFilename } from '$lib/server/photouploads';
+  import { getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { taskManager } from '$lib/server/taskManager';
 import { getTagIds } from '$lib/server/services';
 
@@ -53,12 +53,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 if (left + boxW > width!) boxW = width! - left;
                 if (top + boxH > height!) boxH = height! - top;
                 
-                const cropFilename = getSafeFilename(item.title || 'item', 'crop');
-                const cropLocalPath = `${uploadsDiskFolder}/${cropFilename}.jpg`;
-                const cropWebPath = `${uploadsWebFolder}/${cropFilename}.jpg`;
+                const cropFilename = getSafeFilename(item.title || 'item', 'org');
+                const cropLocalPath = `${uploadsDiskFolder}/${cropFilename}.webp`;
+                const cropWebPath = `${uploadsWebFolder}/${cropFilename}.webp`;
                 
-                // Extract the physical spine
-                await img.clone().extract({ left, top, width: boxW, height: boxH }).jpeg({quality: 90}).toFile(cropLocalPath);
+                // Extract the physical spine and save as pure WebP
+                await img.clone().extract({ left, top, width: boxW, height: boxH }).webp({quality: 85}).toFile(cropLocalPath);
 
                
                 // Build KVP array dynamically
@@ -82,7 +82,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 });
 
                 // Assemble the item
-                await db.item.create({
+                const createdItem = await db.item.create({
                     data: {
                         title: item.title,
                         inventoryId,
@@ -91,14 +91,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         authorId: userId,
                         description: item.subtitle || "",
                         photos: { 
-                            create: [{ type: 'product', orgPath: cropWebPath, cropPath: cropWebPath, thumbPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis }] 
+                            create: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis }] 
                         },
                         attributes: { create: attributesToCreate },
                         locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { inventoryId_name: { inventoryId, name: c } } } })) } : undefined,
                         timelineNotes: noteId ? { connect: [{ id: noteId }] } : undefined,
                         tags: tagIds.length > 0 ? { connect: tagIds } : undefined
-                    }
+                    },
+                    include: { photos: true }
                 });
+
+                // Hand off to the heavy background ML processor to generate thumbnails, remove backgrounds, etc.
+                processItemPhotosBackground(createdItem).catch(e => console.error(e));
             }
         } catch (e) {
             console.error("Bulk processing failed:", e);

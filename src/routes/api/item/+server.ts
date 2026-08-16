@@ -12,15 +12,20 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ url, setHeaders }) {
+export async function GET({ url, setHeaders, locals }) {
 	setHeaders({
 		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
 	});
+
+    const parsedId = Number(url.searchParams.get('id'));
+    if (isNaN(parsedId) || parsedId === 0) error(400, 'Invalid ID');
+
     const item = await db.item.findFirst({
         where: {
             AND: [
                 // { author: { id: locals.user.id } },
-                { id: Number(url.searchParams.get('id')) },
+                // { id: Number(url.searchParams.get('id')) },
+                { id: parsedId },
                 { inventoryId: locals.activeInventoryId }
             ]
         },

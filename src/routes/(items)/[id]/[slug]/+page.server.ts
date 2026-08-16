@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/database';
-import { redirect, fail } from "@sveltejs/kit";
+  import { redirect, fail, error } from "@sveltejs/kit";
 import { marked } from "marked";
 import { JSDOM } from 'jsdom';
 import DOMPurify from 'dompurify';
@@ -11,10 +11,13 @@ import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/ser
 import { taskManager } from '$lib/server/taskManager';
 
 export const load = (async ({ locals, params }) => {
+      const parsedId = Number(params.id);
+      if (isNaN(parsedId)) error(404, 'Not found');
+
     const item = await db.item.findFirst({
         where: {
             AND: [
-                { id: Number(params.id) },
+                  { id: parsedId },
                 { inventoryId: locals.activeInventoryId }
             ]
         },

@@ -7,7 +7,7 @@ import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { apiQueue } from '$lib/server/queue/index';
 
-export const POST: RequestHandler = async ({ request }) => {
+  export const POST: RequestHandler = async ({ request, locals }) => {
     try {
         const data = await request.formData();
         const file = data.get('file') as File;
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
         }
 
         // 3. Kick off heavy processing in the background for ALL image types (Fire-and-forget)
-        processDraftPhotoBackground(webPath, type).catch(e => console.error(e));
+          processDraftPhotoBackground(webPath, type, locals.activeInventoryId).catch(e => console.error(e));
 
         // 4. Return the fast UI updates immediately
         return json({

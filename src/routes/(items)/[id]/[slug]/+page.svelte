@@ -219,7 +219,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                             {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                                 <video class="object-cover w-10 h-10 bg-black rounded" src="{photo.orgPath}#t=0.1" muted playsinline></video>
                             {:else}
-                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath + '_org_thumb.jpg' : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                             {/if}
                         </button>
                     {/each}
@@ -244,9 +244,9 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                         <div class="flex items-center gap-3 flex-1 min-w-0">
                             <div class="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-base-200 bg-base-50 flex items-center justify-center">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="w-full h-full object-cover" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                    <img class="w-full h-full object-cover" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.webp')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
                                 {:else if loc.container?.photoPath}
-                                    <img class="w-full h-full object-cover" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
+                                    <img class="w-full h-full object-cover" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.webp')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
                                 {:else}
                                     <i class="bi bi-box-seam text-2xl text-gray-400"></i>
                                 {/if}
@@ -306,9 +306,9 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                         {#if i === 0}
                             <figure class="w-full h-20 border-b border-base-200 bg-base-200 m-0">
                                 {#if loc.container.parent?.photoPath}
-                                    <img class="w-full h-full object-cover object-top" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.parent.photoPath.replace(/\.[^/.]+$/, '_thumb.webp')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.parent.photoPath; } }} alt="Parent container"/>
                                 {:else if loc.container?.photoPath}
-                                    <img class="w-full h-full object-cover object-top" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.jpg')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
+                                    <img class="w-full h-full object-cover object-top" src="{loc.container.photoPath.replace(/\.[^/.]+$/, '_thumb.webp')}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = loc.container.photoPath; } }} alt="Container thumbnail"/>
                                 {:else}
                                     <div class="w-full h-full flex items-center justify-center">
                                         <i class="bi bi-box-seam text-4xl text-gray-400"></i>

@@ -10,6 +10,7 @@ import { logActivity } from '$lib/server/logger';
 import { db } from '$lib/server/database';
 import { autoFill } from '$lib/server/autofill';
 import { taskManager, type TaskContext } from '$lib/server/taskManager';
+import sharp from 'sharp';
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
@@ -25,6 +26,17 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     generatePhotoDerivatives(tempPhoto, localPath, true, tracking)
   ]);
 
+  let finalOrgPath = webPath;
+  const isVideo = localPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
+  if (!isVideo && !localPath.endsWith('.webp')) {
+    const newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
+    const newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
+    await sharp(localPath).webp({ quality: 85 }).toFile(newLocalPath);
+    fs.unlinkSync(localPath);
+    finalOrgPath = newWebPath;
+    tempPhoto.orgPath = finalOrgPath;
+  }
+
   let categoryName = null;
   let llmAnalysis = null;
 
@@ -36,7 +48,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
       const inv = await db.inventory.findUnique({ where: { id: inventoryId } });
       const allowNew = inv?.allowNewCategories ?? true;
 
-      const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : localPath;
+      const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : tempPhoto.orgPath;
       const analysis = await apiQueue.add(
           () => analyzePhoto(targetPath, existingCategories, allowNew),
           tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
@@ -57,7 +69,8 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     cropPath: imgUpdates.cropPath,
     thumbPath: imgUpdates.thumbPath,
     llmAnalysis,
-    categoryName
+    categoryName,
+    orgPath: finalOrgPath
   };
 }
 
@@ -92,6 +105,7 @@ export async function processItemPhotosBackground(item: any) {
       const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking);
 
       if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
+      photo.orgPath = enriched.orgPath || photo.orgPath;
       if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
       if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
 
@@ -126,7 +140,7 @@ export async function processItemPhotosBackground(item: any) {
       await updatePhoto(photo.id, photo);
 
       if (photo.type !== 'invoice or receipt') {
-        await processQRcodeThenDownload(photo.orgPath, photo, item);
+        await processQRcodeThenDownload(photo.orgPath!, photo, item);
       }
     }
   } finally {
@@ -137,7 +151,7 @@ export async function processItemPhotosBackground(item: any) {
 
 async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item) {
   return ioQueue.add(async () => {
-    const page = await QRUrlDownloader.fetchQRCodeDocument(`static${webFilePath}_thumb.jpg`);
+    const page = await QRUrlDownloader.fetchQRCodeDocument(`static${webFilePath.replace(/\.[^/.]+$/, '_thumb.webp')}`);
     if (page !== null) {
       const pageData = JSON.parse(page);
       await fsPromises.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
@@ -215,17 +229,17 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                     llmAnalysis = sidecar.llmAnalysis || null;
 
                     if (sidecar.cropPath) {
-                        cropPath = `${webPath}/${filename}_crop.png`;
+                        cropPath = `${webPath}/${filename}_crop.webp`;
                         fs.copyFileSync(`static${sidecar.cropPath}`, `static${cropPath}`);
                     }
                     if (sidecar.thumbPath) {
-                        thumbPath = `${webPath}/${filename}_thumb.jpg`;
+                        thumbPath = `${webPath}/${filename}_thumb.webp`;
                         fs.copyFileSync(`static${sidecar.thumbPath}`, `static${thumbPath}`);
                     }
 
-                    const orgThumbDraft = `static${draftPath}_org_thumb.jpg`;
+                    const orgThumbDraft = `static${draftPath}_org_thumb.webp`;
                     if (fs.existsSync(orgThumbDraft)) {
-                        fs.copyFileSync(orgThumbDraft, `static${webPath}/${filename}_org_thumb.jpg`);
+                        fs.copyFileSync(orgThumbDraft, `static${webPath}/${filename}_org_thumb.webp`);
                     }
 
                     console.log(`[Background Task] Successfully merged pre-processed sidecar for image ${i}`);

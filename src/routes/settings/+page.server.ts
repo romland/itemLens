@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
+  import sharp from 'sharp';
 
 export const load = async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
@@ -41,8 +42,8 @@ export const actions = {
 
 		if (avatarFile && avatarFile.size > 0) {
 			const buffer = Buffer.from(await avatarFile.arrayBuffer());
-			const filename = `avatar-${locals.user.id}-${Date.now()}.jpg`;
-			fs.writeFileSync(`${uploadsDiskFolder}/${filename}`, buffer);
+              const filename = `avatar-${locals.user.id}-${Date.now()}.webp`;
+              await sharp(buffer).webp({ quality: 85 }).toFile(`${uploadsDiskFolder}/${filename}`);
 			updateData.avatar = `${uploadsWebFolder}/${filename}`;
 		}
 

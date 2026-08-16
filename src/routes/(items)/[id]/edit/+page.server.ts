@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from "./$types";
 import fs, { writeFileSync } from "fs";
 import slugify from 'slugify';
@@ -14,10 +14,13 @@ import { processFormDocuments } from '$lib/server/services';
 import { logActivity } from '$lib/server/logger';
 
 export const load = (async ({ locals, params }) => {
+    const parsedId = Number(params.id);
+    if (isNaN(parsedId)) error(404, 'Not found');
+
     const item = await db.item.findFirst({
         where: {
             AND: [
-                { id: Number(params.id) },
+                { id: parsedId },
                 { inventoryId: locals.activeInventoryId }
             ]
         },
@@ -134,13 +137,16 @@ console.log("formData:", orgData);
             }
         });
 
+        if (!item) return fail(404, { error: true, message: "Item not found." });
+        if (item.inventoryId !== locals.activeInventoryId) return fail(403, { error: true, message: "Item belongs to a different vault." });
+
         // Holds all image IDs that existed before this item (new photos to be created are not here)
         const preExistingPhotoIds = item.photos.map(p=>p.id);
         const preExistingDocumentIds = item.documents.map(p=>p.id);
 
         // TODO: Wrap this in a Prisma transaction so we don't delete stuff without filling things back in.
         await db.item.update({
-          where: { id: Number(params.id), inventoryId: locals.activeInventoryId },
+          where: { id: Number(params.id) },
           data: {
             attributes: {
               deleteMany: {}
@@ -156,7 +162,7 @@ console.log("formData:", orgData);
         // Note: We overwrite the initial version of item here so that we have the new ID's
         //       of images, etc.
         item = await db.item.update({
-            where: { id: Number(params.id), inventoryId: locals.activeInventoryId },
+            where: { id: Number(params.id) },
             data: {
 				title: safeTitle,
                 reason: data.reason as string || "",

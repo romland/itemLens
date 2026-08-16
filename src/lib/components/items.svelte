@@ -50,7 +50,7 @@
                                 <div class="avatar">
                                     <div class="mask mask-squircle w-12 h-12 bg-base-200">
                                         <a href="/{item.id}/{item.slug}">
-                                            <img class="mask mask-squircle object-scale-down h-16 w-16 bg-transparent" src="{mainPhoto.showOriginal ? mainPhoto.orgPath + '_org_thumb.jpg' : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                                            <img class="mask mask-squircle object-scale-down h-16 w-16 bg-transparent" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+$/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                         </a>
                                     </div>
                                 </div>
