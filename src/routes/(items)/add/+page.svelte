@@ -23,6 +23,7 @@
     let notifications: any[] = [];
 
    let bulkTriageComponent: BulkTriage;
+   let compareHubComponent: CompareHub;
 
     beforeNavigate(({ cancel }) => {
         if (isDirty && !saving) {
@@ -99,6 +100,9 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
        if (mode === 'collection' && ev.detail.file) {
            bulkTriageComponent?.processPastedFile(ev.detail.file);
        }
+       else if (mode === 'compare' && ev.detail.file) {
+           compareHubComponent?.processPastedFile(ev.detail.file);
+       }
    }}
     on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
@@ -132,7 +136,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         isDirty = false;
         mode = 'compare';
-    }}>Compare</button>
+    }}>Comparison</button>
 </div>
 
 {#if mode === 'single'}
@@ -158,7 +162,10 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
     />
 {:else}
     <CompareHub 
+        bind:this={compareHubComponent}
         containers={data.containers}
+        categories={data.categories}
+        tags={data.tags}
         on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
         on:success={(ev) => notify("success", ev.detail)}

@@ -34,13 +34,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         await sharp(buffer).rotate().withMetadata().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 85 }).toFile(localDiskPath);
         const base64Data = fs.readFileSync(localDiskPath).toString('base64');
 
-        let prompt = `Analyze this image containing a collection of items (such as books, CDs, DVDs, groceries, or tools). Extract every distinct identifiable item. Return a JSON object with:
+        let prompt = `Analyze this image containing a collection of physical items (such as books, CDs, DVDs, grocery cans, or tools). 
+CRITICAL: You must extract EVERY SINGLE INDIVIDUAL physical item as its own separate entry. DO NOT group multiple adjacent items together into one bounding box. Even if two items are identical, they must each get their own distinct, tight bounding box.
+
+Return a JSON object with:
 - "detectedItems": array of objects, each containing:
   - "title": (string) main title or product name
   - "subtitle": (string, optional) author, brand, flavor, artist, or edition
   - "category": (string) simple category
   - "rawText": (string) literally every word you can read on the item, space separated. Do not format it.
-  - "box": (array of numbers) bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000`;
+  - "box": (array of numbers) tight bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000 around the SINGLE individual item.`;
 
         if (hint.trim()) {
             prompt += `\nUser hint for context: "${hint.trim()}". Use this to improve detection accuracy.`;
@@ -68,7 +71,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                                     title: { type: 'string' },
                                     subtitle: { type: 'string' },
                                     category: { type: 'string' },
-                                      rawText: { type: 'string' },
+                                    rawText: { type: 'string' },
                                     box: {
                                         type: 'array',
                                         items: { type: 'number' },
@@ -81,6 +84,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     },
                     required: ['detectedItems']
                 }
+            }
             }),
             { targetType: 'global', targetId: 0, description: 'Matching physical items against inventory database' }
         );
@@ -88,24 +92,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const parsed = JSON.parse(response.text || '{"detectedItems":[]}');
         const detected = parsed.detectedItems || [];
 
-        // Fetch target scope from database to cross-reference
-        const itemWhere: any = { inventoryId: locals.activeInventoryId };
-        if (scopeType === 'tag' && scopeValue) {
-            itemWhere.tags = { some: { slug: scopeValue.toLowerCase().replace(/ /g, '-') } };
-        } else if (scopeType === 'category' && scopeValue) {
-            itemWhere.photos = { some: { category: { name: scopeValue } } };
-        } else if (scopeType === 'container' && scopeValue) {
-            itemWhere.locations = { some: { container: { name: scopeValue } } };
-        }
-
+        // Always fetch ALL items in the inventory so we can identify items from other locations
         const dbItems = await db.item.findMany({
-            where: itemWhere,
+            where: { inventoryId: locals.activeInventoryId },
             include: { locations: { include: { container: true } }, tags: true }
         });
 
         const inCollection: any[] = [];
         const newToYou: any[] = [];
         const matchedDbItemIds = new Set<number>();
+        const idUsage = new Map<number, number>();
 
         // Helper to strip accents, apostrophes, turn punctuation to spaces, and remove extra whitespace
         const normalizeStr = (s: string) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -132,6 +128,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             const rawTokens = new Set(normalizeStr(item.rawText).split(' ').filter(t => t.length > 1));
 
             const match = dbItems.find(dbItem => {
+                const used = idUsage.get(dbItem.id) || 0;
+                const available = dbItem.amount || 1;
+                if (used >= available) return false; // Fully consumed by other boxes in photo
+
                 const dbTitleNorm = normalizeStr(dbItem.title);
                 
                 // 1. Exact Match (post-normalization catches Jupiters vs Jupiter's)
@@ -165,16 +165,30 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             });
 
             if (match) {
+                idUsage.set(match.id, (idUsage.get(match.id) || 0) + 1);
                 matchedDbItemIds.add(match.id);
-                inCollection.push({ ...item, matchedItem: { id: match.id, title: match.title, slug: match.slug, amount: match.amount, locationName: match.locations?.[0]?.container?.name || null } });
+
+                const matchNorm = normalizeStr(match.title);
+                const dbTotalAmount = dbItems.filter(i => normalizeStr(i.title) === matchNorm).reduce((sum, i) => sum + (i.amount || 1), 0);
+
+                inCollection.push({ ...item, matchedItem: { id: match.id, title: match.title, slug: match.slug, amount: match.amount, dbTotalAmount, locationName: match.locations?.[0]?.container?.name || null } });
             } else {
                 newToYou.push(item);
             }
         }
 
-        const missingFromScope = (scopeType !== 'all' ? dbItems.filter(i => !matchedDbItemIds.has(i.id)) : []).map(i => ({ id: i.id, title: i.title, slug: i.slug, locationName: i.locations?.[0]?.container?.name || null }));
+        const missingFromScope = (scopeType !== 'all' ? dbItems.filter(i => {
+            const used = idUsage.get(i.id) || 0;
+            const available = i.amount || 1;
+            if (used >= available) return false; // Not missing!
 
-        return json({ success: true, draftPath: webPath, totalDetected: detected.length, inCollection, newToYou, missingFromScope });
+            if (scopeType === 'tag' && scopeValue) return i.tags.some(t => t.slug === scopeValue.toLowerCase().replace(/ /g, '-'));
+            if (scopeType === 'category' && scopeValue) return i.photos?.some(p => p.category?.name === scopeValue);
+            if (scopeType === 'container' && scopeValue) return i.locations.some(l => l.container.name === scopeValue);
+            return false;
+        }) : []).map(i => ({ id: i.id, title: i.title, slug: i.slug, amount: i.amount, locationName: i.locations?.[0]?.container?.name || null }));
+
+        return json({ success: true, draftPath: webPath, totalDetected: detected.length, inCollection, newToYou, missingFromScope, scopeType, scopeValue });
     } catch (e: any) {
         return json({ error: e.message || 'Comparison scan failed' }, { status: 500 });
     }

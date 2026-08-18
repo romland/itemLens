@@ -1,20 +1,28 @@
 <script lang="ts">
-    import ScopeSelector from '$lib/components/compare/ScopeSelector.svelte';
     import CompareResults from '$lib/components/compare/CompareResults.svelte';
     import { createEventDispatcher, onMount } from 'svelte';
     import { beforeNavigate } from '$app/navigation';
 
     export let containers: any[] = [];
+    export let categories: any[] = [];
+    export let tags: any[] = [];
     const dispatch = createEventDispatcher();
 
     let fileInputCamera: HTMLInputElement;
     let fileInputGallery: HTMLInputElement;
     let isScanning = false;
     let scanHint = '';
-    let scopeType: 'all' | 'tag' | 'container' = 'all';
-    let scopeValue = '';
 
     let compareResults: any = null;
+
+    export async function processPastedFile(file: File) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        if (fileInputGallery) {
+            fileInputGallery.files = dt.files;
+            fileInputGallery.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
 
     onMount(() => {
         if (typeof sessionStorage !== 'undefined') {
@@ -23,8 +31,6 @@
                 try {
                     const parsed = JSON.parse(cached);
                     compareResults = parsed.compareResults;
-                    if (parsed.scopeType) scopeType = parsed.scopeType;
-                    if (parsed.scopeValue) scopeValue = parsed.scopeValue;
                     if (parsed.scanHint) scanHint = parsed.scanHint;
                 } catch (e) {}
             }
@@ -34,7 +40,7 @@
     beforeNavigate(() => {
         if (typeof sessionStorage !== 'undefined') {
             if (compareResults) {
-                sessionStorage.setItem('itemlens_compare_state', JSON.stringify({ compareResults, scopeType, scopeValue, scanHint }));
+                sessionStorage.setItem('itemlens_compare_state', JSON.stringify({ compareResults, scanHint }));
             } else {
                 sessionStorage.removeItem('itemlens_compare_state');
             }
@@ -50,8 +56,8 @@
 
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('scopeType', scopeType);
-        fd.append('scopeValue', scopeValue);
+        fd.append('scopeType', 'all');
+        fd.append('scopeValue', '');
         if (scanHint.trim()) fd.append('hint', scanHint.trim());
 
         try {
@@ -87,17 +93,12 @@
             <p class="text-gray-500 text-xs mt-1">Snap a photo of shelves, crates, or groceries to see what you own and what you're missing.</p>
         </div>
 
-        <!-- Step 1: Scope Target -->
-        <div class="mb-6">
-            <ScopeSelector {containers} on:change={(e) => { scopeType = e.detail.scopeType; scopeValue = e.detail.scopeValue; }} />
-        </div>
-
-        <!-- Step 2: Context Hint -->
-        <div class="mb-6">
+        <!-- Step 1: Context Hint -->
+        <div class="mb-8">
             <input type="text" bind:value={scanHint} placeholder="Optional context (e.g. 'Sci-Fi paperbacks', 'Spices')..." class="input input-sm input-bordered w-full rounded-xl bg-base-100 text-xs shadow-inner" />
         </div>
 
-        <!-- Step 3: Trigger Buttons -->
+        <!-- Step 2: Trigger Buttons -->
         {#if isScanning}
             <div class="btn btn-primary btn-lg w-full rounded-2xl opacity-80 cursor-not-allowed flex items-center justify-center gap-3">
                 <span class="loading loading-spinner"></span>
@@ -121,6 +122,6 @@
             <h2 class="text-xl font-bold tracking-tight">Scan Results</h2>
             <button type="button" class="btn btn-sm btn-ghost rounded-xl gap-1 text-gray-500" on:click={reset}><i class="bi bi-arrow-counterclockwise"></i> Scan Again</button>
         </div>
-        <CompareResults results={compareResults} on:notify={(e) => dispatch(e.detail.status, e.detail.message)} />
+        <CompareResults results={compareResults} {containers} {categories} {tags} on:notify={(e) => dispatch(e.detail.status, e.detail.message)} />
     {/if}
 </div>

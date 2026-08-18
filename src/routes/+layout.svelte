@@ -403,7 +403,7 @@ $:  isDemoMode =
   {#if $page.data.user}
       <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname==='/add' ? 'active' : ''}" href="/add" title="Add new item">
           <i class="bi bi-plus-circle text-xl"></i>
-          <span class="btm-nav-label text-[10px]">Add new</span>
+          <span class="btm-nav-label text-[10px]">New</span>
       </a>
   {/if}
 

@@ -87,13 +87,15 @@
     let done = false;
 $:  if(!done && invoicePhotos.length > 0) {
         const p = invoicePhotos[0];
-        const end = p.llmAnalysis.lastIndexOf("}");
-        const start = p.llmAnalysis.indexOf("{");
-        const json = p.llmAnalysis.slice(start, end + 1);
-        console.log(json);
-        console.log(
-            JSON.parse(json)
-        );
+        if (p && p.llmAnalysis) {
+            const end = p.llmAnalysis.lastIndexOf("}");
+            const start = p.llmAnalysis.indexOf("{");
+            if (start !== -1 && end !== -1) {
+                const json = p.llmAnalysis.slice(start, end + 1);
+                console.log(json);
+                try { console.log(JSON.parse(json)); } catch(e) {}
+            }
+        }
 
     }
     

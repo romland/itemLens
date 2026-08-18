@@ -1,0 +1,121 @@
+<script lang="ts">
+    import { createEventDispatcher } from 'svelte';
+    export let item: any;
+    export let type: 'unregistered' | 'missing' | 'elsewhere' | 'correct';
+    export let draftPath: string;
+    
+    const dispatch = createEventDispatcher();
+    
+    $: ymin = Math.max(0, (item.box?.[0] || 0) - 25);
+    $: xmin = Math.max(0, (item.box?.[1] || 0) - 25);
+    $: ymax = Math.min(1000, (item.box?.[2] || 1000) + 25);
+    $: xmax = Math.min(1000, (item.box?.[3] || 1000) + 25);
+    $: w = Math.max(1, xmax - xmin);
+    $: h = Math.max(1, ymax - ymin);
+
+    // Swipe Physics State
+    let touchStartX = 0;
+    let swipeOffset = 0;
+    let isSwiping = false;
+
+    function handleTouchEnd() {
+        isSwiping = false;
+        if (type !== 'unregistered') { swipeOffset = 0; return; }
+
+        if (swipeOffset < -80) {
+            dispatch('discard', item);
+            if (navigator.vibrate) navigator.vibrate(40);
+        } else if (swipeOffset > 80) {
+            dispatch('link', item);
+            if (navigator.vibrate) navigator.vibrate(40);
+            swipeOffset = 0; // Bounce back after triggering modal
+        } else {
+            swipeOffset = 0;
+        }
+    }
+</script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="relative w-full rounded-2xl overflow-hidden {swipeOffset < 0 ? 'bg-error/90' : 'bg-info/90'}" 
+     style="touch-action: pan-y;"
+     on:touchstart={(e) => { if (type === 'unregistered') { touchStartX = e.touches[0].clientX; isSwiping = true; } }}
+     on:touchmove={(e) => { if (isSwiping) swipeOffset = e.touches[0].clientX - touchStartX; }}
+     on:touchend={handleTouchEnd}
+>
+    <!-- Background Swipe Icons -->
+    {#if type === 'unregistered'}
+        <div class="absolute inset-y-0 right-0 flex items-center pr-6 text-white pointer-events-none">
+            <i class="bi bi-trash3-fill text-xl"></i>
+        </div>
+        <div class="absolute inset-y-0 left-0 flex items-center pl-6 text-white pointer-events-none">
+            <i class="bi bi-link-45deg text-xl"></i>
+        </div>
+    {/if}
+
+    <div class="bg-base-100 border border-base-200 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3 hover:border-primary/40"
+         style="transform: translateX({swipeOffset}px); transition: {isSwiping ? 'none' : 'transform 0.2s cubic-bezier(0.1, 0.7, 0.1, 1)'}"
+    >
+        {#if item.box}
+            <button type="button" class="relative w-16 h-20 overflow-visible shrink-0 border-none p-0 cursor-zoom-in block" on:click|stopPropagation={() => dispatch('zoom', item)}>
+                {#if item.count > 1}
+                    <div class="absolute -top-2 -left-2 z-20 bg-neutral text-neutral-content text-[11px] font-black px-2 py-0.5 rounded-lg shadow-md border border-base-100">
+                        {item.count}x
+                    </div>
+                {/if}
+                <div class="w-full h-full overflow-hidden rounded-lg bg-base-300 relative">
+                    <img src="{draftPath}" class="absolute max-w-none origin-top-left object-cover"
+                         style="width: {100000 / w}%; height: {100000 / h}%; left: -{(xmin / w) * 100}%; top: -{(ymin / h) * 100}%;" 
+                         alt="{item.title}" />
+                </div>
+            </button>
+        {/if}
+        <div class="flex flex-col min-w-0 flex-1">
+            <span class="font-bold text-base-content text-sm leading-tight truncate">{item.title}</span>
+            
+            {#if type === 'missing'}
+                <span class="text-xs text-gray-500 truncate mt-0.5">
+                    {#if item.isShortfall}
+                        Expected {item.expected}. Scanned {item.count || 0}.
+                    {:else}
+                        Expected {item.expected}. Scanned 0.
+                    {/if}
+                </span>
+            {:else if type === 'correct' || type === 'elsewhere'}
+                <span class="text-xs text-gray-500 truncate mt-0.5">
+                    {#if item.matchedItem?.dbTotalAmount === item.count}
+                        All accounted for.
+                    {:else if item.matchedItem?.dbTotalAmount > item.count}
+                        Inventory expects {item.matchedItem.dbTotalAmount} total.
+                    {:else if item.matchedItem?.dbTotalAmount < item.count}
+                        Scanned extra (Inventory expects {item.matchedItem.dbTotalAmount}).
+                    {/if}
+                </span>
+            {:else if item.subtitle}
+                <span class="text-xs text-gray-500 truncate mt-0.5">{item.subtitle}</span>
+            {/if}
+            
+            <div class="flex items-center gap-2 mt-2">
+                {#if type === 'unregistered'}
+                    <span class="badge badge-ghost badge-xs text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Inventory</span>
+                {:else if type === 'missing'}
+                    <span class="badge badge-error badge-outline badge-sm text-[10px] uppercase font-bold">Missing</span>
+                    {#if item.locationName}
+                        <span class="text-[10px] text-gray-400">Last in: {item.locationName}</span>
+                    {/if}
+                {:else if type === 'elsewhere'}
+                    <span class="badge badge-warning badge-outline badge-sm text-[10px] uppercase font-bold">Wrong Location</span>
+                    <span class="text-[10px] text-gray-400">Belongs in: {item.matchedItem?.locationName}</span>
+                {:else}
+                    <span class="badge badge-success badge-sm text-[10px] uppercase font-bold text-white"><i class="bi bi-check-lg mr-1"></i> Match</span>
+                    {#if item.matchedItem?.locationName}
+                        <span class="badge badge-ghost badge-sm text-xs font-mono"><i class="bi bi-box-seam mr-1 text-gray-400"></i> {item.matchedItem.locationName}</span>
+                    {/if}
+                {/if}
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2 shrink-0">
+            <slot name="actions"></slot>
+        </div>
+    </div>
+</div>

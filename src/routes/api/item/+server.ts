@@ -71,6 +71,7 @@ export async function POST({ request, locals }) {
     const description = (formData.get('description') as string) || '';
     const draftPath = formData.get('draftPath') as string;
     const boxStr = formData.get('box') as string;
+    const container = formData.get('container') as string;
 
     let finalPathForProduct = draftPath;
 
@@ -91,7 +92,8 @@ export async function POST({ request, locals }) {
             description,
             slug: slugify(title.toLowerCase()),
             inventoryId: locals.activeInventoryId,
-            authorId: locals.user.id
+            authorId: locals.user.id,
+            locations: container ? { create: [{ container: { connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: container } } } }] } : undefined
         }
     });
 
@@ -122,4 +124,20 @@ export async function POST({ request, locals }) {
     }
 
     return json({ success: true, id: item.id });
+}
+
+export async function PATCH({ request, locals }) {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    const { itemId, newContainer } = await request.json();
+    
+    await db.item.update({
+        where: { id: itemId, inventoryId: locals.activeInventoryId },
+        data: {
+            locations: {
+                deleteMany: {},
+                create: [{ container: { connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } } } }]
+            }
+        }
+    });
+    return json({ success: true });
 }

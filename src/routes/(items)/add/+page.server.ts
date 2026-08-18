@@ -126,7 +126,7 @@ return fail(400, {
 
 
 export const load = (async ({ locals, params }) => {
-  console.log("add/page.server.ts:", locals, params);
+  // console.log("add/page.server.ts:", locals, params);
   // TODO: Security -- can be fetched without being logged in now
   // TODO: only get containers for current inventory type (not sure where to set this yet)
   const containers = await db.container.findMany({
@@ -158,8 +158,14 @@ export const load = (async ({ locals, params }) => {
       orderBy: { name: 'asc' }
   });
 
+  const tags = await db.tag.findMany({
+      where: { inventoryId: locals.activeInventoryId },
+      orderBy: { name: 'asc' }
+  });
+
   return {
     containers,
-    categories
+    categories,
+    tags
   };
 }) satisfies PageServerLoad;

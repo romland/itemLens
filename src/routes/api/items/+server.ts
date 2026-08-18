@@ -21,8 +21,10 @@ export async function GET({ url, setHeaders, locals }) {
     const unassigned = url.searchParams.get('unassigned') === 'true';
 
     const query: Prisma.ItemFindManyArgs = {
-        take: count,
-        skip: page == 1 ? 0 : (page - 1) * count,
+        // take: count,
+        // skip: page == 1 ? 0 : (page - 1) * count,
+        take: Number(count) || 10,
+        skip: Math.max(0, (Number(page) || 1) - 1) * (Number(count) || 10),
         orderBy: [{ id: 'desc'}],
         where: {
             inventoryId: locals.activeInventoryId
