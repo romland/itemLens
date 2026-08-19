@@ -38,6 +38,26 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             
             // 3. Process approved items
             for (const item of items) {
+                if (item.resolution === 'merge' && item.duplicateItemDetails?.id) {
+                    await db.item.update({
+                        where: { id: item.duplicateItemDetails.id },
+                        data: { amount: { increment: 1 } }
+                    });
+                    if (containers && containers.length > 0) {
+                        for (const cName of containers) {
+                            const container = await db.container.findUnique({ where: { inventoryId_name: { inventoryId, name: cName } } });
+                            if (container) {
+                                await db.itemsInContainer.upsert({
+                                    where: { itemId_containerId: { itemId: item.duplicateItemDetails.id, containerId: container.id } },
+                                    update: {},
+                                    create: { itemId: item.duplicateItemDetails.id, containerId: container.id }
+                                });
+                            }
+                        }
+                    }
+                    continue; // Skip creating a new row for this item
+                }
+
                 let cropWebPath = draftPath;
                 if (item.box) {
                     const extracted = await extractBoundingBox(localDraftPath, item.box, item.title || 'item');
@@ -77,7 +97,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     photos: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, ...(simulatedLlmAnalysis ? { llmAnalysis: simulatedLlmAnalysis } : {}), showOriginal: true }],
                     attributes: attributesToCreate,
                     extractedAttributes: item.extractedAttributes,
-                    timelineNoteId: noteId
+                    timelineNoteId: noteId,
+                    duplicateDismissed: item.resolution === 'new'
                 });
             }
         } catch (e) {

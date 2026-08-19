@@ -9,6 +9,8 @@ import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
 import sharp from 'sharp';
 import { withRetry } from '$lib/server/retry';
+ import { computeMatch, normalizeStr } from '$lib/server/matcher';
+ import { getActiveSchema } from '$lib/server/ontology';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -62,6 +64,16 @@ For each item:
 - low_confidence: Set to true if the text is blurry, occluded, or hard to read.
 `;
 
+        const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+        const visibleSchema = activeSchema.filter((s: any) => s.extractionMethod !== 'HUMAN_REQUIRED');
+        let schemaProps: any = {};
+        if (visibleSchema.length > 0) {
+            promptText += `\n- extractedAttributes: Extract these specific fields if visible. Use provided enums where applicable. If entirely hidden, omit it.\n SCHEMA: ${JSON.stringify(visibleSchema.map((s: any) => ({ name: s.name, type: s.type, options: s.options })))}\n`;
+            visibleSchema.forEach((s: any) => {
+                schemaProps[s.name] = { type: s.type === 'number' ? Type.NUMBER : Type.STRING, description: s.uiLabel };
+            });
+        }
+
 		const hint = data.get('hint') as string;
 		if (hint && hint.trim()) {
 			promptText += `\n\nUSER HINT: The user noted this collection is: "${hint.trim()}". Prioritize identifying the items within this context.`;
@@ -95,6 +107,7 @@ For each item:
                                                     title: { type: Type.STRING },
                                                     subtitle: { type: Type.STRING },
                                                     category: { type: Type.STRING },
+                                                    ...(visibleSchema.length > 0 ? { extractedAttributes: { type: Type.OBJECT, properties: schemaProps } } : {}),
                                                     box: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: '[ymin, xmin, ymax, xmax] normalized 0-1000' },
                                                     low_confidence: { type: Type.BOOLEAN }
                                                 },
@@ -111,6 +124,47 @@ For each item:
             },
             { targetType: 'global', targetId: 0, description: 'Analyzing collection items with Vision Model' }
         );
+
+        const dbItems = await db.item.findMany({
+            where: { inventoryId: locals.activeInventoryId },
+            include: { attributes: true, locations: { include: { container: true } }, photos: true }
+        });
+        const categories = await db.category.findMany({ where: { inventoryId: locals.activeInventoryId } });
+        const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId } });
+        const defaultStrategy = vault?.duplicateStrategy || 'PROMPT';
+
+        for (const item of aiResponse.items) {
+            item.isDuplicate = false;
+            item.duplicateStrategy = defaultStrategy;
+
+            if (item.category) {
+                const cat = categories.find((c: any) => c.name.toLowerCase() === item.category.toLowerCase());
+                if (cat && cat.duplicateStrategy) item.duplicateStrategy = cat.duplicateStrategy;
+            }
+
+            for (const dbItem of dbItems) {
+                const match = computeMatch(item.extractedAttributes || {}, item.title || '', '', dbItem, activeSchema);
+                if (match.isMatch) {
+                    item.isDuplicate = true;
+                    const sharedAttrs: any[] = [];
+                    if (item.extractedAttributes) {
+                        for (const [k, v] of Object.entries(item.extractedAttributes)) {
+                            const dbVal = dbItem.attributes.find((a: any) => a.key === k)?.value;
+                            if (dbVal && normalizeStr(String(v)) === normalizeStr(dbVal)) {
+                                sharedAttrs.push({ key: k, value: String(v) });
+                            }
+                        }
+                    }
+                    item.duplicateItemDetails = {
+                        id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
+                        thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
+                        locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
+                        sharedAttributes: sharedAttrs
+                    };
+                    break;
+                }
+            }
+        }
 
         return json({ success: true, draftPath: webPath, noteId: note.id, totalVisibleCount: aiResponse.totalVisibleCount, collectionType: aiResponse.collectionType, items: aiResponse.items });
     } catch (e) {

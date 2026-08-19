@@ -184,6 +184,8 @@
                 if (results.draftPath) fd.append('draftPath', results.draftPath);
                 if (item.box) fd.append('box', JSON.stringify(item.box));
                 if (scopeType === 'container' && scopeValue) fd.append('container', scopeValue);
+                if (scopeType === 'category' && scopeValue) fd.append('categoryName', scopeValue);
+                if (scopeType === 'tag' && scopeValue) fd.append('tagcsv', scopeValue);
                 if (item.extractedAttributes) fd.append('extractedAttributes', JSON.stringify(item.extractedAttributes));
                 res = await fetch('/api/item', { method: 'POST', body: fd });
             } else {
@@ -293,7 +295,12 @@
     <div class="grid {scopeType === 'container' ? 'grid-cols-2 md:grid-cols-4' : (scopeType !== 'all' ? 'grid-cols-3' : 'grid-cols-2')} gap-1 bg-base-200/80 p-1 rounded-2xl border border-base-300 w-full">
         {#if scopeType !== 'all'}
             <button type="button" class="btn btn-sm h-auto py-2 flex-1 min-w-[130px] rounded-xl border-none transition-all flex flex-wrap items-center justify-center gap-1 {activeTab === 'missing' ? 'bg-base-100 shadow-sm text-error font-bold' : 'btn-ghost text-gray-500 font-medium hover:bg-base-300/50'}" on:click={() => activeTab = 'missing'}>
-                <span class="flex items-center gap-1">{#if isRefiltering}<span class="loading loading-spinner loading-xs"></span>{:else}⚠️{/if} Missing</span>
+                <div class="flex flex-col items-center leading-tight">
+                    <span class="flex items-center gap-1">{#if isRefiltering}<span class="loading loading-spinner loading-xs"></span>{:else}⚠️{/if} Missing</span>
+                    {#if scopeType === 'container'}
+                        <span class="text-[9px] opacity-70 max-w-[100px] truncate">in {scopeValue}</span>
+                    {/if}
+                </div>
                 <span class="badge badge-sm badge-outline bg-base-100/50 border-gray-300/50">{missing.length}</span>
             </button>
             {#if scopeType === 'container'}
@@ -333,7 +340,9 @@
             <div class="flex flex-col gap-2.5">
                 {#each missing as item}
                     <div id="card-{item.title.replace(/\s+/g, '-')}" class="scroll-mt-24">
-                        <CompareItemCard {item} type="missing" draftPath={results.draftPath}>
+                        <CompareItemCard {item} type="missing" draftPath={results.draftPath}
+                            on:zoom={() => item.thumbPath ? lightbox.open({ orgPath: item.thumbPath, showOriginal: true }) : lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })}
+                        >
                             <div slot="actions">
                                 <a href="/{item.id}/{item.slug || 'view'}" class="btn btn-ghost btn-xs text-error">View</a>
                             </div>

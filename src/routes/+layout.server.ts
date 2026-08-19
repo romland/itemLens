@@ -2,9 +2,11 @@ import type { LayoutServerLoad } from "./$types";
 import { db } from '$lib/server/database';
 
 export const load = (async ({ locals, setHeaders }) => {
-    setHeaders({
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
-    });
+    try {
+        setHeaders({
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+        });
+    } catch (e) {}
 
     let inventories: any[] = [];
     if (locals.user) {

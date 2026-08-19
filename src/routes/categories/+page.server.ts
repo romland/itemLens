@@ -37,6 +37,18 @@ export const actions = {
             create: { name, slug, inventoryId: locals.activeInventoryId }
         });
     },
+    updateStrategy: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const strategy = data.get('strategy')?.toString();
+        
+        if (id && strategy) {
+            await db.category.update({
+                where: { id, inventoryId: locals.activeInventoryId },
+                data: { duplicateStrategy: strategy }
+            });
+        }
+    },
     delete: async ({ request, locals }) => {
         const data = await request.formData();
         const id = Number(data.get('id'));

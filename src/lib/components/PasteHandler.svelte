@@ -3,6 +3,7 @@
     import { photoTypes } from '$lib/shared/constants';
     
     export let formId = "eltForm";
+    export let forcePhotoType: string | null = null;
 
     export function clearQueue() {
         clipboardQueue = [];
@@ -20,6 +21,8 @@
 	let isDraggingOver = false;
 	let dragCount = 0;
     let selectedPhotoType = photoTypes[0].toLowerCase();
+$:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
+
     let textDocumentTitle = "Pasted Note";
     let clipboardQueue: { type: string, label: string }[] = [];
 
@@ -255,14 +258,16 @@
             <div class="mb-4">
                 <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
             </div>
-            <div class="form-control w-full">
-                <div class="label"><span class="label-text font-semibold">What type of image is this?</span></div>
-                <select bind:value={selectedPhotoType} class="select select-bordered w-full">
-                    {#each photoTypes as type}
-                        <option value={type.toLowerCase()}>{type}</option>
-                    {/each}
-                </select>
-            </div>
+            {#if !forcePhotoType}
+                <div class="form-control w-full">
+                    <div class="label"><span class="label-text font-semibold">What type of image is this?</span></div>
+                    <select bind:value={selectedPhotoType} class="select select-bordered w-full">
+                        {#each photoTypes as type}
+                            <option value={type.toLowerCase()}>{type}</option>
+                        {/each}
+                    </select>
+                </div>
+            {/if}
         {:else if pastedType === 'url'}
             <div class="alert alert-success border-none shadow-sm mb-4">
                 <i class="bi bi-link-45deg text-2xl"></i>

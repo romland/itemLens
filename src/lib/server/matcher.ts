@@ -20,7 +20,10 @@ export function getSimilarity(s1: string, s2: string): number {
 export function computeMatch(scanAttributes: Record<string, string>, scanTitle: string, scanRawText: string, dbItem: any, activeSchema: any[]): { isMatch: boolean, confidence: number } {
     let strictFailures = 0;
     let fuzzyMatches = 0;
-    
+    let fuzzyMismatches = 0;
+    const debugTrace: string[] = [];
+
+
     const dbAttributes: Record<string, string> = {};
     if (dbItem.attributes) {
         dbItem.attributes.forEach((attr: any) => { dbAttributes[attr.key] = normalizeStr(attr.value); });
@@ -29,32 +32,74 @@ export function computeMatch(scanAttributes: Record<string, string>, scanTitle: 
     if (scanAttributes && Object.keys(scanAttributes).length > 0) {
         for (const field of activeSchema) {
             const scanVal = scanAttributes[field.name];
-            if (!scanVal) continue; // Allow nulls without failing
-            
-            const normScanVal = normalizeStr(String(scanVal));
+
+            const normScanVal = scanVal ? normalizeStr(String(scanVal)) : null;
             const normDbVal = dbAttributes[field.name];
 
             if (field.matchWeight === 'STRICT_DEDUPE') {
-                if (normDbVal && normDbVal !== normScanVal) strictFailures++;
-                else if (normDbVal === normScanVal) fuzzyMatches += 2;
+                if (normDbVal && normScanVal && normDbVal !== normScanVal) {
+                    strictFailures++;
+                    debugTrace.push(`[STRICT FAIL] ${field.name}: DB='${normDbVal}' != Scan='${normScanVal}'`);
+                } else if (normDbVal && !normScanVal) {
+                    strictFailures += 0.5; // Missing a strict DB attribute in the scan weakens confidence
+                    debugTrace.push(`[STRICT MISSING] ${field.name}: DB='${normDbVal}', Scan missed it`);
+                } else if (normDbVal && normScanVal && normDbVal === normScanVal) {
+                    fuzzyMatches += 2;
+                    debugTrace.push(`[STRICT MATCH] ${field.name} == '${normDbVal}'`);
+                }
             } else if (field.matchWeight === 'FUZZY_SECONDARY') {
-                if (normDbVal === normScanVal) fuzzyMatches++;
+                if (normDbVal && normScanVal && normDbVal === normScanVal) {
+                    fuzzyMatches++;
+                    debugTrace.push(`[FUZZY MATCH] ${field.name} == '${normDbVal}'`);
+                } else if (normDbVal && normScanVal && normDbVal !== normScanVal) {
+                    fuzzyMismatches++;
+                    debugTrace.push(`[FUZZY MISMATCH] ${field.name}: DB='${normDbVal}' != Scan='${normScanVal}'`);
+                }
             }
         }
     }
 
-    if (strictFailures > 0) return { isMatch: false, confidence: 0 };
-    if (fuzzyMatches >= 2) return { isMatch: true, confidence: 0.95 };
+    let isMatch = false;
+    if (strictFailures >= 1) {
+        isMatch = false;
+        debugTrace.push(`[RESULT] Failed: strictFailures=${strictFailures}`);
+    } else if (fuzzyMismatches >= 2) {
+        isMatch = false;
+        debugTrace.push(`[RESULT] Failed: fuzzyMismatches=${fuzzyMismatches}`);
+    } else if (fuzzyMatches >= 3 && fuzzyMismatches === 0) {
+        isMatch = true;
+        debugTrace.push(`[RESULT] Pass: Strong fuzzy match (${fuzzyMatches} matches)`);
+    } else if (fuzzyMatches >= 4) {
+        isMatch = true;
+        debugTrace.push(`[RESULT] Pass: Overwhelming fuzzy match (${fuzzyMatches} matches, ${fuzzyMismatches} mismatches)`);
+    } else {
+        // Textual fallback logic for legacy items without KVPs
+        const normScanTitle = normalizeStr(scanTitle || '');
+        const normDbTitle = normalizeStr(dbItem.title);
 
-    // Textual fallback logic for legacy items without KVPs
-    const normScanTitle = normalizeStr(scanTitle || '');
-    const normDbTitle = normalizeStr(dbItem.title);
-    if (normDbTitle && normScanTitle && normDbTitle === normScanTitle) return { isMatch: true, confidence: 1.0 };
-    if (normScanTitle.length > 4 && normDbTitle.includes(normScanTitle)) return { isMatch: true, confidence: 0.85 };
-    if (normDbTitle.length > 4 && normScanTitle.includes(normDbTitle)) return { isMatch: true, confidence: 0.85 };
+        // Ignore placeholders
+        const isGenericTitle = normScanTitle.includes("new item") || normScanTitle.includes("default product") || normScanTitle.includes("unknown") || normDbTitle.includes("new item") || normDbTitle.includes("default product") || normDbTitle.includes("unknown");
 
-    const textSim = getSimilarity(normDbTitle, normScanTitle);
-    if (textSim > 0.8) return { isMatch: true, confidence: textSim };
+        if (!isGenericTitle && normDbTitle && normScanTitle) {
+            if (normDbTitle === normScanTitle) {
+                isMatch = true;
+                debugTrace.push(`[TEXT MATCH] Exact Title: '${normDbTitle}'`);
+            } else {
+                const textSim = getSimilarity(normDbTitle, normScanTitle);
+                if (textSim > 0.85) {
+                    isMatch = true;
+                    debugTrace.push(`[TEXT MATCH] Sim=${textSim.toFixed(2)}`);
+                } else if (normScanTitle.length > 5 && normDbTitle.includes(normScanTitle)) {
+                    isMatch = true;
+                    debugTrace.push(`[TEXT MATCH] Scan title inside DB title`);
+                } else if (normDbTitle.length > 5 && normScanTitle.includes(normDbTitle)) {
+                    isMatch = true;
+                    debugTrace.push(`[TEXT MATCH] DB title inside Scan title`);
+                }
+            }
+        }
+    }
 
-    return { isMatch: false, confidence: 0 };
+    // Cast as any because previous files using it expect exactly { isMatch, confidence }. Adding debugTrace is safe as long as we type-cast locally where used.
+    return { isMatch, confidence: isMatch ? 0.95 : 0, debugTrace } as any;
 }

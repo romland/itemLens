@@ -9,6 +9,8 @@ import { processFormDocuments } from '$lib/server/services';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { taskManager } from '$lib/server/taskManager';
+ import { getActiveSchema } from '$lib/server/ontology';
+ import { computeMatch, normalizeStr } from '$lib/server/matcher';
 
 export const load = (async ({ locals, params }) => {
       const parsedId = Number(params.id);
@@ -51,6 +53,36 @@ export const load = (async ({ locals, params }) => {
         orderBy: { name: 'asc' }
     });
 
+     const activeSchema = await getActiveSchema(locals.activeInventoryId, item.photos[0]?.categoryId, true);
+     const existingItems = await db.item.findMany({
+         where: { inventoryId: locals.activeInventoryId, id: { not: parsedId } },
+         include: { attributes: true, locations: { include: { container: true } }, photos: true }
+     });
+
+     const itemAttrs: Record<string, string> = {};
+     item.attributes.forEach(a => itemAttrs[a.key] = a.value);
+
+     let duplicateItemDetails = null;
+     if (!item.duplicateDismissed) {
+         for (const dbItem of existingItems) {
+             const match = computeMatch(itemAttrs, item.title || '', '', dbItem, activeSchema);
+             if (match.isMatch) {
+                 const sharedAttrs = [];
+                 for (const [k, v] of Object.entries(itemAttrs)) {
+                     const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
+                     if (dbVal && normalizeStr(v) === normalizeStr(dbVal)) sharedAttrs.push({ key: k, value: v });
+                 }
+                 duplicateItemDetails = {
+                     id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
+                     thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
+                     locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
+                     sharedAttributes: sharedAttrs
+                 };
+                 break;
+             }
+         }
+     }
+
     return {
         item: {
             ...item,
@@ -58,7 +90,8 @@ export const load = (async ({ locals, params }) => {
             contentToHtml: purify.sanitize(await marked.parse(item.description!, {gfm:true,breaks:true}))
         },
         activeTasks: taskManager.getTasks('item', item.id),
-        categories
+         categories,
+         duplicateItemDetails
     };
 }) satisfies PageServerLoad;
 
@@ -117,6 +150,45 @@ export const actions = {
         }
         
         return { success: true };
-    }
+     },
+
+     mergeDuplicate: async ({ request, locals, params }) => {
+         if (!locals.user) return fail(401, { error: 'Unauthorized' });
+         const data = await request.formData();
+         const targetId = Number(data.get('targetId'));
+         const sourceId = Number(params.id);
+
+         if (targetId && sourceId) {
+             const sourceItem = await db.item.findUnique({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { locations: true } });
+             if (!sourceItem) return fail(404, { message: 'Item not found' });
+
+             await db.item.update({
+                 where: { id: targetId },
+                 data: { amount: { increment: sourceItem.amount || 1 } }
+             });
+
+             if (sourceItem.locations) {
+                 for (const loc of sourceItem.locations) {
+                     await db.itemsInContainer.upsert({
+                         where: { itemId_containerId: { itemId: targetId, containerId: loc.containerId } },
+                         update: {}, create: { itemId: targetId, containerId: loc.containerId }
+                     });
+                 }
+             }
+
+             await db.item.delete({ where: { id: sourceId } });
+             const targetItem = await db.item.findUnique({ where: { id: targetId } });
+             redirect(302, `/${targetId}/${targetItem?.slug || 'view'}`);
+         }
+     },
+
+     dismissDuplicate: async ({ locals, params }) => {
+         if (!locals.user) return fail(401, { error: 'Unauthorized' });
+         await db.item.update({
+             where: { id: Number(params.id) },
+             data: { duplicateDismissed: true }
+         });
+         return { success: true };
+     }
 
 } satisfies Actions;

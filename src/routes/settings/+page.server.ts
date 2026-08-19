@@ -24,6 +24,7 @@ export const load = async ({ locals }) => {
                 allowAutoTaxonomy: true,
                 extractExif: true,
                 deepScanCollections: true,
+                duplicateStrategy: true,
                 _count: { select: { items: true, notes: true, containers: true } }
             } 
         });
@@ -221,6 +222,17 @@ export const actions = {
         const allow = data.get('deepScan') === 'true';
         await db.inventory.update({ where: { id }, data: { deepScanCollections: allow } });
         return { success: true, message: "Collection scanning settings updated." };
+    },
+
+    updateInventoryStrategy: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const strategy = data.get('strategy')?.toString();
+        if (id && strategy) {
+            await db.inventory.update({ where: { id }, data: { duplicateStrategy: strategy } });
+        }
+        return { success: true, message: "Default duplicate strategy updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {

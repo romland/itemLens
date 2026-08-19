@@ -10,6 +10,7 @@ import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
 import crypto from 'crypto';
+    import { normalizeStr, computeMatch } from '$lib/server/matcher';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -34,6 +35,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // Run the fast Gemini analysis for the UI
         let aiData = null;
         let classificationData = null;
+        let isDuplicate = false;
+        let duplicateItemDetails = null;
         try {
             const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { allowNewCategories: true } });
             const allowNew = vault?.allowNewCategories ?? true;
@@ -48,12 +51,58 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             
             classificationData = await analyzePromise;
 
+            if (classificationData) {
+                const existingItems = await db.item.findMany({
+                    where: { inventoryId: locals.activeInventoryId },
+                    include: { attributes: true, locations: { include: { container: true } }, photos: true }
+                });
+
+                console.log("\n[DEBUG] --- DUPLICATE CHECK START ---");
+                console.log("[DEBUG] Scan Title:", classificationData.title);
+                console.log("[DEBUG] Scan Attrs:", classificationData.extractedAttributes);
+                console.log("[DEBUG] Active Schema Fields:", activeSchema.map(s => s.name).join(', '));
+
+                for (const dbItem of existingItems) {
+                    const match = computeMatch(classificationData.extractedAttributes || {}, classificationData.title || '', '', dbItem, activeSchema);
+                    
+                    if (match.isMatch) {
+                        isDuplicate = true;
+                        const sharedAttrs = [];
+                        
+                        console.log(`[DEBUG] ⚠️ MATCHED: ID ${dbItem.id} "${dbItem.title}"`);
+                        console.log(`[DEBUG] Trace:\n  ` + (match as any).debugTrace?.join('\n  '));
+
+                        if (classificationData.extractedAttributes) {
+                            for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
+                                const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
+                                if (dbVal && normalizeStr(String(v)) === normalizeStr(dbVal)) {
+                                    sharedAttrs.push({ key: k, value: String(v) });
+                                }
+                            }
+                        }
+
+                        duplicateItemDetails = {
+                            id: dbItem.id,
+                            slug: dbItem.slug,
+                            title: dbItem.title,
+                            createdAt: dbItem.createdAt,
+                            thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
+                            locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
+                            sharedAttributes: sharedAttrs
+                        };
+                        break; // Stop at first strong match
+                    }
+                }
+            }
+
             aiData = {
                 title: classificationData?.title,
                 description: classificationData?.description || classificationData?.subtitle || null,
                 extractedAttributes: classificationData?.extractedAttributes,
                 photoType: classificationData?.photoType,
-                subCategory: classificationData?.subCategory
+                subCategory: classificationData?.subCategory,
+                isDuplicate,
+                duplicateItemDetails
             };
 
             // WRITE EARLY JSON TO PREVENT RACE CONDITIONS

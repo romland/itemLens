@@ -4,6 +4,7 @@
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import QRurlScanner from "$lib/components/QRurlScanner.svelte";
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
+    import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
     import { photoTypes } from "$lib/shared/constants";
     import { marked } from 'marked';
@@ -37,6 +38,8 @@
     let pendingPhotos: any[] = [];
     let showPreview = false;
     let currentDraftPath = "";
+    let isDuplicateWarning = false;
+    let duplicateDetails: any = null;
 
     // Dirty State Reactivity
     $: {
@@ -88,6 +91,11 @@
             currentDraftPath = data.draftPath;
         }        
         if (data && data.aiData) {
+            if (data.aiData.isDuplicate && !item) {
+                isDuplicateWarning = true;
+                duplicateDetails = data.aiData.duplicateItemDetails;
+                dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in inventory!' });
+            }
             let autofilled = false;
             if (!currentTitle && data.aiData.title) {
                 currentTitle = data.aiData.title;
@@ -193,6 +201,35 @@
                 {/if}
             </p>
         </div>
+
+        {#if isDuplicateWarning && duplicateDetails}
+            <div class="alert bg-warning/20 border border-warning/50 text-warning-content shadow-sm rounded-xl mb-6 py-3 animate-fade-in items-start">
+                <i class="bi bi-intersect text-warning text-xl mt-0.5"></i>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-sm mb-2">Potential Duplicate</h3>
+                    
+                    <ItemMiniCard item={duplicateDetails} />
+
+                    <div class="text-[11px] mt-2 flex flex-col gap-1">
+                        <div class="flex items-center justify-between gap-2 px-1">
+                            <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Original Added:</span> 
+                            <span class="font-medium text-right">{new Date(duplicateDetails.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {#if duplicateDetails.sharedAttributes?.length > 0}
+                            <div class="flex flex-col mt-1 pt-1.5 border-t border-warning/10">
+                                <span class="text-gray-500 font-semibold uppercase tracking-wider mb-1">Matched Attributes:</span>
+                                <div class="flex flex-wrap gap-1">
+                                    {#each duplicateDetails.sharedAttributes as attr}
+                                        <span class="badge badge-warning badge-outline text-[9px] font-mono font-bold h-auto py-0.5">{attr.key}: {attr.value}</span>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Dismiss" on:click={() => isDuplicateWarning = false}><i class="bi bi-x-lg"></i></button>
+            </div>
+        {/if}
 
         <!-- HERO CAMERA BUTTON (Pure 1-Tap Capture) -->
         <div class="flex justify-center items-center gap-4 mb-4 relative">

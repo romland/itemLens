@@ -8,6 +8,7 @@
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import InvoiceViewer from "$lib/components/InvoiceViewer.svelte";
+    import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
 
     export let data: PageServerData;
     
@@ -158,6 +159,34 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
             </div>
         </div>
     </div>
+
+    {#if data.duplicateItemDetails}
+        <div class="mb-6 animate-fade-in max-w-2xl mx-auto">
+            <DuplicateResolution 
+                scannedTitle={data.item.title} 
+                matchDetails={data.duplicateItemDetails} 
+                scannedCreatedAt={data.item.createdAt}
+                isAfterTheFact={true}
+                on:resolve={(e) => {
+                    if (e.detail === 'merge') (document.getElementById('mergeForm') as HTMLFormElement)?.requestSubmit();
+                    else if (e.detail === 'new') (document.getElementById('dismissForm') as HTMLFormElement)?.requestSubmit();
+                    else if (e.detail === 'ignore') {
+                        const deleteBtn = document.querySelector('.menu-delete-btn') as HTMLButtonElement;
+                        if (deleteBtn) deleteBtn.click();
+                    }
+                }} 
+            />
+            <form id="mergeForm" method="POST" action="?/mergeDuplicate" class="hidden" use:enhance>
+                <input type="hidden" name="targetId" value={data.duplicateItemDetails.id}>
+            </form>
+            <form id="dismissForm" method="POST" action="?/dismissDuplicate" class="hidden" use:enhance={() => {
+                return async ({ update }) => {
+                    data.duplicateItemDetails = null;
+                    await update({ reset: false });
+                };
+            }}></form>
+        </div>
+    {/if}
 
     <!-- End-User Processing Indicator -->
     {#if isProcessingItem}

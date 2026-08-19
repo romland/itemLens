@@ -375,6 +375,16 @@
 										<span class="text-xs text-gray-500 font-medium">Deep-scan collection imports (extracts detailed attributes for all items in collections)</span>
 									</form>
 
+                                    <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <select name="strategy" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.duplicateStrategy || 'PROMPT'}>
+                                            <option value="PROMPT">Ask Me</option>
+                                            <option value="AUTO_BUMP">Auto-Merge (+1)</option>
+                                            <option value="AUTO_IGNORE">Auto-Ignore</option>
+                                        </select>
+                                        <span class="text-xs text-gray-500 font-medium">is the default duplicate resolution</span>
+                                    </form>
+
                             <!-- Manual Schema Retry Action -->
                             <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} class="mt-2">
                                 <input type="hidden" name="inventoryId" value={v.id}>

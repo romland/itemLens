@@ -68,6 +68,12 @@
                          alt="{item.title}" />
                 </div>
             </button>
+        {:else if item.thumbPath}
+            <button type="button" class="relative w-16 h-20 overflow-visible shrink-0 border-none p-0 cursor-zoom-in block" on:click|stopPropagation={() => dispatch('zoom', item)}>
+                <div class="w-full h-full overflow-hidden rounded-lg bg-base-300 relative">
+                    <img src="{item.thumbPath}" class="w-full h-full object-cover" alt="{item.title}" />
+                </div>
+            </button>
         {/if}
         <div class="flex flex-col min-w-0 flex-1">
             <span class="font-bold text-base-content text-sm leading-tight truncate">{item.title}</span>

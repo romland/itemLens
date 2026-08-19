@@ -6,6 +6,7 @@
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
+    import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
 
     export let isDirty = false;
     export let containers = [];
@@ -74,13 +75,27 @@
                 draftNoteId = data.noteId;
                 collectionType = data.collectionType;
                 totalVisibleCount = data.totalVisibleCount || data.items.length;
-                items = data.items.map((item: any, id: number) => ({
-                    ...item,
-                    id: id.toString(), // For keying flip animations
-                    swipeOffset: 0,
-                    isSwiping: false,
-                    optedOut: false
-                }));
+                items = data.items.map((item: any, id: number) => {
+                    let optedOut = false;
+                    let resolution = null;
+                    
+                    if (item.isDuplicate) {
+                        if (item.duplicateStrategy === 'AUTO_IGNORE') {
+                            optedOut = true; resolution = 'ignore';
+                        } else if (item.duplicateStrategy === 'AUTO_BUMP') {
+                            resolution = 'merge';
+                        } else {
+                            resolution = 'prompt';
+                        }
+                    }
+                    return {
+                        ...item,
+                        id: id.toString(), // For keying flip animations
+                        swipeOffset: 0,
+                        isSwiping: false,
+                        optedOut, resolution
+                    };
+                });
 
                 // Pre-fill global category based on the most common item category detected
                 const catCounts = items.reduce((acc, it) => {
@@ -143,10 +158,11 @@
 
     async function saveCollection() {
         if (selectedContainers.length === 0) {
-            alert("Please scan or select a location to assign these items.");
-            settingsExpanded = true;
-            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
-            return;
+            if (!confirm("You haven't selected a location. Save these items without a location?")) {
+                settingsExpanded = true;
+                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+                return;
+            }
         }
 
         if (activeItems.length === 0) {
@@ -165,7 +181,7 @@
                 containers: selectedContainers,
                 globalCategory,
                 tagcsv: globalTags,
-                items: activeItems.map(item => ({ title: item.title, subtitle: item.subtitle, category: item.category, box: item.box, extractedAttributes: item.extractedAttributes }))
+                items: activeItems.map(item => ({ title: item.title, subtitle: item.subtitle, category: item.category, box: item.box, extractedAttributes: item.extractedAttributes, resolution: item.resolution, duplicateItemDetails: item.duplicateItemDetails }))
             })
         });
         
@@ -268,8 +284,10 @@
                 {@const w = Math.max(1, xmax - xmin)}
                 {@const h = Math.max(1, ymax - ymin)}
 
-                <!-- Swipe container - pan-y stops mobile Safari backwards nav! -->
-                <div animate:flip={{duration: 250}} class="relative w-full mb-3 rounded-2xl {item.optedOut ? 'bg-success/90' : 'bg-error/90'} overflow-hidden" style="touch-action: pan-y;"
+                <div animate:flip={{duration: 250}} class="mb-4">
+                    <!-- Swipe container - pan-y stops mobile Safari backwards nav! -->
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <div class="relative w-full rounded-2xl {item.optedOut ? 'bg-success/90' : 'bg-error/90'} overflow-hidden shadow-sm" style="touch-action: pan-y;"
                      on:touchstart={(e) => { item.touchStartX = e.touches[0].clientX; item.isSwiping = true; }}
                      on:touchmove={(e) => { 
                          if (!item.isSwiping) return; 
@@ -286,48 +304,61 @@
                          } 
                      }}
                 >
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-6 text-white pointer-events-none">
-                        <i class="bi {item.optedOut ? 'bi-arrow-counterclockwise' : 'bi-trash3-fill'} text-xl"></i>
-                    </div>
-
-                    <div class="group flex items-center gap-4 bg-base-100 shadow-sm border border-base-200 p-3 rounded-2xl w-full transition-all select-none {item.optedOut ? 'opacity-40 grayscale' : 'hover:border-primary/30 active:scale-[0.98]'}"
-                         style="transform: translateX({item.swipeOffset}px); transition: {item.isSwiping ? 'none' : 'transform 0.2s cubic-bezier(0.1, 0.7, 0.1, 1)'}"
-                         on:click={() => { 
-                             if (Math.abs(item.swipeOffset) > 5) return;
-                             if (item.optedOut) toggleItem(item.id);
-                             else openEdit(items.indexOf(item)); 
-                         }}
-                         role="button" tabindex="0"
-                    >
-                        <!-- The Magic Zoom -->
-                        <button type="button" class="relative w-16 h-20 overflow-hidden rounded-lg shrink-0 bg-base-300 border-none p-0 cursor-zoom-in block" on:click|stopPropagation={() => lightbox.open({ orgPath: draftPath, thumbPath: draftPath, showOriginal: true, box: item.box })}>
-							<img src="{draftPath}" class="absolute max-w-none origin-top-left object-cover"
-                                 style="width: {100000 / w}%; height: {100000 / h}%; left: -{(xmin / w) * 100}%; top: -{(ymin / h) * 100}%;" 
-                                 alt="{item.title}" />
-                        </button>
-
-                        <div class="flex-1 min-w-0 pr-2">
-                            <div class="font-bold text-base text-base-content truncate {item.optedOut ? 'line-through' : ''}">{item.title}</div>
-                            <div class="text-sm text-gray-500 truncate">{item.subtitle || 'Unknown Detail'}</div>
-                            <div class="flex gap-2 mt-1">
-                                <span class="badge badge-ghost badge-sm text-[10px] uppercase font-bold border-base-300">{item.category}</span>
-                                {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
-                                    <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
-                                {/if}
-                                {#if item.low_confidence}
-                                    <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry</span>
-                                {/if}
-                            </div>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-6 text-white pointer-events-none">
+                            <i class="bi {item.optedOut ? 'bi-arrow-counterclockwise' : 'bi-trash3-fill'} text-xl"></i>
                         </div>
 
-                        <!-- Desktop Hover Delete/Restore Button -->
-                        <button class="hidden md:flex btn btn-circle btn-ghost btn-sm transition-all z-10 {item.optedOut ? 'text-success hover:bg-success/10 opacity-100' : 'text-gray-300 hover:text-error hover:bg-error/10 opacity-0 group-hover:opacity-100'}" 
-                                on:click|stopPropagation={() => toggleItem(item.id)} aria-label="Toggle item">
-                            <i class="bi {item.optedOut ? 'bi-arrow-counterclockwise text-xl' : 'bi-trash3-fill'}"></i>
-                        </button>
-                        
-                        <i class="bi bi-chevron-right text-gray-300 shrink-0 md:hidden pointer-events-none"></i>
+                        <!-- svelte-ignore a11y_click_events_have_key_events -->
+                        <div class="group flex items-center gap-4 bg-base-100 shadow-sm border border-base-200 p-3 rounded-2xl w-full transition-all select-none {item.optedOut ? 'opacity-40 grayscale' : 'hover:border-primary/30 active:scale-[0.98]'}"
+                            style="transform: translateX({item.swipeOffset}px); transition: {item.isSwiping ? 'none' : 'transform 0.2s cubic-bezier(0.1, 0.7, 0.1, 1)'}"
+                            on:click={() => { 
+                                if (Math.abs(item.swipeOffset) > 5) return;
+                                if (item.optedOut) toggleItem(item.id);
+                                else openEdit(items.indexOf(item)); 
+                            }}
+                            role="button" tabindex="0"
+                        >
+                            <!-- The Magic Zoom -->
+                            <button type="button" class="relative w-16 h-20 overflow-hidden rounded-lg shrink-0 bg-base-300 border-none p-0 cursor-zoom-in block" on:click|stopPropagation={() => lightbox.open({ orgPath: draftPath, thumbPath: draftPath, showOriginal: true, box: item.box })}>
+                                <img src="{draftPath}" class="absolute max-w-none origin-top-left object-cover"
+                                    style="width: {100000 / w}%; height: {100000 / h}%; left: -{(xmin / w) * 100}%; top: -{(ymin / h) * 100}%;" 
+                                    alt="{item.title}" />
+                            </button>
+
+                            <div class="flex-1 min-w-0 pr-2">
+                                <div class="font-bold text-base text-base-content truncate {item.optedOut ? 'line-through' : ''}">{item.title}</div>
+                                <div class="text-sm text-gray-500 truncate">{item.subtitle || 'Unknown Detail'}</div>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-ghost badge-sm text-[10px] uppercase font-bold border-base-300">{item.category}</span>
+                                    {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
+                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
+                                    {/if}
+                                    {#if item.low_confidence}
+                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry</span>
+                                    {/if}
+                                </div>
+                            </div>
+
+                            <!-- Desktop Hover Delete/Restore Button -->
+                            <button class="hidden md:flex btn btn-circle btn-ghost btn-sm transition-all z-10 {item.optedOut ? 'text-success hover:bg-success/10 opacity-100' : 'text-gray-300 hover:text-error hover:bg-error/10 opacity-0 group-hover:opacity-100'}" 
+                                    on:click|stopPropagation={() => toggleItem(item.id)} aria-label="Toggle item">
+                                <i class="bi {item.optedOut ? 'bi-arrow-counterclockwise text-xl' : 'bi-trash3-fill'}"></i>
+                            </button>
+                            
+                            <i class="bi bi-chevron-right text-gray-300 shrink-0 md:hidden pointer-events-none"></i>
+                        </div>
                     </div>
+
+                    {#if item.isDuplicate}
+                        <div class="mt-2 mx-1">
+                            <DuplicateResolution 
+                                scannedTitle={item.title} 
+                                matchDetails={item.duplicateItemDetails} 
+                                currentAction={item.resolution} 
+                                on:resolve={(e) => { item.resolution = e.detail; item.optedOut = e.detail === 'ignore'; items = items; }}
+                            />
+                        </div>
+                    {/if}
                 </div>
             {/each}
         </div>

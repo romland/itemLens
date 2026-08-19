@@ -17,6 +17,7 @@
     import { onMount } from 'svelte';
 
     let mode: 'single' | 'collection' | 'compare' = 'single';
+    let modeLoaded = false;
     let saving = false;
     let isDirty = false;
     let pastedDocCount = 0;
@@ -82,8 +83,12 @@
                 mode = savedMode;
             }
         }
+        modeLoaded = true;
     });
-    $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('itemlens_add_mode', mode);
+    
+    $: if (modeLoaded && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('itemlens_add_mode', mode);
+    }
 
     function removeNotification(id: string) {
         notifications = notifications.filter(n => n.id !== id);
@@ -96,6 +101,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
 
 <PasteHandler 
     formId="eltForm" 
+    forcePhotoType={mode === 'collection' || mode === 'compare' ? 'product' : null}
    on:save={(ev) => {
        if (mode === 'collection' && ev.detail.file) {
            bulkTriageComponent?.processPastedFile(ev.detail.file);

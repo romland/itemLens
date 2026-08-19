@@ -4,6 +4,8 @@
     import Delete from "./delete.svelte";
     import { navigating } from '$app/stores';
     import { goto } from '$app/navigation';
+    import { onMount } from 'svelte';
+    import { page } from '$app/stores';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -28,12 +30,32 @@
         }
         return false;
     }
+
+    let viewMode = 'list';
+    let viewModeLoaded = false;
+
+    onMount(() => {
+        const cached = localStorage.getItem('itemlens_viewmode_' + $page.data.activeInventoryId);
+        if (cached === 'list' || cached === 'grid') viewMode = cached;
+        viewModeLoaded = true;
+    });
+
+    $: if (viewModeLoaded) {
+        localStorage.setItem('itemlens_viewmode_' + $page.data.activeInventoryId, viewMode);
+    }
 </script>
 
 {#if (!items || items.length === 0)}
     <Alert>Empty.</Alert>
 {:else}
-    <div class="overflow-x-auto">
+    <div class="flex justify-end mb-3 mt-1">
+        <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
+            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
+            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+        </div>
+    </div>
+    {#if viewMode === 'list'}
+        <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
             <tbody>
                 {#each items as item}
@@ -148,4 +170,45 @@
             </tbody>
         </table>
     </div>
+    {:else}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 pb-4">
+            {#each items as item}
+                {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
+                {@const mainPhoto = getFirstProductPhoto(item)}
+                
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <div class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}" on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
+                    <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative">
+                        {#if mainPhoto.thumbPath || mainPhoto.orgPath}
+                            <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                        {:else}
+                            <i class="bi bi-box text-4xl text-gray-300"></i>
+                        {/if}
+                        {#if isNavigatingToThis}
+                            <div class="absolute inset-0 bg-base-100/50 flex items-center justify-center">
+                                <span class="loading loading-spinner text-primary"></span>
+                            </div>
+                        {/if}
+                    </figure>
+                    <div class="card-body p-3 gap-1">
+                        <h3 class="font-bold text-sm leading-tight line-clamp-2">{item.title}</h3>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {#if item.locations}
+                                {#each item.locations as loc}
+                                    <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap truncate max-w-[80%]">
+                                        {loc.container.name}
+                                    </div>
+                                {/each}
+                            {/if}
+                            {#if mainPhoto.category?.name || mainPhoto.llmAnalysis}
+                                <div class="badge badge-primary badge-outline text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap capitalize">
+                                    {mainPhoto.category?.name || JSON.parse(mainPhoto.llmAnalysis || '{}')?.subCategory || 'Unknown'}
+                                </div>
+                            {/if}
+                        </div>
+                    </div>
+                </div>
+            {/each}
+        </div>
+    {/if}
 {/if}

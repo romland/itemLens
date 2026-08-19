@@ -43,7 +43,7 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
     // Only inject physical base traits for physical hard-goods. Omit for media/books.
     const globalBaseFields = (archetype === 'media' || archetype === 'books') ? [] : [
         { id: undefined, name: 'brand', uiLabel: 'Brand', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID' },
-        { id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'FUZZY_SECONDARY', extractionMethod: 'VISION_STRICT' }
+        { id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT' }
     ];
 
     return [

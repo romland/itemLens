@@ -114,6 +114,7 @@ export async function createItemEntity(params: {
     attributes?: Prisma.KVPCreateWithoutItemInput[];
     extractedAttributes?: string | Record<string, any> | null;
     timelineNoteId?: number | null;
+    duplicateDismissed?: boolean;
 }) {
     const { getActiveSchema } = await import('$lib/server/ontology');
     const activeSchema = await getActiveSchema(params.inventoryId, null, true);
@@ -160,6 +161,7 @@ export async function createItemEntity(params: {
             slug: slugify(safeTitle.toLowerCase()) || "new-item",
             inventoryId: params.inventoryId,
             authorId: params.userId,
+            duplicateDismissed: params.duplicateDismissed || false,
             reason: params.reason || "",
             amount: params.amount !== undefined ? params.amount : null,
             photos: params.photos && params.photos.length > 0 ? { create: params.photos } : undefined,

@@ -70,9 +70,33 @@
                             <div class="text-xs text-gray-500 font-medium">{cat._count.photos} {cat._count.photos === 1 ? 'photo' : 'photos'} linked</div>
                         </div>
                     </div>
+                    
+                    <div class="hidden sm:flex items-center gap-2 mr-4">
+                        <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Duplicate Strategy:</span>
+                        <form method="POST" action="?/updateStrategy" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); notify('success', 'Strategy updated.'); }; }}>
+                            <input type="hidden" name="id" value={cat.id}>
+                            <select name="strategy" class="select select-bordered select-sm bg-base-100 font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={cat.duplicateStrategy}>
+                                <option value="PROMPT">Ask Me</option>
+                                <option value="AUTO_BUMP">Auto-Merge (+1)</option>
+                                <option value="AUTO_IGNORE">Auto-Ignore</option>
+                            </select>
+                        </form>
+                    </div>
+
                     <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-error hover:bg-error/10 transition-colors" on:click={() => categoryToDelete = cat} aria-label="Delete Category">
                         <i class="bi bi-trash text-lg"></i>
                     </button>
+                </div>
+                <div class="sm:hidden px-4 pb-4 pt-1 flex items-center justify-between bg-base-50">
+                    <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Strategy:</span>
+                    <form method="POST" action="?/updateStrategy" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); notify('success', 'Strategy updated.'); }; }}>
+                        <input type="hidden" name="id" value={cat.id}>
+                        <select name="strategy" class="select select-bordered select-xs bg-base-100 font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={cat.duplicateStrategy}>
+                            <option value="PROMPT">Ask Me</option>
+                            <option value="AUTO_BUMP">Auto-Merge (+1)</option>
+                            <option value="AUTO_IGNORE">Auto-Ignore</option>
+                        </select>
+                    </form>
                 </div>
             {:else}
                 <div class="p-8 text-center text-gray-400 flex flex-col items-center gap-3">

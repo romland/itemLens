@@ -63,6 +63,7 @@ model Inventory {
   allowAutoTaxonomy Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
   extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
    deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+  duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   templateFields TemplateField[]
 
   users       UserInventoryAccess[]
@@ -85,6 +86,7 @@ model Category {
   name        String
   slug        String
   description String?
+  duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   templateFields TemplateField[]
 
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
@@ -149,6 +151,7 @@ model Item {
   title       String?
   description String?
   reason      String?
+  duplicateDismissed Boolean @default(false)
 
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   inventoryId Int

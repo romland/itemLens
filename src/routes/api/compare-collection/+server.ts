@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
-import { computeMatch } from '$lib/server/matcher';
+    import { computeMatch, normalizeStr } from '$lib/server/matcher';
 import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
@@ -168,7 +168,7 @@ Return a JSON object with:
             if (scopeType === 'category' && scopeValue) return i.photos?.some(p => p.category?.name === scopeValue);
             if (scopeType === 'container' && scopeValue) return i.locations.some(l => l.container.name === scopeValue);
             return false;
-        }) : []).map(i => ({ id: i.id, title: i.title, slug: i.slug, amount: i.amount, locationName: i.locations?.[0]?.container?.name || null }));
+        }) : []).map(i => ({ id: i.id, title: i.title, slug: i.slug, amount: i.amount, locationName: i.locations?.[0]?.container?.name || null, thumbPath: i.photos?.[0]?.thumbPath || i.photos?.[0]?.orgPath || null }));
 
         return json({ success: true, draftPath: webPath, totalDetected: detected.length, totalVisibleCount, inCollection, newToYou, missingFromScope, scopeType, scopeValue, activeSchema });
     } catch (e: any) {

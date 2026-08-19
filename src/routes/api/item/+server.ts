@@ -73,6 +73,8 @@ export async function POST({ request, locals }) {
     const boxStr = formData.get('box') as string;
     const container = formData.get('container') as string;
     const extractedAttributesStr = formData.get('extractedAttributes') as string;
+    const tagcsv = formData.get('tagcsv') as string;
+    const categoryName = formData.get('categoryName') as string;
 
     let finalPathForProduct = draftPath;
 
@@ -100,15 +102,25 @@ export async function POST({ request, locals }) {
         noteId = note.id;
     }
 
-    const { createItemEntity } = await import('$lib/server/services');
+    const { createItemEntity, getTagIds } = await import('$lib/server/services');
+    const tagIds = tagcsv ? await getTagIds(tagcsv, locals.activeInventoryId) : undefined;
+    
+    let catId = undefined;
+    if (categoryName) {
+        const { getOrCreateCategory } = await import('$lib/server/categories');
+        const cat = await getOrCreateCategory(categoryName, locals.activeInventoryId);
+        catId = cat.id;
+    }
+
     const item = await createItemEntity({
         title,
         description,
         inventoryId: locals.activeInventoryId,
         userId: locals.user.id,
         containers: container ? [container] : [],
+        tagIds,
         extractedAttributes: extractedAttributesStr,
-        photos: draftPath ? [{ type: 'product', orgPath: finalPathForProduct }] : [],
+        photos: draftPath ? [{ type: 'product', orgPath: finalPathForProduct, ...(catId ? { categoryId: catId } : {}) }] : [],
         timelineNoteId: noteId
     });
 
