@@ -11,6 +11,7 @@ import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
 import { computeMatch } from '$lib/server/matcher';
+import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -74,7 +75,7 @@ Return a JSON object with:
         });
 
         const response = await apiQueue.add(
-            () => ai.models.generateContent({
+            () => withRetry(() => ai.models.generateContent({
                 model: 'gemini-3.1-flash-lite',
                 contents: [
                 {
@@ -117,7 +118,7 @@ Return a JSON object with:
                     required: ['totalVisibleCount', 'detectedItems']
                 }
             }
-            }),
+            }), 3, 2000, 'Comparison Scan', { prompt }),
             { targetType: 'global', targetId: 0, description: 'Matching physical items against inventory database' }
         );
 

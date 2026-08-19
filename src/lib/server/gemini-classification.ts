@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
 import fs from 'fs';
 import path from 'path';
+import { withRetry } from './retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -90,7 +91,7 @@ export async function analyzePhoto(
     properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
   }
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     // model: 'gemini-2.5-flash',
     model: 'gemini-3.1-flash-lite',
     contents: [
@@ -108,7 +109,7 @@ export async function analyzePhoto(
         type: 'object', properties, required
       }
     }
-  });
+  }), 3, 2000, 'Gemini Classification', { prompt: promptText, path: localFilePath });
 
   return JSON.parse(response.text!);
 }
@@ -123,7 +124,7 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
     promptText += `\n\nUSER HINT: "${hint}". You MUST use this hint to identify the exact product model or brand, overriding your default guess.`;
   }
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: 'gemini-3.1-flash-lite',
     contents: [
       {
@@ -145,7 +146,7 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
         required: ['title', 'description']
       }
     }
-  });
+  }), 3, 2000, 'Product Details Guess', { prompt: promptText, path: localFilePath });
 
   return JSON.parse(response.text!);
 }
@@ -158,7 +159,7 @@ If it is a simple list of attributes, structure each row with 2 columns: [Attrib
 TEXT:
 ${text}`;
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: 'gemini-3.1-flash-lite',
     contents: [
       {
@@ -184,7 +185,7 @@ ${text}`;
         required: ['rows']
       }
     }
-  });
+  }), 3, 2000, 'KVP Extraction', { prompt: promptText });
 
   return JSON.parse(response.text!);
 }

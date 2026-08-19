@@ -92,7 +92,7 @@ CRITICAL BANS:
                 model: 'gemini-3.1-flash-lite',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 config: { responseMimeType: 'application/json', responseSchema: eavResponseSchema as any }
-            }), 3, 2000, `Inventory Bootstrap: ${domainName}`);
+            }), 3, 2000, `Inventory Bootstrap: ${domainName}`, { prompt });
             
             const fields = JSON.parse(res.text!);
             console.log(`[Taxonomy Engine] 🟢 Received ${fields.length} schema fields for "${domainName}". Saving to DB:`, JSON.stringify(fields, null, 2));
@@ -145,7 +145,7 @@ export async function bootstrapCategorySchema(categoryId: number, categoryName: 
                 model: 'gemini-3.1-flash-lite',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 config: { responseMimeType: 'application/json', responseSchema: eavResponseSchema as any }
-            }), 3, 2000, `Category Bootstrap: ${categoryName}`);
+            }), 3, 2000, `Category Bootstrap: ${categoryName}`, { prompt });
             
             const fields = JSON.parse(res.text!);
             console.log(`[Taxonomy Engine] 🟢 Received ${fields.length} fields for category "${categoryName}". Saving to DB:`, JSON.stringify(fields, null, 2));

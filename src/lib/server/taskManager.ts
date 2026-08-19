@@ -73,6 +73,14 @@ class TaskManager {
         return id;
     }
 
+    update(id: string, description: string) {
+        const task = this.tasks.get(id);
+        if (task) {
+            task.description = description;
+            taskEvents.emit('update');
+        }
+    }
+
     end(id: string) {
         const task = this.tasks.get(id);
         if (task) {

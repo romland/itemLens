@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
 import { db } from '$lib/server/database';
 import { apiQueue } from '$lib/server/queue/index';
+import { withRetry } from './retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -33,11 +34,11 @@ export async function generateTaxonomySchema(categoryId: number, domainName: str
         `;
 
         try {
-            const response = await ai.models.generateContent({
+            const response = await withRetry(() => ai.models.generateContent({
                 model: 'gemini-3.1-flash-lite',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 config: { responseMimeType: 'application/json' }
-            });
+            }), 3, 2000, 'Taxonomy Schema Generation', { prompt });
             
             const fields = JSON.parse(response.text!);
             for (const field of fields) {

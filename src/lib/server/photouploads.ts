@@ -11,6 +11,10 @@ import { db } from '$lib/server/database';
 import { autoFill } from '$lib/server/autofill';
 import { taskManager, type TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
+import crypto from 'crypto';
+
+// Global memory lock to synchronize fast-workflow draft uploads with background LLM tasks
+export const activeDrafts = new Map<string, Promise<any>>();
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
@@ -296,64 +300,78 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
 		if (formFile.size > 0) {
 			const filename = getSafeFilename(formFile.name, String(i));
 			
-			// Start writing the file asynchronously and push the promise to the array
-			filePromises.push(
-				formFile.arrayBuffer().then(buffer => {
-					const filePath = `${diskPath}/${filename}`;
-					return fsPromises.writeFile(filePath, Buffer.from(buffer));
-				})
-			);
-			
-			let ocr = null, colors = null, llmAnalysis = null, cropPath = null, thumbPath = null;
 			const draftPath = formData[`${fieldPrefix}draft.${i}`] as string;
-			
-			if (draftPath) {
-				const jsonPath = `static${draftPath}.json`;
-				if (fs.existsSync(jsonPath)) {
-					try {
-						const sidecar = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-						ocr = sidecar.ocr || null;
-						colors = sidecar.colors || null;
-						llmAnalysis = sidecar.llmAnalysis || null;
-						
-						if (sidecar.extractedAttributes) {
-							Object.assign(extractedAttributes, JSON.parse(sidecar.extractedAttributes));
-						}
-						
-						if (sidecar.title && !extractedTitle) extractedTitle = sidecar.title;
-						if (sidecar.description && !extractedDescription) extractedDescription = sidecar.description;
-						
-						if (sidecar.cropPath) {
-							cropPath = `${webPath}/${filename}_crop.webp`;
-							fs.copyFileSync(`static${sidecar.cropPath}`, `static${cropPath}`);
-						}
-						if (sidecar.thumbPath) {
-							thumbPath = `${webPath}/${filename}_thumb.webp`;
-							fs.copyFileSync(`static${sidecar.thumbPath}`, `static${thumbPath}`);
-						}
-						
-						const orgThumbDraft = `static${draftPath}_org_thumb.webp`;
-						if (fs.existsSync(orgThumbDraft)) {
-							fs.copyFileSync(orgThumbDraft, `static${webPath}/${filename}_org_thumb.webp`);
-						}
-						
-						console.log(`[Background Task] Successfully merged pre-processed sidecar for image ${i}`);
-					} catch (e) {
-						console.error(`Error reading sidecar JSON for ${draftPath}:`, e);
-					}
-				}
-			}
-			
-			// @ts-expect-error (missing DB fields that will be filled in)
-			photos.push({
-				type: formData[`${fieldPrefix}type.${i}`] as string,
-				orgPath: `${webPath}/${filename}`,
-				thumbPath,
-				cropPath,
-				llmAnalysis,
-				ocr,
-				colors,
-			});
+            const photoType = formData[`${fieldPrefix}type.${i}`] as string;
+            filePromises.push((async () => {
+                const fileBuffer = Buffer.from(await formFile.arrayBuffer());
+                const hash = crypto.createHash('sha1').update(fileBuffer).digest('hex');
+                const filePath = `${diskPath}/${filename}`;
+                await fsPromises.writeFile(filePath, fileBuffer);
+                
+                let ocr = null, colors = null, llmAnalysis = null, cropPath = null, thumbPath = null;
+                
+                if (draftPath) {
+                    const jsonPath = `static${draftPath}.json`;
+                    if (fs.existsSync(jsonPath)) {
+                        try {
+                            const sidecar = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                            ocr = sidecar.ocr || null;
+                            colors = sidecar.colors || null;
+                            llmAnalysis = sidecar.llmAnalysis || null;
+                            
+                            if (sidecar.extractedAttributes) {
+                                Object.assign(extractedAttributes, typeof sidecar.extractedAttributes === 'string' ? JSON.parse(sidecar.extractedAttributes) : sidecar.extractedAttributes);
+                            }
+                            
+                            if (sidecar.title && !extractedTitle) extractedTitle = sidecar.title;
+                            if (sidecar.description && !extractedDescription) extractedDescription = sidecar.description;
+                            
+                            if (sidecar.cropPath) {
+                                cropPath = `${webPath}/${filename}_crop.webp`;
+                                fs.copyFileSync(`static${sidecar.cropPath}`, `static${cropPath}`);
+                            }
+                            if (sidecar.thumbPath) {
+                                thumbPath = `${webPath}/${filename}_thumb.webp`;
+                                fs.copyFileSync(`static${sidecar.thumbPath}`, `static${thumbPath}`);
+                            }
+                            
+                            const orgThumbDraft = `static${draftPath}_org_thumb.webp`;
+                            if (fs.existsSync(orgThumbDraft)) {
+                                fs.copyFileSync(orgThumbDraft, `static${webPath}/${filename}_org_thumb.webp`);
+                            }
+                        } catch (e) {
+                            console.error(`Error reading sidecar JSON for ${draftPath}:`, e);
+                        }
+                    }
+                }
+
+                // FAST WORKFLOW FIX: Sync heavily with in-flight LLM calls using the raw file hash as a lock
+                if (!llmAnalysis && activeDrafts.has(hash)) {
+                    console.log(`[Fast Workflow] Synchronizing with in-flight LLM task for hash ${hash}`);
+                    try {
+                        const classificationData = await activeDrafts.get(hash);
+                        if (classificationData) {
+                            llmAnalysis = JSON.stringify(classificationData);
+                            if (classificationData.extractedAttributes) {
+                                Object.assign(extractedAttributes, typeof classificationData.extractedAttributes === 'string' ? JSON.parse(classificationData.extractedAttributes) : classificationData.extractedAttributes);
+                            }
+                            if (classificationData.title && !extractedTitle) extractedTitle = classificationData.title;
+                            if (classificationData.description && !extractedDescription) extractedDescription = classificationData.description;
+                        }
+                    } catch (e) {}
+                }
+                
+                // @ts-expect-error (missing DB fields that will be filled in)
+                photos.push({
+                    type: photoType,
+                    orgPath: `${webPath}/${filename}`,
+                    thumbPath,
+                    cropPath,
+                    llmAnalysis,
+                    ocr,
+                    colors,
+                });
+            })());
 		}
 		i++;
 	}

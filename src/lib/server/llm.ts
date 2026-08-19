@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { apiQueue } from './queue/index';
 import type { TaskContext } from '$lib/server/taskManager';
+import { withRetry } from './retry';
 
 // Get available models:
 //  export APIKEY=gsk-...
@@ -41,7 +42,7 @@ async function extractInvoiceDataOpenAI(ocrData)
 
     // TODO: ChatGPT 3.5 is trash for this task. I want Mixtral@Groq for it!
     try {
-        const chatCompletion = await openai.chat.completions.create({
+        const chatCompletion = await withRetry(() => openai.chat.completions.create({
             messages: [
                 {
                     role: 'user',
@@ -49,7 +50,7 @@ async function extractInvoiceDataOpenAI(ocrData)
                 }
             ],
             model: 'gpt-3.5-turbo',
-        });
+            }), 3, 2000, 'Invoice Extraction (OpenAI)', { prompt });
         console.log("OpenAI invoice result:", chatCompletion);
         return chatCompletion.choices[0]?.message?.content || "";
     } catch(ex) {
@@ -81,7 +82,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
         const refined = toTextDocument(ocrData);
 
         try {
-            const chatCompletion = await groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => groq.chat.completions.create({
                 messages: [
                     {
                         role: 'system',
@@ -100,7 +101,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
                 temperature: 0.2,
                 top_p: 0.8,
                 // top K 40
-            });
+            }), 3, 2000, 'Invoice Extraction (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq invoice result:", chatCompletion);
             return chatCompletion.choices[0]?.message?.content || "";
@@ -126,7 +127,7 @@ Leave out:
 and other irrelevant (to the product or guide) stuff that you might find on a webpage.`;
 
         try {
-            const chatCompletion = await groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => groq.chat.completions.create({
                 messages: [
                     {
                         role: 'system',
@@ -142,7 +143,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
                 model: "llama-3.3-70b-versatile",
                 temperature: 0.2,
                 top_p: 0.8,
-            });
+            }), 3, 2000, 'Web Summary', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq summary prompt:", prompt + "\n\n" + extract);
             console.log("===========================");
@@ -180,7 +181,7 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
         // };
 
         try {
-            const chatCompletion = await groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => groq.chat.completions.create({
                 messages: [
                     {
                         role: 'system',
@@ -200,7 +201,7 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
                 // top K 40
                 // @ts-ignore – Together.ai supports schema while OpenAI does not
                 // response_format: { type: 'json_object', schema: jsonSchema },
-            });
+            }), 3, 2000, 'Reverse Search LLM Parsing', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq product name result:", chatCompletion);
             return chatCompletion.choices[0]?.message?.content || "";

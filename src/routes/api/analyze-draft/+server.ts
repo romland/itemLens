@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guessProductDetails, analyzePhoto } from '$lib/server/gemini-classification';
-import { getSafeFilename, processDraftPhotoBackground } from '$lib/server/photouploads';
+import { getSafeFilename, processDraftPhotoBackground, activeDrafts } from '$lib/server/photouploads';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { apiQueue } from '$lib/server/queue/index';
@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
+import crypto from 'crypto';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -22,6 +23,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         
         // Save to the staging area immediately
         const rawBuffer = Buffer.from(await file.arrayBuffer());
+        const hash = crypto.createHash('sha1').update(rawBuffer).digest('hex');
         const buffer = await sharp(rawBuffer).rotate().withMetadata().webp({ quality: 85 }).toBuffer();
         const filename = getSafeFilename(file.name, 'draft') + '.webp';
         const localPath = `${uploadsDiskFolder}/${filename}`;
@@ -39,7 +41,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             const existingCategories = await getExistingCategoryNames(locals.activeInventoryId);
 
             // SINGLE LLM CALL: Gets title, description, and taxonomy in one shot.
-            classificationData = await apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, activeSchema), { targetType: 'global', targetId: 0, description: 'Extracting taxonomy and title' });
+            const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, activeSchema), { targetType: 'global', targetId: 0, description: 'Extracting taxonomy and title' });
+            
+            activeDrafts.set(hash, analyzePromise);
+            setTimeout(() => activeDrafts.delete(hash), 5 * 60 * 1000); // 5 min TTL
+            
+            classificationData = await analyzePromise;
 
             aiData = {
                 title: classificationData?.title,

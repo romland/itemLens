@@ -8,6 +8,7 @@ import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
 import sharp from 'sharp';
+import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -74,10 +75,7 @@ For each item:
 
         const aiResponse = await apiQueue.add(
             async () => {
-                let retries = 3;
-                while (retries > 0) {
-                    try {
-                        const res = await ai.models.generateContent({
+                const res = await withRetry(() => ai.models.generateContent({
                             model: 'gemini-3.1-flash-lite',
                             contents: [
                                 { role: 'user', parts: [{ text: promptText }, { inlineData: { mimeType, data: base64Data } }] }
@@ -107,20 +105,9 @@ For each item:
                                     required: ['totalVisibleCount', 'collectionType', 'items']
                                 }
                             }
-                        });
-                        return JSON.parse(res.text!);
-                    } catch (e: any) {
-                        const is503 = e?.status === 503 || e?.status === 'UNAVAILABLE' || e?.message?.includes('503') || e?.message?.includes('UNAVAILABLE') || e?.message?.includes('demand');
-                        if (is503 && retries > 1) {
-                            retries--;
-                            console.warn(`[Collection] Gemini API busy (503). Retrying in 4s... (${retries} left)`);
-                            await new Promise(resolve => setTimeout(resolve, 4000));
-                        } else {
-                            throw e;
-                        }
-                    }
-                }
-
+                        }), 3, 2000, 'Collection Analysis (Vision)', { itemId: 0, prompt: promptText }); 
+                
+                return JSON.parse(res.text!);
             },
             { targetType: 'global', targetId: 0, description: 'Analyzing collection items with Vision Model' }
         );

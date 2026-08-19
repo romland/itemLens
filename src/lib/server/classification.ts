@@ -1,6 +1,7 @@
 import Replicate from "replicate";
 import { env } from '$env/dynamic/private';
 import fs from 'fs';
+import { withRetry } from './retry';
 
 export async function classifyImageUsingReplicate(imgUrl : string, callback)
 {
@@ -8,7 +9,7 @@ export async function classifyImageUsingReplicate(imgUrl : string, callback)
         const replicate = new Replicate({
             auth: env.REPLICATE_API_TOKEN,
         });
-        const output = await replicate.run(
+        const output = await withRetry(() => replicate.run(
             // Model: blip
             // Runs on nVidia T4 -- https://replicate.com/pricing
             // Task, allowed values: image_captioning, visual_question_answering, image_text_matching
@@ -20,7 +21,7 @@ export async function classifyImageUsingReplicate(imgUrl : string, callback)
                     image: imgUrl,
                 }
             }
-        );
+        ), 3, 2000, 'Replicate BLIP', { prompt: "describe the type of item depicted, e.g. receipt..." });
 
         console.log("Replicate:", output);
         callback(null, output);
