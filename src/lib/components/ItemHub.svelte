@@ -31,6 +31,7 @@
     let amount = item?.amount || "";
     let reason = item?.reason || "";
     let tagcsv = item?.tagcsv || "";
+    let currentAttributes = item?.attributes ? [...item.attributes] : [];
 
     let isAnalyzing = false;
     let pendingPhotos: any[] = [];
@@ -96,6 +97,22 @@
                 currentDescription = data.aiData.description;
                 autofilled = true;
             }
+            if (data.aiData.extractedAttributes) {
+                try {
+                    const attrs = typeof data.aiData.extractedAttributes === 'string' ? JSON.parse(data.aiData.extractedAttributes) : data.aiData.extractedAttributes;
+                    let foundNew = false;
+                    for (const [k, v] of Object.entries(attrs)) {
+                        if (v !== null && v !== '') {
+                            if (!currentAttributes.some(a => a.key === k)) {
+                                currentAttributes = [...currentAttributes, { key: k, value: String(v) }];
+                                foundNew = true;
+                            }
+                        }
+                    }
+                    if (foundNew) { autofilled = true; isDirty = true; }
+                } catch (e) { console.error("Failed to parse AI attributes", e); }
+            }
+
             if (autofilled) {
                 dispatch('success', 'AI auto-filled details!');
             }
@@ -315,6 +332,19 @@
                 </div>
             </button>
 
+            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'details'}>
+                <div class="flex items-center gap-4">
+                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-base">Item Details</div>
+                        <div class="text-xs text-gray-500 font-normal">Title, qty, tags...</div>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-right text-gray-400"></i>
+            </button>
+
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'links'}>
                 <div class="flex items-center gap-4">
                     <div class="bg-emerald-100 text-emerald-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
@@ -331,19 +361,6 @@
                     {/if}
                     <i class="bi bi-chevron-right text-gray-400"></i>
                 </div>
-            </button>
-            
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'details'}>
-                <div class="flex items-center gap-4">
-                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
-                        <i class="bi bi-pencil-square"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="font-bold text-base">Item Details</div>
-                        <div class="text-xs text-gray-500 font-normal">Title, qty, tags...</div>
-                    </div>
-                </div>
-                <i class="bi bi-chevron-right text-gray-400"></i>
             </button>
         </div>
 
@@ -453,7 +470,7 @@
                             Title
                             {#if isAnalyzing}
                                 <span class="loading loading-spinner loading-xs text-primary"></span>
-                                <span class="text-xs text-primary font-normal">AI analyzing image...</span>
+                                <span class="text-xs text-primary font-normal">Analyzing image...</span>
                             {/if}
                         </span>
                     </div>
@@ -503,7 +520,9 @@
                 <div class="form-control w-full">
                     <div class="label"><span class="label-text font-semibold">Attributes</span></div>
                     <div class="bg-base-200/50 p-3 rounded-xl border border-base-200" on:input={() => isDirty = true}>
-                        <AttributeAdder values={item?.attributes || []} on:change={() => isDirty = true} />
+                        {#key currentAttributes}
+                            <AttributeAdder values={currentAttributes} on:change={() => isDirty = true} />
+                        {/key}
                     </div>
                 </div>
             </div>
@@ -519,7 +538,7 @@
 <dialog bind:this={aiDialog} class="modal modal-top sm:modal-middle" on:close={() => showAiDrawer = false}>
     <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
         <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
-            <i class="bi bi-stars text-primary"></i> Refine AI Guess
+            <i class="bi bi-stars text-primary"></i> Refine Guess
         </h3>
         <p class="text-sm text-gray-500 mb-6">Give the AI a nudge with a brand or model name to get a better match.</p>
         

@@ -72,6 +72,7 @@ export async function POST({ request, locals }) {
     const draftPath = formData.get('draftPath') as string;
     const boxStr = formData.get('box') as string;
     const container = formData.get('container') as string;
+    const extractedAttributesStr = formData.get('extractedAttributes') as string;
 
     let finalPathForProduct = draftPath;
 
@@ -86,41 +87,36 @@ export async function POST({ request, locals }) {
         }
     }
 
-    const item = await db.item.create({
-        data: {
-            title,
-            description,
-            slug: slugify(title.toLowerCase()),
-            inventoryId: locals.activeInventoryId,
-            authorId: locals.user.id,
-            locations: container ? { create: [{ container: { connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: container } } } }] } : undefined
-        }
-    });
-
-    await logActivity(item.id, 'Creation', `Item added from Quick Action (Compare Lens)`, 'success');
-
+    let noteId = null;
     if (draftPath) {
-        await logActivity(item.id, 'Extraction', `Cropped bounding box out of original scan`, 'info');
         let note = await db.timelineNote.findFirst({
             where: { inventoryId: locals.activeInventoryId, category: 'archive', photos: { some: { orgPath: draftPath } } }
         });
-
         if (!note) {
             note = await db.timelineNote.create({
                 data: { content: `Comparison Scan Source`, category: 'archive', inventoryId: locals.activeInventoryId, authorId: locals.user.id, photos: { create: [{ type: 'information', orgPath: draftPath }] } }
             });
         }
+        noteId = note.id;
+    }
 
-        await db.item.update({
-            where: { id: item.id },
-            data: { timelineNotes: { connect: [{ id: note.id }] }, photos: { create: [{ type: 'product', orgPath: finalPathForProduct }] } }
-        });
+    const { createItemEntity } = await import('$lib/server/services');
+    const item = await createItemEntity({
+        title,
+        description,
+        inventoryId: locals.activeInventoryId,
+        userId: locals.user.id,
+        containers: container ? [container] : [],
+        extractedAttributes: extractedAttributesStr,
+        photos: draftPath ? [{ type: 'product', orgPath: finalPathForProduct }] : [],
+        timelineNoteId: noteId
+    });
 
-        const itemWithPhotos = await db.item.findUnique({ where: { id: item.id }, include: { photos: true } });
-        if (itemWithPhotos) {
-            const { processItemPhotosBackground } = await import('$lib/server/photouploads');
-            processItemPhotosBackground(itemWithPhotos).catch(e => console.error(e));
-        }
+
+    await logActivity(item.id, 'Creation', `Item added from Quick Action (Compare Lens)`, 'success');
+
+    if (draftPath) {
+        await logActivity(item.id, 'Extraction', `Cropped bounding box out of original scan`, 'info');
     }
 
     return json({ success: true, id: item.id });

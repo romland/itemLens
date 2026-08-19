@@ -32,6 +32,7 @@
     let draftNoteId: number | null = null;
     let collectionType = "";
     let items: any[] = [];
+    let totalVisibleCount = 0;
 
     let selectedContainers: string[] = [];
     let globalCategory = "";
@@ -72,6 +73,7 @@
                 draftPath = data.draftPath;
                 draftNoteId = data.noteId;
                 collectionType = data.collectionType;
+                totalVisibleCount = data.totalVisibleCount || data.items.length;
                 items = data.items.map((item: any, id: number) => ({
                     ...item,
                     id: id.toString(), // For keying flip animations
@@ -122,7 +124,22 @@
     let isSaving = false;
 
     $: activeItems = items.filter(i => !i.optedOut);
+    $: discardedCount = items.length - activeItems.length;
+    $: presentCategories = [...new Set(items.map(i => i.category || 'unknown'))];
 
+    function toggleUnknowns() {
+        const unknowns = items.filter(i => i.low_confidence || i.title.toLowerCase().includes('unknown'));
+        if (unknowns.length === 0) return;
+        const newState = !unknowns.every(i => i.optedOut);
+        items = items.map(i => (i.low_confidence || i.title.toLowerCase().includes('unknown')) ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
+    }
+
+    function toggleCategory(cat: string) {
+        const catItems = items.filter(i => (i.category || 'unknown') === cat);
+        if (catItems.length === 0) return;
+        const newState = !catItems.every(i => i.optedOut);
+        items = items.map(i => (i.category || 'unknown') === cat ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
+    }
 
     async function saveCollection() {
         if (selectedContainers.length === 0) {
@@ -148,7 +165,7 @@
                 containers: selectedContainers,
                 globalCategory,
                 tagcsv: globalTags,
-                items: activeItems.map(item => ({ title: item.title, subtitle: item.subtitle, category: item.category, box: item.box }))
+                items: activeItems.map(item => ({ title: item.title, subtitle: item.subtitle, category: item.category, box: item.box, extractedAttributes: item.extractedAttributes }))
             })
         });
         
@@ -209,9 +226,36 @@
         </div>
     {:else}
         <!-- Header -->
-        <div class="mb-4 animate-fade-in bg-base-100/90 backdrop-blur-md sticky top-[60px] z-40 py-2 border-b border-base-200">
-            <h2 class="text-2xl font-bold tracking-tight mb-1">Found {items.length} {collectionType || 'items'}</h2>
-            <p class="text-success font-medium text-sm flex items-center gap-2"><i class="bi bi-magic"></i> Extracted from image</p>
+        <div class="mb-4 animate-fade-in bg-base-100/95 backdrop-blur-md sticky top-[60px] z-40 pt-3 pb-2 border-b border-base-200 shadow-sm -mx-4 px-4">
+            <div class="flex justify-between items-end mb-1">
+                <h2 class="text-2xl font-bold tracking-tight">Found {items.length} {collectionType || 'items'}</h2>
+                <div class="text-right text-sm font-semibold tracking-tight pb-1">
+                    <span class="text-success">{activeItems.length} Keep</span>
+                    {#if discardedCount > 0}
+                        <span class="text-gray-300 mx-1">•</span>
+                        <span class="text-error">{discardedCount} Trash</span>
+                    {/if}
+                </div>
+            </div>
+
+            <!-- Quick Actions Bar -->
+            <div class="flex flex-wrap items-center gap-2 mt-3 pb-2 text-sm">
+                <span class="text-gray-500 font-semibold mr-1 whitespace-nowrap text-xs uppercase tracking-wider">Bulk Toggle:</span>
+                {#if items.some(i => i.low_confidence || i.title.toLowerCase().includes('unknown'))}
+                    {@const unknownItems = items.filter(i => i.low_confidence || i.title.toLowerCase().includes('unknown'))}
+                    {@const allOut = unknownItems.every(i => i.optedOut)}
+                    <button type="button" class="badge {allOut ? 'badge-success text-white border-transparent' : 'badge-warning'} gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={toggleUnknowns}>
+                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-exclamation-triangle'}"></i> Blurry / Unknown ({unknownItems.length})
+                    </button>
+                {/if}
+                {#each presentCategories as cat}
+                    {@const catItems = items.filter(i => (i.category || 'unknown') === cat)}
+                    {@const allOut = catItems.every(i => i.optedOut)}
+                    <button type="button" class="badge {allOut ? 'badge-success text-white border-transparent' : 'badge-outline bg-base-100 hover:bg-error/10 hover:text-error hover:border-error/50'} gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={() => toggleCategory(cat)}>
+                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-trash3'}"></i> All {cat}s ({catItems.length})
+                    </button>
+                {/each}
+            </div>
         </div>
 
         <!-- The Interactive List -->

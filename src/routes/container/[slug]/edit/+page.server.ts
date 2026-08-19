@@ -38,7 +38,7 @@ export const load = (async ({ locals, params }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    default: async ({ request, params }) => {
+    default: async ({ request, params, locals }) => {
         const data = Object.fromEntries(await request.formData());
         const name = data.name as string;
         const description = data.description as string;

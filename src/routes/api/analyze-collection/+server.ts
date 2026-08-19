@@ -45,14 +45,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         });
 
 		let promptText = `Identify the collection of items in this image (e.g. Books, CDs, Vinyl, Board Games).
-Extract EVERY single item visible on the shelf.
+FIRST, count the total number of FULLY VISIBLE individual items.
+THEN, extract EVERY fully visible item on the shelf.
+
+CRITICAL EXTRACTION RULES:
+1. NO PARTIALS: Completely ignore items cut off by the edge of the image. Do not count them, do not extract them.
+2. UNKNOWN BUT PRESENT: If an item is fully visible but turned backward, unreadable, or blurry, you MUST still extract it. Use a generic title (e.g., 'Unknown CD') and set low_confidence to true.
+3. NO DUPLICATES: Draw exactly one bounding box per physical item.
+
 For each item:
-- title: The main title. If the text is completely unreadable, supply a generic placeholder (e.g., 'Unknown CD', 'Unreadable Book').
-- subtitle: Secondary info like Author, Artist, or Brand.
+- title: The actual name of the work itself (e.g., Book Title, Album Name, Movie Title, Product Name). NEVER put the author or artist here. If unreadable, use a placeholder (e.g., 'Unknown CD').
+- subtitle: The creator (e.g., Author, Band/Artist, Maker, Brand). NEVER put the main work title here.
 - category: The type of item (e.g., 'book', 'cd', 'dvd', 'stamp', 'game').
 - box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
 - low_confidence: Set to true if the text is blurry, occluded, or hard to read.
-CRITICAL: Do not omit physical items just because you cannot read their labels. We need a 100% complete physical count of the items.
 `;
 
 		const hint = data.get('hint') as string;
@@ -81,6 +87,7 @@ CRITICAL: Do not omit physical items just because you cannot read their labels. 
                                 responseSchema: {
                                     type: Type.OBJECT,
                                     properties: {
+                                        totalVisibleCount: { type: Type.INTEGER, description: 'The total number of items you counted' },
                                         collectionType: { type: Type.STRING },
                                         items: {
                                             type: Type.ARRAY,
@@ -97,7 +104,7 @@ CRITICAL: Do not omit physical items just because you cannot read their labels. 
                                             }
                                         }
                                     },
-                                    required: ['collectionType', 'items']
+                                    required: ['totalVisibleCount', 'collectionType', 'items']
                                 }
                             }
                         });
@@ -118,7 +125,7 @@ CRITICAL: Do not omit physical items just because you cannot read their labels. 
             { targetType: 'global', targetId: 0, description: 'Analyzing collection items with Vision Model' }
         );
 
-        return json({ success: true, draftPath: webPath, noteId: note.id, collectionType: aiResponse.collectionType, items: aiResponse.items });
+        return json({ success: true, draftPath: webPath, noteId: note.id, totalVisibleCount: aiResponse.totalVisibleCount, collectionType: aiResponse.collectionType, items: aiResponse.items });
     } catch (e) {
         console.error("Collection analysis error:", e);
         const err = e as any;

@@ -58,8 +58,12 @@ model Inventory {
   name        String
   description String
   classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
+  archetype   String   @default("generic") // "apparel", "electronics", "tools", "media", "generic"
   allowNewCategories Boolean @default(true) // Whether AI is allowed to invent new sub-categories
+  allowAutoTaxonomy Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
   extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
+   deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+  templateFields TemplateField[]
 
   users       UserInventoryAccess[]
   items       Item[]
@@ -81,6 +85,7 @@ model Category {
   name        String
   slug        String
   description String?
+  templateFields TemplateField[]
 
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   inventoryId Int
@@ -254,6 +259,29 @@ model KVP {
 
   item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId Int
+}
+
+// ==========================================
+// 6. DYNAMIC TAXONOMY ENGINE
+// ==========================================
+model TemplateField {
+  id          Int      @id @unique @default(autoincrement())
+  name        String
+  uiLabel     String   @default("Attribute")
+  type        String   @default("string") // "string", "enum", "boolean", "number"
+  options     String?  // JSON array for enums, e.g. '["Red", "Blue"]'
+  matchWeight String   @default("FUZZY_SECONDARY") // "STRICT_DEDUPE", "FUZZY_SECONDARY", "METADATA_ONLY"
+  extractionMethod String @default("HYBRID") // "VISION_STRICT", "HUMAN_REQUIRED", "HYBRID"
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId Int
+
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  Int?
+
+  @@unique([inventoryId, categoryId, name])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Be able to tag items that are in use by/on something

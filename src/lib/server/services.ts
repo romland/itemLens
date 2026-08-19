@@ -100,3 +100,83 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
         }        
     }
 }
+
+export async function createItemEntity(params: {
+    title: string;
+    description?: string;
+    reason?: string;
+    amount?: number | null;
+    inventoryId: number;
+    userId: number;
+    containers?: string[];
+    tagIds?: { id: number }[];
+    photos?: Prisma.PhotoCreateWithoutItemInput[];
+    attributes?: Prisma.KVPCreateWithoutItemInput[];
+    extractedAttributes?: string | Record<string, any> | null;
+    timelineNoteId?: number | null;
+}) {
+    const { getActiveSchema } = await import('$lib/server/ontology');
+    const activeSchema = await getActiveSchema(params.inventoryId, null, true);
+
+    const finalAttributes = params.attributes ? [...params.attributes] : [];
+
+    if (params.extractedAttributes) {
+        try {
+            const attrs = typeof params.extractedAttributes === 'string' 
+                ? JSON.parse(params.extractedAttributes) 
+                : params.extractedAttributes;
+
+            for (const [k, v] of Object.entries(attrs)) {
+                if (v !== null && v !== '') {
+                    const valStr = String(v).trim();
+                    // Prioritize Human UI edits: Only append if the form didn't already send this exact key
+                    if (!finalAttributes.some(a => a.key === k)) {
+                        finalAttributes.push({ key: k, value: valStr });
+                    }
+                }
+            }
+        } catch(e) { console.error("Failed to parse extracted attributes", e); }
+    }
+
+    // Organic Schema Evolution - run across the final merged set (both AI-extracted and Human-edited)
+    for (const attr of finalAttributes) {
+        const field = activeSchema.find((f: any) => f.name === attr.key) as any;
+        if (field && field.id && field.type === 'enum' && field.options) {
+            const valStr = attr.value.trim();
+            if (!field.options.map((o: string) => o.toLowerCase()).includes(valStr.toLowerCase())) {
+                const newOptions = [...field.options, valStr];
+                await db.templateField.update({ where: { id: field.id }, data: { options: JSON.stringify(newOptions) } });
+                field.options = newOptions; // Update in-memory for subsequent matches in loop
+            }
+        }
+    }
+
+    const safeTitle = params.title.trim() || "New Item";
+
+    const item = await db.item.create({
+        data: {
+            title: safeTitle,
+            description: params.description?.trim() || "",
+            slug: slugify(safeTitle.toLowerCase()) || "new-item",
+            inventoryId: params.inventoryId,
+            authorId: params.userId,
+            reason: params.reason || "",
+            amount: params.amount !== undefined ? params.amount : null,
+            photos: params.photos && params.photos.length > 0 ? { create: params.photos } : undefined,
+            attributes: finalAttributes.length > 0 ? { create: finalAttributes } : undefined,
+            locations: params.containers && params.containers.length > 0 ? {
+                create: params.containers.map(cont => ({
+                    container: { connect: { inventoryId_name: { inventoryId: params.inventoryId, name: cont } } }
+                }))
+            } : undefined,
+            tags: params.tagIds && params.tagIds.length > 0 ? { connect: params.tagIds } : undefined,
+            timelineNotes: params.timelineNoteId ? { connect: [{ id: params.timelineNoteId }] } : undefined
+        },
+        include: { photos: true }
+    });
+
+    const { processItemPhotosBackground } = await import('$lib/server/photouploads');
+    processItemPhotosBackground(item).catch(e => console.error(e));
+
+    return item;
+}

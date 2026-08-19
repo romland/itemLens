@@ -8,7 +8,7 @@ export function getTopColorsNamed(imagePath : string, callback: any)
 
     // args: path, num colors, quality (step pixels to skip between sampling)
     getPalette(imagePath, 5, 1).then(palette => { 
-        const colorNames = [];
+        // const colorNames = [];
         const ret = {};
         console.log("colorThief palette:", palette);
         const maxColors = Math.min(palette.length, 2);
@@ -16,7 +16,7 @@ export function getTopColorsNamed(imagePath : string, callback: any)
             const hexCol = rgbToHex(palette[i][0], palette[i][1], palette[i][2]).toUpperCase();
 
             // console.log("hex:", hexCol);
-            console.log(`<div style='height:100; width:100; background-color: ${hexCol}'></div>`);
+            // console.log(`<div style='height:100; width:100; background-color: ${hexCol}'></div>`);
             
             // color-namer
             const colorName: any = namer(hexCol, { distance : "deltae", pick: ['basic', "pantone"] } as any);
@@ -33,7 +33,7 @@ export function getTopColorsNamed(imagePath : string, callback: any)
         }
         
         // const ret = [...new Set(colorNames)];
-        console.log("Color names:", ret);
+        // console.log("Color names:", ret);
         callback(null, ret);
     })
     .catch(err => {

@@ -19,6 +19,8 @@ export async function GET({ url, setHeaders, locals }) {
     const page = Number(url.searchParams.get('page') ?? '1');
     const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
     const unassigned = url.searchParams.get('unassigned') === 'true';
+    const attrKey = url.searchParams.get('attrKey');
+    const attrVal = url.searchParams.get('attrVal');
 
     const query: Prisma.ItemFindManyArgs = {
         // take: count,
@@ -58,6 +60,13 @@ export async function GET({ url, setHeaders, locals }) {
 			photos: { some: { category: { name: cat } } }
 		};
 	}
+
+    if (attrKey && attrVal) {
+        query.where = {
+            ...query.where,
+            attributes: { some: { key: attrKey, value: attrVal } }
+        };
+    }
 
     if (unassigned) {
         query.where = {

@@ -4,7 +4,8 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import fs from 'fs';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
-  import sharp from 'sharp';
+import sharp from 'sharp';
+import { bootstrapInventorySchema } from '$lib/server/ontology';
 
 export const load = async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
@@ -20,7 +21,9 @@ export const load = async ({ locals }) => {
                 id: true, 
                 name: true,
                 allowNewCategories: true,
+                allowAutoTaxonomy: true,
                 extractExif: true,
+                deepScanCollections: true,
                 _count: { select: { items: true, notes: true, containers: true } }
             } 
         });
@@ -77,17 +80,28 @@ export const actions = {
         
         const data = await request.formData();
         const name = data.get('name') as string;
-        
+        const archetype = (data.get('archetype') as string) || "generic";
+        const customArchetype = data.get('customArchetype') as string;
+
 		if (!name || name.trim() === '') return fail(400, { error: true, message: "Inventory name required." });
+
+        const finalArchetype = archetype === 'other' ? (customArchetype || 'generic') : archetype;        
 
         const inventory = await db.inventory.create({
             data: {
                 name: name.trim(),
 				description: "User created inventory",
                 classes: "[]",
+                archetype: archetype,
                 users: { create: { userId: locals.user.id, role: "OWNER" } }
             }
         });
+
+        // Fire and forget with internal retry protection
+        bootstrapInventorySchema(inventory.id, `${inventory.name} (${finalArchetype})`)
+            .catch(e => console.error("Initial schema bootstrap failed, use manual retry in settings.", e));
+
+
 
 		return { success: true, message: `Inventory '${inventory.name}' created!` };
     },
@@ -181,6 +195,15 @@ export const actions = {
         return { success: true, message: "Category generation settings updated." };
     },
 
+    toggleAutoTaxonomy: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('allowAutoTaxonomy') === 'true';
+        await db.inventory.update({ where: { id }, data: { allowAutoTaxonomy: allow } as any });
+        return { success: true, message: "AI Taxonomy settings updated." };
+    },
+
     toggleExtractExif: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
 
@@ -189,6 +212,26 @@ export const actions = {
         const allow = data.get('extractExif') === 'true';
         await db.inventory.update({ where: { id }, data: { extractExif: allow } });
         return { success: true, message: "EXIF extraction settings updated." };
+    },
+
+    toggleDeepScan: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('deepScan') === 'true';
+        await db.inventory.update({ where: { id }, data: { deepScanCollections: allow } });
+        return { success: true, message: "Collection scanning settings updated." };
+    },
+
+    retrySchemaBootstrap: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const inventoryId = Number(data.get('inventoryId'));
+        const name = data.get('name') as string;
+
+        if (!inventoryId) return fail(400, { error: true, message: "Invalid ID." });
+        await bootstrapInventorySchema(inventoryId, name);
+        return { success: true, message: `Taxonomy rules regenerated for '${name}'!` };
     },
 
 	deleteInventory: async ({ request, locals }) => {

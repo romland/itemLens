@@ -9,6 +9,8 @@ import fs from 'fs';
 import sharp from 'sharp';
 import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
+import { getActiveSchema } from '$lib/server/ontology';
+import { computeMatch } from '$lib/server/matcher';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -31,23 +33,45 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const localDiskPath = `${uploadsDiskFolder}/${filename}`;
         const webPath = `${uploadsWebFolder}/${filename}`;
 
+        // Fetch ALL fields in inventory so Gemini can extract category-specific fields dynamically across a broad scan
+        const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+
         await sharp(buffer).rotate().withMetadata().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 85 }).toFile(localDiskPath);
         const base64Data = fs.readFileSync(localDiskPath).toString('base64');
 
         let prompt = `Analyze this image containing a collection of physical items (such as books, CDs, DVDs, grocery cans, or tools). 
 CRITICAL: You must extract EVERY SINGLE INDIVIDUAL physical item as its own separate entry. DO NOT group multiple adjacent items together into one bounding box. Even if two items are identical, they must each get their own distinct, tight bounding box.
 
+CRITICAL GROUNDING RULES:
+- YOU ARE A STRICT VISUAL EXTRACTOR.
+- FIRST, count the total number of FULLY VISIBLE individual items.
+- THEN, extract data for EVERY fully visible item.
+- NO PARTIALS: Completely ignore items cut off by the edge of the image. Do not count or extract them.
+- UNKNOWN BUT PRESENT: If a fully visible item is backwards, blurry, or unreadable, you MUST still extract it using a generic title (e.g., 'Unknown').
+- NO DUPLICATES: Draw exactly one box per physical item.
+- IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
+- NEVER generate plot summaries, reviews, or historical facts.
+
 Return a JSON object with:
+- "totalVisibleCount": (integer) the number of items you counted.
 - "detectedItems": array of objects, each containing:
-  - "title": (string) main title or product name
-  - "subtitle": (string, optional) author, brand, flavor, artist, or edition
-  - "category": (string) simple category
+- "title": (string) The actual name of the work (Book Title, Album Name, Movie Title). NEVER the author/artist.
+- "subtitle": (string, optional) ONLY the creator (Author, Artist, Brand, Maker) or edition physically printed on the item. NEVER the main title. DO NOT write descriptions.
+- "category": (string) simple category
+  ${activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').length > 0 ? 
+  `- "extractedAttributes": (object) You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n SCHEMA: ${JSON.stringify(activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').map(s => ({ name: s.name, type: s.type, options: s.options })))}` : ''}
   - "rawText": (string) literally every word you can read on the item, space separated. Do not format it.
   - "box": (array of numbers) tight bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000 around the SINGLE individual item.`;
 
         if (hint.trim()) {
             prompt += `\nUser hint for context: "${hint.trim()}". Use this to improve detection accuracy.`;
         }
+
+        const visibleSchema = activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED');
+        let schemaProps: any = {};
+        visibleSchema.forEach(s => {
+            schemaProps[s.name] = { type: s.type === 'number' ? 'number' : 'string', nullable: true };
+        });
 
         const response = await apiQueue.add(
             () => ai.models.generateContent({
@@ -63,6 +87,7 @@ Return a JSON object with:
                 responseSchema: {
                     type: 'object',
                     properties: {
+                        totalVisibleCount: { type: 'integer' },
                         detectedItems: {
                             type: 'array',
                             items: {
@@ -71,6 +96,13 @@ Return a JSON object with:
                                     title: { type: 'string' },
                                     subtitle: { type: 'string' },
                                     category: { type: 'string' },
+                                    ...(visibleSchema.length > 0 ? {
+                                        extractedAttributes: {
+                                            type: 'object',
+                                            properties: schemaProps,
+                                            required: visibleSchema.map(s => s.name)
+                                        }
+                                    } : {}),
                                     rawText: { type: 'string' },
                                     box: {
                                         type: 'array',
@@ -82,20 +114,21 @@ Return a JSON object with:
                             }
                         }
                     },
-                    required: ['detectedItems']
+                    required: ['totalVisibleCount', 'detectedItems']
                 }
             }
             }),
             { targetType: 'global', targetId: 0, description: 'Matching physical items against inventory database' }
         );
 
-        const parsed = JSON.parse(response.text || '{"detectedItems":[]}');
+        const parsed = JSON.parse(response.text || '{"detectedItems":[], "totalVisibleCount": 0}');
         const detected = parsed.detectedItems || [];
+        const totalVisibleCount = parsed.totalVisibleCount || detected.length;
 
         // Always fetch ALL items in the inventory so we can identify items from other locations
         const dbItems = await db.item.findMany({
             where: { inventoryId: locals.activeInventoryId },
-            include: { locations: { include: { container: true } }, tags: true }
+            include: { locations: { include: { container: true } }, tags: true, attributes: true }
         });
 
         const inCollection: any[] = [];
@@ -103,65 +136,13 @@ Return a JSON object with:
         const matchedDbItemIds = new Set<number>();
         const idUsage = new Map<number, number>();
 
-        // Helper to strip accents, apostrophes, turn punctuation to spaces, and remove extra whitespace
-        const normalizeStr = (s: string) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-
-       // Levenshtein distance for fuzzy string matching (0.0 to 1.0 similarity)
-       const getSimilarity = (s1: string, s2: string) => {
-           if (s1 === s2) return 1.0;
-           const len1 = s1.length, len2 = s2.length;
-           if (!len1 || !len2) return 0.0;
-           const dp = Array.from({length: len1 + 1}, () => new Array(len2 + 1).fill(0));
-           for (let i = 0; i <= len1; i++) dp[i][0] = i;
-           for (let j = 0; j <= len2; j++) dp[0][j] = j;
-           for (let i = 1; i <= len1; i++) {
-               for (let j = 1; j <= len2; j++) {
-                   const cost = s1[i-1] === s2[j-1] ? 0 : 1;
-                   dp[i][j] = Math.min(dp[i-1][j] + 1, dp[i][j-1] + 1, dp[i-1][j-1] + cost);
-               }
-           }
-           return 1 - (dp[len1][len2] / Math.max(len1, len2));
-       };
-
         for (const item of detected) {
-            const normTitle = normalizeStr(item.title);
-            const rawTokens = new Set(normalizeStr(item.rawText).split(' ').filter(t => t.length > 1));
-
             const match = dbItems.find(dbItem => {
                 const used = idUsage.get(dbItem.id) || 0;
                 const available = dbItem.amount || 1;
                 if (used >= available) return false; // Fully consumed by other boxes in photo
 
-                const dbTitleNorm = normalizeStr(dbItem.title);
-                
-                // 1. Exact Match (post-normalization catches Jupiters vs Jupiter's)
-                if (dbTitleNorm === normTitle) return true;
-
-                // 2. Substring Match (e.g. "Dune" inside "Dune Messiah")
-                if (normTitle.length > 4 && dbTitleNorm.includes(normTitle)) return true;
-                if (dbTitleNorm.length > 4 && normTitle.includes(dbTitleNorm)) return true;
-
-                // 3. String-level Typo Match (fixes minor OCR failures on full strings)
-                if (getSimilarity(dbTitleNorm, normTitle) > 0.8) return true;
-
-                // 4. Fuzzy Token Match (checking raw physical text against DB title)
-                const dbTokens = dbTitleNorm.split(' ').filter(t => t.length > 1);
-                if (dbTokens.length > 0 && rawTokens.size > 0) {
-                    let overlap = 0;
-                    dbTokens.forEach(t => { 
-                        if (rawTokens.has(t)) {
-                            overlap++;
-                        } else {
-                            for (const rt of rawTokens) {
-                                if (getSimilarity(t, rt) >= 0.8) { overlap++; break; }
-                            }
-                        }
-                    });
-                    
-                    // If 60% of the important DB words are visibly printed on the item
-                    if (overlap / dbTokens.length >= 0.6) return true;
-                }
-                return false;
+                return computeMatch(item.extractedAttributes, item.title, item.rawText, dbItem, activeSchema).isMatch;
             });
 
             if (match) {
@@ -188,7 +169,7 @@ Return a JSON object with:
             return false;
         }) : []).map(i => ({ id: i.id, title: i.title, slug: i.slug, amount: i.amount, locationName: i.locations?.[0]?.container?.name || null }));
 
-        return json({ success: true, draftPath: webPath, totalDetected: detected.length, inCollection, newToYou, missingFromScope, scopeType, scopeValue });
+        return json({ success: true, draftPath: webPath, totalDetected: detected.length, totalVisibleCount, inCollection, newToYou, missingFromScope, scopeType, scopeValue, activeSchema });
     } catch (e: any) {
         return json({ error: e.message || 'Comparison scan failed' }, { status: 500 });
     }

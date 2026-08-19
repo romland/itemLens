@@ -96,7 +96,7 @@ export const actions = {
         const orgData = await request.formData();
         const itemId = Number(params.id);
 
-        const photos = await savePhotos(Object.fromEntries(orgData), uploadsDiskFolder, uploadsWebFolder, "file.", "");
+        const { photos } = await savePhotos(Object.fromEntries(orgData), uploadsDiskFolder, uploadsWebFolder, "file.", "");
 
         if (photos.length > 0) {
             await db.item.update({

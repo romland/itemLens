@@ -1,4 +1,6 @@
 import slugify from 'slugify';
+import { db } from '$lib/server/database';
+import { bootstrapCategorySchema } from './ontology';
 
 /**
  * Fetch existing category names to pass to Gemini context
@@ -18,13 +20,20 @@ export async function getOrCreateCategory(rawName: string, inventoryId: number) 
   const cleanName = rawName.trim().toLowerCase();
   const slug = slugify(cleanName);
 
-  return await db.category.upsert({
-    where: { inventoryId_slug: { inventoryId, slug } },
-    update: {},
-    create: {
-      name: cleanName,
-      slug,
-      inventoryId
-    }
+  let category = await db.category.findUnique({
+    where: { inventoryId_slug: { inventoryId, slug } }
   });
+
+  if (!category) {
+    category = await db.category.create({
+      data: { name: cleanName, slug, inventoryId }
+    });
+    
+    const inv = await db.inventory.findUnique({ where: { id: inventoryId } });
+    if ((inv as any)?.allowAutoTaxonomy) {
+      bootstrapCategorySchema(category.id, cleanName, inventoryId).catch(e => console.error("Schema gen failed:", e));
+    }
+  }
+
+  return category;
 }

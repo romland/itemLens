@@ -102,7 +102,7 @@ export const actions = {
         //         message: 'Field <strong>Title</strong> cannot be blank.'
         //     });
         // }
-		const safeTitle = title.trim() || "Default product";
+		const safeTitle = title.trim() || "New Item";
 
         /*
         if(containers.length === 0) {
@@ -114,7 +114,7 @@ export const actions = {
         }
         */
   
-          let photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
+          const { photos } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
 		  const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
           const tagIds = await getTagIds(tagcsv, locals.activeInventoryId);
 
@@ -183,7 +183,7 @@ console.log("formData:", orgData);
                     }
                   }),
                 },
-				slug: slugify(safeTitle.toLowerCase()) || "default-product",
+				slug: slugify(safeTitle.toLowerCase()) || "new-item",
                 description: description.trim(),
                 // authorId: locals.user.id,
                 tags: {

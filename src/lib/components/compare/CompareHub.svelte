@@ -65,7 +65,11 @@
             const data = await res.json();
             if (res.ok && data.success) {
                 compareResults = data;
-                dispatch('success', `Found ${data.totalDetected} items!`);
+                if (data.totalVisibleCount > data.totalDetected) {
+                    dispatch('notify', { status: 'warning', message: `We saw ${data.totalVisibleCount} items but only extracted ${data.totalDetected}. Some may be missing.` });
+                } else {
+                    dispatch('success', `Found ${data.totalDetected} items!`);
+                }
             } else {
                 alert(data.error || 'Comparison failed.');
             }

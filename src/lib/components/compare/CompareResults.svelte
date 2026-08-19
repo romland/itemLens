@@ -5,6 +5,7 @@
     import ARImagePreview from './ARImagePreview.svelte';
     import CompareEmptyState from './CompareEmptyState.svelte';
     import CompareItemCard from './CompareItemCard.svelte';
+    import CompareAttributeSheet from './CompareAttributeSheet.svelte';
 
     export let results: {
         draftPath: string;
@@ -14,6 +15,7 @@
         missingFromScope: any[];
         scopeType?: string;
         scopeValue?: string;
+        activeSchema?: any[];
     };
     export let containers: any[] = [];
     export let categories: any[] = [];
@@ -31,6 +33,10 @@
 
     let actionModal: HTMLDialogElement;
     let actionItem: any = null;
+
+    let attributeSheetModal: HTMLDialogElement;
+    let pendingItemForAdd: any = null;
+    let pendingTarget: 'inventory' | 'to buy' | 'todo' | null = null;
 
     $: scopeType = results.scopeType || 'all';
     $: scopeValue = results.scopeValue || '';
@@ -151,7 +157,21 @@
         ...correct.map(i => ({ box: i.box, colorClass: 'border-success shadow-[0_0_15px_rgba(var(--su),0.8)]', id: i.title }))
     ];
 
-    async function quickAdd(item: any, target: 'inventory' | 'to buy' | 'todo') {
+    async function quickAdd(item: any, target: 'inventory' | 'to buy' | 'todo', skipHumanCheck = false) {
+        // Check for HUMAN_REQUIRED fields if adding to inventory
+        if (target === 'inventory' && !skipHumanCheck && results.activeSchema) {
+            const localAttributes = item.extractedAttributes || {};
+            const needsHuman = results.activeSchema.some(f => 
+                f.extractionMethod === 'HUMAN_REQUIRED' || 
+                (f.extractionMethod === 'HYBRID' && !localAttributes[f.name])
+            );
+            if (needsHuman) {
+                pendingItemForAdd = item;
+                pendingTarget = target;
+                attributeSheetModal.showModal();
+                return;
+            }
+        }
         savingTitles.add(item.title);
         savingTitles = savingTitles;
 
@@ -164,6 +184,7 @@
                 if (results.draftPath) fd.append('draftPath', results.draftPath);
                 if (item.box) fd.append('box', JSON.stringify(item.box));
                 if (scopeType === 'container' && scopeValue) fd.append('container', scopeValue);
+                if (item.extractedAttributes) fd.append('extractedAttributes', JSON.stringify(item.extractedAttributes));
                 res = await fetch('/api/item', { method: 'POST', body: fd });
             } else {
                 fd.append('content', `${target === 'to buy' ? 'Buy: ' : 'Task: '} ${item.title} ${item.subtitle ? `(${item.subtitle})` : ''}`);
@@ -181,6 +202,15 @@
         } finally {
             savingTitles.delete(item.title);
             savingTitles = savingTitles;
+        }
+    }
+
+    function handleAttributeSave(e: CustomEvent) {
+        const { item, attributes } = e.detail;
+        item.extractedAttributes = attributes;
+        attributeSheetModal.close();
+        if (pendingTarget) {
+            quickAdd(item, pendingTarget, true);
         }
     }
 
@@ -427,6 +457,14 @@
        </div>
    </div>
    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Human Input Modal -->
+<dialog bind:this={attributeSheetModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => { pendingItemForAdd = null; pendingTarget = null; }}>
+    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
+        <CompareAttributeSheet item={pendingItemForAdd} activeSchema={results.activeSchema || []} on:save={handleAttributeSave} on:cancel={() => attributeSheetModal.close()} />
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
 <!-- Target Scope Bottom Sheet -->

@@ -9,13 +9,18 @@ export interface ImageAnalysisResult {
   photoType: 'product' | 'invoice' | 'information' | 'other';
   subCategory: string;
   isNewCategory: boolean;
-  description: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  extractedAttributes?: Record<string, string | null>;
+  searchSynonyms?: string[];
 }
 
 export async function analyzePhoto(
   localFilePath: string,
   existingCategories: string[] = [],
-  allowNewCategories: boolean = true
+  allowNewCategories: boolean = true,
+  templateFields: any[] = []
 ): Promise<ImageAnalysisResult> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const base64Data = fileBuffer.toString('base64');
@@ -25,19 +30,65 @@ export async function analyzePhoto(
   if (ext === '.png') mimeType = 'image/png';
   else if (ext === '.webp') mimeType = 'image/webp';
 
-  const promptText = `
-    Analyze this image for a home inventory system.
+  // Convert DB fields to a schema description for Gemini
+  let schemaPrompt = '';
+  let schemaObj: any = {};
+  
+  const visibleFields = templateFields.filter(f => f.extractionMethod !== 'HUMAN_REQUIRED');
+  const hasSchema = visibleFields.length > 0;
 
-    EXISTING SUB-CATEGORIES IN DATABASE:
-    ${JSON.stringify(existingCategories)}
+  let promptText = '';
+  const properties: any = {
+    photoType: { type: 'string', enum: ['product', 'invoice', 'information', 'other'], description: 'Type of photo' },
+    title: { type: 'string', description: 'Concise product title' },
+    subCategory: { type: 'string', description: 'Fine-grained sub-category' },
+    isNewCategory: { type: 'boolean', description: 'True if subCategory was created new' },
+    searchSynonyms: { type: 'array', items: { type: 'string' } }
+  };
+  const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms'];
 
+  if (hasSchema) {
+      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n`;
+      for (const field of visibleFields) {
+          schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
+          if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;
+          else schemaPrompt += `- ${field.name} (${field.uiLabel})\n`;
+      }
+
+    promptText = `Analyze this image for a home inventory system.
+    EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
+    
     TASKS:
     1. photoType: Identify if this photo is a 'product' (physical item), 'invoice' (receipt/bill), 'information' (pinout/diagram/spec sheet), or 'other'.
-    2. subCategory: Assign a sub-category. 
-       ${allowNewCategories ? "- CRITICAL: If the image fits ANY string in EXISTING SUB-CATEGORIES, you MUST reuse that exact string.\n       - If none fit, create a new standardized short lowercase string (e.g., 'power_tool', 't_shirt', 'circuit_board')." : "- CRITICAL RESTRICTION: You MUST ONLY select a string EXACTLY as it appears in the EXISTING SUB-CATEGORIES list. Do NOT invent or create new categories under any circumstances. Pick the closest match."}
-    3. isNewCategory: Set to true ONLY if you created a subCategory not in the existing list.
-    4. description: A brief visual summary of the image.
-  `;
+    2. title: Identify this product. Return a concise 'title' for it.
+    3. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create new short lowercase string." : "MUST pick exactly from list."}
+    4. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
+    5. description: A brief visual physical description of the item.
+    ${schemaPrompt}
+    7. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.`;
+
+    properties.description = { type: 'string', description: 'Brief visual description' };
+    properties.extractedAttributes = { type: 'object', properties: schemaObj, required: visibleFields.map(f => f.name) };
+    required.push('description', 'extractedAttributes');
+  } else {
+    promptText = `Analyze this image for a home inventory system.
+    EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
+    
+    CRITICAL GROUNDING RULES:
+    - YOU ARE A STRICT VISUAL EXTRACTOR.
+    - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
+    - NEVER write plot summaries, historical context, or fun facts.
+
+    TASKS:
+    1. photoType: Identify if this photo is a 'product', 'invoice', 'information', or 'other'.
+    2. title: Identify this product. Return the actual name of the work itself (Book Title, Album Name, Product Name) based strictly on visible text. NEVER put the creator here.
+    3. subtitle: Identify the creator (Author, Band/Artist, Maker, Brand). NEVER put the main work title here. DO NOT write a description or plot summary. Just literal secondary text.
+    4. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create new short lowercase string." : "MUST pick exactly from list."}
+    5. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
+    6. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.`;
+
+    properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
+  }
 
   const response = await ai.models.generateContent({
     // model: 'gemini-2.5-flash',
@@ -54,27 +105,7 @@ export async function analyzePhoto(
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
-        type: 'object',
-        properties: {
-          photoType: { 
-            type: 'string', 
-            enum: ['product', 'invoice', 'information', 'other'],
-            description: 'Type of photo' 
-          },
-          subCategory: { 
-            type: 'string', 
-            description: 'Fine-grained sub-category' 
-          },
-          isNewCategory: { 
-            type: 'boolean', 
-            description: 'True if subCategory was created new' 
-          },
-          description: { 
-            type: 'string', 
-            description: 'Brief visual summary' 
-          }
-        },
-        required: ['photoType', 'subCategory', 'isNewCategory', 'description']
+        type: 'object', properties, required
       }
     }
   });

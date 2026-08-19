@@ -6,12 +6,11 @@ import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 
 import type { Item, Photo, Prisma } from '@prisma/client';
-import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
+  import { createItemEntity, formKVPsToDBrows, getTagIds, processFormDocuments } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
+  import { savePhotos, getSafeFilename } from '$lib/server/photouploads';
 import { autoFill } from '$lib/server/autofill';
-import { processFormDocuments } from '$lib/server/services';
 import { logActivity } from '$lib/server/logger';
 
 export const actions = {
@@ -34,7 +33,6 @@ export const actions = {
         }
         */
 
-    		const safeTitle = title.trim() || "Default product";
         /*
         if(containers.length === 0) {
           console.warn("Missing required field(s): containers");
@@ -45,9 +43,12 @@ export const actions = {
         }
         */
 
-        const photos: Photo[] = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
+        const { photos, extractedAttributes, extractedTitle, extractedDescription } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
         const ids = await getTagIds(tagcsv, locals.activeInventoryId);
+
+        const safeTitle = (title.trim() || extractedTitle || "New Item").trim();
+        const finalDesc = (description.trim() || extractedDescription || "").trim();
 
 /*
 console.log("formData:", orgData);
@@ -60,39 +61,18 @@ return fail(400, {
 */
 
     		const parsedAmount = parseInt(data.amount as string, 10);
-        const item : Item = await db.item.create({
-            data: {
-        				title: safeTitle,
-                inventoryId: locals.activeInventoryId,
-                reason: data.reason as string || "",
-                // amount: parseInt(data.amount as string, 10) || null,
-        				amount: isNaN(parsedAmount) ? null : parsedAmount,
-                photos: {
-                  create: photos
-                },
-                attributes: {
-                  create: kvps
-                },
-                // valid (motherfucker)
-                locations: {
-                  create: containers.map((cont) => {
-                    return {
-                      container : {
-                          connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: String(cont) } },
-                      }
-                    }
-                  })
-                },
-        				slug: slugify(safeTitle.toLowerCase()) || "default-product",
-                description: description.trim(),
-                authorId: locals.user.id,
-                tags: {
-                    connect: [...ids]
-                }
-            },
-            include: {
-              photos : true,
-            }
+        const item = await createItemEntity({
+            title: safeTitle,
+            description: finalDesc,
+            reason: data.reason as string || "",
+            amount: isNaN(parsedAmount) ? null : parsedAmount,
+            inventoryId: locals.activeInventoryId,
+            userId: locals.user.id,
+            containers,
+            tagIds: ids,
+            photos,
+            attributes: kvps,
+            extractedAttributes
         });
 
         const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
@@ -114,7 +94,6 @@ return fail(400, {
         // Fire and forget heavy IO & ML tasks so the server returns "200 OK" to the outbox instantly
         processFormDocuments(orgData, { itemId: item.id }, uploadsDiskFolder, uploadsWebFolder).catch(e => console.error(e));
         downloadAndStoreDocuments({ itemId: item.id }, uploadsRemoteSite, data, uploadsDiskFolder, uploadsWebFolder, "qr.").catch(e => console.error(e));
-        processItemPhotosBackground(item).catch(e => console.error(e));
 
         if (data.llm_attributes_used === 'true') {
           await logActivity(item.id, 'Attributes', 'Automatically structured messy attribute data using AI', 'success');

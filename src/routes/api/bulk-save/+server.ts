@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/database';
 import { ioQueue } from '$lib/server/queue/index';
 import slugify from 'slugify';
-import { processItemPhotosBackground } from '$lib/server/photouploads';
 import { taskManager } from '$lib/server/taskManager';
 import { getTagIds } from '$lib/server/services';
 import { extractBoundingBox } from '$lib/server/imageProcessor';
@@ -15,6 +14,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const userId = locals.user.id;
     const inventoryId = locals.activeInventoryId;
     
+    const inv = await db.inventory.findUnique({ where: { id: inventoryId }, select: { deepScanCollections: true } });
+    const doDeepScan = inv?.deepScanCollections ?? false;
+
     // Fire and forget background worker
     ioQueue.add(async () => {
         const taskId = taskManager.start('global', 0, `Saving ${items.length} items from collection...`);
@@ -54,8 +56,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 const { getOrCreateCategory } = await import('$lib/server/categories');
                 const cat = await getOrCreateCategory(finalCategoryName, inventoryId);
 
-                // Mock the ML response so the UI recognizes the category without needing an expensive API call per item
-                const simulatedLlmAnalysis = JSON.stringify({
+                // Only mock the ML response if Deep Scan is off. If it's on, omitting this forces the background worker to analyze it.
+                const simulatedLlmAnalysis = doDeepScan ? undefined : JSON.stringify({
                     photoType: 'product',
                     subCategory: finalCategoryName.toLowerCase(),
                     isNewCategory: false,
@@ -63,27 +65,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 });
 
                 // Assemble the item
-                const createdItem = await db.item.create({
-                    data: {
-                        title: item.title,
-                        inventoryId,
-                        slug: slugify((item.title || 'item').toLowerCase(), { lower: true }),
-                        amount: 1,
-                        authorId: userId,
-                        description: item.subtitle || "",
-                        photos: { 
-                            create: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, llmAnalysis: simulatedLlmAnalysis, showOriginal: true }] 
-                        },
-                        attributes: { create: attributesToCreate },
-                        locations: containers?.length ? { create: containers.map((c: string) => ({ container: { connect: { inventoryId_name: { inventoryId, name: c } } } })) } : undefined,
-                        timelineNotes: noteId ? { connect: [{ id: noteId }] } : undefined,
-                        tags: tagIds.length > 0 ? { connect: tagIds } : undefined
-                    },
-                    include: { photos: true }
+                const { createItemEntity } = await import('$lib/server/services');
+                const createdItem = await createItemEntity({
+                    title: item.title,
+                    description: item.subtitle || "",
+                    amount: 1,
+                    inventoryId,
+                    userId,
+                    containers,
+                    tagIds,
+                    photos: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, ...(simulatedLlmAnalysis ? { llmAnalysis: simulatedLlmAnalysis } : {}), showOriginal: true }],
+                    attributes: attributesToCreate,
+                    extractedAttributes: item.extractedAttributes,
+                    timelineNoteId: noteId
                 });
-
-                // Hand off to the heavy background ML processor to generate thumbnails, remove backgrounds, etc.
-                processItemPhotosBackground(createdItem).catch(e => console.error(e));
             }
         } catch (e) {
             console.error("Bulk processing failed:", e);

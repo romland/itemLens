@@ -12,6 +12,8 @@
 
 	let notifications: any[] = [];
 	let avatarPreview: string | null = null;
+    let inventoryArchetype = "apparel";
+    let customArchetype = "";
 
     const updateTheme: SubmitFunction = ({ action }) => {
         const theme = action.searchParams.get('theme');
@@ -132,6 +134,30 @@
 		</button>
 	</div>
 
+	<!-- APPEARANCE -->
+    <h2 class="text-2xl font-bold mb-6">Appearance</h2>
+    
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+        <h3 class="font-bold text-lg mb-4">Application Theme</h3>
+        <p class="text-sm text-gray-500 mb-6">Select a theme to change the colors and feel of the entire application.</p>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {#each themes as theme}
+                <form method="POST" action="/?/setTheme&theme={theme.id}&redirectTo=/settings" use:enhance={() => {
+                    // Instantly apply the theme in the browser while the server saves the cookie
+                    document.documentElement.setAttribute('data-theme', theme.id);
+                    return async ({ update }) => {
+                        await update({ reset: false });
+                    };
+                }}>
+                    <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border transition-all {currentTheme === theme.id ? 'border-primary ring-2 ring-primary/30 bg-base-300' : 'border-base-300 hover:border-primary/50 bg-base-200 hover:bg-base-300'}">
+                        <i class="bi {theme.icon} text-2xl"></i>
+                        <span class="font-semibold text-sm">{theme.name}</span>
+                    </button>
+                </form>
+            {/each}
+        </div>
+    </div>
 
 	<!-- PROFILE -->
 	<h2 class="text-2xl font-bold mb-6">Profile & Security</h2>
@@ -177,36 +203,24 @@
 		</form>
 	</div>
 
-	<!-- APPEARANCE -->
-    <h2 class="text-2xl font-bold mb-6">Appearance</h2>
-    
-    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
-        <h3 class="font-bold text-lg mb-4">Application Theme</h3>
-        <p class="text-sm text-gray-500 mb-6">Select a theme to change the colors and feel of the entire application.</p>
-        
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {#each themes as theme}
-                <form method="POST" action="/?/setTheme&theme={theme.id}&redirectTo=/settings" use:enhance={() => {
-                    // Instantly apply the theme in the browser while the server saves the cookie
-                    document.documentElement.setAttribute('data-theme', theme.id);
-                    return async ({ update }) => {
-                        await update({ reset: false });
-                    };
-                }}>
-                    <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border transition-all {currentTheme === theme.id ? 'border-primary ring-2 ring-primary/30 bg-base-300' : 'border-base-300 hover:border-primary/50 bg-base-200 hover:bg-base-300'}">
-                        <i class="bi {theme.icon} text-2xl"></i>
-                        <span class="font-semibold text-sm">{theme.name}</span>
-                    </button>
-                </form>
-            {/each}
-        </div>
-    </div>
 
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
 		<h3 class="font-bold text-lg mb-4">Create New Inventory</h3>
-		<form method="POST" action="?/createInventory" use:enhance={createEnhancer} class="flex gap-2">
-			<input type="text" name="name" placeholder="Inventory Name (e.g., Books)" class="input input-bordered w-full" required>
-            <button type="submit" class="btn btn-primary">Create</button>
+        <form method="POST" action="?/createInventory" use:enhance={createEnhancer} class="flex flex-col gap-3">
+            <div class="flex gap-2">
+                <input type="text" name="name" placeholder="Inventory Name (e.g., Wardrobe)" class="input input-bordered flex-1" required>
+                <select name="archetype" bind:value={inventoryArchetype} class="select select-bordered w-44">
+                    <option value="apparel">Apparel & Clothing</option>
+                    <option value="electronics">Electronics & Parts</option>
+                    <option value="tools">Tools & Hardware</option>
+                    <option value="media">Media & Books</option>
+                    <option value="other">Other...</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+            {#if inventoryArchetype === 'other'}
+                <input type="text" name="customArchetype" bind:value={customArchetype} placeholder="What kind of items? (e.g., Board Games, Action Figures)" class="input input-bordered w-full text-xs" required />
+            {/if}
         </form>
     </div>
 
@@ -342,12 +356,31 @@
 										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowNewCategories} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
 										<span class="text-xs text-gray-500 font-medium">Allow automated creation of categories</span>
 									</form>
+									<form method="POST" action="?/toggleAutoTaxonomy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+										<input type="hidden" name="id" value={v.id}>
+										<input type="hidden" name="allowAutoTaxonomy" value={(!v.allowAutoTaxonomy).toString()}>
+										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowAutoTaxonomy} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+										<span class="text-xs text-gray-500 font-medium">Enable AI Taxonomy & Attribute Extractions</span>
+									</form>
 									<form method="POST" action="?/toggleExtractExif" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
 										<input type="hidden" name="id" value={v.id}>
 										<input type="hidden" name="extractExif" value={(!v.extractExif).toString()}>
 										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.extractExif} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
 										<span class="text-xs text-gray-500 font-medium">Extract EXIF data (including GPS) from photos</span>
 									</form>
+									<form method="POST" action="?/toggleDeepScan" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+										<input type="hidden" name="id" value={v.id}>
+										<input type="hidden" name="deepScan" value={(!v.deepScanCollections).toString()}>
+										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.deepScanCollections} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+										<span class="text-xs text-gray-500 font-medium">Deep-scan collection imports (extracts detailed attributes for all items in collections)</span>
+									</form>
+
+                            <!-- Manual Schema Retry Action -->
+                            <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} class="mt-2">
+                                <input type="hidden" name="inventoryId" value={v.id}>
+                                <input type="hidden" name="name" value={v.name}>
+                                <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Taxonomy Rules</button>
+                            </form>
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}
