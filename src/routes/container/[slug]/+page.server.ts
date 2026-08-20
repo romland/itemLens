@@ -15,6 +15,7 @@ export const load = (async ({ locals, params }) => {
         include: {
             children : {
                 select : {
+                    id: true,
                     name : true,
                     parentId : true,
                     description : true,
