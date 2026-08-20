@@ -148,7 +148,9 @@ For each item:
                     item.isDuplicate = true;
                     const sharedAttrs: any[] = [];
                     if (item.extractedAttributes) {
+                        const schemaKeys = new Set(activeSchema.map((s: any) => s.name));
                         for (const [k, v] of Object.entries(item.extractedAttributes)) {
+                            if (!schemaKeys.has(k)) continue;
                             const dbVal = dbItem.attributes.find((a: any) => a.key === k)?.value;
                             if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
                                 sharedAttrs.push({ key: k, value: String(v) });

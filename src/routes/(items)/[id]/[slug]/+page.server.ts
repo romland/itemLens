@@ -66,11 +66,13 @@ export const load = (async ({ locals, params }) => {
 
      let duplicateItemDetails = null;
      if (!item.duplicateDismissed) {
+         const schemaKeys = new Set(activeSchema.map((s: any) => s.name));
          for (const dbItem of existingItems) {
              const match = computeMatch(itemAttrs, item.title || '', '', dbItem, activeSchema, item.photos?.[0]?.category?.name);
              if (match.isMatch) {
                  const sharedAttrs = [];
                  for (const [k, v] of Object.entries(itemAttrs)) {
+                     if (!schemaKeys.has(k)) continue;
                      const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
                      if (dbVal && !isUseless(v) && normalizeStr(v) === normalizeStr(dbVal)) sharedAttrs.push({ key: k, value: v });
                  }

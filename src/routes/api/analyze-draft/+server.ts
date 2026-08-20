@@ -86,7 +86,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         console.log(`[DEBUG] Trace:\n  ` + (match as any).debugTrace?.join('\n  '));
 
                         if (classificationData.extractedAttributes) {
+                            const schemaKeys = new Set(activeSchema.map(s => s.name));
                             for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
+                                if (!schemaKeys.has(k)) continue;
                                 const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
                                 if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
                                     sharedAttrs.push({ key: k, value: String(v) });
