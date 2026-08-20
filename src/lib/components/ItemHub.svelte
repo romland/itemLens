@@ -40,6 +40,7 @@
     let currentDraftPath = "";
     let isDuplicateWarning = false;
     let duplicateDetails: any = null;
+    let duplicateDismissed = false;
 
     // Dirty State Reactivity
     $: {
@@ -227,7 +228,7 @@
                         {/if}
                     </div>
                 </div>
-                <button type="button" class="btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Dismiss" on:click={() => isDuplicateWarning = false}><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="btn btn-ghost btn-sm btn-circle shrink-0" aria-label="Dismiss" on:click={() => { isDuplicateWarning = false; duplicateDismissed = true; }}><i class="bi bi-x-lg"></i></button>
             </div>
         {/if}
 
@@ -402,6 +403,7 @@
         </div>
 
         <!-- STICKY FOOTER -->
+        <input type="hidden" name="duplicateDismissed" value={duplicateDismissed.toString()} />
         <div class="sticky bottom-16 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] mt-6">
             <button disabled={saving || !isDirty} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md transition-all active:scale-95">
                 {#if saving}

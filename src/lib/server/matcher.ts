@@ -17,6 +17,12 @@ export function getSimilarity(s1: string, s2: string): number {
     return 1 - (dp[len1][len2] / Math.max(len1, len2));
 }
 
+export const isUseless = (s: any) => {
+    if (!s) return true;
+    const norm = String(s).trim().toLowerCase();
+    return norm === 'null' || norm === 'undefined' || norm === 'unknown' || norm === 'n/a' || norm === 'none';
+};
+
 export function computeMatch(scanAttributes: Record<string, string>, scanTitle: string, scanRawText: string, dbItem: any, activeSchema: any[], scanCategory?: string): { isMatch: boolean, confidence: number, debugTrace: string[] } {
     let strictFailures = 0;
     let fuzzyMatches = 0;
@@ -37,9 +43,8 @@ export function computeMatch(scanAttributes: Record<string, string>, scanTitle: 
     if (scanAttributes && Object.keys(scanAttributes).length > 0) {
         for (const field of activeSchema) {
             const scanVal = scanAttributes[field.name];
-
-            const normScanVal = scanVal ? normalizeStr(String(scanVal)) : null;
-            const normDbVal = dbAttributes[field.name];
+            const normScanVal = isUseless(scanVal) ? null : normalizeStr(String(scanVal));
+            const normDbVal = isUseless(dbAttributes[field.name]) ? null : dbAttributes[field.name];
 
             if (field.matchWeight === 'STRICT_DEDUPE') {
                 if (normDbVal && normScanVal && normDbVal !== normScanVal) {

@@ -49,7 +49,8 @@ export async function analyzePhoto(
   const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms'];
 
   if (hasSchema) {
-      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n`;
+      // schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n`;
+      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, missing, or unknown, output null (do NOT use "unknown", "n/a", or "none").\n`;
       for (const field of visibleFields) {
           schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
           if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;

@@ -10,7 +10,7 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { taskManager } from '$lib/server/taskManager';
  import { getActiveSchema } from '$lib/server/ontology';
- import { computeMatch, normalizeStr } from '$lib/server/matcher';
+ import { computeMatch, normalizeStr, isUseless } from '$lib/server/matcher';
 
 export const load = (async ({ locals, params }) => {
       const parsedId = Number(params.id);
@@ -70,7 +70,7 @@ export const load = (async ({ locals, params }) => {
                  const sharedAttrs = [];
                  for (const [k, v] of Object.entries(itemAttrs)) {
                      const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
-                     if (dbVal && normalizeStr(v) === normalizeStr(dbVal)) sharedAttrs.push({ key: k, value: v });
+                     if (dbVal && !isUseless(v) && normalizeStr(v) === normalizeStr(dbVal)) sharedAttrs.push({ key: k, value: v });
                  }
                  duplicateItemDetails = {
                      id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,

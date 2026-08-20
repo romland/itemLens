@@ -70,6 +70,7 @@ return fail(400, {
             userId: locals.user.id,
             containers,
             tagIds: ids,
+            duplicateDismissed: data.duplicateDismissed === 'true',
             photos,
             attributes: kvps,
             extractedAttributes

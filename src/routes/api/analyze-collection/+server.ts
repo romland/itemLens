@@ -9,8 +9,8 @@ import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
 import sharp from 'sharp';
 import { withRetry } from '$lib/server/retry';
- import { computeMatch, normalizeStr } from '$lib/server/matcher';
- import { getActiveSchema } from '$lib/server/ontology';
+import { computeMatch, normalizeStr, isUseless } from '$lib/server/matcher';
+import { getActiveSchema } from '$lib/server/ontology';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -150,7 +150,7 @@ For each item:
                     if (item.extractedAttributes) {
                         for (const [k, v] of Object.entries(item.extractedAttributes)) {
                             const dbVal = dbItem.attributes.find((a: any) => a.key === k)?.value;
-                            if (dbVal && normalizeStr(String(v)) === normalizeStr(dbVal)) {
+                            if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
                                 sharedAttrs.push({ key: k, value: String(v) });
                             }
                         }

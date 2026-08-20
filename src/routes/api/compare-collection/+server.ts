@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
-    import { computeMatch, normalizeStr } from '$lib/server/matcher';
+import { computeMatch, normalizeStr } from '$lib/server/matcher';
 import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });

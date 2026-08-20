@@ -10,7 +10,7 @@ import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
 import crypto from 'crypto';
-    import { normalizeStr, computeMatch } from '$lib/server/matcher';
+    import { normalizeStr, computeMatch, isUseless } from '$lib/server/matcher';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -75,7 +75,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                         if (classificationData.extractedAttributes) {
                             for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
                                 const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
-                                if (dbVal && normalizeStr(String(v)) === normalizeStr(dbVal)) {
+                                if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
                                     sharedAttrs.push({ key: k, value: String(v) });
                                 }
                             }
