@@ -45,7 +45,7 @@
         },
         { 
             id: 'collectibles', name: 'Valuables/Collectibles', icon: 'bi-gem', 
-            examples: 'Coins, stamps, cards, art, sculptures, toys, Lego, posters, etc.', 
+            examples: 'Coins, stamps, cards, sculptures, toys, Lego, posters, pet rocks, etc.', 
             defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true}, {label: 'Deep Scan', icon: 'bi-search', highlight: true}] 
         },
         { 
