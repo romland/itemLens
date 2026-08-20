@@ -6,6 +6,7 @@
     import AttributeAdder from "$lib/components/AttributeAdder.svelte";
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
+    import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import { photoTypes } from "$lib/shared/constants";
     import { marked } from 'marked';
     import { createEventDispatcher } from 'svelte';
@@ -75,6 +76,7 @@
     let userHint = "";
     let isRefining = false;
     let aiDialog: HTMLDialogElement;
+    let lightbox: ImageLightbox;
 
     $: if (aiDialog) {
         if (showAiDrawer && !aiDialog.open) aiDialog.showModal();
@@ -209,7 +211,7 @@
                 <div class="flex-1 min-w-0">
                     <h3 class="font-bold text-sm mb-2">Potential Duplicate</h3>
                     
-                    <ItemMiniCard item={duplicateDetails} />
+                    <ItemMiniCard item={duplicateDetails} on:zoom={() => lightbox.open({ orgPath: duplicateDetails.thumbPath || duplicateDetails.orgPath, showOriginal: true })} />
 
                     <div class="text-[11px] mt-2 flex flex-col gap-1">
                         <div class="flex items-center justify-between gap-2 px-1">
@@ -598,3 +600,5 @@
         <button type="button" on:click={() => showAiDrawer = false}>close</button>
     </div>
 </dialog>
+
+<ImageLightbox bind:this={lightbox} />
