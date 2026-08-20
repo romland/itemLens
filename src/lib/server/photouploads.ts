@@ -370,6 +370,7 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                     llmAnalysis,
                     ocr,
                     colors,
+                    showOriginal: photoType === 'invoice or receipt'
                 });
             })());
 		}

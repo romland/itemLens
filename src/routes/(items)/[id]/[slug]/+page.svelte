@@ -9,6 +9,7 @@
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import InvoiceViewer from "$lib/components/InvoiceViewer.svelte";
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
+    import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
 
     export let data: PageServerData;
     
@@ -17,6 +18,7 @@
     let isSavingPasted = false;
     let lightbox: ImageLightbox;
     let isProcessingItem = false;
+    let attrModal: HTMLDialogElement;
 
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
     // this block automatically re-runs and updates our local state instantly.
@@ -104,6 +106,13 @@ $:  if(!done && invoicePhotos.length > 0) {
 $:  pageTitle.set(data.item?.title || 'Item Details');
 
 $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category).map(p => p.category.name) || []));
+$:  activeSchema = data.activeSchema || [];
+$:  itemAttributes = data.item?.attributes?.reduce((acc: any, a: any) => { acc[a.key] = a.value; return acc; }, {}) || {};
+$:  hasMissingFields = activeSchema.some(f => 
+        f.extractionMethod === 'HUMAN_REQUIRED' || 
+        (f.extractionMethod === 'HYBRID' && !itemAttributes[f.name])
+    );
+
 </script>
 
 <PasteHandler 
@@ -140,9 +149,16 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                 <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200 mt-2 gap-1">
                     <li>
                         <a href="/{data.item?.id}/edit" class="font-medium text-base-content hover:text-primary">
-                            <i class="bi bi-pencil-square text-lg opacity-70"></i> Edit
+                            <i class="bi bi-pencil-square text-lg opacity-70"></i> Modify
                         </a>
                     </li>
+                    {#if activeSchema.length > 0}
+                        <li>
+                            <button type="button" class="font-medium text-base-content hover:text-primary justify-between" on:click={() => attrModal.showModal()}>
+                                <span class="flex items-center gap-2"><i class="bi bi-ui-checks-grid text-lg opacity-70"></i> Attributes</span>
+                            </button>
+                        </li>
+                    {/if}
                     <li>
                         <a href="https://www.google.com/search?q={encodeURIComponent(data.item?.title)}" target="_blank" rel="noopener noreferrer" class="font-medium text-base-content hover:text-primary">
                             <i class="bi bi-google text-lg opacity-70"></i> Search
@@ -173,7 +189,8 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                     else if (e.detail === 'ignore') {
                         if (confirm('Are you sure you want to vaporize this anomaly? This cannot be undone.')) (document.getElementById('deleteDuplicateForm') as HTMLFormElement)?.requestSubmit();
                     }
-                }} 
+                }}
+                on:zoom={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}
             />
             <form id="mergeForm" method="POST" action="?/mergeDuplicate" class="hidden" use:enhance>
                 <input type="hidden" name="targetId" value={data.duplicateItemDetails.id}>
@@ -391,8 +408,15 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
 
     {#if data.item.attributes.length > 0 || photoAttributes.length > 0}
         <div class="bg-base-100 rounded-3xl border border-base-200 shadow-sm p-4 sm:p-6 mb-6">
-            <div class="font-bold text-lg mb-4 flex items-center gap-2">
-                <i class="bi bi-list-columns-reverse text-primary"></i> Attributes
+            <div class="flex items-center justify-between mb-4">
+                <div class="font-bold text-lg flex items-center gap-2">
+                    <i class="bi bi-list-columns-reverse text-primary"></i> Attributes
+                </div>
+                {#if activeSchema.length > 0}
+                    <button type="button" class="btn btn-xs btn-ghost text-primary gap-1" on:click={() => attrModal.showModal()}>
+                        <i class="bi bi-pencil-square"></i> Edit Form
+                    </button>
+                {/if}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -564,6 +588,19 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
         </div>
     </div>
 </article>
+
+<form method="POST" action="?/saveAttributes" id="saveAttrsForm" use:enhance={() => {
+    return async ({ update }) => { attrModal.close(); await update(); };
+}}>
+    <input type="hidden" name="attributes" id="attrsInput" />
+</form>
+
+<dialog bind:this={attrModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
+        <CompareAttributeSheet item={{...data.item, extractedAttributes: itemAttributes}} {activeSchema} showAll={true} on:cancel={() => attrModal.close()} on:save={(e) => { document.getElementById('attrsInput').value = JSON.stringify(e.detail.attributes); document.getElementById('saveAttrsForm').requestSubmit(); }} />
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} categories={data.categories} allowCategoryEdit={true} />
 

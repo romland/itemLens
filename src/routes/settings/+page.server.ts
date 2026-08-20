@@ -25,6 +25,9 @@ export const load = async ({ locals }) => {
                 extractExif: true,
                 deepScanCollections: true,
                 duplicateStrategy: true,
+                templateFields: {
+                    select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
+                },
                 _count: { select: { items: true, notes: true, containers: true } }
             } 
         });
@@ -244,6 +247,36 @@ export const actions = {
         if (!inventoryId) return fail(400, { error: true, message: "Invalid ID." });
         await bootstrapInventorySchema(inventoryId, name);
         return { success: true, message: `Taxonomy rules regenerated for '${name}'!` };
+    },
+
+    updateTaxonomy: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const taxonomyJson = data.get('taxonomyJson') as string;
+        
+        try {
+            const fields = JSON.parse(taxonomyJson);
+            
+            await db.$transaction([
+                db.templateField.deleteMany({ where: { inventoryId: id } }),
+                db.templateField.createMany({
+                    data: fields.map((f: any) => ({
+                        name: f.name,
+                        uiLabel: f.uiLabel || f.name,
+                        type: f.type || 'string',
+                        options: typeof f.options === 'string' ? f.options : JSON.stringify(f.options),
+                        matchWeight: f.matchWeight || 'FUZZY_SECONDARY',
+                        extractionMethod: f.extractionMethod || 'HYBRID',
+                        inventoryId: id,
+                        categoryId: f.categoryId || null
+                    }))
+                })
+            ]);
+            return { success: true, message: "Taxonomy updated successfully." };
+        } catch (e: any) {
+            return fail(400, { error: true, message: "Invalid JSON or DB error: " + e.message });
+        }
     },
 
 	deleteInventory: async ({ request, locals }) => {

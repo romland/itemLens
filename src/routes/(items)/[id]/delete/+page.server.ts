@@ -11,6 +11,6 @@ export const actions = {
             }
         });
 
-        redirect(302, '/');
+        return { deleted: true };
     }
 } satisfies Actions;

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import ItemMiniCard from '../ItemMiniCard.svelte';
     export let item: any;
     export let type: 'unregistered' | 'missing' | 'elsewhere' | 'correct';
     export let draftPath: string;
@@ -127,7 +128,17 @@
                     {/if}
                 {/if}
             </div>
+
+            {#if item.matchedItem && (type === 'correct' || type === 'elsewhere')}
+                <div class="mt-2 pt-2 border-t border-base-200/60">
+                    <div class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mb-1">Matched Against:</div>
+                    <div class="bg-base-200/50 rounded-lg">
+                        <ItemMiniCard item={item.matchedItem} on:zoom={() => dispatch('zoomMatch', item.matchedItem)} />
+                    </div>
+                </div>
+            {/if}
         </div>
+        
         
         <div class="flex items-center gap-2 shrink-0">
             <slot name="actions"></slot>

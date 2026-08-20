@@ -356,13 +356,14 @@
                         </div>
                     </div>
 
-                    {#if item.isDuplicate}
-                        <div class="mt-2 mx-1">
+                    {#if item.isDuplicate && !item.optedOut}
+                        <div class="mt-2 mx-1 animate-fade-in">
                             <DuplicateResolution 
                                 scannedTitle={item.title} 
                                 matchDetails={item.duplicateItemDetails} 
                                 currentAction={item.resolution} 
                                 on:resolve={(e) => { item.resolution = e.detail; item.optedOut = e.detail === 'ignore'; items = items; }}
+                                on:zoom={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}
                             />
                         </div>
                     {/if}

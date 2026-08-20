@@ -92,7 +92,8 @@ export const load = (async ({ locals, params }) => {
         },
         activeTasks: taskManager.getTasks('item', item.id),
          categories,
-         duplicateItemDetails
+         duplicateItemDetails,
+         activeSchema
     };
 }) satisfies PageServerLoad;
 
@@ -152,6 +153,25 @@ export const actions = {
         
         return { success: true };
      },
+
+    saveAttributes: async ({ request, locals, params }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        const data = await request.formData();
+        const attrs = JSON.parse(data.get('attributes') as string);
+        const kvps = Object.entries(attrs).filter(([k,v]) => v !== null && v !== '').map(([k,v]) => ({ key: k, value: String(v) }));
+        
+        const itemId = Number(params.id);
+        const existingItem = await db.item.findUnique({ where: { id: itemId }, include: { attributes: true }});
+        for (const kvp of kvps) {
+            const ext = existingItem?.attributes.find(a => a.key === kvp.key);
+            if (ext) {
+                await db.kVP.update({ where: { id: ext.id }, data: { value: kvp.value } });
+            } else {
+                await db.kVP.create({ data: { itemId, key: kvp.key, value: kvp.value } });
+            }
+        }
+        return { success: true };
+    },
 
      mergeDuplicate: async ({ request, locals, params }) => {
          if (!locals.user) return fail(401, { error: 'Unauthorized' });

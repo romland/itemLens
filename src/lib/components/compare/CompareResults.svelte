@@ -2,6 +2,7 @@
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import { createEventDispatcher, onMount } from 'svelte';
     import { beforeNavigate } from '$app/navigation';
+    import { page } from "$app/stores";
     import ARImagePreview from './ARImagePreview.svelte';
     import CompareEmptyState from './CompareEmptyState.svelte';
     import CompareItemCard from './CompareItemCard.svelte';
@@ -107,6 +108,8 @@
 
     let activeTab: 'unregistered' | 'missing' | 'elsewhere' | 'correct' = 'unregistered';
     
+    $: activeInvName = $page.data.inventories?.find((i) => i.id === $page.data.activeInventoryId)?.name || 'Inventory';
+
     // Late binding logic: Auto-select the most emotionally relevant tab upon scan completion
     $: if (results) {
         if (scopeType === 'all') activeTab = (results.newToYou?.length || 0) > 0 ? 'unregistered' : 'correct';
@@ -377,8 +380,9 @@
             <div class="flex flex-col gap-2.5">
                 {#each groupedElsewhere as item}
                     <div id="card-{item.title.replace(/\s+/g, '-')}" class="scroll-mt-24">
-                        <CompareItemCard {item} type="elsewhere" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })}>
-                            <div slot="actions">
+                        <CompareItemCard {item} type="elsewhere" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })} on:zoomMatch={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}>
+                            <div slot="actions" class="flex flex-col sm:flex-row items-center gap-1">
+                                <button type="button" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
                                 <a href="/{item.matchedItem.id}/{item.matchedItem.slug || 'view'}" class="btn btn-ghost btn-xs text-warning">View</a>
                             </div>
                         </CompareItemCard>
@@ -391,8 +395,9 @@
             <div class="flex flex-col gap-2.5">
                 {#each groupedCorrect as item}
                     <div id="card-{item.title.replace(/\s+/g, '-')}" class="scroll-mt-24">
-                        <CompareItemCard {item} type="correct" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })}>
-                            <div slot="actions">
+                        <CompareItemCard {item} type="correct" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })} on:zoomMatch={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}>
+                            <div slot="actions" class="flex flex-col sm:flex-row items-center gap-1">
+                                <button type="button" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
                                 <a href="/{item.matchedItem.id}/{item.matchedItem.slug || 'view'}" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary"><i class="bi bi-arrow-right-short text-2xl"></i></a>
                             </div>
                         </CompareItemCard>
@@ -541,23 +546,23 @@
             <button class="btn btn-sm btn-circle btn-ghost shrink-0" on:click={() => actionModal.close()}><i class="bi bi-x-lg"></i></button>
         </div>
         <div class="p-4 flex flex-col gap-3 bg-base-100">
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl border-base-300 hover:border-primary hover:bg-primary/5" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
+            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
                 <i class="bi bi-box-seam text-2xl mr-4 text-primary"></i>
-                <div class="text-left"><div class="font-bold">Inventory</div><div class="text-xs text-gray-500 font-normal">Add to your database</div></div>
+                <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to inventory</div></div>
             </button>
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl border-base-300 hover:border-warning hover:bg-warning/5" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
+            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 active:scale-95 transition-all p-4 text-left mt-3" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
                 <i class="bi bi-cart text-2xl mr-4 text-warning"></i>
-                <div class="text-left"><div class="font-bold">Shopping List</div><div class="text-xs text-gray-500 font-normal">Add to your buy list</div></div>
+                <div><div class="font-bold text-base-content">Shopping List</div><div class="text-xs text-gray-500 font-normal">Add to your buy list</div></div>
             </button>
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl border-base-300 hover:border-success hover:bg-success/5" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }}>
+            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-success hover:bg-success/5 active:scale-95 transition-all p-4 text-left mt-3" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }}>
                 <i class="bi bi-list-check text-2xl mr-4 text-success"></i>
-                <div class="text-left"><div class="font-bold">To-Do List</div><div class="text-xs text-gray-500 font-normal">Add as a task</div></div>
+                <div><div class="font-bold text-base-content">To-Do List</div><div class="text-xs text-gray-500 font-normal">Add as a task</div></div>
             </button>
             {#if missing.length > 0}
-                <div class="divider my-0 text-xs text-gray-400">OR</div>
-                <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl border-base-300 hover:border-info hover:bg-info/5 text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }}>
-                    <i class="bi bi-link-45deg text-2xl mr-4"></i>
-                    <div class="text-left"><div class="font-bold">Link to Existing...</div><div class="text-xs text-info/70 font-normal">Match it to an expected item</div></div>
+                <div class="divider my-2 text-xs text-gray-400">OR</div>
+                <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-info hover:bg-info/5 active:scale-95 transition-all p-4 text-left text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }}>
+                    <i class="bi bi-link-45deg text-2xl mr-4 text-info"></i>
+                    <div><div class="font-bold text-base-content">Link to Existing...</div><div class="text-xs text-gray-500 font-normal">Match it to an expected item</div></div>
                 </button>
             {/if}
         </div>

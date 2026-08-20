@@ -105,6 +105,7 @@ export async function analyzePhoto(
       }
     ],
     config: {
+      temperature: 0.1,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object', properties, required
@@ -137,6 +138,7 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
       }
     ],
     config: {
+      temperature: 0.1,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object',
@@ -171,6 +173,7 @@ ${text}`;
       }
     ],
     config: {
+      temperature: 0.1,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object',

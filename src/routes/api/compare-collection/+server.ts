@@ -153,7 +153,7 @@ Return a JSON object with:
                 const matchNorm = normalizeStr(match.title);
                 const dbTotalAmount = dbItems.filter(i => normalizeStr(i.title) === matchNorm).reduce((sum, i) => sum + (i.amount || 1), 0);
 
-                inCollection.push({ ...item, matchedItem: { id: match.id, title: match.title, slug: match.slug, amount: match.amount, dbTotalAmount, locationName: match.locations?.[0]?.container?.name || null } });
+                inCollection.push({ ...item, matchedItem: { id: match.id, title: match.title, slug: match.slug, amount: match.amount, dbTotalAmount, locationName: match.locations?.[0]?.container?.name || null, thumbPath: match.photos?.[0]?.thumbPath || match.photos?.[0]?.orgPath || null, categoryName: match.photos?.[0]?.category?.name || 'Uncategorized' } });
             } else {
                 newToYou.push(item);
             }

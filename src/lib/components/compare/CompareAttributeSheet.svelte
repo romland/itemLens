@@ -4,6 +4,7 @@
 
     export let item: any = null;
     export let activeSchema: any[] = [];
+    export let showAll: boolean = false;
     
     let localAttributes: Record<string, string> = {};
     let customInputs: Record<string, boolean> = {};
@@ -13,7 +14,7 @@
         localAttributes = { ...(item.extractedAttributes || {}) };
     }
 
-    $: requiredFields = activeSchema.filter(f => 
+    $: requiredFields = showAll ? activeSchema : activeSchema.filter(f => 
         f.extractionMethod === 'HUMAN_REQUIRED' || 
         (f.extractionMethod === 'HYBRID' && !localAttributes[f.name])
     );
@@ -29,8 +30,8 @@
 
 <div class="p-6 bg-base-100 flex flex-col gap-5">
     <div>
-        <h3 class="font-bold text-xl leading-tight">Missing Details</h3>
-        <p class="text-xs text-gray-500 mt-1">Please provide these details for "{item?.title}"</p>
+        <h3 class="font-bold text-xl leading-tight">Attributes</h3>
+        <p class="text-xs text-gray-500 mt-1">Details for "{item?.title}"</p>
     </div>
 
     <div class="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">

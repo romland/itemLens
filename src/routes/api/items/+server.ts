@@ -47,7 +47,9 @@ export async function GET({ url, setHeaders, locals }) {
             OR: [
                 { title: { contains: q }},
                 { description: { contains: q }},
-                { locations: { some: { container: { name: { contains: q } } } } }
+                { locations: { some: { container: { name: { contains: q } } } } },
+                { photos: { some: { llmAnalysis: { contains: q } } } },
+                { photos: { some: { ocr: { contains: q } } } }
             ]
         };
     }

@@ -391,6 +391,17 @@
                                 <input type="hidden" name="name" value={v.name}>
                                 <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Taxonomy Rules</button>
                             </form>
+                                    
+                                    <details class="collapse bg-base-300 mt-2 rounded-xl border border-base-200">
+                                        <summary class="collapse-title text-[10px] font-bold px-3 py-2 min-h-0">Raw Taxonomy (JSON)</summary>
+                                        <div class="collapse-content px-3 pb-3">
+                                            <form method="POST" action="?/updateTaxonomy" use:enhance={createEnhancer} class="flex flex-col gap-2 mt-2">
+                                                <input type="hidden" name="id" value={v.id}>
+                                                <textarea name="taxonomyJson" class="textarea textarea-bordered font-mono text-[10px] h-64 whitespace-pre leading-tight" spellcheck="false">{JSON.stringify(v.templateFields, null, 2)}</textarea>
+                                                <button type="submit" class="btn btn-primary btn-xs self-end shadow-sm">Save JSON</button>
+                                            </form>
+                                        </div>
+                                    </details>
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}
