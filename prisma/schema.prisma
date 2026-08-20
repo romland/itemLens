@@ -58,7 +58,7 @@ model Inventory {
   name        String
   description String
   classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
-  archetype   String   @default("generic") // "apparel", "electronics", "tools", "media", "generic"
+  archetype   String   @default("generic") // "media", "apparel", "hardware", "consumables", "collectibles", "natural", "generic"
   allowNewCategories Boolean @default(true) // Whether AI is allowed to invent new sub-categories
   allowAutoTaxonomy Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
   extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault

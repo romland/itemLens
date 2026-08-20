@@ -7,13 +7,13 @@
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
 	import Notifications from "$lib/components/Notifications.svelte";
+    import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
 
     export let form: ActionData;
 
 	let notifications: any[] = [];
 	let avatarPreview: string | null = null;
-    let inventoryArchetype = "apparel";
-    let customArchetype = "";
+    let createInventoryModal: CreateInventoryModal;
 
     const updateTheme: SubmitFunction = ({ action }) => {
         const theme = action.searchParams.get('theme');
@@ -48,6 +48,7 @@
         { id: 'light', name: 'Default Light', icon: 'bi-sun' },
         { id: 'manhattan', name: 'Manhattan', icon: 'bi-building' }
     ];
+
 
 	function notify(status: string, message: string, id: string | null = null) {
 		const newId = id || Math.random().toString(36);
@@ -204,39 +205,15 @@
 	</div>
 
 
-    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
-		<h3 class="font-bold text-lg mb-4">Create New Inventory</h3>
-        <!-- 
-        =============================================================================
-        [ARCHETYPE DEFAULTS CONFIGURATION - UI NOTE]
-        When creating an inventory, the archetype determines intelligent system defaults.
-        For example:
-        - Apparel needs deep scanning (parsing huge piles of clothes) and AI taxonomy.
-        - Media/Books needs deep scanning but NOT background removal (boxes/covers are flat).
-        If you add new archetypes or tweak defaults, ensure they are mirrored in the 
-        backend (settings/+page.server.ts -> createInventory).
-        =============================================================================
-        -->
-        <p class="text-xs text-gray-500 mb-4 -mt-2">
-            The archetype you select will automatically configure optimal system defaults. For example, <strong>Apparel</strong> turns on Deep-Scanning and AI Taxonomy by default, while <strong>Media</strong> focuses on bulk processing without background removal.
-        </p>        
-        <form method="POST" action="?/createInventory" use:enhance={createEnhancer} class="flex flex-col gap-3">
-            <div class="flex gap-2">
-                <input type="text" name="name" placeholder="Inventory Name (e.g., Wardrobe)" class="input input-bordered flex-1" required>
-                <select name="archetype" bind:value={inventoryArchetype} class="select select-bordered w-44">
-                    <option value="apparel">Apparel & Clothing</option>
-                    <option value="electronics">Electronics & Parts</option>
-                    <option value="tools">Tools & Hardware</option>
-                    <option value="media">Media & Books</option>
-                    <option value="other">Other...</option>
-                </select>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </div>
-            {#if inventoryArchetype === 'other'}
-                <input type="text" name="customArchetype" bind:value={customArchetype} placeholder="What kind of items? (e.g., Board Games, Action Figures)" class="input input-bordered w-full text-xs" required />
-            {/if}
-        </form>
-    </div>
+	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+		<div>
+			<h3 class="font-bold text-lg mb-1">Create New Inventory</h3>
+			<p class="text-sm text-gray-500">Set up a new isolated vault for a specific collection of items.</p>
+		</div>
+		<button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
+			<i class="bi bi-plus-lg"></i> Create Inventory
+		</button>
+	</div>
 
     {#if $page.data.user?.isAdmin}
         <div class="bg-base-100 border border-error/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
@@ -471,3 +448,5 @@
         </div>
     {/if}
 </div>
+
+<CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => notify('success', e.detail)} on:error={(e) => notify('error', e.detail)} />

@@ -58,7 +58,7 @@ Return a JSON object with:
 - "detectedItems": array of objects, each containing:
 - "title": (string) The actual name of the work (Book Title, Album Name, Movie Title). NEVER the author/artist.
 - "subtitle": (string, optional) ONLY the creator (Author, Artist, Brand, Maker) or edition physically printed on the item. NEVER the main title. DO NOT write descriptions.
-- "category": (string) simple category
+- "category": (string) A STRICTLY SINGULAR, specific retail-style sub-category (e.g. 't-shirt', 'mug', 'wrench'). NEVER use plural. NEVER use broad macro-categories like 'clothing', 'media', or 'electronics'.
   ${activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').length > 0 ? 
   `- "extractedAttributes": (object) You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n SCHEMA: ${JSON.stringify(activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').map(s => ({ name: s.name, type: s.type, options: s.options })))}` : ''}
   - "rawText": (string) literally every word you can read on the item, space separated. Do not format it.

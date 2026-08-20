@@ -2,6 +2,7 @@
 <script lang="ts">
     import ItemMiniCard from './ItemMiniCard.svelte';
     import { createEventDispatcher } from 'svelte';
+    import RelativeDate from './RelativeDate.svelte';
 
     export let scannedTitle: string;
     export let matchDetails: any; // ID, title, locationName, sharedAttributes
@@ -28,12 +29,12 @@
         <div class="mt-3 pt-2 border-t border-warning/20 flex flex-col gap-1.5">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[10px] gap-0.5 sm:gap-0">
                 <span class="text-gray-500 font-bold uppercase tracking-wider">Original Added:</span>
-                <span class="font-medium text-base-content/80">{new Date(matchDetails?.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="font-medium text-base-content/80"><RelativeDate date={matchDetails?.createdAt} /></span>
             </div>
             {#if scannedCreatedAt}
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[10px] gap-0.5 sm:gap-0">
                 <span class="text-gray-500 font-bold uppercase tracking-wider">This Scan Added:</span>
-                <span class="font-medium text-base-content/80">{new Date(scannedCreatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="font-medium text-base-content/80"><RelativeDate date={scannedCreatedAt} /></span>
             </div>
             {/if}
             {#if matchDetails?.sharedAttributes?.length > 0}

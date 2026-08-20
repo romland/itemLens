@@ -10,6 +10,7 @@
     import InvoiceViewer from "$lib/components/InvoiceViewer.svelte";
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
+    import RelativeDate from "$lib/components/RelativeDate.svelte";
 
     export let data: PageServerData;
     
@@ -134,10 +135,18 @@ $:  hasMissingFields = activeSchema.some(f =>
 
 <article style="padding-bottom: 100px;" class="">
 
-    <div class="flex justify-between items-start gap-4 border-b border-base-200/60 pb-4 mb-4 mt-2">
-        <h1 class="text-3xl sm:text-4xl font-bold text-base-content break-words leading-tight tracking-tight flex-1">
-            {data.item?.title}
-        </h1>
+    <div class="flex justify-between items-start gap-4 border-b border-base-200/60 pb-3 mb-4 mt-2">
+        <div class="flex flex-col flex-1">
+            <h1 class="text-3xl sm:text-4xl font-bold text-base-content break-words leading-tight tracking-tight">
+                {data.item?.title}
+            </h1>
+            <div class="text-[11px] text-gray-500 font-medium flex items-center gap-1.5 mt-2">
+                <i class="bi bi-clock-history opacity-70"></i> Added <RelativeDate date={data.item?.createdAt} />
+                {#if data.item?.updatedAt && data.item.updatedAt !== data.item.createdAt}
+                    <span class="mx-1 opacity-40">•</span> <i class="bi bi-pencil opacity-70"></i> Updated <RelativeDate date={data.item.updatedAt} />
+                {/if}
+            </div>
+        </div>
         <div class="inline-flex gap-2 items-center shrink-0 pt-1">
             {#if isSavingPasted}
                 <span class="loading loading-spinner loading-sm text-primary"></span>
@@ -249,6 +258,11 @@ $:  hasMissingFields = activeSchema.some(f =>
                                     {/if}
                                 </button>
 
+                                <!-- Photo Import Date Overlay -->
+                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    <span class="text-[10px] font-medium text-base-content/80"><RelativeDate date={productPhotos[i].createdAt} /></span>
+                                </div>
+
                             {:else}
                                 <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
                                     {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
@@ -260,6 +274,11 @@ $:  hasMissingFields = activeSchema.some(f =>
                                         <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
                                     {/if}
                                 </button>
+
+                                <!-- Photo Import Date Overlay -->
+                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    <span class="text-[10px] font-medium text-base-content/80"><RelativeDate date={productPhotos[i].createdAt} /></span>
+                                </div>
                             {/if}
                         </div> 
                     {/each}

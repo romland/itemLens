@@ -69,7 +69,7 @@ export async function analyzePhoto(
     TASKS:
     1. photoType: Identify if this photo is a 'product' (physical item), 'invoice' (receipt/bill), 'information' (pinout/diagram/spec sheet), or 'other'.
     2. title: Identify this product. Return a concise 'title' for it.
-    3. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create new short lowercase string." : "MUST pick exactly from list."}
+    3. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create a NEW STRICTLY SINGULAR noun (e.g. 'shirt', not 'shirts'). Use standard retail-level specificity (e.g. 't-shirt' or 'cardigan'). NEVER output a broad macro-category like 'clothing', 'electronics', or 'tools'." : "MUST pick exactly from list."}
     4. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
     5. description: A brief visual physical description of the item.
     ${schemaPrompt}
@@ -93,7 +93,7 @@ export async function analyzePhoto(
     1. photoType: Identify if this photo is a 'product', 'invoice', 'information', or 'other'.
     2. title: Identify this product. Return the actual name of the work itself (Book Title, Album Name, Product Name) based strictly on visible text. NEVER put the creator here.
     3. subtitle: Identify the creator (Author, Band/Artist, Maker, Brand). NEVER put the main work title here. DO NOT write a description or plot summary. Just literal secondary text.
-    4. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create new short lowercase string." : "MUST pick exactly from list."}
+    4. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create a NEW STRICTLY SINGULAR noun (e.g. 'book', not 'books'). Use standard retail-level specificity. NEVER output a broad macro-category like 'media', 'clothing', or 'hardware'." : "MUST pick exactly from list."}
     5. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
     6. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
     7. foregroundBox: Provide the bounding box of the isolated primary object.`;

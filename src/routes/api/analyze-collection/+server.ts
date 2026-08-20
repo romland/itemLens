@@ -59,7 +59,7 @@ CRITICAL EXTRACTION RULES:
 For each item:
 - title: The actual name of the work itself (e.g., Book Title, Album Name, Movie Title, Product Name). NEVER put the author or artist here. If unreadable, use a placeholder (e.g., 'Unknown CD').
 - subtitle: The creator (e.g., Author, Band/Artist, Maker, Brand). NEVER put the main work title here.
-- category: The type of item (e.g., 'book', 'cd', 'dvd', 'stamp', 'game').
+- category: A STRICTLY SINGULAR, specific retail-style sub-category (e.g. 't-shirt', 'mug', 'wrench'). NEVER use plural. NEVER use broad macro-categories like 'clothing', 'media', or 'electronics'.
 - box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
 - low_confidence: Set to true if the text is blurry, occluded, or hard to read.
 `;

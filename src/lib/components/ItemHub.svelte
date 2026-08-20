@@ -7,6 +7,7 @@
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import RefreshDeleteList from "$lib/components/RefreshDeleteList.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import RelativeDate from "$lib/components/RelativeDate.svelte";
     import { photoTypes } from "$lib/shared/constants";
     import { marked } from 'marked';
     import { createEventDispatcher } from 'svelte';
@@ -216,7 +217,7 @@
                     <div class="text-[11px] mt-2 flex flex-col gap-1">
                         <div class="flex items-center justify-between gap-2 px-1">
                             <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Original Added:</span> 
-                            <span class="font-medium text-right">{new Date(duplicateDetails.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            <span class="font-medium text-right"><RelativeDate date={duplicateDetails.createdAt} /></span>
                         </div>
                         {#if duplicateDetails.sharedAttributes?.length > 0}
                             <div class="flex flex-col mt-1 pt-1.5 border-t border-warning/10">

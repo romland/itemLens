@@ -87,11 +87,8 @@ export const actions = {
         const data = await request.formData();
         const name = data.get('name') as string;
         const archetype = (data.get('archetype') as string) || "generic";
-        const customArchetype = data.get('customArchetype') as string;
 
 		if (!name || name.trim() === '') return fail(400, { error: true, message: "Inventory name required." });
-
-        const finalArchetype = archetype === 'other' ? (customArchetype || 'generic') : archetype;        
 
         // =========================================================================
         // [ARCHETYPE DEFAULTS CONFIGURATION]
@@ -115,18 +112,28 @@ export const actions = {
         let bgRemovalEnabled = true;
 
         switch (archetype) {
+            case 'media':
+                deepScanCollections = true;
+                bgRemovalEnabled = false; // Flat covers, background removal ruins edges
+                break;
             case 'apparel':
                 allowAutoTaxonomy = true;
                 deepScanCollections = true;
                 break;
-            case 'electronics':
-            case 'tools':
+            case 'hardware':
                 allowAutoTaxonomy = true;
                 break;
-            case 'media':
+            case 'consumables':
                 deepScanCollections = true;
                 bgRemovalEnabled = false;
                 break;
+            case 'collectibles':
+                allowAutoTaxonomy = true;
+                deepScanCollections = true;
+                break;
+            case 'natural':
+                allowAutoTaxonomy = true;
+                break;                
         }
 
         const inventory = await db.inventory.create({
@@ -143,10 +150,8 @@ export const actions = {
         });
 
         // Fire and forget with internal retry protection
-        bootstrapInventorySchema(inventory.id, `${inventory.name} (${finalArchetype})`)
+        bootstrapInventorySchema(inventory.id, `${inventory.name} (${archetype})`)
             .catch(e => console.error("Initial schema bootstrap failed, use manual retry in settings.", e));
-
-
 
 		return { success: true, message: `Inventory '${inventory.name}' created!` };
     },

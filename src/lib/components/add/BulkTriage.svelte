@@ -7,6 +7,7 @@
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
+    import RelativeDate from "$lib/components/RelativeDate.svelte";
 
     export let isDirty = false;
     export let containers = [];
@@ -103,7 +104,11 @@
                     if (c) acc[c] = (acc[c] || 0) + 1;
                     return acc;
                 }, {});
-                globalCategory = Object.keys(catCounts).sort((a,b) => catCounts[b] - catCounts[a])[0] || '';
+
+                // Only auto-fill the global category if the AI was unanimous.
+                // If it's a mixed bag, leave it blank so we preserve the individual guesses.
+                const uniqueCats = Object.keys(catCounts);
+                globalCategory = uniqueCats.length === 1 ? uniqueCats[0] : '';
                 isDirty = true;
 
             } else {
@@ -142,13 +147,14 @@
     $: discardedCount = items.length - activeItems.length;
     $: presentCategories = [...new Set(items.map(i => i.category || 'unknown'))];
 
-    const isBlurryOrUnknown = (i: any) => i.low_confidence || i.title.trim().toLowerCase() === 'unknown' || i.title.trim().toLowerCase() === 'unknown item';
+    // Strictly flag ONLY items that lack a real title. A generic title like "Dress" is valid.
+    const isCompletelyUnknown = (i: any) => !i.title || i.title.trim().toLowerCase() === 'unknown' || i.title.trim().toLowerCase() === 'unknown item';
 
     function toggleUnknowns() {
-        const unknowns = items.filter(isBlurryOrUnknown);
+        const unknowns = items.filter(isCompletelyUnknown);
         if (unknowns.length === 0) return;
         const newState = !unknowns.every(i => i.optedOut);
-        items = items.map(i => isBlurryOrUnknown(i) ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
+        items = items.map(i => isCompletelyUnknown(i) ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
     }
 
     function toggleCategory(cat: string) {
@@ -259,11 +265,11 @@
             <!-- Quick Actions Bar -->
             <div class="flex flex-wrap items-center gap-2 mt-3 pb-2 text-sm">
                 <span class="text-gray-500 font-semibold mr-1 whitespace-nowrap text-xs uppercase tracking-wider">Bulk Toggle:</span>
-                {#if items.some(isBlurryOrUnknown)}
-                    {@const unknownItems = items.filter(isBlurryOrUnknown)}
+                {#if items.some(isCompletelyUnknown)}
+                    {@const unknownItems = items.filter(isCompletelyUnknown)}
                     {@const allOut = unknownItems.every(i => i.optedOut)}
                     <button type="button" class="badge {allOut ? 'badge-success text-white border-transparent' : 'badge-warning'} gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={toggleUnknowns}>
-                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-exclamation-triangle'}"></i> Blurry / Unknown ({unknownItems.length})
+                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-question-circle'}"></i> Unknown ({unknownItems.length})
                     </button>
                 {/if}
                 {#if items.some(i => i.isDuplicate && !i.optedOut)}
@@ -342,8 +348,8 @@
                                     {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
                                         <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
                                     {/if}
-                                    {#if isBlurryOrUnknown(item)}
-                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold" title="Low confidence or unknown title"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry/Unknown</span>
+                                    {#if isCompletelyUnknown(item)}
+                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold whitespace-nowrap" title="Missing all identifiable information"><i class="bi bi-question-circle mr-1"></i> Unknown</span>
                                     {/if}
                                 </div>
                             </div>
@@ -385,14 +391,17 @@
                     <ContainerSelector {containers} on:change={(e) => selectedContainers = e.detail.containers} />
                 </div>
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Global Category</span></label>
+                    <label class="label"><span class="label-text font-semibold">Apply a category for all</span></label>
                     <input type="text" bind:value={globalCategory} placeholder="e.g. book, dvd, cd" class="input input-bordered w-full bg-base-100 rounded-xl" />
                     {#if globalCategory && !categories.some(c => c.name.toLowerCase() === globalCategory.toLowerCase())}
                         <div class="label pt-1 pb-0"><span class="label-text-alt text-warning font-semibold"><i class="bi bi-exclamation-triangle"></i> New category will be created</span></div>
                     {/if}
+                    {#if globalCategory && items.some(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())}
+                        <div class="label pt-1 pb-0"><span class="label-text-alt text-error font-semibold"><i class="bi bi-exclamation-octagon"></i> Warning: This overwrites AI-detected categories (like "{items.find(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())?.category}") for all items!</span></div>
+                    {/if}
                 </div>
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Global Tags</span></label>
+                    <label class="label"><span class="label-text font-semibold">Apply tags for all</span></label>
                     <input type="text" bind:value={globalTags} placeholder="e.g. donate, trash, read, living-room" class="input input-bordered w-full bg-base-100 rounded-xl" />
                     <div class="label"><span class="label-text-alt text-gray-500">Comma separated</span></div>
                 </div>

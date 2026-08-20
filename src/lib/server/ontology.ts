@@ -43,13 +43,19 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
     
     const dbFields = await db.templateField.findMany({ where: whereClause });
 
-    // Only inject physical base traits for physical hard-goods. Omit for media/books.
-    const globalBaseFields = (archetype === 'media' || archetype === 'books') ? [] : [
-        { id: undefined, name: 'brand', uiLabel: 'Brand', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null },
-        { id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT', categoryId: null },
-        // The Graphic Slogan T-Shirt Fix: Constrain the AI to be concise so phrases are distinct and manageable
-        ...(archetype === 'apparel' ? [{ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Primary Graphic/Text (Keep to 1-3 words max)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null }] : [])
-    ];
+    const globalBaseFields = [];
+
+    // Only natural specimens totally lack a concept of a manufacturer or creator.
+    if (archetype !== 'natural') {
+        globalBaseFields.push({ id: undefined, name: 'brand_or_creator', uiLabel: archetype === 'media' ? 'Creator/Publisher' : 'Brand/Maker', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
+    }
+    // Media rarely benefits from deduplicating based on the color of the spine.
+    if (archetype !== 'media') {
+        globalBaseFields.push({ id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT', categoryId: null });
+    }
+    if (archetype === 'apparel') {
+        globalBaseFields.push({ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Primary Graphic/Text (Keep to 1-3 words max)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
+    }
 
     return [
         ...globalBaseFields,
@@ -64,14 +70,25 @@ export async function bootstrapInventorySchema(inventoryId: number, domainName: 
     const taskId = taskManager.start('global', inventoryId, `Bootstrapping AI taxonomy rules for "${domainName}"`);
     console.log(`[Taxonomy Engine] 🚀 Starting schema generation for inventory ID ${inventoryId}: "${domainName}"`);
     
+    const archetype = (inv as any)?.archetype || 'generic';
+    let archetypeGuidance = "";
+    switch (archetype) {
+        case 'media': archetypeGuidance = "This is a Media & Publications inventory. Focus on Identity and Authorship. Ignore physical materials. Extract things like Format (e.g. Hardcover, DVD), Genre, Release Era."; break;
+        case 'apparel': archetypeGuidance = "This is an Apparel & Soft Goods inventory. Focus on Fit, Form, and Fabric. Extract things like Item Style, Target Audience (e.g. Mens, Womens), Size, Material."; break;
+        case 'hardware': archetypeGuidance = "This is a Hardware & Equipment inventory. Focus on Make, Model, and Specs. Extract things like Form Factor, Power/Connectivity, Purpose."; break;
+        case 'consumables': archetypeGuidance = "This is a Consumables & Pantry inventory. Focus on Shelf-life and Volume. Extract things like Volume/Weight, Packaging Type (e.g. Can, Box), Diet/Type."; break;
+        case 'collectibles': archetypeGuidance = "This is a Collectibles & Valuables inventory. Focus on Rarity, Era, and Condition. Extract things like Franchise/Subject, Era/Year, Material/Finish."; break;
+        case 'natural': archetypeGuidance = "This is a Natural Specimens inventory. Focus on Classification and Origin. Ignore brands or model numbers. Extract things like Species/Mineral Type, Form, Pattern."; break;
+    }
+
     try {
-        // We explicitly ban Color/Brand because they are injected globally by getActiveSchema().
-        // Prevent the AI from reinventing our global base layer
         return await apiQueue.add(async () => {
             // const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
-            const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
+            // const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
+            const prompt = `You are a Principal Data Architect designing a strict Entity-Attribute-Value (EAV) taxonomy for an inventory tracking: "${domainName}".
 The user describes this inventory as: "${inv.description || 'A general collection'}".
-The core archetype of these items is: "${(inv as any)?.archetype || 'generic'}".
+
+${archetypeGuidance}
 
 We need BOTH human-friendly specific terms AND abstract groupings for "similar item" matching.
 
@@ -93,7 +110,7 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
    - E.g., Size, Storage Capacity, Material. ALWAYS use type "enum" for sizes with exhaustive options.
 
 CRITICAL BANS:
-- NO "Brand", "Manufacturer", "Make", or "Color" (tracked globally). DO NOT output any field containing these words.
+- NO "Color", "Brand", "Manufacturer", "Creator", or "Publisher" fields (these are tracked globally). DO NOT output any field containing these words.
 - 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", or "METADATA_ONLY".
 - For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
