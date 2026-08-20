@@ -34,28 +34,53 @@ export function computeMatch(scanAttributes: Record<string, string>, scanTitle: 
     if (dbCat && sCat && dbCat !== sCat) {
         return { isMatch: false, confidence: 0, debugTrace: [`[CATEGORY MISMATCH] DB='${dbCat}' != Scan='${sCat}'`] } as any;
     }
+    
+    // Semantic Reality Check for missing/blank categories (Massager vs Person fix)
+    if (!dbCat || !sCat) {
+        const normScanTitle = normalizeStr(scanTitle || '');
+        const normDbTitle = normalizeStr(dbItem.title || '');
+        
+        // If we lack category consensus AND the textual titles are vastly different, veto the match immediately.
+        // This prevents wildly different objects from matching just because they share a color or brand.
+        if (normDbTitle.length > 3 && normScanTitle.length > 3) {
+            const titleSim = getSimilarity(normDbTitle, normScanTitle);
+            if (titleSim < 0.35) {
+                return { isMatch: false, confidence: 0, debugTrace: [`[SEMANTIC VETO] Categories missing/null and titles are entirely different ('${normDbTitle}' vs '${normScanTitle}', sim=${titleSim.toFixed(2)})`] } as any;
+            }
+        }
+    }
 
-    const dbAttributes: Record<string, string> = {};
+    const dbAttributesRaw: Record<string, string> = {};
     if (dbItem.attributes) {
-        dbItem.attributes.forEach((attr: any) => { dbAttributes[attr.key] = normalizeStr(attr.value); });
+        dbItem.attributes.forEach((attr: any) => { dbAttributesRaw[attr.key] = String(attr.value); });
     }
 
     if (scanAttributes && Object.keys(scanAttributes).length > 0) {
         for (const field of activeSchema) {
-            const scanVal = scanAttributes[field.name];
-            const normScanVal = isUseless(scanVal) ? null : normalizeStr(String(scanVal));
-            const normDbVal = isUseless(dbAttributes[field.name]) ? null : dbAttributes[field.name];
+            const rawScanVal = scanAttributes[field.name];
+            const rawDbVal = dbAttributesRaw[field.name];
+
+            const normScanVal = isUseless(rawScanVal) ? null : normalizeStr(String(rawScanVal));
+            const normDbVal = isUseless(rawDbVal) ? null : normalizeStr(rawDbVal);
 
             if (field.matchWeight === 'STRICT_DEDUPE') {
-                if (normDbVal && normScanVal && normDbVal !== normScanVal) {
-                    strictFailures++;
-                    debugTrace.push(`[STRICT FAIL] ${field.name}: DB='${normDbVal}' != Scan='${normScanVal}'`);
+                if (rawDbVal && rawScanVal) {
+                    // Split RAW values ONLY by commas, preserving full phrases (e.g. "adidas logo" -> "adidaslogo")
+                    // This prevents two different brands from matching just because they both contain the word "logo"
+                    const dbVals = rawDbVal.split(',').map(normalizeStr).filter(Boolean);
+                    const scanVals = String(rawScanVal).split(',').map(normalizeStr).filter(Boolean);
+                    const hasIntersection = dbVals.some(v => scanVals.includes(v));
+                    
+                    if (!hasIntersection && dbVals.length > 0 && scanVals.length > 0) {
+                        strictFailures++;
+                        debugTrace.push(`[STRICT FAIL] ${field.name}: DB='${rawDbVal}' has no overlap with Scan='${rawScanVal}'`);
+                    } else if (hasIntersection) {
+                        fuzzyMatches += 2;
+                        debugTrace.push(`[STRICT MATCH] ${field.name} overlaps: DB='${rawDbVal}' & Scan='${rawScanVal}'`);
+                    }
                 } else if (normDbVal && !normScanVal) {
                     strictFailures += 0.5; // Missing a strict DB attribute in the scan weakens confidence
                     debugTrace.push(`[STRICT MISSING] ${field.name}: DB='${normDbVal}', Scan missed it`);
-                } else if (normDbVal && normScanVal && normDbVal === normScanVal) {
-                    fuzzyMatches += 2;
-                    debugTrace.push(`[STRICT MATCH] ${field.name} == '${normDbVal}'`);
                 }
             } else if (field.matchWeight === 'FUZZY_SECONDARY') {
                 if (normDbVal && normScanVal && normDbVal === normScanVal) {

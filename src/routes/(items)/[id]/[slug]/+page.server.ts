@@ -53,7 +53,9 @@ export const load = (async ({ locals, params }) => {
         orderBy: { name: 'asc' }
     });
 
-     const activeSchema = await getActiveSchema(locals.activeInventoryId, item.photos[0]?.categoryId, true);
+     // Set fetchAll to FALSE: We already know the category, so do not fetch other categories' rules!
+     // This strictly prevents "belt buckle" fields from bleeding into "t-shirt" items.
+     const activeSchema = await getActiveSchema(locals.activeInventoryId, item.photos[0]?.categoryId, false);
      const existingItems = await db.item.findMany({
          where: { inventoryId: locals.activeInventoryId, id: { not: parsedId } },
          include: { attributes: true, locations: { include: { container: true } }, photos: true }

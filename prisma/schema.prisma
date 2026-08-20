@@ -63,6 +63,8 @@ model Inventory {
   allowAutoTaxonomy Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
   extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
    deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+  bgRemovalEnabled Boolean @default(true) // Whether to run background removal
+  bgRemovalPreCrop Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
   duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   templateFields TemplateField[]
 

@@ -44,13 +44,13 @@ export async function analyzePhoto(
     title: { type: 'string', description: 'Concise product title' },
     subCategory: { type: 'string', description: 'Fine-grained sub-category' },
     isNewCategory: { type: 'boolean', description: 'True if subCategory was created new' },
-    searchSynonyms: { type: 'array', items: { type: 'string' } }
+    searchSynonyms: { type: 'array', items: { type: 'string' } },
+    foregroundBox: { type: 'array', items: { type: 'number' }, description: 'Bounding box [ymin, xmin, ymax, xmax] normalized 0-1000 for the primary foreground object. Ignore background clutter.' }
   };
-  const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms'];
+  const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms', 'foregroundBox'];
 
   if (hasSchema) {
-      // schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n`;
-      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, missing, or unknown, output null (do NOT use "unknown", "n/a", or "none").\n`;
+      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, missing, or unknown, output null (do NOT use "unknown", "n/a", or "none"). Comma-separate values if multiple apply (e.g., 50/50 striped shirts should be "Red, White").\n`;
       for (const field of visibleFields) {
           schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
           if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;
@@ -60,6 +60,12 @@ export async function analyzePhoto(
     promptText = `Analyze this image for a home inventory system.
     EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
     
+    CRITICAL GROUNDING RULES:
+    - YOU ARE A STRICT VISUAL EXTRACTOR.
+    - ISOLATE THE PRIMARY FOREGROUND OBJECT. Completely ignore background clutter (like workbenches, tables, soldering irons, hands, etc.).
+    - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
+    - NEVER write plot summaries, historical context, or fun facts.
+
     TASKS:
     1. photoType: Identify if this photo is a 'product' (physical item), 'invoice' (receipt/bill), 'information' (pinout/diagram/spec sheet), or 'other'.
     2. title: Identify this product. Return a concise 'title' for it.
@@ -67,7 +73,8 @@ export async function analyzePhoto(
     4. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
     5. description: A brief visual physical description of the item.
     ${schemaPrompt}
-    7. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.`;
+    7. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
+    8. foregroundBox: Provide the bounding box of the isolated primary object.`;
 
     properties.description = { type: 'string', description: 'Brief visual description' };
     properties.extractedAttributes = { type: 'object', properties: schemaObj, required: visibleFields.map(f => f.name) };
@@ -78,6 +85,7 @@ export async function analyzePhoto(
     
     CRITICAL GROUNDING RULES:
     - YOU ARE A STRICT VISUAL EXTRACTOR.
+    - ISOLATE THE PRIMARY FOREGROUND OBJECT. Completely ignore background clutter (like workbenches, tables, soldering irons, hands, etc.).
     - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
     - NEVER write plot summaries, historical context, or fun facts.
 
@@ -87,7 +95,8 @@ export async function analyzePhoto(
     3. subtitle: Identify the creator (Author, Band/Artist, Maker, Brand). NEVER put the main work title here. DO NOT write a description or plot summary. Just literal secondary text.
     4. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create new short lowercase string." : "MUST pick exactly from list."}
     5. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
-    6. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.`;
+    6. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
+    7. foregroundBox: Provide the bounding box of the isolated primary object.`;
 
     properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
   }

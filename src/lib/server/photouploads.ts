@@ -22,12 +22,14 @@ import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
 
-export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext, skipLlm: boolean = false): Promise<any> {
+export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext, skipLlm: boolean = false, precomputedBox?: number[] | null): Promise<any> {
 	const tempPhoto = { id: -1, orgPath: webPath, type } as any;
 	
 	let exifDataJson: string | null = null;
+    let bgRemovalEnabled = true;
+    let bgRemovalPreCrop = false;
 	try {
-		const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true }});
+        const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true }});
 		if (vault?.extractExif) {
 			const metadata = await sharp(localPath).metadata();
 			if (metadata.exif) {
@@ -47,14 +49,12 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 				});
 			}
 		}
+        bgRemovalEnabled = vault?.bgRemovalEnabled ?? true;
+        bgRemovalPreCrop = vault?.bgRemovalPreCrop ?? false;
 	} catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
 	
-	const [ocrResult, imgUpdates] = await Promise.all([
-		getOCRdata(localPath, tracking).catch(() => null),
-		generatePhotoDerivatives(tempPhoto, localPath, true, tracking)
-	]);
-	
 	let finalOrgPath = webPath;
+    let currentLocalPath = localPath;
 	const isVideo = localPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
 	if (!isVideo && !localPath.endsWith('.webp')) {
 		const newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
@@ -63,13 +63,18 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 		fs.unlinkSync(localPath);
 		finalOrgPath = newWebPath;
 		tempPhoto.orgPath = finalOrgPath;
+        currentLocalPath = newLocalPath;
 	}
 	
 	let categoryName = null;
 	let llmAnalysis = null;
 	let extractedAttributes = null;
-	
-	if (!skipLlm && (type === 'product' || type === 'information' || type === 'other')) {
+    let foregroundBox = precomputedBox || null;
+
+    // RUN GEMINI VISION FIRST TO GET THE FOREGROUND BOX (If not skipped)
+    // We run this before generatePhotoDerivatives so we can pass the bounding box to RemBG,
+    // ensuring the background removal only focuses on the primary item.
+    if (!skipLlm && (type === 'product' || type === 'information' || type === 'other')) {
 		try {
 			const { analyzePhoto } = await import('$lib/server/gemini-classification');
 			const { getExistingCategoryNames } = await import('$lib/server/categories');
@@ -79,13 +84,15 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 			const allowNew = inv?.allowNewCategories ?? true;
 			
 			const activeSchema = await getActiveSchema(inventoryId, tempPhoto.categoryId);      
-			const targetPath = imgUpdates.thumbPath ? `static${imgUpdates.thumbPath}` : tempPhoto.orgPath;
+
+            // Pass the ORIGINAL uncropped image to Gemini, never a thumbnail or cutout!
 			const analysis = await apiQueue.add(
-				() => analyzePhoto(targetPath, existingCategories, allowNew, activeSchema),
+                () => analyzePhoto(currentLocalPath, existingCategories, allowNew, activeSchema),
 				tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
 			);
 			llmAnalysis = JSON.stringify(analysis);
 			categoryName = analysis.subCategory;
+            foregroundBox = analysis.foregroundBox || null;
 			if (analysis.extractedAttributes) extractedAttributes = JSON.stringify(analysis.extractedAttributes);
 			
 			// Save the search synonyms instantly as tags
@@ -95,7 +102,16 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 				await db.item.update({ where: { id: tempPhoto.itemId }, data: { tags: { connect: tagIds } }});
 			}
 		} catch (e) { console.error("[Background Task] LLM classification failed:", e); }
-	} else if (type === 'invoice or receipt') {
+    }
+    
+    // 2. RUN OCR & DERIVATIVES (Passing the new foregroundBox down to guide RemBG!)
+    const [ocrResult, imgUpdates] = await Promise.all([
+        getOCRdata(currentLocalPath, tracking).catch(() => null),
+        generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled)
+    ]);
+    
+    // 3. RUN INVOICE EXTRACTION (Must run after OCR completes)
+    if (!skipLlm && type === 'invoice or receipt') {
 		try {
 			const { extractInvoiceData } = await import('$lib/server/llm');
 			if (ocrResult) llmAnalysis = await extractInvoiceData(ocrResult, tracking);
@@ -118,7 +134,8 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 export async function processDraftPhotoBackground(webPath: string, type: string, inventoryId: number, precomputedAi?: any) {
 	const tracking = { targetType: 'global' as const, targetId: 0 };
 	const localPath = `static${webPath}`;
-	const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking, !!precomputedAi);
+    const box = precomputedAi?.foregroundBox || precomputedAi?.box || null;
+    const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking, !!precomputedAi, box);
 	
 	if (precomputedAi) {
 		data.llmAnalysis = JSON.stringify(precomputedAi);
@@ -153,7 +170,15 @@ export async function processItemPhotosBackground(item: any) {
 			const tracking = { targetType: 'item' as const, targetId: item.id };
 			const skipLlm = !!photo.llmAnalysis; // Skip LLM if we already analyzed it (e.g. Bulk Import)
 			
-			const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking, skipLlm);
+            let box = null;
+            if (skipLlm && photo.llmAnalysis) {
+                try { 
+                    const parsed = JSON.parse(photo.llmAnalysis);
+                    box = parsed.foregroundBox || parsed.box || null; 
+                } catch(e) {}
+            }
+            
+            const enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking, skipLlm, box);
 			
 			if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
 			photo.orgPath = enriched.orgPath || photo.orgPath;

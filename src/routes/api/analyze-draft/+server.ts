@@ -37,19 +37,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         let classificationData = null;
         let isDuplicate = false;
         let duplicateItemDetails = null;
+        let activeSchema: any[] = [];
         try {
             const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { allowNewCategories: true } });
             const allowNew = vault?.allowNewCategories ?? true;
-            const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+            const fullSchema = await getActiveSchema(locals.activeInventoryId, null, true);
             const existingCategories = await getExistingCategoryNames(locals.activeInventoryId);
 
             // SINGLE LLM CALL: Gets title, description, and taxonomy in one shot.
-            const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, activeSchema), { targetType: 'global', targetId: 0, description: 'Extracting taxonomy and title' });
+            // We pass the full universe of schemas so the LLM can extract what it needs regardless of the eventual category.
+            const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, fullSchema), { targetType: 'global', targetId: 0, description: 'Extracting taxonomy and title' });
             
             activeDrafts.set(hash, analyzePromise);
             setTimeout(() => activeDrafts.delete(hash), 5 * 60 * 1000); // 5 min TTL
             
             classificationData = await analyzePromise;
+            
+            // Resolve the category the AI just picked so we can filter the schema down for the UI
+            let resolvedCatId = null;
+            if (classificationData?.subCategory) {
+                const { getOrCreateCategory } = await import('$lib/server/categories');
+                const cat = await getOrCreateCategory(classificationData.subCategory, locals.activeInventoryId);
+                resolvedCatId = cat.id;
+            }
+            
+            // STRICT SCOPING: Only send Global fields + Fields belonging to the specific category to the UI
+            activeSchema = fullSchema.filter(f => !f.categoryId || f.categoryId === resolvedCatId);
 
             if (classificationData) {
                 const existingItems = await db.item.findMany({
@@ -115,7 +128,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     description: classificationData.description || classificationData.subtitle || null,
                     llmAnalysis: JSON.stringify(classificationData),
                     categoryName: classificationData?.subCategory || null,
-                    extractedAttributes: classificationData?.extractedAttributes ? JSON.stringify(classificationData.extractedAttributes) : null
+                    extractedAttributes: classificationData?.extractedAttributes ? JSON.stringify(classificationData.extractedAttributes) : null,
+                    foregroundBox: classificationData.foregroundBox || null
                 };
                 fs.writeFileSync(`${localPath}.json`, JSON.stringify(initialDraftData), 'utf8');
             }
@@ -131,7 +145,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         return json({
             success: true,
             draftPath: webPath,
-            aiData
+            aiData,
+            activeSchema
         });
         
     } catch (e) {

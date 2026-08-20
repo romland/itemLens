@@ -24,6 +24,8 @@ export const load = async ({ locals }) => {
                 allowAutoTaxonomy: true,
                 extractExif: true,
                 deepScanCollections: true,
+                bgRemovalEnabled: true,
+                bgRemovalPreCrop: true,
                 duplicateStrategy: true,
                 templateFields: {
                     select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
@@ -225,6 +227,24 @@ export const actions = {
         const allow = data.get('deepScan') === 'true';
         await db.inventory.update({ where: { id }, data: { deepScanCollections: allow } });
         return { success: true, message: "Collection scanning settings updated." };
+    },
+
+    toggleBgRemoval: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('bgRemovalEnabled') === 'true';
+        await db.inventory.update({ where: { id }, data: { bgRemovalEnabled: allow } });
+        return { success: true, message: "Background removal settings updated." };
+    },
+
+    toggleBgPreCrop: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('bgRemovalPreCrop') === 'true';
+        await db.inventory.update({ where: { id }, data: { bgRemovalPreCrop: allow } });
+        return { success: true, message: "Pre-crop settings updated." };
     },
 
     updateInventoryStrategy: async ({ request, locals }) => {

@@ -8,9 +8,11 @@ import type { Photo } from '@prisma/client';
 import type { TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
 
-export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext): Promise<string> {
+export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string): Promise<string> {
     return heavyMlQueue.add(async () => {
-        const localPath = outputFileNoBkg.replace(/_crop\.png$/, '');
+        // Allow an explicit input path so we can feed it pre-cropped images, 
+        // otherwise fallback to deriving the original path from the output filename.
+        const localPath = inputLocalPath || outputFileNoBkg.replace(/_crop\.png$/, '');
         let response;
         if (fs.existsSync(localPath)) {
             const form = new FormData();
@@ -39,7 +41,7 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
     }, tracking ? { ...tracking, description: 'Removing image background' } : undefined);
 }
 
-export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext): Promise<Partial<Photo>> {
+export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext, foregroundBox?: number[] | null, bgRemovalEnabled: boolean = true): Promise<Partial<Photo>> {
     const updates: Partial<Photo> = {};
     
     try {
@@ -55,29 +57,64 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
     const finalThumbPath = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
 
     try {
-        await removeBackground(imgUrl, outputFileNoBkg, tracking);
-        const cropped: any = await heavyMlQueue.add(
-            () => crop(outputFileNoBkg, { outputFormat: "png" }),
-            tracking ? { ...tracking, description: 'Cropping image' } : undefined
-        );
-        await sharp(cropped).webp({ quality: 85 }).toFile(finalCropPath);
-        fs.unlinkSync(outputFileNoBkg); // Cleanup Rembg's PNG
-        updates.cropPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
+        if (bgRemovalEnabled) {
+            let pathForRembg = `static${photo.orgPath}`;
+            let tempBoxCrop = null;
+            
+            if (foregroundBox && foregroundBox.length === 4) {
+                tempBoxCrop = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_temp_box.webp`;
+                const extracted = await extractBoundingBox(`static${photo.orgPath}`, foregroundBox, 'temp_box');
+                if (extracted) {
+                    pathForRembg = `static${extracted}`;
+                }
+            }
 
-        const thumbnail = await heavyMlQueue.add(
-            () => sharp(finalCropPath).resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath),
-            tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
-        );
-        updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
-
-        if (getColors) {
-            const colors = await heavyMlQueue.add(
-                () => new Promise((resolve, reject) => {
-                    getTopColorsNamed(finalCropPath, (err: any, res: any) => err ? reject(err) : resolve(res));
-                }),
-                tracking ? { ...tracking, description: 'Extracting color palette' } : undefined
+            await removeBackground(imgUrl, outputFileNoBkg, tracking, pathForRembg);
+            const cropped: any = await heavyMlQueue.add(
+                () => crop(outputFileNoBkg, { outputFormat: "png" }),
+                tracking ? { ...tracking, description: 'Cropping image' } : undefined
             );
-            updates.colors = JSON.stringify(colors);
+            await sharp(cropped).webp({ quality: 85 }).toFile(finalCropPath);
+            fs.unlinkSync(outputFileNoBkg);
+            
+            if (tempBoxCrop && fs.existsSync(tempBoxCrop)) {
+                fs.unlinkSync(tempBoxCrop);
+            }
+            updates.cropPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
+
+            const thumbnail = await heavyMlQueue.add(
+                () => sharp(finalCropPath).resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath),
+                tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
+            );
+            updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
+
+            if (getColors) {
+                const colors = await heavyMlQueue.add(
+                    () => new Promise((resolve, reject) => {
+                        getTopColorsNamed(finalCropPath, (err: any, res: any) => err ? reject(err) : resolve(res));
+                    }),
+                    tracking ? { ...tracking, description: 'Extracting color palette' } : undefined
+                );
+                updates.colors = JSON.stringify(colors);
+            }
+        } else {
+            // Fallback: Just generate thumbnails and colors from the original un-cropped image
+            const thumbnail = await heavyMlQueue.add(
+                () => sharp(`static${photo.orgPath}`).resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath),
+                tracking ? { ...tracking, description: 'Generating thumbnails' } : undefined
+            );
+            updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
+            updates.cropPath = photo.orgPath; // No cutout created
+
+            if (getColors) {
+                const colors = await heavyMlQueue.add(
+                    () => new Promise((resolve, reject) => {
+                        getTopColorsNamed(`static${photo.orgPath}`, (err: any, res: any) => err ? reject(err) : resolve(res));
+                    }),
+                    tracking ? { ...tracking, description: 'Extracting color palette' } : undefined
+                );
+                updates.colors = JSON.stringify(colors);
+            }
         }
     } catch (err) { console.error("Background/Crop pipeline failed:", err); }
     return updates;

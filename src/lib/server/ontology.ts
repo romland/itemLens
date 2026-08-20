@@ -7,7 +7,10 @@ import { taskManager } from './taskManager';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-const BASE_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 'Navy', 'Teal', 'Multicolor', 'Metallic', 'Clear'];
+// const BASE_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 'Navy', 'Teal', 'Multicolor', 'Metallic', 'Clear'];
+// 'Multicolor' is intentionally banned. The model must comma-separate dominant colors (e.g., "Red, White") for 50/50 splits.
+const BASE_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 'Navy', 'Teal', 'Metallic', 'Clear'];
+
 
 const eavResponseSchema = {
     type: 'array',
@@ -42,13 +45,15 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
 
     // Only inject physical base traits for physical hard-goods. Omit for media/books.
     const globalBaseFields = (archetype === 'media' || archetype === 'books') ? [] : [
-        { id: undefined, name: 'brand', uiLabel: 'Brand', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID' },
-        { id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT' }
+        { id: undefined, name: 'brand', uiLabel: 'Brand', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null },
+        { id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT', categoryId: null },
+        // The Graphic Slogan T-Shirt Fix: Constrain the AI to be concise so phrases are distinct and manageable
+        ...(archetype === 'apparel' ? [{ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Primary Graphic/Text (Keep to 1-3 words max)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null }] : [])
     ];
 
     return [
         ...globalBaseFields,
-        ...dbFields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod }))
+        ...dbFields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod, categoryId: f.categoryId }))
     ];
 }
 
@@ -63,7 +68,11 @@ export async function bootstrapInventorySchema(inventoryId: number, domainName: 
         // We explicitly ban Color/Brand because they are injected globally by getActiveSchema().
         // Prevent the AI from reinventing our global base layer
         return await apiQueue.add(async () => {
+            // const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
             const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
+The user describes this inventory as: "${inv.description || 'A general collection'}".
+The core archetype of these items is: "${(inv as any)?.archetype || 'generic'}".
+
 We need BOTH human-friendly specific terms AND abstract groupings for "similar item" matching.
 
 STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
@@ -86,8 +95,9 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
 CRITICAL BANS:
 - NO "Brand", "Manufacturer", "Make", or "Color" (tracked globally). DO NOT output any field containing these words.
 - 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", or "METADATA_ONLY".
-- For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.`;
+- For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
+ADAPT TO USER INTENT: Adjust your specificity based on the user's description and archetype. If it's a generic collection, keep fields broad. If the description implies a highly specific sub-niche (e.g., "Vintage Belts"), generate hyper-specific fields (e.g., "Buckle Type", "Notch Count").`;
             const res = await withRetry(() => ai.models.generateContent({
                 model: 'gemini-3.1-flash-lite',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -131,9 +141,10 @@ export async function bootstrapCategorySchema(categoryId: number, categoryName: 
 
         await apiQueue.add(async () => {
             const prompt = `You are a Principal Data Architect. Define 1-3 critical visual attributes needed to uniquely identify and deduplicate an item specifically in the sub-category: "${categoryName}".
+            The overarching inventory is described as: "${inv.description || 'A general collection'}" (Archetype: ${(inv as any)?.archetype || 'generic'}).
             CRITICAL RULES:
             1. NO REDUNDANCY: The overarching inventory ALREADY tracks these fields globally: [${existingLabels}]. DO NOT create attributes that conceptually overlap with these (e.g. no "Fabric" if "Material" exists, no "Brand Name" if "Brand" exists).
-            2. CATEGORY-SPECIFIC ONLY: Only generate attributes unique to "${categoryName}" (e.g., "Sleeve Length" for shirts, "Screen Size" for monitors). Do not generate generic fields.
+            2. CATEGORY-SPECIFIC ONLY: Only generate attributes unique to "${categoryName}" (e.g., "Sleeve Length" for shirts, "Screen Size" for monitors). Adjust your specificity to match the user's inventory description. Do not extract micro-details that are irrelevant to this specific type of collection.
             3. Categorize EVERY attribute with an extractionMethod:
                - "VISION_STRICT": 100% undeniable visual geometry or physical form.
                - "HYBRID": Visible text, brands, or labels that might be obscured.
