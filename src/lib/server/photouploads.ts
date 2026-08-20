@@ -245,9 +245,11 @@ export async function processItemPhotosBackground(item: any) {
 				}
 			}
 			
-			if (enriched.categoryName) {
+            // Fallback: If we skipped the LLM to save quota, pull the category from the cached JSON block
+            const finalCategoryName = enriched.categoryName || (photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null);
+            if (finalCategoryName) {
 				const { getOrCreateCategory } = await import('$lib/server/categories');
-				const cat = await getOrCreateCategory(enriched.categoryName, item.inventoryId);
+                const cat = await getOrCreateCategory(finalCategoryName, item.inventoryId);
 				photo.categoryId = cat.id;
 			}
 			

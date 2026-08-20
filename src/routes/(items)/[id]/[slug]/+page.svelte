@@ -146,12 +146,13 @@ $:  hasMissingFields = activeSchema.some(f =>
                 <button tabindex="0" class="btn btn-circle btn-ghost bg-base-200/50 border-base-300 shadow-sm text-gray-500 hover:text-primary transition-all active:scale-95" aria-label="Item Options">
                     <i class="bi bi-three-dots text-xl"></i>
                 </button>
-                <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200 mt-2 gap-1">
+                <ul tabindex="-1" role="menu" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200 mt-2 gap-1">
                     <li>
                         <a href="/{data.item?.id}/edit" class="font-medium text-base-content hover:text-primary">
                             <i class="bi bi-pencil-square text-lg opacity-70"></i> Modify
                         </a>
                     </li>
+                    <!--
                     {#if activeSchema.length > 0}
                         <li>
                             <button type="button" class="font-medium text-base-content hover:text-primary justify-between" on:click={() => attrModal.showModal()}>
@@ -159,6 +160,7 @@ $:  hasMissingFields = activeSchema.some(f =>
                             </button>
                         </li>
                     {/if}
+                    -->
                     <li>
                         <a href="https://www.google.com/search?q={encodeURIComponent(data.item?.title)}" target="_blank" rel="noopener noreferrer" class="font-medium text-base-content hover:text-primary">
                             <i class="bi bi-google text-lg opacity-70"></i> Search
@@ -414,7 +416,7 @@ $:  hasMissingFields = activeSchema.some(f =>
                 </div>
                 {#if activeSchema.length > 0}
                     <button type="button" class="btn btn-xs btn-ghost text-primary gap-1" on:click={() => attrModal.showModal()}>
-                        <i class="bi bi-pencil-square"></i> Edit Form
+                        <i class="bi bi-pencil-square"></i> Quick Tweak
                     </button>
                 {/if}
             </div>
