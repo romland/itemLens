@@ -142,11 +142,13 @@
     $: discardedCount = items.length - activeItems.length;
     $: presentCategories = [...new Set(items.map(i => i.category || 'unknown'))];
 
+    const isBlurryOrUnknown = (i: any) => i.low_confidence || i.title.trim().toLowerCase() === 'unknown' || i.title.trim().toLowerCase() === 'unknown item';
+
     function toggleUnknowns() {
-        const unknowns = items.filter(i => i.low_confidence || i.title.toLowerCase().includes('unknown'));
+        const unknowns = items.filter(isBlurryOrUnknown);
         if (unknowns.length === 0) return;
         const newState = !unknowns.every(i => i.optedOut);
-        items = items.map(i => (i.low_confidence || i.title.toLowerCase().includes('unknown')) ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
+        items = items.map(i => isBlurryOrUnknown(i) ? { ...i, optedOut: newState, swipeOffset: 0 } : i);
     }
 
     function toggleCategory(cat: string) {
@@ -257,8 +259,8 @@
             <!-- Quick Actions Bar -->
             <div class="flex flex-wrap items-center gap-2 mt-3 pb-2 text-sm">
                 <span class="text-gray-500 font-semibold mr-1 whitespace-nowrap text-xs uppercase tracking-wider">Bulk Toggle:</span>
-                {#if items.some(i => i.low_confidence || i.title.toLowerCase().includes('unknown'))}
-                    {@const unknownItems = items.filter(i => i.low_confidence || i.title.toLowerCase().includes('unknown'))}
+                {#if items.some(isBlurryOrUnknown)}
+                    {@const unknownItems = items.filter(isBlurryOrUnknown)}
                     {@const allOut = unknownItems.every(i => i.optedOut)}
                     <button type="button" class="badge {allOut ? 'badge-success text-white border-transparent' : 'badge-warning'} gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={toggleUnknowns}>
                         <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-exclamation-triangle'}"></i> Blurry / Unknown ({unknownItems.length})
@@ -340,8 +342,8 @@
                                     {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
                                         <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
                                     {/if}
-                                    {#if item.low_confidence}
-                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry</span>
+                                    {#if isBlurryOrUnknown(item)}
+                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold" title="Low confidence or unknown title"><i class="bi bi-exclamation-triangle mr-1"></i> Blurry/Unknown</span>
                                     {/if}
                                 </div>
                             </div>

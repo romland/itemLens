@@ -94,8 +94,12 @@ export function computeMatch(scanAttributes: Record<string, string>, scanTitle: 
         }
     }
 
-    const scanAttrCount = Object.keys(scanAttributes || {}).filter(k=>scanAttributes[k]).length;
-    const dbAttrCount = dbItem.attributes?.length || 0;
+    // Only consider attributes that are officially part of our taxonomy/schema.
+    // We explicitly ignore injected meta-attributes like "Source Scan" or loose LLM guesses
+    // that aren't formally governed by the item's category rules.
+    const schemaKeys = new Set(activeSchema.map(f => f.name));
+    const scanAttrCount = Object.keys(scanAttributes || {}).filter(k => schemaKeys.has(k) && scanAttributes[k]).length;
+    const dbAttrCount = dbItem.attributes?.filter((a: any) => schemaKeys.has(a.key)).length || 0;
 
     let isMatch = false;
     if (strictFailures >= 1) {

@@ -93,12 +93,51 @@ export const actions = {
 
         const finalArchetype = archetype === 'other' ? (customArchetype || 'generic') : archetype;        
 
+        // =========================================================================
+        // [ARCHETYPE DEFAULTS CONFIGURATION]
+        // Depending on the type of inventory the user is creating, we intelligently 
+        // tweak the default settings. 
+        //
+        // For example:
+        // - Apparel/Clothes: Highly visual. Benefits massively from AI Taxonomy (extracting 
+        //   Brand, Size, Color, Pattern) and Deep-Scanning collections (to identify 
+        //   individual garments from a pile).
+        // - Electronics/Tools: Relies more on exact model numbers. Still uses taxonomy 
+        //   but maybe less visual background removal.
+        // - Media/Books: Very standardized. Deep scanning is great, but background 
+        //   removal is less critical than just reading the spine.
+        // 
+        // NOTE: Modify this switch statement as we discover better default 
+        // behaviors for new archetypes!
+        // =========================================================================
+        let allowAutoTaxonomy = false;
+        let deepScanCollections = false;
+        let bgRemovalEnabled = true;
+
+        switch (archetype) {
+            case 'apparel':
+                allowAutoTaxonomy = true;
+                deepScanCollections = true;
+                break;
+            case 'electronics':
+            case 'tools':
+                allowAutoTaxonomy = true;
+                break;
+            case 'media':
+                deepScanCollections = true;
+                bgRemovalEnabled = false;
+                break;
+        }
+
         const inventory = await db.inventory.create({
             data: {
                 name: name.trim(),
 				description: "User created inventory",
                 classes: "[]",
                 archetype: archetype,
+                allowAutoTaxonomy,
+                deepScanCollections,
+                bgRemovalEnabled,                
                 users: { create: { userId: locals.user.id, role: "OWNER" } }
             }
         });

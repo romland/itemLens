@@ -206,6 +206,20 @@
 
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
 		<h3 class="font-bold text-lg mb-4">Create New Inventory</h3>
+        <!-- 
+        =============================================================================
+        [ARCHETYPE DEFAULTS CONFIGURATION - UI NOTE]
+        When creating an inventory, the archetype determines intelligent system defaults.
+        For example:
+        - Apparel needs deep scanning (parsing huge piles of clothes) and AI taxonomy.
+        - Media/Books needs deep scanning but NOT background removal (boxes/covers are flat).
+        If you add new archetypes or tweak defaults, ensure they are mirrored in the 
+        backend (settings/+page.server.ts -> createInventory).
+        =============================================================================
+        -->
+        <p class="text-xs text-gray-500 mb-4 -mt-2">
+            The archetype you select will automatically configure optimal system defaults. For example, <strong>Apparel</strong> turns on Deep-Scanning and AI Taxonomy by default, while <strong>Media</strong> focuses on bulk processing without background removal.
+        </p>        
         <form method="POST" action="?/createInventory" use:enhance={createEnhancer} class="flex flex-col gap-3">
             <div class="flex gap-2">
                 <input type="text" name="name" placeholder="Inventory Name (e.g., Wardrobe)" class="input input-bordered flex-1" required>
@@ -398,7 +412,7 @@
                                     </form>
 
                             <!-- Manual Schema Retry Action -->
-                            <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} class="mt-2">
+                            <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} class="mt-2" on:submit={(e) => { if(!confirm('Are you sure you want to regenerate AI Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.')) e.preventDefault(); }}>
                                 <input type="hidden" name="inventoryId" value={v.id}>
                                 <input type="hidden" name="name" value={v.name}>
                                 <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Taxonomy Rules</button>
