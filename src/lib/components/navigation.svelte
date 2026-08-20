@@ -68,7 +68,7 @@
         let h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
         for (let i = 0; i < loadedPages.length; i++) {
             const p = i + 2; // SvelteKit natively handles page 1, so loadedPages[0] is page 2
-            const url = `${h}c=10&page=${p}`;
+            const url = `${h}c=12&page=${p}`;
             try {
                 console.log(`[DEBUG-CACHE] 📡 Fetching fresh data for page ${p}: ${url}`);
                 const res = await fetch(url, { cache: 'no-store' });
@@ -110,7 +110,7 @@
 
     async function query() {
         let h = href.replace("/search?", "/api/items?").replace("/?", "/api/items?");
-        const url = `${h}c=10&page=${nextPage}`;
+        const url = `${h}c=12&page=${nextPage}`;
         
         try {
             // Explicitly command fetch to bypass browser disk cache
@@ -176,7 +176,7 @@
 
 {#each loadedPages as page}
     <slot items={page}>
-        <Items items={page} />
+        <Items items={page} showControls={false} />
     </slot>
 {/each}
 

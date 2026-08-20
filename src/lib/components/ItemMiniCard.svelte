@@ -15,10 +15,10 @@
             <i class="bi bi-box text-xl text-gray-400"></i>
         {/if}
     </div>
-    <a href="/{item.id}/{item.slug || 'view'}" target="_blank" class="flex-1 min-w-0 block">
+    <a href="/{item.id}/{item.slug || 'view'}" class="flex-1 min-w-0 block">
         <div class="font-bold text-base-content text-sm truncate group-hover:text-primary transition-colors">{item.title}</div>
         <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold truncate mt-0.5">
-            <i class="bi bi-box-seam mr-0.5"></i> {item.locationName || 'Unassigned'}
+            <i class="bi bi-box-seam mr-0.5"></i> {item.locationName || 'Unassigned'} <span class="mx-0.5 opacity-50">•</span> {item.categoryName || 'No Category'}
         </div>
     </a>
     <div class="shrink-0 pr-2 opacity-50 group-hover:opacity-100 group-hover:text-primary transition-opacity">

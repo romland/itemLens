@@ -65,7 +65,7 @@ export const load = (async ({ locals, params }) => {
      let duplicateItemDetails = null;
      if (!item.duplicateDismissed) {
          for (const dbItem of existingItems) {
-             const match = computeMatch(itemAttrs, item.title || '', '', dbItem, activeSchema);
+             const match = computeMatch(itemAttrs, item.title || '', '', dbItem, activeSchema, item.photos?.[0]?.category?.name);
              if (match.isMatch) {
                  const sharedAttrs = [];
                  for (const [k, v] of Object.entries(itemAttrs)) {
@@ -74,6 +74,7 @@ export const load = (async ({ locals, params }) => {
                  }
                  duplicateItemDetails = {
                      id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
+                     categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
                      thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
                      locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
                      sharedAttributes: sharedAttrs
@@ -162,10 +163,16 @@ export const actions = {
              const sourceItem = await db.item.findUnique({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { locations: true } });
              if (!sourceItem) return fail(404, { message: 'Item not found' });
 
+             const targetItem = await db.item.findUnique({ where: { id: targetId } });
+             if (!targetItem) return fail(404, { message: 'Target item not found' });
+
              await db.item.update({
                  where: { id: targetId },
-                 data: { amount: { increment: sourceItem.amount || 1 } }
+                 data: { amount: (targetItem.amount || 1) + (sourceItem.amount || 1) }
              });
+
+             await db.photo.updateMany({ where: { itemId: sourceId }, data: { itemId: targetId } });
+             await db.document.updateMany({ where: { itemId: sourceId }, data: { itemId: targetId } });
 
              if (sourceItem.locations) {
                  for (const loc of sourceItem.locations) {
@@ -177,9 +184,14 @@ export const actions = {
              }
 
              await db.item.delete({ where: { id: sourceId } });
-             const targetItem = await db.item.findUnique({ where: { id: targetId } });
              redirect(302, `/${targetId}/${targetItem?.slug || 'view'}`);
          }
+     },
+
+     deleteDuplicate: async ({ locals, params }) => {
+         if (!locals.user) return fail(401, { error: 'Unauthorized' });
+         await db.item.delete({ where: { id: Number(params.id) } });
+         redirect(302, '/');
      },
 
      dismissDuplicate: async ({ locals, params }) => {

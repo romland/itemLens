@@ -23,6 +23,6 @@
     </div>
 {/if}
 
-<Items items={data.items} />
+<Items items={data.items} showControls={true} />
 
 <Navigation href="/?" prevPage={data.prevPage} nextPage={data.nextPage} />

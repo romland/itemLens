@@ -6,9 +6,11 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import ImageLightbox from "$lib/components/ImageLightbox.svelte";
 
     export let items: any[] = [];
     export let brief: boolean = false;
+    export let showControls: boolean = true;
 
     function getFirstProductPhoto(item) {
         if (item?.photos?.length > 0) {
@@ -33,6 +35,7 @@
 
     let viewMode = 'list';
     let viewModeLoaded = false;
+    let lightbox: ImageLightbox;
 
     onMount(() => {
         const cached = localStorage.getItem('itemlens_viewmode_' + $page.data.activeInventoryId);
@@ -48,12 +51,14 @@
 {#if (!items || items.length === 0)}
     <Alert>Empty.</Alert>
 {:else}
-    <div class="flex justify-end mb-3 mt-1">
-        <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
-            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
-            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+    {#if showControls}
+        <div class="flex justify-end mb-3 mt-1">
+            <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+            </div>
         </div>
-    </div>
+    {/if}
     {#if viewMode === 'list'}
         <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
@@ -178,7 +183,7 @@
                 
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <div class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}" on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
-                    <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative">
+                    <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
                         {#if mainPhoto.thumbPath || mainPhoto.orgPath}
                             <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                         {:else}
@@ -211,4 +216,6 @@
             {/each}
         </div>
     {/if}
+
+    <ImageLightbox bind:this={lightbox} />
 {/if}

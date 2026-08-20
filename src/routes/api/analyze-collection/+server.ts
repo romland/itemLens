@@ -143,7 +143,7 @@ For each item:
             }
 
             for (const dbItem of dbItems) {
-                const match = computeMatch(item.extractedAttributes || {}, item.title || '', '', dbItem, activeSchema);
+                const match = computeMatch(item.extractedAttributes || {}, item.title || '', '', dbItem, activeSchema, item.category);
                 if (match.isMatch) {
                     item.isDuplicate = true;
                     const sharedAttrs: any[] = [];
@@ -156,7 +156,7 @@ For each item:
                         }
                     }
                     item.duplicateItemDetails = {
-                        id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
+                        id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt, categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
                         thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
                         locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
                         sharedAttributes: sharedAttrs

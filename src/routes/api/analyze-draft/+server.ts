@@ -63,7 +63,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 console.log("[DEBUG] Active Schema Fields:", activeSchema.map(s => s.name).join(', '));
 
                 for (const dbItem of existingItems) {
-                    const match = computeMatch(classificationData.extractedAttributes || {}, classificationData.title || '', '', dbItem, activeSchema);
+                    const match = computeMatch(classificationData.extractedAttributes || {}, classificationData.title || '', '', dbItem, activeSchema, classificationData.subCategory);
                     
                     if (match.isMatch) {
                         isDuplicate = true;
@@ -85,6 +85,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                             id: dbItem.id,
                             slug: dbItem.slug,
                             title: dbItem.title,
+                            categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
                             createdAt: dbItem.createdAt,
                             thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
                             locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',

@@ -26,12 +26,12 @@
         </div>
 
         <div class="mt-3 pt-2 border-t border-warning/20 flex flex-col gap-1.5">
-            <div class="flex justify-between items-center text-[10px]">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[10px] gap-0.5 sm:gap-0">
                 <span class="text-gray-500 font-bold uppercase tracking-wider">Original Added:</span>
                 <span class="font-medium text-base-content/80">{new Date(matchDetails?.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             {#if scannedCreatedAt}
-            <div class="flex justify-between items-center text-[10px]">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center text-[10px] gap-0.5 sm:gap-0">
                 <span class="text-gray-500 font-bold uppercase tracking-wider">This Scan Added:</span>
                 <span class="font-medium text-base-content/80">{new Date(scannedCreatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
@@ -70,7 +70,7 @@
             <div class="w-6 h-6 rounded-full bg-error/20 text-error flex items-center justify-center mr-3 shrink-0"><i class="bi bi-trash3 text-xs"></i></div>
             <div class="text-left flex-1 min-w-0">
                 <div class="font-bold text-xs leading-tight">{isAfterTheFact ? 'Delete Duplicate' : 'Ignore'}</div>
-                <div class="text-[10px] text-gray-500 font-normal truncate">{isAfterTheFact ? 'Remove this mistake entirely' : 'Drop from this import'}</div>
+                <div class="text-[10px] text-gray-500 font-normal truncate">{isAfterTheFact ? 'Vaporize this anomaly' : 'Drop from this import'}</div>
             </div>
             {#if currentAction === 'ignore'}<i class="bi bi-check-circle-fill text-error ml-auto text-lg"></i>{/if}
         </button>

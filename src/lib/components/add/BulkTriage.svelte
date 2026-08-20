@@ -264,6 +264,13 @@
                         <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-exclamation-triangle'}"></i> Blurry / Unknown ({unknownItems.length})
                     </button>
                 {/if}
+                {#if items.some(i => i.isDuplicate && !i.optedOut)}
+                    <button type="button" class="badge badge-error badge-outline gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={() => {
+                        items = items.map(i => i.isDuplicate ? { ...i, optedOut: true, resolution: 'ignore' } : i);
+                    }}>
+                        <i class="bi bi-trash3"></i> Trash All Duplicates
+                    </button>
+                {/if}
                 {#each presentCategories as cat}
                     {@const catItems = items.filter(i => (i.category || 'unknown') === cat)}
                     {@const allOut = catItems.every(i => i.optedOut)}
@@ -390,7 +397,7 @@
         </div>
 
        <div class="fixed bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
-            <button class="btn btn-primary btn-lg w-full max-w-md mx-auto block rounded-2xl shadow-lg active:scale-95 transition-transform" on:click={saveCollection} disabled={isSaving || activeItems.length === 0 || selectedContainers.length === 0}>
+            <button class="btn btn-primary btn-lg w-full max-w-md mx-auto block rounded-2xl shadow-lg active:scale-95 transition-transform" on:click={saveCollection} disabled={isSaving || activeItems.length === 0}>
                 {#if isSaving}
                     <span class="loading loading-spinner"></span> Saving...
                 {:else}

@@ -17,12 +17,17 @@ export function getSimilarity(s1: string, s2: string): number {
     return 1 - (dp[len1][len2] / Math.max(len1, len2));
 }
 
-export function computeMatch(scanAttributes: Record<string, string>, scanTitle: string, scanRawText: string, dbItem: any, activeSchema: any[]): { isMatch: boolean, confidence: number } {
+export function computeMatch(scanAttributes: Record<string, string>, scanTitle: string, scanRawText: string, dbItem: any, activeSchema: any[], scanCategory?: string): { isMatch: boolean, confidence: number, debugTrace: string[] } {
     let strictFailures = 0;
     let fuzzyMatches = 0;
     let fuzzyMismatches = 0;
     const debugTrace: string[] = [];
 
+    const dbCat = dbItem.photos?.[0]?.category?.name?.toLowerCase();
+    const sCat = scanCategory?.toLowerCase();
+    if (dbCat && sCat && dbCat !== sCat) {
+        return { isMatch: false, confidence: 0, debugTrace: [`[CATEGORY MISMATCH] DB='${dbCat}' != Scan='${sCat}'`] } as any;
+    }
 
     const dbAttributes: Record<string, string> = {};
     if (dbItem.attributes) {
@@ -59,10 +64,16 @@ export function computeMatch(scanAttributes: Record<string, string>, scanTitle: 
         }
     }
 
+    const scanAttrCount = Object.keys(scanAttributes || {}).filter(k=>scanAttributes[k]).length;
+    const dbAttrCount = dbItem.attributes?.length || 0;
+
     let isMatch = false;
     if (strictFailures >= 1) {
         isMatch = false;
         debugTrace.push(`[RESULT] Failed: strictFailures=${strictFailures}`);
+    } else if (scanAttrCount >= 2 && dbAttrCount === 0) {
+        isMatch = false;
+        debugTrace.push(`[RESULT] Failed: Attribute imbalance (Scan has ${scanAttrCount}, DB has 0)`);
     } else if (fuzzyMismatches >= 2) {
         isMatch = false;
         debugTrace.push(`[RESULT] Failed: fuzzyMismatches=${fuzzyMismatches}`);

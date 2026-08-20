@@ -171,8 +171,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                     if (e.detail === 'merge') (document.getElementById('mergeForm') as HTMLFormElement)?.requestSubmit();
                     else if (e.detail === 'new') (document.getElementById('dismissForm') as HTMLFormElement)?.requestSubmit();
                     else if (e.detail === 'ignore') {
-                        const deleteBtn = document.querySelector('.menu-delete-btn') as HTMLButtonElement;
-                        if (deleteBtn) deleteBtn.click();
+                        if (confirm('Are you sure you want to vaporize this anomaly? This cannot be undone.')) (document.getElementById('deleteDuplicateForm') as HTMLFormElement)?.requestSubmit();
                     }
                 }} 
             />
@@ -185,6 +184,7 @@ $:	itemCategories = Array.from(new Set(data.item?.photos?.filter(p => p.category
                     await update({ reset: false });
                 };
             }}></form>
+            <form id="deleteDuplicateForm" method="POST" action="?/deleteDuplicate" class="hidden" use:enhance></form>
         </div>
     {/if}
 

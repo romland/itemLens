@@ -17,16 +17,14 @@ export async function GET({ url, setHeaders, locals }) {
     const q = String(url.searchParams.get('q') || "").trim();
 	const cat = String(url.searchParams.get('category') || "").trim();
     const page = Number(url.searchParams.get('page') ?? '1');
-    const count = Math.min( Number(url.searchParams.get('c') ?? '10'), 15);
+    const count = Math.min( Number(url.searchParams.get('c') ?? '12'), 24);
     const unassigned = url.searchParams.get('unassigned') === 'true';
     const attrKey = url.searchParams.get('attrKey');
     const attrVal = url.searchParams.get('attrVal');
 
     const query: Prisma.ItemFindManyArgs = {
-        // take: count,
-        // skip: page == 1 ? 0 : (page - 1) * count,
-        take: Number(count) || 10,
-        skip: Math.max(0, (Number(page) || 1) - 1) * (Number(count) || 10),
+        take: Number(count) || 12,
+        skip: Math.max(0, (Number(page) || 1) - 1) * (Number(count) || 12),
         orderBy: [{ id: 'desc'}],
         where: {
             inventoryId: locals.activeInventoryId

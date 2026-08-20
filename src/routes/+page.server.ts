@@ -14,8 +14,8 @@ export const load = (async ({ locals, url }) => {
 
     const items = await db.item.findMany({
         where: { inventoryId: locals.activeInventoryId },
-        take: 10,
-        skip: page == 1 ? 0 : (page - 1) * 10,
+        take: 12,
+        skip: page == 1 ? 0 : (page - 1) * 12,
         orderBy: [{ id: 'desc' }],
         include: {
             locations: {
@@ -30,7 +30,7 @@ export const load = (async ({ locals, url }) => {
     });
 
     const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = items.length < 10 ? 0 : page + 1;
+    const nextPage = items.length < 12 ? 0 : page + 1;
 
     return { items, prevPage, nextPage, unassignedCount };
 }) satisfies PageServerLoad;
