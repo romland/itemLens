@@ -70,11 +70,13 @@ export const actions = {
                 mappedData[`file.${i}`] = img;
                 mappedData[`file.type.${i}`] = 'information';
             });
-            photosToConnect = await savePhotos(mappedData, uploadsDiskFolder, uploadsWebFolder, 'file.', '');
+            const { photos } = await savePhotos(mappedData, uploadsDiskFolder, uploadsWebFolder, 'file.', '');
+            photosToConnect = photos;
         } else {
             // Standard internal form submission from TimelineInput
             const dataObj = Object.fromEntries(formData);
-            photosToConnect = await savePhotos(dataObj, uploadsDiskFolder, uploadsWebFolder, 'file.', '');
+            const { photos } = await savePhotos(dataObj, uploadsDiskFolder, uploadsWebFolder, 'file.', '');
+            photosToConnect = photos;
         }
 
         if (!content && photosToConnect.length === 0 && linkedIds.length === 0 && preDocsRaw.length === 0) {

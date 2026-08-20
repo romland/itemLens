@@ -2,17 +2,13 @@
     import { enhance } from '$app/forms';
     import { marked } from 'marked';
 	import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import RelativeDate from "$lib/components/RelativeDate.svelte";
 
     export let note;
     
     let isEditing = false;
     let editContent = "";
 	let lightbox: ImageLightbox;
-
-    function formatTime(dateStr: string) {
-        const d = new Date(dateStr);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + d.toLocaleDateString();
-    }
 
     function getDocSnippet(doc: any) {
         if (doc.summary) return doc.summary;
@@ -45,7 +41,7 @@
     <!-- Top Header: Time, Tag, and Menu -->
     <div class="flex justify-between items-center px-4 pt-3 pb-1 text-[10px] text-gray-400 font-medium uppercase tracking-wider">
         <div class="flex items-center gap-2">
-            <span>{formatTime(note.createdAt)}</span>
+            <span class="normal-case tracking-normal"><RelativeDate date={note.createdAt} capitalize={true} /></span>
             {#if note.latitude}
                 <span class="text-primary"><i class="bi bi-geo-alt-fill"></i></span>
             {/if}
