@@ -17,3 +17,19 @@ export function tokenizeAndStem(texts: (string | null | undefined)[]): string[] 
     }
     return allTokens;
 }
+
+export function calculateWeightedJaccard(tokensA: string[], tokensB: string[], idfMap?: Map<string, number>): number {
+    if (tokensA.length === 0 && tokensB.length === 0) return 1.0;
+    
+    let intersectionWeight = 0;
+    let unionWeight = 0;
+    const uniqueUnion = new Set([...tokensA, ...tokensB]);
+    
+    for (const token of uniqueUnion) {
+        const weight = idfMap?.get(token) || 1.0;
+        unionWeight += weight;
+        if (tokensA.includes(token) && tokensB.includes(token)) intersectionWeight += weight;
+    }
+    
+    return unionWeight > 0 ? intersectionWeight / unionWeight : 0;
+}

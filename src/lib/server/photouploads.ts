@@ -314,13 +314,23 @@ export async function downloadQRURLs(data: any, diskFolder: string, webFolder: s
 	}
 }
 
-export async function savePhotos(formData: any, diskPath: string, webPath: string, fieldPrefix: string, remoteURLlist: string = ""): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null, extractedCategoryName: string | null }>
+export async function savePhotos(
+    formData: any, 
+    diskPath: string, 
+    webPath: string, 
+    fieldPrefix: string, 
+    remoteURLlist: string = ""
+): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null, extractedCategoryName: string | null, physical_traits: string[], prominent_text_or_graphic: string | null, color_mix: any }>
 {
 	const photos: Photo[] = [];
 	const extractedAttributes: Record<string, string> = {};
 	let extractedTitle: string | null = null;
 	let extractedDescription: string | null = null;
     let extractedCategoryName: string | null = null;
+    let physical_traits: string[] = [];
+    let prominent_text_or_graphic: string | null = null;
+    let distinctive_blemishes_or_wear: string | null = null;
+    let color_mix: any = null;
 	
 	const filePromises = [];
 	let formFile, i = 0;
@@ -355,6 +365,11 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                             if (sidecar.description && !extractedDescription) extractedDescription = sidecar.description;
                             if (sidecar.categoryName && !extractedCategoryName) extractedCategoryName = sidecar.categoryName;
                             
+                            if (sidecar.physical_traits) physical_traits = sidecar.physical_traits;
+                            if (sidecar.prominent_text_or_graphic) prominent_text_or_graphic = sidecar.prominent_text_or_graphic;
+                            if (sidecar.distinctive_blemishes_or_wear) distinctive_blemishes_or_wear = sidecar.distinctive_blemishes_or_wear;
+                            if (sidecar.color_mix) color_mix = sidecar.color_mix;
+                            
                             if (sidecar.cropPath) {
                                 cropPath = `${webPath}/${filename}_crop.webp`;
                                 fs.copyFileSync(`static${sidecar.cropPath}`, `static${cropPath}`);
@@ -386,6 +401,11 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                             }
                             if (classificationData.title && !extractedTitle) extractedTitle = classificationData.title;
                             if (classificationData.description && !extractedDescription) extractedDescription = classificationData.description;
+                            
+                            if (classificationData.physical_traits) physical_traits = classificationData.physical_traits;
+                            if (classificationData.prominent_text_or_graphic) prominent_text_or_graphic = classificationData.prominent_text_or_graphic;
+                            if (classificationData.distinctive_blemishes_or_wear) distinctive_blemishes_or_wear = classificationData.distinctive_blemishes_or_wear;
+                            if (classificationData.color_mix) color_mix = classificationData.color_mix;
                         }
                     } catch (e) {}
                 }
@@ -453,12 +473,12 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
 		
 		// merge local file photos and remote file photos and return 
 		if((photos.length + remotePhotos.length) === 0 ) {
-            return { photos: [], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName };
+            return { photos: [], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName, physical_traits, prominent_text_or_graphic, distinctive_blemishes_or_wear, color_mix };
 		}
-        return { photos: [...photos, ...remotePhotos], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName };
+        return { photos: [...photos, ...remotePhotos], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName, physical_traits, prominent_text_or_graphic, distinctive_blemishes_or_wear, color_mix };
 	} catch (error) {
 		console.error("Error saving files:", error);
-        return { photos: [], extractedAttributes: {}, extractedTitle: null, extractedDescription: null, extractedCategoryName: null };
+        return { photos: [], extractedAttributes: {}, extractedTitle: null, extractedDescription: null, extractedCategoryName: null, physical_traits: [], prominent_text_or_graphic: null, distinctive_blemishes_or_wear: null, color_mix: null };
 	}
 }
 

@@ -3,6 +3,7 @@ Doc: https://kit.svelte.dev/docs/routing#server
 */
 import { db } from '$lib/server/database';
 import type { Prisma } from '@prisma/client';
+import { flagDuplicatesInList } from '$lib/server/matcher';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -38,6 +39,7 @@ export async function GET({ url, setHeaders, locals }) {
             photos: { include: { category: true } },
             "tags" : true,
             "documents": true,      // a bit wasteful as I really only need the count()
+            attributes: true,
         }
     };
 
@@ -76,6 +78,8 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
     const items = await db.item.findMany(query);
+
+    await flagDuplicatesInList(items, locals.activeInventoryId);
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < count ? 0 : page + 1;

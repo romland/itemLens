@@ -51,7 +51,7 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
         globalBaseFields.push({ id: undefined, name: 'color_mix', uiLabel: 'Colors (Proportional)', type: 'object', options: BASE_COLORS, matchWeight: 'COLOR_PROPORTION', extractionMethod: 'VISION_STRICT', categoryId: null });
     }
     if (archetype !== 'natural') {
-        globalBaseFields.push({ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Distinguishing Graphic/Text (MAX 3 WORDS. Literal text or core shape only)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
+        globalBaseFields.push({ id: undefined, name: 'distinctive_blemishes_or_wear', uiLabel: 'Condition/Wear (Null if pristine)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
     }
 
     return [
@@ -153,21 +153,26 @@ export async function bootstrapCategorySchema(categoryId: number, categoryName: 
     console.log(`[Taxonomy Engine] 🚀 Starting category schema generation for ID ${categoryId}: "${categoryName}"`);
 
     try {
-        const existingInvFields = await db.templateField.findMany({ where: { inventoryId, categoryId: null } });
-        const existingLabels = ['Brand', 'Color', ...existingInvFields.map(f => f.uiLabel)].join(', ');
+        const existingCategories = await db.category.findMany({ where: { inventoryId }, select: { name: true } });
+        const existingCatNames = existingCategories.map(c => c.name).join(', ');
 
         await apiQueue.add(async () => {
             const prompt = `You are a Principal Data Architect. Define 1-3 critical visual attributes needed to uniquely identify and deduplicate an item specifically in the sub-category: "${categoryName}".
-            The overarching inventory is described as: "${inv.description || 'A general collection'}" (Archetype: ${(inv as any)?.archetype || 'generic'}).
+            
+            CONTEXT (THE ZOOM LEVEL):
+            The overarching inventory archetype is: "${(inv as any)?.archetype || 'generic'}".
+            Existing categories in this vault: [${existingCatNames}].
+            
             CRITICAL RULES:
-            1. NO REDUNDANCY: The overarching inventory ALREADY tracks these fields globally: [${existingLabels}]. DO NOT create attributes that conceptually overlap with these (e.g. no "Fabric" if "Material" exists, no "Brand Name" if "Brand" exists).
-            2. CATEGORY-SPECIFIC ONLY: Only generate attributes unique to "${categoryName}" (e.g., "Sleeve Length" for shirts, "Screen Size" for monitors). Adjust your specificity to match the user's inventory description. Do not extract micro-details that are irrelevant to this specific type of collection.
-            3. Categorize EVERY attribute with an extractionMethod:
+            1. RELATIVE RESOLUTION (MACRO vs MICRO): Gauge the "Zoom Level" of this vault. 
+                - High Variance (MACRO): If existing categories are vastly different (e.g., 'shirts', 'hardware', 'books'), DO NOT generate micro-attributes like 'fastening_mechanism'. Stick to macro identifiers.
+                - Low Variance (MICRO): If existing categories are highly clustered (e.g., 'sneakers', 'boots', 'loafers'), you are operating at MICRO resolution. You MUST generate specific micro-attributes (e.g., 'sole_pattern', 'heel_height') because every item is structurally similar.
+            2. Categorize EVERY attribute with an extractionMethod:
                - "VISION_STRICT": 100% undeniable visual geometry or physical form.
                - "HYBRID": Visible text, brands, or labels that might be obscured.
-               - "HUMAN_REQUIRED": Context the camera CANNOT reliably know without a tag (e.g., size, capacity, format).
-            4. Use premium, human-friendly 'uiLabel's.
-            5. For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array (15-25 values where applicable).`;
+                - "HUMAN_REQUIRED": Context the camera CANNOT reliably know without reading a hidden tag, using a measuring tool, or chemical testing (e.g., size, exact dimensions, weight, capacity, internal material).
+            3. For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array.
+            4. NO REDUNDANCY: Do not generate "Color", "Color Mix", or "Brand" fields as they are tracked globally.`;
 
             const res = await withRetry(() => ai.models.generateContent({
                 model: 'gemini-3.1-flash-lite',

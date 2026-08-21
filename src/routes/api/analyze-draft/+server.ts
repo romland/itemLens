@@ -10,7 +10,8 @@ import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
 import crypto from 'crypto';
-import { normalizeStr, computeMatch, isUseless, findBestMatch, buildDuplicateDetails } from '$lib/server/matcher';
+import { findBestMatch, buildDuplicateDetails } from '$lib/server/matcher';
+import { tokenizeAndStem } from '$lib/server/nlp';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -41,59 +42,39 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         try {
             const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { allowNewCategories: true } });
             const allowNew = vault?.allowNewCategories ?? true;
-            const fullSchema = await getActiveSchema(locals.activeInventoryId, null, true);
             const existingCategories = await getExistingCategoryNames(locals.activeInventoryId);
+            activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
 
-            // SINGLE LLM CALL: Gets title, description, and taxonomy in one shot.
-            // We pass the full universe of schemas so the LLM can extract what it needs regardless of the eventual category.
-            const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, fullSchema), { targetType: 'global', targetId: 0, description: 'Extracting taxonomy and title' });
-            
+            const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, activeSchema), { targetType: 'global', targetId: 0, description: 'Extracting physical traits and title' });
+
             activeDrafts.set(hash, analyzePromise);
             setTimeout(() => activeDrafts.delete(hash), 5 * 60 * 1000); // 5 min TTL
             
             classificationData = await analyzePromise;
             
-            // Resolve the category the AI just picked so we can filter the schema down for the UI
-            let resolvedCatId = null;
-            if (classificationData?.subCategory) {
-                const { getOrCreateCategory } = await import('$lib/server/categories');
-                const cat = await getOrCreateCategory(classificationData.subCategory, locals.activeInventoryId);
-                resolvedCatId = cat.id;
-            }
-            
-            // STRICT SCOPING: Only send Global fields + Fields belonging to the specific category to the UI
-            activeSchema = fullSchema.filter(f => !f.categoryId || f.categoryId === resolvedCatId);
-
-            if (classificationData?.extractedAttributes) {
-                // Cold-start awareness: If the category is brand new and has no specific schema yet, allow it to borrow relevant fields.
-                const categoryHasSpecificFields = fullSchema.some(f => f.categoryId === resolvedCatId);
-                const allowedKeys = new Set((categoryHasSpecificFields ? activeSchema : fullSchema).map(s => s.name));
-                
-                const filtered: any = {};
-                for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
-                    if (allowedKeys.has(k) && v !== null && v !== '') {
-                        filtered[k] = v;
-                        if (!activeSchema.some(s => s.name === k)) {
-                            const borrowedField = fullSchema.find(f => f.name === k);
-                            if (borrowedField) activeSchema.push(borrowedField);
-                        }
-                    }
-                }
-                classificationData.extractedAttributes = filtered;
-            }
-
             if (classificationData) {
                 const existingItems = await db.item.findMany({
                     where: { inventoryId: locals.activeInventoryId },
                     include: { attributes: true, locations: { include: { container: true } }, photos: true }
                 });
 
-                console.log("\n[DEBUG] --- DUPLICATE CHECK START ---");
-                console.log("[DEBUG] Scan Title:", classificationData.title);
-                console.log("[DEBUG] Scan Attrs:", classificationData.extractedAttributes);
-                console.log("[DEBUG] Active Schema Fields:", activeSchema.map(s => s.name).join(', '));
+                const scanTokens = tokenizeAndStem([
+                    classificationData.title, 
+                    classificationData.description, 
+                    ...(classificationData.physical_traits || [])
+                ]);
 
-                const bestMatch = findBestMatch(classificationData.extractedAttributes || {}, classificationData.title || '', classificationData.description || classificationData.subtitle || '', '', existingItems, activeSchema, classificationData.subCategory);
+                const scanCtx = {
+                    tokens: scanTokens,
+                    colorMix: classificationData.color_mix,
+                    title: classificationData.title || '',
+                    description: classificationData.description || classificationData.subtitle || '',
+                    rawText: '',
+                    category: classificationData.subCategory,
+                    prominentTextOrGraphic: classificationData.prominent_text_or_graphic,
+                    distinctiveWear: classificationData.distinctive_blemishes_or_wear
+                };
+                const bestMatch = findBestMatch(scanCtx, existingItems, undefined);
                 
                 if (bestMatch) {
                     isDuplicate = true;
@@ -106,23 +87,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             aiData = {
                 title: classificationData?.title,
                 description: classificationData?.description || classificationData?.subtitle || null,
-                extractedAttributes: classificationData?.extractedAttributes,
                 photoType: classificationData?.photoType,
                 subCategory: classificationData?.subCategory,
                 isDuplicate,
                 duplicateItemDetails
             };
 
-            // WRITE EARLY JSON TO PREVENT RACE CONDITIONS
-            // This ensures that if the user clicks Save immediately, savePhotos reads this and sets photo.llmAnalysis.
-            // Which in turn prevents processItemPhotosBackground from running redundant LLM calls and duplicating KVPs.
             if (classificationData) {
                 const initialDraftData = {
                     title: classificationData.title || null,
                     description: classificationData.description || classificationData.subtitle || null,
                     llmAnalysis: JSON.stringify(classificationData),
                     categoryName: classificationData?.subCategory || null,
-                    extractedAttributes: classificationData?.extractedAttributes ? JSON.stringify(classificationData.extractedAttributes) : null,
+                    physical_traits: classificationData.physical_traits,
+                    prominent_text_or_graphic: classificationData.prominent_text_or_graphic,
+                    distinctive_blemishes_or_wear: classificationData.distinctive_blemishes_or_wear,
+                    color_mix: classificationData.color_mix,
                     foregroundBox: classificationData.foregroundBox || null
                 };
                 fs.writeFileSync(`${localPath}.json`, JSON.stringify(initialDraftData), 'utf8');

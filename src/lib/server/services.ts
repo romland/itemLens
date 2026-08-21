@@ -113,6 +113,10 @@ export async function createItemEntity(params: {
     photos?: Prisma.PhotoCreateWithoutItemInput[];
     attributes?: Prisma.KVPCreateWithoutItemInput[];
     extractedAttributes?: string | Record<string, any> | null;
+    physical_traits?: string[];
+    prominent_text_or_graphic?: string | null;
+    distinctive_blemishes_or_wear?: string | null;
+    color_mix?: any;
     timelineNoteId?: number | null;
     duplicateDismissed?: boolean;
 }) {
@@ -140,6 +144,14 @@ export async function createItemEntity(params: {
         } catch(e) { console.error("Failed to parse extracted attributes", e); }
     }
 
+    // Ensure discriminators are saved cleanly as Attributes, separate from the generic NLP pool
+    if (params.prominent_text_or_graphic && !finalAttributes.some(a => a.key === 'prominent_text_or_graphic')) {
+        finalAttributes.push({ key: 'prominent_text_or_graphic', value: params.prominent_text_or_graphic });
+    }
+    if (params.distinctive_blemishes_or_wear && !finalAttributes.some(a => a.key === 'distinctive_blemishes_or_wear')) {
+        finalAttributes.push({ key: 'distinctive_blemishes_or_wear', value: params.distinctive_blemishes_or_wear });
+    }
+
     // Organic Schema Evolution - run across the final merged set (both AI-extracted and Human-edited)
     for (const attr of finalAttributes) {
         const field = activeSchema.find((f: any) => f.name === attr.key) as any;
@@ -156,9 +168,11 @@ export async function createItemEntity(params: {
     const safeTitle = params.title.trim() || "New Item";
 
     const { tokenizeAndStem } = await import('$lib/server/nlp');
-    const subjectiveValues = finalAttributes
-        .filter(a => activeSchema.find((s: any) => s.name === a.key)?.matchWeight === 'SUBJECTIVE_TEXT')
-        .map(a => a.value);
+    const semanticTokens = JSON.stringify(tokenizeAndStem([
+        safeTitle, 
+        params.description, 
+        ...(params.physical_traits || [])
+    ]));
 
     const item = await db.item.create({
         data: {
@@ -170,7 +184,7 @@ export async function createItemEntity(params: {
             duplicateDismissed: params.duplicateDismissed || false,
             reason: params.reason || "",
             amount: params.amount !== undefined ? params.amount : null,
-            semanticTokens: JSON.stringify(tokenizeAndStem([safeTitle, params.description, ...subjectiveValues])),
+            semanticTokens,
             photos: params.photos && params.photos.length > 0 ? { create: params.photos } : undefined,
             attributes: finalAttributes.length > 0 ? { create: finalAttributes } : undefined,
             locations: params.containers && params.containers.length > 0 ? {
@@ -183,6 +197,38 @@ export async function createItemEntity(params: {
         },
         include: { photos: true }
     });
+
+    // Organic Background Schema Mapping
+    if (params.physical_traits && params.physical_traits.length > 0) {
+        const { ioQueue } = await import('$lib/server/queue/index');
+        
+        ioQueue.add(async () => {
+            const kvpsToCreate = [];
+            for (const field of activeSchema) {
+                if (field.extractionMethod === 'HUMAN_REQUIRED') continue;
+                if (field.type === 'enum' && field.options) {
+                    for (const trait of params.physical_traits!) {
+                        const normTrait = trait.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const match = field.options.find((opt: string) => opt.toLowerCase().replace(/[^a-z0-9]/g, '') === normTrait);
+                        if (match) {
+                            const existing = await db.kVP.findFirst({ where: { itemId: item.id, key: field.name } });
+                            if (!existing && !kvpsToCreate.some(k => k.key === field.name)) {
+                                kvpsToCreate.push({ itemId: item.id, key: field.name, value: match });
+                            }
+                        }
+                    }
+                }
+            }
+            if (kvpsToCreate.length > 0) {
+                await db.kVP.createMany({ data: kvpsToCreate });
+                await logActivity(item.id, 'Semantic Extraction', `Structured ${kvpsToCreate.length} attributes in background`, 'success');
+            }
+        });
+    }
+
+    if (params.color_mix && !finalAttributes.some(a => a.key === 'color_mix')) {
+        await db.kVP.create({ data: { itemId: item.id, key: 'color_mix', value: typeof params.color_mix === 'string' ? params.color_mix : JSON.stringify(params.color_mix) } });
+    }
 
     const { processItemPhotosBackground } = await import('$lib/server/photouploads');
     processItemPhotosBackground(item).catch(e => console.error(e));

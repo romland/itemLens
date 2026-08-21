@@ -130,6 +130,16 @@
                 } catch (e) { console.error("Failed to parse AI attributes", e); }
             }
 
+            if (data.aiData.prominent_text_or_graphic && !currentAttributes.some(a => a.key === 'prominent_text_or_graphic')) {
+                currentAttributes = [...currentAttributes, { key: 'prominent_text_or_graphic', value: data.aiData.prominent_text_or_graphic }];
+                autofilled = true; isDirty = true;
+            }
+
+            if (data.aiData.distinctive_blemishes_or_wear && !currentAttributes.some(a => a.key === 'distinctive_blemishes_or_wear')) {
+                currentAttributes = [...currentAttributes, { key: 'distinctive_blemishes_or_wear', value: data.aiData.distinctive_blemishes_or_wear }];
+                autofilled = true; isDirty = true;
+            }
+
             if (autofilled) {
                 dispatch('success', 'AI auto-filled details!');
             }

@@ -63,7 +63,7 @@ async function extractInvoiceDataOpenAI(ocrData)
 // https://www.npmjs.com/package/groq-sdk
 async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
 {
-    return apiQueue.add(async () => {    
+    return apiQueue.add(async () => {   
         const prompt = `From the document (invoice or receipt) below, extract data and put it in this new structure:\n` +
             '```json'+`{ supplier: ...,  items: [ { description: ..., quantity: ..., price: ..., vat: ... }, ` +
             `{ description..., etc }], total: ..., totalIncTaxes, ..., date: ..., invoiceNo: ..., paymentMethod: ... }` + '```\n' +
@@ -97,7 +97,8 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
                 response_format: {"type": "json_object"},
                 // model: "mixtral-8x7b-32768",
                 // model: "llama3-70b-8192",
-                model: "llama-3.3-70b-versatile",
+                // model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-20b",
                 temperature: 0.2,
                 top_p: 0.8,
                 // top K 40
@@ -113,6 +114,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
 }
 
 
+// Using Groq because free, limit to 8000 character input tho...
 export async function summarizeWebpageExtract(extract, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {
@@ -136,14 +138,14 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
                     },
                     {
                         role: "user",
-                        content: prompt + "\n\n" + extract,
+                        content: prompt + "\n\n" + extract.substring(0, 7500),
                     },
                 ],
                 // REMOVED: response_format: {"type": "json_object"}
-                model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-20b",
                 temperature: 0.2,
                 top_p: 0.8,
-            }), 3, 2000, 'Web Summary', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
+            }), 3, 5000, 'Web Summary (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq summary prompt:", prompt + "\n\n" + extract);
             console.log("===========================");
@@ -195,13 +197,14 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
                 response_format: {"type": "json_object"},
                 // model: "mixtral-8x7b-32768",
                 // model: "llama3-70b-8192",
-                model: "llama-3.3-70b-versatile",
+                // model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-20b",
                 temperature: 0.2,
                 top_p: 0.8,
                 // top K 40
                 // @ts-ignore – Together.ai supports schema while OpenAI does not
                 // response_format: { type: 'json_object', schema: jsonSchema },
-            }), 3, 2000, 'Reverse Search LLM Parsing', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
+            }), 3, 2000, 'Reverse Search LLM Parsing (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq product name result:", chatCompletion);
             return chatCompletion.choices[0]?.message?.content || "";

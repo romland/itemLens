@@ -43,7 +43,7 @@ export const actions = {
         }
         */
 
-        const { photos, extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
+        const { photos, extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName, physical_traits, prominent_text_or_graphic, distinctive_blemishes_or_wear, color_mix } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
         const ids = await getTagIds(tagcsv, locals.activeInventoryId);
 
@@ -80,7 +80,11 @@ return fail(400, {
             duplicateDismissed: data.duplicateDismissed === 'true',
             photos,
             attributes: kvps,
-            extractedAttributes
+            extractedAttributes,
+            physical_traits,
+            prominent_text_or_graphic,
+            distinctive_blemishes_or_wear,
+            color_mix
         });
 
         const pastedUrls = orgData.getAll("pasted_urls[]") as string[];

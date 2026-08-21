@@ -161,11 +161,14 @@ console.log("formData:", orgData);
 
 		const parsedAmount = parseInt(data.amount as string, 10);
 
-        const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
-        const subjectiveValues = kvps
-            .filter(a => activeSchema.find((s: any) => s.name === a.key)?.matchWeight === 'SUBJECTIVE_TEXT')
-            .map(a => a.value);
-        const semanticTokens = JSON.stringify(tokenizeAndStem([safeTitle, description.trim(), ...subjectiveValues]));
+        // const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+        // const subjectiveValues = kvps
+        //     .filter(a => activeSchema.find((s: any) => s.name === a.key)?.matchWeight === 'SUBJECTIVE_TEXT')
+        //     .map(a => a.value);
+        // const semanticTokens = JSON.stringify(tokenizeAndStem([safeTitle, description.trim(), ...subjectiveValues]));
+        const excludeKeys = new Set(['prominent_text_or_graphic', 'distinctive_blemishes_or_wear', 'color_mix', 'brand']);
+        const descriptorValues = kvps.filter(a => !excludeKeys.has(a.key)).map(a => a.value);
+        const semanticTokens = JSON.stringify(tokenizeAndStem([safeTitle, description.trim(), ...descriptorValues]));
 
         // Note: We overwrite the initial version of item here so that we have the new ID's
         //       of images, etc.

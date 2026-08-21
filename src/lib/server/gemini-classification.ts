@@ -13,15 +13,20 @@ export interface ImageAnalysisResult {
   title: string;
   subtitle?: string;
   description?: string;
-  extractedAttributes?: Record<string, string | null>;
+  color_mix?: { color: string, pct: number }[] | null;
+  prominent_text_or_graphic?: string | null;
+  distinctive_blemishes_or_wear?: string | null;
+  physical_traits?: string[];
   searchSynonyms?: string[];
+  foregroundBox?: number[];
+  extractedAttributes?: Record<string, any>;
 }
 
 export async function analyzePhoto(
   localFilePath: string,
   existingCategories: string[] = [],
   allowNewCategories: boolean = true,
-  templateFields: any[] = []
+  activeSchema: any[] = []
 ): Promise<ImageAnalysisResult> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const base64Data = fileBuffer.toString('base64');
@@ -31,91 +36,67 @@ export async function analyzePhoto(
   if (ext === '.png') mimeType = 'image/png';
   else if (ext === '.webp') mimeType = 'image/webp';
 
-  // Convert DB fields to a schema description for Gemini
-  let schemaPrompt = '';
-  let schemaObj: any = {};
-  
-  const visibleFields = templateFields.filter(f => f.extractionMethod !== 'HUMAN_REQUIRED');
-  const hasSchema = visibleFields.length > 0;
+  const visibleFields = activeSchema.filter(f => f.extractionMethod !== 'HUMAN_REQUIRED');
+  let dictionaryPrompt = '';
+  if (visibleFields.length > 0) {
+      const dict: any = {};
+      visibleFields.forEach(f => {
+          const cat = f.categoryId ? f.categoryId.toString() : 'global';
+          if (!dict[cat]) dict[cat] = {};
+          dict[cat][f.name] = f.options || f.type;
+      });
+      dictionaryPrompt = `\nSCHEMA DICTIONARY:\n${JSON.stringify(dict)}\n`;
+  }
 
-  let promptText = '';
   const properties: any = {
     photoType: { type: 'string', enum: ['product', 'invoice', 'information', 'other'], description: 'Type of photo' },
     title: { type: 'string', description: 'Concise product title' },
     subCategory: { type: 'string', description: 'Fine-grained sub-category' },
     isNewCategory: { type: 'boolean', description: 'True if subCategory was created new' },
+    color_mix: { 
+        type: 'array', 
+        items: { type: 'object', properties: { color: { type: 'string' }, pct: { type: 'number' } } },
+        description: 'Extract dominant colors as an array of objects mapped to base colors (e.g., Red, Blue, Black, Metallic, Clear, Navy). e.g. [{"color": "Black", "pct": 0.9}]'
+    },
+    prominent_text_or_graphic: { type: 'string', nullable: true },
+    distinctive_blemishes_or_wear: { type: 'string', nullable: true, description: 'Specific damage, wear, or unique blemishes (e.g., "scratched bezel", "hole in left sleeve"). Null if pristine.' },
+    physical_traits: { type: 'array', items: { type: 'string' } },
     searchSynonyms: { type: 'array', items: { type: 'string' } },
-    foregroundBox: { type: 'array', items: { type: 'number' }, description: 'Bounding box [ymin, xmin, ymax, xmax] normalized 0-1000 for the primary foreground object. Ignore background clutter.' }
+    foregroundBox: { type: 'array', items: { type: 'number' }, description: 'Bounding box [ymin, xmin, ymax, xmax] normalized 0-1000 for the primary foreground object. Ignore background clutter.' },
+    extractedAttributes: { type: 'object', description: 'Key-value mapping based strictly on the SCHEMA DICTIONARY.' }
   };
-  const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms', 'foregroundBox'];
+  const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'color_mix', 'prominent_text_or_graphic', 'distinctive_blemishes_or_wear', 'physical_traits', 'searchSynonyms', 'foregroundBox', 'extractedAttributes'];
 
-  if (hasSchema) {
-      schemaPrompt = `6. extractedAttributes: CRITICAL: You MUST evaluate and return every single key listed below. Look closely at the image for distinguishing marks. If a field applies (e.g., printed text, unique graphics, distinct patterns), extract it exactly. If a field is entirely hidden or fundamentally irrelevant, you MUST set the value to null. DO NOT omit the key.\n`;
-      for (const field of visibleFields) {
-          if (field.name === 'color_mix') {
-              schemaObj[field.name] = { 
-                  type: 'array', 
-                  items: { 
-                      type: 'object', 
-                      properties: { color: { type: 'string', enum: field.options || BASE_COLORS }, pct: { type: 'number' } },
-                      required: ['color', 'pct']
-                  }, 
-                  description: 'Dominant colors and their proportions. e.g. [{"color": "Navy", "pct": 0.8}]', nullable: true
-              };
-              schemaPrompt += `- ${field.name}: Extract dominant colors as an array of objects. Map complex shades to the closest base color from: ${field.options?.join(', ')}. Pay careful attention to dark shades (e.g. Navy vs Black). ALWAYS output at least one color.\n`;
-          } else {
-              schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
-              if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;
-              else schemaPrompt += `- ${field.name} (${field.uiLabel})\n`;
-          }
-      }
+  const promptText = `Analyze this image for a home inventory system.
+EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
+${dictionaryPrompt}
 
-    promptText = `Analyze this image for a home inventory system.
-    EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
-    
-    CRITICAL GROUNDING RULES:
-    - YOU ARE A STRICT VISUAL EXTRACTOR.
-    - ISOLATE THE PRIMARY FOREGROUND OBJECT. Completely ignore background clutter (like workbenches, tables, soldering irons, hands, etc.).
-    - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
-    - NEVER write plot summaries, historical context, or fun facts.
+CRITICAL GROUNDING RULES:
+1. YOU ARE A STRICT VISUAL EXTRACTOR.
+2. ISOLATE THE PRIMARY FOREGROUND OBJECT. Completely ignore background clutter.
+3. IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
+4. NEVER write plot summaries, historical context, or fun facts.
+5. SEPARATE DESCRIPTORS FROM DISCRIMINATORS: "physical_traits" are generic properties (e.g., cotton, white, v-neck). Do NOT put graphics, text, brands, or wear into physical_traits.
+6. THE SCALE & MATERIAL FALLACY: A photo has no absolute scale. You cannot tell a Small shirt from a Large shirt, or a 10mm wrench from a 12mm wrench. DO NOT guess sizes, dimensions, or invisible materials. If it is not explicitly printed in visible text, you do not know it.
+7. DICTIONARY ENFORCEMENT: If SCHEMA DICTIONARY is provided, check the 'global' keys and the keys matching your chosen subCategory. Output EXACTLY those keys into 'extractedAttributes'. Use the provided enums. Output null if visually obscured. Do not invent keys.
 
-    TASKS:
-    1. photoType: Identify if this photo is a 'product' (physical item), 'invoice' (receipt/bill), 'information' (pinout/diagram/spec sheet), or 'other'.
-    2. title: Identify this product. Return a concise 'title' for it.
-    3. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create a NEW STRICTLY SINGULAR noun (e.g. 'shirt', not 'shirts'). Use standard retail-level specificity (e.g. 't-shirt' or 'cardigan'). NEVER output a broad macro-category like 'clothing', 'electronics', or 'tools'." : "MUST pick exactly from list."}
-    4. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
-    5. description: A brief visual physical description of the item.
-    ${schemaPrompt}
-    7. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
-    8. foregroundBox: Provide the bounding box of the isolated primary object.`;
+TASKS:
+1. photoType: Identify if this photo is a 'product' (physical item), 'invoice', 'information', or 'other'.
+2. title: Identify this product. Return a concise 'title' for it.
+3. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create a NEW STRICTLY SINGULAR noun (e.g. 'shirt', not 'shirts'). Use standard retail-level specificity. NEVER output a broad macro-category like 'clothing' or 'tools'." : "MUST pick exactly from list."}
+4. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
+5. description: A brief visual physical description.
+6. color_mix: Extract dominant colors as an array of objects mapped to base colors (e.g. Red, Blue, Black, Clear, Metallic). e.g. [{"color": "Black", "pct": 0.9}].
+7. prominent_text_or_graphic: Literal transcription of any text or a description of the core graphic shape. Null if plain/blank.
+8. distinctive_blemishes_or_wear: Specific damage, fading, or wear (e.g., "hole in knee", "scratched screen"). Null if pristine.
+9. physical_traits: An array of 5-10 generic descriptive strings (e.g., ["cotton", "crew-neck", "short-sleeves", "stainless steel"]). Describe form and structure.
+10. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
+11. foregroundBox: Provide the bounding box of the isolated primary object.`;
 
-    properties.description = { type: 'string', description: 'Brief visual description' };
-    properties.extractedAttributes = { type: 'object', properties: schemaObj, required: visibleFields.map(f => f.name) };
-    required.push('description', 'extractedAttributes');
-  } else {
-    promptText = `Analyze this image for a home inventory system.
-    EXISTING SUB-CATEGORIES IN DATABASE: ${JSON.stringify(existingCategories)}
-    
-    CRITICAL GROUNDING RULES:
-    - YOU ARE A STRICT VISUAL EXTRACTOR.
-    - ISOLATE THE PRIMARY FOREGROUND OBJECT. Completely ignore background clutter (like workbenches, tables, soldering irons, hands, etc.).
-    - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
-    - NEVER write plot summaries, historical context, or fun facts.
-
-    TASKS:
-    1. photoType: Identify if this photo is a 'product', 'invoice', 'information', or 'other'.
-    2. title: Identify this product. Return the actual name of the work itself (Book Title, Album Name, Product Name) based strictly on visible text. NEVER put the creator here.
-    3. subtitle: Identify the creator (Author, Band/Artist, Maker, Brand). NEVER put the main work title here. DO NOT write a description or plot summary. Just literal secondary text.
-    4. subCategory: Assign a sub-category. ${allowNewCategories ? "Reuse from list or create a NEW STRICTLY SINGULAR noun (e.g. 'book', not 'books'). Use standard retail-level specificity. NEVER output a broad macro-category like 'media', 'clothing', or 'hardware'." : "MUST pick exactly from list."}
-    5. isNewCategory: Set to true ONLY if you created a subCategory not in the list.
-    6. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
-    7. foregroundBox: Provide the bounding box of the isolated primary object.`;
-
-    properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
-  }
+  properties.description = { type: 'string', description: 'Brief visual description' };
+  properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
 
   const response = await withRetry(() => ai.models.generateContent({
-    // model: 'gemini-2.5-flash',
     model: 'gemini-3.1-flash-lite',
     contents: [
       {

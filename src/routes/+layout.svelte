@@ -74,8 +74,18 @@
     }
 
     // GLOBAL SYNC ENGINE (Outbox)
-    let isSyncing = false;
     async function processOutbox() {
+        if (typeof navigator !== 'undefined' && navigator.locks) {
+            await navigator.locks.request('itemlens-outbox-sync', { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+                if (lock) await doProcessOutbox();
+            });
+        } else {
+            await doProcessOutbox();
+        }
+    }
+
+    let isSyncing = false;
+    async function doProcessOutbox() {
         if (isSyncing || !navigator.onLine) return;
         isSyncing = true;
         try {

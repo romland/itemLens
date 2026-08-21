@@ -12,6 +12,7 @@ import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
 import { computeMatch, normalizeStr, findBestMatch, computeIdfMap } from '$lib/server/matcher';
 import { withRetry } from '$lib/server/retry';
+import { tokenizeAndStem } from '$lib/server/nlp';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -52,6 +53,7 @@ CRITICAL GROUNDING RULES:
 - NO DUPLICATES: Draw exactly one box per physical item.
 - IF YOU CANNOT SEE IT PRINTED OR PHYSICALLY PRESENT IN THE IMAGE, DO NOT INFER IT.
 - NEVER generate plot summaries, reviews, or historical facts.
+- DICTIONARY ENFORCEMENT: Check the SCHEMA DICTIONARY. Output exact keys for 'global' and your chosen 'category' into 'extractedAttributes'. Output null if obscured.
 
 Return a JSON object with:
 - "totalVisibleCount": (integer) the number of items you counted.
@@ -59,20 +61,20 @@ Return a JSON object with:
 - "title": (string) The actual name of the work (Book Title, Album Name, Movie Title). NEVER the author/artist.
 - "subtitle": (string, optional) ONLY the creator (Author, Artist, Brand, Maker) or edition physically printed on the item. NEVER the main title. DO NOT write descriptions.
 - "category": (string) A STRICTLY SINGULAR, specific retail-style sub-category (e.g. 't-shirt', 'mug', 'wrench'). NEVER use plural. NEVER use broad macro-categories like 'clothing', 'media', or 'electronics'.
-  ${activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').length > 0 ? 
-  `- "extractedAttributes": (object) You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, output null.\n SCHEMA: ${JSON.stringify(activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED').map(s => ({ name: s.name, type: s.type, options: s.options })))}` : ''}
+  - "extractedAttributes": (object) Key-value pairs matching the SCHEMA DICTIONARY.
   - "rawText": (string) literally every word you can read on the item, space separated. Do not format it.
   - "box": (array of numbers) tight bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000 around the SINGLE individual item.`;
+
+        const visibleSchema = activeSchema.filter((s: any) => s.extractionMethod !== 'HUMAN_REQUIRED');
+        if (visibleSchema.length > 0) {
+            const dict: any = {};
+            visibleSchema.forEach((s: any) => { const cat = s.categoryId ? s.categoryId.toString() : 'global'; if (!dict[cat]) dict[cat] = {}; dict[cat][s.name] = s.options || s.type; });
+            prompt += `\nSCHEMA DICTIONARY:\n${JSON.stringify(dict)}\n`;
+        }
 
         if (hint.trim()) {
             prompt += `\nUser hint for context: "${hint.trim()}". Use this to improve detection accuracy.`;
         }
-
-        const visibleSchema = activeSchema.filter(s => s.extractionMethod !== 'HUMAN_REQUIRED');
-        let schemaProps: any = {};
-        visibleSchema.forEach(s => {
-            schemaProps[s.name] = { type: s.type === 'number' ? 'number' : 'string', nullable: true };
-        });
 
         const response = await apiQueue.add(
             () => withRetry(() => ai.models.generateContent({
@@ -97,13 +99,7 @@ Return a JSON object with:
                                     title: { type: 'string' },
                                     subtitle: { type: 'string' },
                                     category: { type: 'string' },
-                                    ...(visibleSchema.length > 0 ? {
-                                        extractedAttributes: {
-                                            type: 'object',
-                                            properties: schemaProps,
-                                            required: visibleSchema.map(s => s.name)
-                                        }
-                                    } : {}),
+                                    extractedAttributes: { type: 'object' },
                                     rawText: { type: 'string' },
                                     box: {
                                         type: 'array',
@@ -147,7 +143,17 @@ Return a JSON object with:
                 const available = dbItem.amount || 1;
                 if (used >= available) continue; // Fully consumed by other boxes in photo
 
-                const m = computeMatch(item.extractedAttributes || {}, item.title || '', item.subtitle || '', item.rawText || '', dbItem, activeSchema, idfMap, item.category);
+            const scanCtx = {
+                tokens: tokenizeAndStem([item.title, item.subtitle, item.rawText]),
+                colorMix: item.extractedAttributes?.color_mix,
+                title: item.title || '',
+                description: item.subtitle || '',
+                rawText: item.rawText || '',
+                category: item.category,
+                prominentTextOrGraphic: item.extractedAttributes?.prominent_text_or_graphic,
+                distinctiveWear: item.extractedAttributes?.distinctive_blemishes_or_wear
+            };
+            const m = computeMatch(scanCtx, dbItem, idfMap);
                 if (m.isMatch && m.score > highestScore) {
                     highestScore = m.score;
                     bestMatch = dbItem;

@@ -1,3 +1,6 @@
+// DEPRECATED: This file is obsolete. All taxonomy and schema generation 
+// has been consolidated into `src/lib/server/ontology.ts`.
+/*
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
 import { db } from '$lib/server/database';
@@ -7,9 +10,7 @@ import { withRetry } from './retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-/**
- * Bootstraps a strict EAV schema for a new category via LLM.
- */
+// Bootstraps a strict EAV schema for a new category via LLM.
 export async function generateTaxonomySchema(categoryId: number, domainName: string, inventoryId: number): Promise<void> {
     await apiQueue.add(async () => {
         const prompt = `
@@ -56,10 +57,8 @@ export async function generateTaxonomySchema(categoryId: number, domainName: str
     });
 }
 
-/**
- * Fetches the active EAV rules for a given context.
- * @param fetchAll If true, grabs every field in the inventory (useful for bulk collection scans where category is unknown).
- */
+//  Fetches the active EAV rules for a given context.
+//  @param fetchAll If true, grabs every field in the inventory (useful for bulk collection scans where category is unknown).
 export async function getActiveSchema(inventoryId: number, categoryId?: number | null, fetchAll: boolean = false) {
     const whereClause: any = { inventoryId };
     if (!fetchAll) {
@@ -75,3 +74,4 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
         ...fields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod }))
     ];
 }
+*/
