@@ -43,12 +43,19 @@ export const actions = {
         }
         */
 
-        const { photos, extractedAttributes, extractedTitle, extractedDescription } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
+        const { photos, extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
         const ids = await getTagIds(tagcsv, locals.activeInventoryId);
 
         const safeTitle = (title.trim() || extractedTitle || "New Item").trim();
         const finalDesc = (description.trim() || extractedDescription || "").trim();
+
+        if (extractedCategoryName && photos.length > 0) {
+            const { getOrCreateCategory } = await import('$lib/server/categories');
+            const cat = await getOrCreateCategory(extractedCategoryName, locals.activeInventoryId);
+            const prodPhoto: any = photos.find((p: any) => p.type === 'product');
+            if (prodPhoto) prodPhoto.categoryId = cat.id;
+        }
 
 /*
 console.log("formData:", orgData);

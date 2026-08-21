@@ -9,8 +9,9 @@ import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
 import sharp from 'sharp';
 import { withRetry } from '$lib/server/retry';
-import { computeMatch, normalizeStr, isUseless } from '$lib/server/matcher';
+import { computeMatch, normalizeStr, isUseless, buildDuplicateDetails, findBestMatch, computeIdfMap } from '$lib/server/matcher';
 import { getActiveSchema } from '$lib/server/ontology';
+import { BASE_COLORS } from '$lib/server/colors';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -60,19 +61,32 @@ For each item:
 - title: The actual name of the work itself (e.g., Book Title, Album Name, Movie Title, Product Name). NEVER put the author or artist here. If unreadable, use a placeholder (e.g., 'Unknown CD').
 - subtitle: The creator (e.g., Author, Band/Artist, Maker, Brand). NEVER put the main work title here.
 - category: A STRICTLY SINGULAR, specific retail-style sub-category (e.g. 't-shirt', 'mug', 'wrench'). NEVER use plural. NEVER use broad macro-categories like 'clothing', 'media', or 'electronics'.
-- box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
-- low_confidence: Set to true if the text is blurry, occluded, or hard to read.
 `;
 
         const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
         const visibleSchema = activeSchema.filter((s: any) => s.extractionMethod !== 'HUMAN_REQUIRED');
         let schemaProps: any = {};
         if (visibleSchema.length > 0) {
-            promptText += `\n- extractedAttributes: Extract these specific fields if visible. Use provided enums where applicable. If entirely hidden, omit it.\n SCHEMA: ${JSON.stringify(visibleSchema.map((s: any) => ({ name: s.name, type: s.type, options: s.options })))}\n`;
+            promptText += `\n- extractedAttributes: CRITICAL: Evaluate every field in the schema. If visible, extract it exactly. If hidden or irrelevant, explicitly set the value to null. DO NOT omit keys.\n  SCHEMA: ${JSON.stringify(visibleSchema.map((s: any) => ({ name: s.name, type: s.type, options: s.options })))}\n`;
             visibleSchema.forEach((s: any) => {
-                schemaProps[s.name] = { type: s.type === 'number' ? Type.NUMBER : Type.STRING, description: s.uiLabel };
+                if (s.name === 'color_mix') {
+                    schemaProps[s.name] = { 
+                        type: Type.ARRAY, 
+                        items: { 
+                            type: Type.OBJECT, 
+                            properties: { color: { type: Type.STRING, enum: s.options || BASE_COLORS }, pct: { type: Type.NUMBER } },
+                            required: ['color', 'pct']
+                        }, 
+                        description: 'Dominant colors and their proportions. e.g. [{"color": "Black", "pct": 0.8}]' 
+                    };
+                    promptText += `  - ${s.name}: Extract dominant colors as an array of objects. Map complex shades to the closest base color from: ${s.options?.join(', ')}. Pay careful attention to dark shades (e.g. Navy vs Black). ALWAYS output at least one color.\n`;
+                } else {
+                    schemaProps[s.name] = { type: s.type === 'number' ? Type.NUMBER : Type.STRING, description: s.uiLabel };
+                }
             });
         }
+
+        promptText += `\n- box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.\n- low_confidence: Set to true if the text is blurry, occluded, or hard to read.`;
 
 		const hint = data.get('hint') as string;
 		if (hint && hint.trim()) {
@@ -107,7 +121,7 @@ For each item:
                                                     title: { type: Type.STRING },
                                                     subtitle: { type: Type.STRING },
                                                     category: { type: Type.STRING },
-                                                    ...(visibleSchema.length > 0 ? { extractedAttributes: { type: Type.OBJECT, properties: schemaProps } } : {}),
+                                                    ...(visibleSchema.length > 0 ? { extractedAttributes: { type: Type.OBJECT, properties: schemaProps, required: visibleSchema.map((s: any) => s.name) } } : {}),
                                                     box: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: '[ymin, xmin, ymax, xmax] normalized 0-1000' },
                                                     low_confidence: { type: Type.BOOLEAN }
                                                 },
@@ -133,6 +147,10 @@ For each item:
         const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId } });
         const defaultStrategy = vault?.duplicateStrategy || 'PROMPT';
 
+        // Map to track how many times a DB item has been consumed by a match in the photo
+        const idUsage = new Map<number, number>();
+        const idfMap = computeIdfMap(dbItems);
+
         for (const item of aiResponse.items) {
             item.isDuplicate = false;
             item.duplicateStrategy = defaultStrategy;
@@ -142,29 +160,35 @@ For each item:
                 if (cat && cat.duplicateStrategy) item.duplicateStrategy = cat.duplicateStrategy;
             }
 
+            let bestMatch = null;
+            let highestScore = -999;
+
             for (const dbItem of dbItems) {
-                const match = computeMatch(item.extractedAttributes || {}, item.title || '', '', dbItem, activeSchema, item.category);
-                if (match.isMatch) {
-                    item.isDuplicate = true;
-                    const sharedAttrs: any[] = [];
-                    if (item.extractedAttributes) {
-                        const schemaKeys = new Set(activeSchema.map((s: any) => s.name));
-                        for (const [k, v] of Object.entries(item.extractedAttributes)) {
-                            if (!schemaKeys.has(k)) continue;
-                            const dbVal = dbItem.attributes.find((a: any) => a.key === k)?.value;
-                            if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
-                                sharedAttrs.push({ key: k, value: String(v) });
-                            }
-                        }
-                    }
-                    item.duplicateItemDetails = {
-                        id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt, categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
-                        thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
-                        locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
-                        sharedAttributes: sharedAttrs
-                    };
-                    break;
+                // Bug Fix: If we've already matched this physical item up to its total stored quantity, skip it.
+                const used = idUsage.get(dbItem.id) || 0;
+                const available = dbItem.amount || 1;
+                if (used >= available) continue;
+
+                const match = computeMatch(item.extractedAttributes || {}, item.title || '', item.subtitle || '', item.rawText || '', dbItem, activeSchema, idfMap, item.category);
+
+                const dbCat = dbItem.photos?.[0]?.category?.name?.toLowerCase();
+                const sCat = item.category?.toLowerCase();
+                if (match.isMatch || (dbCat && sCat && dbCat === sCat) || (item.title && dbItem.title && (dbItem.title.toLowerCase().includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(dbItem.title.toLowerCase())))) {
+                    if (!item._debugComparisons) item._debugComparisons = [];
+                    item._debugComparisons.push({ dbTitle: dbItem.title, score: match.score, trace: match.debugTrace });
                 }
+
+                if (match.isMatch && match.score > highestScore) {
+                    highestScore = match.score;
+                    bestMatch = { dbItem, match };
+                }
+            }
+
+            if (bestMatch) {
+                const { dbItem, match } = bestMatch;
+                item.isDuplicate = true;
+                idUsage.set(dbItem.id, (idUsage.get(dbItem.id) || 0) + 1);
+                item.duplicateItemDetails = buildDuplicateDetails(dbItem, match);
             }
         }
 

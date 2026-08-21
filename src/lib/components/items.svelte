@@ -104,6 +104,9 @@
                         <td class="w-full">
                             <div class="flex items-center gap-2">
                                 <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
+                                {#if item.hasDuplicate}
+                                    <span class="w-2.5 h-2.5 rounded-full bg-error shrink-0" title="Potential duplicate detected"></span>
+                                {/if}
                                 <!-- Show a loading spinner right next to the title while we wait -->
                                 {#if isNavigatingToThis}
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
@@ -184,6 +187,9 @@
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <div class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}" on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
+                        {#if item.hasDuplicate}
+                            <div class="absolute top-3 right-3 w-3 h-3 bg-error rounded-full border-2 border-base-100 shadow-sm z-10" title="Potential duplicate detected"></div>
+                        {/if}
                         {#if mainPhoto.thumbPath || mainPhoto.orgPath}
                             <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                         {:else}

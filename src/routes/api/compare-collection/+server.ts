@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
-import { computeMatch, normalizeStr } from '$lib/server/matcher';
+import { computeMatch, normalizeStr, findBestMatch, computeIdfMap } from '$lib/server/matcher';
 import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
@@ -136,15 +136,25 @@ Return a JSON object with:
         const newToYou: any[] = [];
         const matchedDbItemIds = new Set<number>();
         const idUsage = new Map<number, number>();
+        const idfMap = computeIdfMap(dbItems);
 
         for (const item of detected) {
-            const match = dbItems.find(dbItem => {
+            let bestMatch = null;
+            let highestScore = -999;
+
+            for (const dbItem of dbItems) {
                 const used = idUsage.get(dbItem.id) || 0;
                 const available = dbItem.amount || 1;
-                if (used >= available) return false; // Fully consumed by other boxes in photo
+                if (used >= available) continue; // Fully consumed by other boxes in photo
 
-                return computeMatch(item.extractedAttributes, item.title, item.rawText, dbItem, activeSchema).isMatch;
-            });
+                const m = computeMatch(item.extractedAttributes || {}, item.title || '', item.subtitle || '', item.rawText || '', dbItem, activeSchema, idfMap, item.category);
+                if (m.isMatch && m.score > highestScore) {
+                    highestScore = m.score;
+                    bestMatch = dbItem;
+                }
+            }
+
+            const match = bestMatch;
 
             if (match) {
                 idUsage.set(match.id, (idUsage.get(match.id) || 0) + 1);

@@ -314,12 +314,13 @@ export async function downloadQRURLs(data: any, diskFolder: string, webFolder: s
 	}
 }
 
-export async function savePhotos(formData: any, diskPath: string, webPath: string, fieldPrefix: string, remoteURLlist: string = ""): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null }>
+export async function savePhotos(formData: any, diskPath: string, webPath: string, fieldPrefix: string, remoteURLlist: string = ""): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null, extractedCategoryName: string | null }>
 {
 	const photos: Photo[] = [];
 	const extractedAttributes: Record<string, string> = {};
 	let extractedTitle: string | null = null;
 	let extractedDescription: string | null = null;
+    let extractedCategoryName: string | null = null;
 	
 	const filePromises = [];
 	let formFile, i = 0;
@@ -352,6 +353,7 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
                             
                             if (sidecar.title && !extractedTitle) extractedTitle = sidecar.title;
                             if (sidecar.description && !extractedDescription) extractedDescription = sidecar.description;
+                            if (sidecar.categoryName && !extractedCategoryName) extractedCategoryName = sidecar.categoryName;
                             
                             if (sidecar.cropPath) {
                                 cropPath = `${webPath}/${filename}_crop.webp`;
@@ -451,12 +453,12 @@ export async function savePhotos(formData: any, diskPath: string, webPath: strin
 		
 		// merge local file photos and remote file photos and return 
 		if((photos.length + remotePhotos.length) === 0 ) {
-			return { photos: [], extractedAttributes, extractedTitle, extractedDescription };
+            return { photos: [], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName };
 		}
-		return { photos: [...photos, ...remotePhotos], extractedAttributes, extractedTitle, extractedDescription };
+        return { photos: [...photos, ...remotePhotos], extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName };
 	} catch (error) {
 		console.error("Error saving files:", error);
-		return { photos: [], extractedAttributes: {}, extractedTitle: null, extractedDescription: null };
+        return { photos: [], extractedAttributes: {}, extractedTitle: null, extractedDescription: null, extractedCategoryName: null };
 	}
 }
 
@@ -482,5 +484,6 @@ export function getSafeFilename(filename: string, extra: string = ""): string
 	.replace(/T/, '')
 	.replace(/\..+/, '');
 	
-	return date + '-' + extra + "-" + slugify(filename.toLowerCase());
+    const hash = crypto.randomBytes(3).toString('hex');
+    return date + '-' + extra + "-" + hash + "-" + slugify(filename.toLowerCase());
 }

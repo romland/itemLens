@@ -11,6 +11,7 @@
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
+    import ColorMixBar from "$lib/components/ColorMixBar.svelte";
 
     export let data: PageServerData;
     
@@ -114,6 +115,12 @@ $:  hasMissingFields = activeSchema.some(f =>
         (f.extractionMethod === 'HYBRID' && !itemAttributes[f.name])
     );
 
+$: if (data.duplicateItemDetails?.debugTrace) {
+    console.group(`🔍 Match Trace for: ${data.item?.title}`);
+    data.duplicateItemDetails.debugTrace.forEach((line: string) => console.log(line));
+    console.groupEnd();
+}
+
 </script>
 
 <PasteHandler 
@@ -194,6 +201,7 @@ $:  hasMissingFields = activeSchema.some(f =>
                 matchDetails={data.duplicateItemDetails} 
                 scannedCreatedAt={data.item.createdAt}
                 isAfterTheFact={true}
+                    scannedItem={data.item}
                 on:resolve={(e) => {
                     if (e.detail === 'merge') (document.getElementById('mergeForm') as HTMLFormElement)?.requestSubmit();
                     else if (e.detail === 'new') (document.getElementById('dismissForm') as HTMLFormElement)?.requestSubmit();
@@ -201,7 +209,7 @@ $:  hasMissingFields = activeSchema.some(f =>
                         if (confirm('Are you sure you want to vaporize this anomaly? This cannot be undone.')) (document.getElementById('deleteDuplicateForm') as HTMLFormElement)?.requestSubmit();
                     }
                 }}
-                on:zoom={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}
+                    on:zoom={(e) => lightbox.open({ orgPath: e.detail.orgPath || e.detail.thumbPath, showOriginal: true })}
             />
             <form id="mergeForm" method="POST" action="?/mergeDuplicate" class="hidden" use:enhance>
                 <input type="hidden" name="targetId" value={data.duplicateItemDetails.id}>
@@ -444,8 +452,10 @@ $:  hasMissingFields = activeSchema.some(f =>
                 <div class="flex flex-col gap-2">
                     {#each data.item.attributes as attrib}
                         <div class="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-base-200/50 last:border-0">
-                            <span class="text-sm text-gray-500 font-medium">{attrib.key}</span>
-                            {#if attrib.value.startsWith('/images/')}
+                            <span class="text-sm text-gray-500 font-medium">{attrib.key === 'color_mix' ? 'Colors' : attrib.key}</span>
+                            {#if attrib.key === 'color_mix'}
+                                <div class="sm:w-1/2 mt-1 sm:mt-0"><ColorMixBar colorMixStr={attrib.value} /></div>
+                            {:else if attrib.value.startsWith('/images/')}
                                 <button type="button" class="text-sm font-bold text-primary hover:underline break-all text-left sm:text-right" on:click={() => lightbox.open({ orgPath: attrib.value, showOriginal: true })}>
                                     {attrib.value}
                                 </button>

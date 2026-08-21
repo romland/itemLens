@@ -1,5 +1,6 @@
 import { getPalette } from "$lib/server/colorthief";
 import namer from 'color-namer';
+export { BASE_COLORS_RGB, BASE_COLORS } from '$lib/shared/colors';
 
 // Extract top colors of image
 export function getTopColorsNamed(imagePath : string, callback: any)

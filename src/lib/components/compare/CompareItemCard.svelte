@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import ItemMiniCard from '../ItemMiniCard.svelte';
+    import ColorMixBar from '../ColorMixBar.svelte';
     export let item: any;
     export let type: 'unregistered' | 'missing' | 'elsewhere' | 'correct';
     export let draftPath: string;
@@ -105,7 +106,11 @@
             {#if item.extractedAttributes}
                 <div class="flex flex-wrap gap-1 mt-1.5">
                     {#each Object.entries(item.extractedAttributes).filter(([_, v]) => v !== null) as [key, val]}
-                        <span class="badge badge-ghost badge-xs text-[9px] uppercase tracking-wider font-mono opacity-80 border-base-300">{val}</span>
+                        {#if key === 'color_mix'}
+                            <div class="w-full mb-1"><ColorMixBar colorMixStr={val} /></div>
+                        {:else}
+                            <span class="badge badge-ghost badge-xs text-[9px] uppercase tracking-wider font-mono opacity-80 border-base-300">{val}</span>
+                        {/if}
                     {/each}
                 </div>
             {/if}

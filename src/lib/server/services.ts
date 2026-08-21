@@ -129,7 +129,8 @@ export async function createItemEntity(params: {
 
             for (const [k, v] of Object.entries(attrs)) {
                 if (v !== null && v !== '') {
-                    const valStr = String(v).trim();
+                    const valStr = typeof v === 'object' ? JSON.stringify(v) : String(v).trim();
+                    if (valStr === '{}' || valStr === '[object Object]') continue; // Do not save empty JSON objects or literal garbage strings
                     // Prioritize Human UI edits: Only append if the form didn't already send this exact key
                     if (!finalAttributes.some(a => a.key === k)) {
                         finalAttributes.push({ key: k, value: valStr });
@@ -154,6 +155,11 @@ export async function createItemEntity(params: {
 
     const safeTitle = params.title.trim() || "New Item";
 
+    const { tokenizeAndStem } = await import('$lib/server/nlp');
+    const subjectiveValues = finalAttributes
+        .filter(a => activeSchema.find((s: any) => s.name === a.key)?.matchWeight === 'SUBJECTIVE_TEXT')
+        .map(a => a.value);
+
     const item = await db.item.create({
         data: {
             title: safeTitle,
@@ -164,6 +170,7 @@ export async function createItemEntity(params: {
             duplicateDismissed: params.duplicateDismissed || false,
             reason: params.reason || "",
             amount: params.amount !== undefined ? params.amount : null,
+            semanticTokens: JSON.stringify(tokenizeAndStem([safeTitle, params.description, ...subjectiveValues])),
             photos: params.photos && params.photos.length > 0 ? { create: params.photos } : undefined,
             attributes: finalAttributes.length > 0 ? { create: finalAttributes } : undefined,
             locations: params.containers && params.containers.length > 0 ? {

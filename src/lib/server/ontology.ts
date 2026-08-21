@@ -4,12 +4,9 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import { apiQueue } from '$lib/server/queue/index';
 import { withRetry } from './retry';
 import { taskManager } from './taskManager';
+import { BASE_COLORS } from './colors';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-// const BASE_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 'Navy', 'Teal', 'Multicolor', 'Metallic', 'Clear'];
-// 'Multicolor' is intentionally banned. The model must comma-separate dominant colors (e.g., "Red, White") for 50/50 splits.
-const BASE_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 'Navy', 'Teal', 'Metallic', 'Clear'];
 
 
 const eavResponseSchema = {
@@ -21,7 +18,7 @@ const eavResponseSchema = {
             uiLabel: { type: 'string', description: 'Premium human label, e.g., Form Factor' },
             type: { type: 'string', enum: ['string', 'enum', 'boolean', 'number'] },
             options: { type: 'array', items: { type: 'string' }, description: 'Array of enums if type is enum' },
-            matchWeight: { type: 'string', enum: ['STRICT_DEDUPE', 'FUZZY_SECONDARY', 'METADATA_ONLY'] },
+                matchWeight: { type: 'string', enum: ['STRICT_DEDUPE', 'FUZZY_SECONDARY', 'METADATA_ONLY', 'SUBJECTIVE_TEXT'] },
             extractionMethod: { type: 'string', enum: ['VISION_STRICT', 'HUMAN_REQUIRED', 'HYBRID'] }
         },
         required: ['name', 'uiLabel', 'type', 'matchWeight', 'extractionMethod']
@@ -51,10 +48,10 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
     }
     // Media rarely benefits from deduplicating based on the color of the spine.
     if (archetype !== 'media') {
-        globalBaseFields.push({ id: undefined, name: 'primary_color', uiLabel: 'Color', type: 'enum', options: BASE_COLORS, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'VISION_STRICT', categoryId: null });
+        globalBaseFields.push({ id: undefined, name: 'color_mix', uiLabel: 'Colors (Proportional)', type: 'object', options: BASE_COLORS, matchWeight: 'COLOR_PROPORTION', extractionMethod: 'VISION_STRICT', categoryId: null });
     }
-    if (archetype === 'apparel') {
-        globalBaseFields.push({ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Primary Graphic/Text (Keep to 1-3 words max)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
+    if (archetype !== 'natural') {
+        globalBaseFields.push({ id: undefined, name: 'prominent_text_or_graphic', uiLabel: 'Distinguishing Graphic/Text (MAX 3 WORDS. Literal text or core shape only)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
     }
 
     return [
@@ -85,8 +82,11 @@ export async function bootstrapInventorySchema(inventoryId: number, domainName: 
         return await apiQueue.add(async () => {
             // const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
             // const prompt = `You are a Principal Data Architect designing a strict EAV taxonomy for an inventory tracking: "${domainName}".
-            const prompt = `You are a Principal Data Architect designing a strict Entity-Attribute-Value (EAV) taxonomy for an inventory tracking: "${domainName}".
-The user describes this inventory as: "${inv.description || 'A general collection'}".
+            // const prompt = `You are a Principal Data Architect designing a strict Entity-Attribute-Value (EAV) taxonomy for an inventory tracking: "${domainName}".
+            // The user describes this inventory as: "${inv.description || 'A general collection'}".
+            const prompt = `You are a Principal Data Architect designing a strict Entity-Attribute-Value (EAV) taxonomy.
+The user was asked what this inventory contains, and they answered: "${domainName}".
+If this answer is vague (like "stuff in the shed" or "boxes"), generate a broad, generic tracking schema. If it is highly specific (like "vintage stamps"), generate a bespoke schema.
 
 ${archetypeGuidance}
 
@@ -111,7 +111,7 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
 
 CRITICAL BANS:
 - NO "Color", "Brand", "Manufacturer", "Creator", or "Publisher" fields (these are tracked globally). DO NOT output any field containing these words.
-- 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", or "METADATA_ONLY".
+- 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", "SUBJECTIVE_TEXT", or "METADATA_ONLY".
 - For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
 ADAPT TO USER INTENT: Adjust your specificity based on the user's description and archetype. If it's a generic collection, keep fields broad. If the description implies a highly specific sub-niche (e.g., "Vintage Belts"), generate hyper-specific fields (e.g., "Buckle Type", "Notch Count").`;

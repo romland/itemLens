@@ -10,7 +10,7 @@ import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
 import crypto from 'crypto';
-    import { normalizeStr, computeMatch, isUseless } from '$lib/server/matcher';
+import { normalizeStr, computeMatch, isUseless, findBestMatch, buildDuplicateDetails } from '$lib/server/matcher';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -64,6 +64,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             // STRICT SCOPING: Only send Global fields + Fields belonging to the specific category to the UI
             activeSchema = fullSchema.filter(f => !f.categoryId || f.categoryId === resolvedCatId);
 
+            if (classificationData?.extractedAttributes) {
+                // Cold-start awareness: If the category is brand new and has no specific schema yet, allow it to borrow relevant fields.
+                const categoryHasSpecificFields = fullSchema.some(f => f.categoryId === resolvedCatId);
+                const allowedKeys = new Set((categoryHasSpecificFields ? activeSchema : fullSchema).map(s => s.name));
+                
+                const filtered: any = {};
+                for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
+                    if (allowedKeys.has(k) && v !== null && v !== '') {
+                        filtered[k] = v;
+                        if (!activeSchema.some(s => s.name === k)) {
+                            const borrowedField = fullSchema.find(f => f.name === k);
+                            if (borrowedField) activeSchema.push(borrowedField);
+                        }
+                    }
+                }
+                classificationData.extractedAttributes = filtered;
+            }
+
             if (classificationData) {
                 const existingItems = await db.item.findMany({
                     where: { inventoryId: locals.activeInventoryId },
@@ -75,39 +93,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 console.log("[DEBUG] Scan Attrs:", classificationData.extractedAttributes);
                 console.log("[DEBUG] Active Schema Fields:", activeSchema.map(s => s.name).join(', '));
 
-                for (const dbItem of existingItems) {
-                    const match = computeMatch(classificationData.extractedAttributes || {}, classificationData.title || '', '', dbItem, activeSchema, classificationData.subCategory);
-                    
-                    if (match.isMatch) {
-                        isDuplicate = true;
-                        const sharedAttrs = [];
-                        
-                        console.log(`[DEBUG] ⚠️ MATCHED: ID ${dbItem.id} "${dbItem.title}"`);
-                        console.log(`[DEBUG] Trace:\n  ` + (match as any).debugTrace?.join('\n  '));
-
-                        if (classificationData.extractedAttributes) {
-                            const schemaKeys = new Set(activeSchema.map(s => s.name));
-                            for (const [k, v] of Object.entries(classificationData.extractedAttributes)) {
-                                if (!schemaKeys.has(k)) continue;
-                                const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
-                                if (dbVal && !isUseless(v) && normalizeStr(String(v)) === normalizeStr(dbVal)) {
-                                    sharedAttrs.push({ key: k, value: String(v) });
-                                }
-                            }
-                        }
-
-                        duplicateItemDetails = {
-                            id: dbItem.id,
-                            slug: dbItem.slug,
-                            title: dbItem.title,
-                            categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
-                            createdAt: dbItem.createdAt,
-                            thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
-                            locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
-                            sharedAttributes: sharedAttrs
-                        };
-                        break; // Stop at first strong match
-                    }
+                const bestMatch = findBestMatch(classificationData.extractedAttributes || {}, classificationData.title || '', classificationData.description || classificationData.subtitle || '', '', existingItems, activeSchema, classificationData.subCategory);
+                
+                if (bestMatch) {
+                    isDuplicate = true;
+                    console.log(`[DEBUG] ⚠️ BEST MATCH: ID ${bestMatch.dbItem.id} "${bestMatch.dbItem.title}" (Score: ${bestMatch.match.score})`);
+                    console.log(`[DEBUG] Trace:\n  ` + bestMatch.match.debugTrace?.join('\n  '));
+                    duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);
                 }
             }
 

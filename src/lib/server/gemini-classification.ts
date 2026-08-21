@@ -50,11 +50,24 @@ export async function analyzePhoto(
   const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'searchSynonyms', 'foregroundBox'];
 
   if (hasSchema) {
-      schemaPrompt = `6. extractedAttributes: You MUST extract these exact fields. Use provided enums where applicable. If entirely hidden, missing, or unknown, output null (do NOT use "unknown", "n/a", or "none"). Comma-separate values if multiple apply (e.g., 50/50 striped shirts should be "Red, White").\n`;
+      schemaPrompt = `6. extractedAttributes: CRITICAL: You MUST evaluate and return every single key listed below. Look closely at the image for distinguishing marks. If a field applies (e.g., printed text, unique graphics, distinct patterns), extract it exactly. If a field is entirely hidden or fundamentally irrelevant, you MUST set the value to null. DO NOT omit the key.\n`;
       for (const field of visibleFields) {
-          schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
-          if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;
-          else schemaPrompt += `- ${field.name} (${field.uiLabel})\n`;
+          if (field.name === 'color_mix') {
+              schemaObj[field.name] = { 
+                  type: 'array', 
+                  items: { 
+                      type: 'object', 
+                      properties: { color: { type: 'string', enum: field.options || BASE_COLORS }, pct: { type: 'number' } },
+                      required: ['color', 'pct']
+                  }, 
+                  description: 'Dominant colors and their proportions. e.g. [{"color": "Navy", "pct": 0.8}]', nullable: true
+              };
+              schemaPrompt += `- ${field.name}: Extract dominant colors as an array of objects. Map complex shades to the closest base color from: ${field.options?.join(', ')}. Pay careful attention to dark shades (e.g. Navy vs Black). ALWAYS output at least one color.\n`;
+          } else {
+              schemaObj[field.name] = { type: field.type === 'number' ? 'number' : 'string', nullable: true };
+              if (field.options) schemaPrompt += `- ${field.name} (Enum: ${field.options.join(', ')} - Pick closest, or invent a new Title Case term ONLY if fundamentally different)\n`;
+              else schemaPrompt += `- ${field.name} (${field.uiLabel})\n`;
+          }
       }
 
     promptText = `Analyze this image for a home inventory system.

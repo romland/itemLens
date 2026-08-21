@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
+import { flagDuplicatesInList } from '$lib/server/matcher';
 
 export const load = (async ({ locals, url }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
@@ -26,8 +27,11 @@ export const load = (async ({ locals, url }) => {
             photos: { include: { category: true } },
             "tags" : true,
             "documents": true,      // a bit wasteful as I really only need the count()
+                attributes: true,
         }
     });
+
+    await flagDuplicatesInList(items, locals.activeInventoryId);
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < 12 ? 0 : page + 1;

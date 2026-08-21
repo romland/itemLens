@@ -11,7 +11,11 @@
 
     // Reactively determine which fields require human intervention
     $: if (item) {
-        localAttributes = { ...(item.extractedAttributes || {}) };
+        const raw = { ...(item.extractedAttributes || {}) };
+        for (const k in raw) {
+            if (typeof raw[k] === 'object' && raw[k] !== null) raw[k] = JSON.stringify(raw[k]);
+        }
+        localAttributes = raw;
     }
 
     $: requiredFields = showAll ? activeSchema : activeSchema.filter(f => 

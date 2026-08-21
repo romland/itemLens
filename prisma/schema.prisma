@@ -154,6 +154,7 @@ model Item {
   description String?
   reason      String?
   duplicateDismissed Boolean @default(false)
+  semanticTokens String?
 
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   inventoryId Int

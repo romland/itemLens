@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { db } from '$lib/server/database';
 import { fail } from '@sveltejs/kit';
+import { flagDuplicatesInList } from '$lib/server/matcher';
 
 export const load = (async ({ locals, url }) => {
 	const q = (url.searchParams.get('q') || '').trim();
@@ -69,13 +70,16 @@ export const load = (async ({ locals, url }) => {
 						container: true,
 					}
 				},
-				"photos" : true,
+                    photos: { include: { category: true } },
 				"tags" : true,
 				"documents": true,      // a bit wasteful as I really only need the count()
+                    attributes: true,
 			}
 		}),
 		db.item.count({ where: whereClause })
 	]);
+
+    await flagDuplicatesInList(items, locals.activeInventoryId);
 
 	const categories = await db.category.findMany({
 		where: { inventoryId: locals.activeInventoryId },

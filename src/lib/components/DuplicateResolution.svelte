@@ -3,21 +3,33 @@
     import ItemMiniCard from './ItemMiniCard.svelte';
     import { createEventDispatcher } from 'svelte';
     import RelativeDate from './RelativeDate.svelte';
+    import ColorMixBar from './ColorMixBar.svelte';
 
     export let scannedTitle: string;
     export let matchDetails: any; // ID, title, locationName, sharedAttributes
+    export let scannedItem: any = null;
     export let scannedCreatedAt: string | null = null;
     export let isAfterTheFact: boolean = false;
     export let currentAction: 'new' | 'merge' | 'ignore' | 'prompt' | null = null;
 
     const dispatch = createEventDispatcher();
+    import { copyDuplicateDebugPayload } from '$lib/client/utils';
+
+    function dumpDebug() {
+        copyDuplicateDebugPayload(`${scannedTitle} vs ${matchDetails?.title}`, scannedItem, matchDetails);
+    }
 </script>
 
 <div class="flex flex-col gap-4 bg-base-100/50 p-3 rounded-2xl border border-warning/30 shadow-inner">
     <div class="bg-warning/10 border border-warning/30 rounded-xl p-3">
-        <h3 class="font-bold text-warning-content text-xs mb-1.5 flex items-center gap-2">
-            <i class="bi bi-intersect text-warning"></i> Potential Duplicate
-        </h3>
+        <div class="flex justify-between items-start mb-1.5">
+            <h3 class="font-bold text-warning-content text-xs flex items-center gap-2">
+                <i class="bi bi-intersect text-warning"></i> Potential Duplicate
+            </h3>
+            <button type="button" class="btn btn-xs btn-ghost text-warning hover:bg-warning/20 p-1 h-auto min-h-0" on:click={dumpDebug} title="Dump debug data to console">
+                <i class="bi bi-bug-fill text-sm"></i>
+            </button>
+        </div>
         <p class="text-[11px] text-base-content/80 mb-2 leading-tight">
             We found an existing item that matches <strong>{scannedTitle}</strong>.
         </p>
@@ -38,11 +50,17 @@
             </div>
             {/if}
             {#if matchDetails?.sharedAttributes?.length > 0}
-            <div class="flex flex-wrap gap-1 mt-1">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mr-1 mt-0.5">Matched:</span>
-                {#each matchDetails.sharedAttributes as attr}
-                    <span class="badge badge-warning badge-outline text-[9px] font-mono h-auto py-0.5">{attr.key}: {attr.value}</span>
-                {/each}
+            <div class="flex flex-col gap-1 mt-2">
+                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Matched Attributes:</span>
+                <div class="flex flex-wrap gap-1">
+                    {#each matchDetails.sharedAttributes as attr}
+                        {#if attr.key === 'color_mix'}
+                            <div class="w-full my-0.5"><ColorMixBar colorMixStr={attr.value} /></div>
+                        {:else}
+                            <span class="badge badge-warning badge-outline text-[9px] font-mono h-auto py-0.5">{attr.key}: {attr.value}</span>
+                        {/if}
+                    {/each}
+                </div>
             </div>
             {/if}
         </div>

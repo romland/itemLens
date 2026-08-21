@@ -80,6 +80,16 @@
                     let optedOut = false;
                     let resolution = null;
                     
+                if (item._debugComparisons && item._debugComparisons.length > 0) {
+                    console.groupCollapsed(`🔍 Collection Match Trace for: ${item.title}`);
+                    item._debugComparisons.forEach((comp: any) => {
+                        console.groupCollapsed(`Against DB Item: ${comp.dbTitle}`);
+                        comp.trace.forEach((line: string) => console.log(line));
+                        console.groupEnd();
+                    });
+                    console.groupEnd();
+                }
+
                     if (item.isDuplicate) {
                         if (item.duplicateStrategy === 'AUTO_IGNORE') {
                             optedOut = true; resolution = 'ignore';
@@ -87,6 +97,11 @@
                             resolution = 'merge';
                         } else {
                             resolution = 'prompt';
+                        }
+                        if (item.duplicateItemDetails?.debugTrace) {
+                            console.group(`🔍 Match Trace for: ${item.title}`);
+                            item.duplicateItemDetails.debugTrace.forEach((line: string) => console.log(line));
+                            console.groupEnd();
                         }
                     }
                     return {
@@ -370,8 +385,9 @@
                                 scannedTitle={item.title} 
                                 matchDetails={item.duplicateItemDetails} 
                                 currentAction={item.resolution} 
+                                scannedItem={item}
                                 on:resolve={(e) => { item.resolution = e.detail; item.optedOut = e.detail === 'ignore'; items = items; }}
-                                on:zoom={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}
+                                on:zoom={(e) => lightbox.open({ orgPath: e.detail.orgPath || e.detail.thumbPath, showOriginal: true })}
                             />
                         </div>
                     {/if}
@@ -397,7 +413,7 @@
                         <div class="label pt-1 pb-0"><span class="label-text-alt text-warning font-semibold"><i class="bi bi-exclamation-triangle"></i> New category will be created</span></div>
                     {/if}
                     {#if globalCategory && items.some(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())}
-                        <div class="label pt-1 pb-0"><span class="label-text-alt text-error font-semibold"><i class="bi bi-exclamation-octagon"></i> Warning: This overwrites AI-detected categories (like "{items.find(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())?.category}") for all items!</span></div>
+                        <div class="label pt-1 pb-0"><span class="label-text-alt text-error font-semibold"><i class="bi bi-exclamation-octagon"></i> Warning: This overwrites assigned categories (like "{items.find(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())?.category}") for all items!</span></div>
                     {/if}
                 </div>
                 <div class="form-control">

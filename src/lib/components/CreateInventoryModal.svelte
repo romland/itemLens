@@ -7,6 +7,7 @@
     export function showModal() { modal.showModal(); }
 
     let name = '';
+    let contentsHint = '';
 
     // =============================================================================
     // [ARCHETYPE DEFAULTS CONFIGURATION - UI NOTE]
@@ -66,6 +67,7 @@
                 dispatch('success', result.data?.message || 'Inventory created successfully!');
                 modal.close();
                 name = '';
+                contentsHint = '';
                 selectedArchetype = 'hardware';
             } else {
                 dispatch('error', result.data?.message || 'An error occurred while creating inventory.');
@@ -90,6 +92,12 @@
                 <div class="form-control w-full">
                     <label class="label"><span class="label-text font-semibold text-lg">Name your inventory</span></label>
                     <input type="text" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar..." class="input input-bordered input-lg w-full rounded-2xl shadow-inner focus:border-primary" required autocomplete="off">
+                </div>
+
+                <div class="form-control w-full -mt-2">
+                    <label class="label"><span class="label-text font-semibold text-lg">What will be in it? (1-3 words)</span></label>
+                    <!-- This hint empowers the LLM to generate a bespoke schema even if the archetype is broad -->
+                    <input type="text" name="contentsHint" bind:value={contentsHint} placeholder="e.g. vintage stamps, lego, cables..." class="input input-bordered w-full rounded-2xl shadow-inner focus:border-primary" required>
                 </div>
 
                 <div>

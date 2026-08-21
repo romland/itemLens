@@ -12,6 +12,8 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
 import { processFormDocuments } from '$lib/server/services';
 import { logActivity } from '$lib/server/logger';
+import { tokenizeAndStem } from '$lib/server/nlp';
+import { getActiveSchema } from '$lib/server/ontology';
 
 export const load = (async ({ locals, params }) => {
     const parsedId = Number(params.id);
@@ -159,6 +161,12 @@ console.log("formData:", orgData);
 
 		const parsedAmount = parseInt(data.amount as string, 10);
 
+        const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+        const subjectiveValues = kvps
+            .filter(a => activeSchema.find((s: any) => s.name === a.key)?.matchWeight === 'SUBJECTIVE_TEXT')
+            .map(a => a.value);
+        const semanticTokens = JSON.stringify(tokenizeAndStem([safeTitle, description.trim(), ...subjectiveValues]));
+
         // Note: We overwrite the initial version of item here so that we have the new ID's
         //       of images, etc.
         item = await db.item.update({
@@ -173,6 +181,7 @@ console.log("formData:", orgData);
                 attributes: {
                   create: kvps,
                 },
+                semanticTokens,
                 // valid (motherfucker)
                 locations: {
                   create: containers.map((cont) => {

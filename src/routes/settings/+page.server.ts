@@ -87,6 +87,7 @@ export const actions = {
         const data = await request.formData();
         const name = data.get('name') as string;
         const archetype = (data.get('archetype') as string) || "generic";
+        const contentsHint = data.get('contentsHint') as string || name;
 
 		if (!name || name.trim() === '') return fail(400, { error: true, message: "Inventory name required." });
 
@@ -139,7 +140,7 @@ export const actions = {
         const inventory = await db.inventory.create({
             data: {
                 name: name.trim(),
-				description: "User created inventory",
+                description: contentsHint.trim(),
                 classes: "[]",
                 archetype: archetype,
                 allowAutoTaxonomy,
@@ -150,7 +151,7 @@ export const actions = {
         });
 
         // Fire and forget with internal retry protection
-        bootstrapInventorySchema(inventory.id, `${inventory.name} (${archetype})`)
+        bootstrapInventorySchema(inventory.id, contentsHint)
             .catch(e => console.error("Initial schema bootstrap failed, use manual retry in settings.", e));
 
 		return { success: true, message: `Inventory '${inventory.name}' created!` };

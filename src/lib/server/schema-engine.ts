@@ -3,14 +3,9 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import { db } from '$lib/server/database';
 import { apiQueue } from '$lib/server/queue/index';
 import { withRetry } from './retry';
+    import { BASE_COLORS } from './colors';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-export const BASE_COLOR_FAMILIES = [
-    'Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 
-    'Grey', 'Brown', 'Beige', 'Purple', 'Pink', 'Orange', 
-    'Navy', 'Teal', 'Multicolor', 'Metallic', 'Clear'
-];
 
 /**
  * Bootstraps a strict EAV schema for a new category via LLM.
@@ -24,7 +19,7 @@ export async function generateTaxonomySchema(categoryId: number, domainName: str
         1. Base it ONLY on visual truths (e.g., "visual_texture").
         2. DO NOT include "color" (handled globally).
         3. DO NOT include "brand" or "title" (handled globally).
-        4. "matchWeight" MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", or "METADATA_ONLY".
+        4. "matchWeight" MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", "SUBJECTIVE_TEXT", or "METADATA_ONLY".
         
         Return an array of objects matching this exact structure:
         [
@@ -75,7 +70,7 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
 
     // We automatically prepend our global strict dedupe rules
     return [
-        { name: 'primary_color_family', type: 'enum', options: JSON.stringify(BASE_COLOR_FAMILIES), matchWeight: 'STRICT_DEDUPE' },
+        { name: 'color_mix', uiLabel: 'Colors (Proportional)', type: 'object', options: BASE_COLORS, matchWeight: 'COLOR_PROPORTION', extractionMethod: 'VISION_STRICT', categoryId: null },
         { name: 'brand', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE' },
         ...fields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod }))
     ];

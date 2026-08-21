@@ -99,6 +99,11 @@
                 isDuplicateWarning = true;
                 duplicateDetails = data.aiData.duplicateItemDetails;
                 dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in inventory!' });
+                if (duplicateDetails.debugTrace) {
+                    console.group(`🔍 Match Trace for: ${data.aiData.title}`);
+                    duplicateDetails.debugTrace.forEach((line: string) => console.log(line));
+                    console.groupEnd();
+                }
             }
             let autofilled = false;
             if (!currentTitle && data.aiData.title) {
@@ -116,7 +121,7 @@
                     for (const [k, v] of Object.entries(attrs)) {
                         if (v !== null && v !== '') {
                             if (!currentAttributes.some(a => a.key === k)) {
-                                currentAttributes = [...currentAttributes, { key: k, value: String(v) }];
+                                currentAttributes = [...currentAttributes, { key: k, value: typeof v === 'object' ? JSON.stringify(v) : String(v) }];
                                 foundNew = true;
                             }
                         }
@@ -210,9 +215,12 @@
             <div class="alert bg-warning/20 border border-warning/50 text-warning-content shadow-sm rounded-xl mb-6 py-3 animate-fade-in items-start">
                 <i class="bi bi-intersect text-warning text-xl mt-0.5"></i>
                 <div class="flex-1 min-w-0">
-                    <h3 class="font-bold text-sm mb-2">Potential Duplicate</h3>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-sm">Potential Duplicate</h3>
+                            <button type="button" class="btn btn-xs btn-ghost text-warning hover:bg-warning/20 p-1 h-auto min-h-0" on:click={() => { console.group('🐞 DEBUG DUPLICATE'); console.log('SCANNED', {title: currentTitle, attributes: currentAttributes, aiData: duplicateDetails._rawAiData}); console.log('DB ITEM', duplicateDetails); if (duplicateDetails.debugTrace) { console.log('TRACE'); duplicateDetails.debugTrace.forEach((l: string) => console.log(l)); } console.groupEnd(); alert('Debug data dumped to browser console!'); }} title="Dump debug data"><i class="bi bi-bug-fill text-sm"></i></button>
+                        </div>
                     
-                    <ItemMiniCard item={duplicateDetails} on:zoom={() => lightbox.open({ orgPath: duplicateDetails.thumbPath || duplicateDetails.orgPath, showOriginal: true })} />
+                    <ItemMiniCard item={duplicateDetails} on:zoom={() => lightbox.open({ orgPath: duplicateDetails.orgPath || duplicateDetails.thumbPath, showOriginal: true })} />
 
                     <div class="text-[11px] mt-2 flex flex-col gap-1">
                         <div class="flex items-center justify-between gap-2 px-1">

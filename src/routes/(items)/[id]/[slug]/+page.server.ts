@@ -10,7 +10,7 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { taskManager } from '$lib/server/taskManager';
  import { getActiveSchema } from '$lib/server/ontology';
- import { computeMatch, normalizeStr, isUseless } from '$lib/server/matcher';
+ import { computeMatch, normalizeStr, isUseless, findBestMatch, buildDuplicateDetails } from '$lib/server/matcher';
 
 export const load = (async ({ locals, params }) => {
       const parsedId = Number(params.id);
@@ -67,25 +67,10 @@ export const load = (async ({ locals, params }) => {
      let duplicateItemDetails = null;
      if (!item.duplicateDismissed) {
          const schemaKeys = new Set(activeSchema.map((s: any) => s.name));
-         for (const dbItem of existingItems) {
-             const match = computeMatch(itemAttrs, item.title || '', '', dbItem, activeSchema, item.photos?.[0]?.category?.name);
-             if (match.isMatch) {
-                 const sharedAttrs = [];
-                 for (const [k, v] of Object.entries(itemAttrs)) {
-                     if (!schemaKeys.has(k)) continue;
-                     const dbVal = dbItem.attributes.find(a => a.key === k)?.value;
-                     if (dbVal && !isUseless(v) && normalizeStr(v) === normalizeStr(dbVal)) sharedAttrs.push({ key: k, value: v });
-                 }
-                 duplicateItemDetails = {
-                     id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
-                     categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized',
-                     thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null,
-                     locationName: dbItem.locations?.[0]?.container?.name || 'Unassigned',
-                     sharedAttributes: sharedAttrs
-                 };
-                 break;
-             }
-         }
+          const bestMatch = findBestMatch(itemAttrs, item.title || '', item.description || '', '', existingItems, activeSchema, item.photos?.[0]?.category?.name);
+          if (bestMatch) {
+              duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);
+          }
      }
 
     return {
