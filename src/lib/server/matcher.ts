@@ -216,8 +216,11 @@ export function computeMatch(
         if (sim < 0.35 && new Set([...scanGraphTokens, ...dbGraphTokens]).size > 0) {
             strictFailures += 2;
             debugTrace.push(`[VETO: GRAPHIC] Distinct graphics (Jaccard=${sim.toFixed(2)}): '${scan.prominentTextOrGraphic}' vs '${dbGraphic}'`);
-        } else {
+        } else if (sim > 0.75) {
             fuzzyMatches += 2;
+            debugTrace.push(`[GRAPHIC MATCH] Strong graphic similarity: ${sim.toFixed(2)}`);
+        } else {
+            fuzzyMatches += 0.5;
             debugTrace.push(`[GRAPHIC MATCH] Graphic similarity: ${sim.toFixed(2)}`);
         }
     } else if ((scan.prominentTextOrGraphic && !dbGraphic) || (!scan.prominentTextOrGraphic && dbGraphic)) {
@@ -232,9 +235,12 @@ export function computeMatch(
         if (sim < 0.35 && new Set([...scanWearTokens, ...dbWearTokens]).size > 0) {
             strictFailures += 2;
             debugTrace.push(`[VETO: WEAR] Distinct condition/wear (Jaccard=${sim.toFixed(2)}): '${scan.distinctiveWear}' vs '${dbWear}'`);
-        } else {
+        } else if (sim > 0.75) {
             fuzzyMatches += 1;
-            debugTrace.push(`[WEAR MATCH] Wear pattern matches`);
+            debugTrace.push(`[WEAR MATCH] Strong wear pattern match`);
+        } else {
+            fuzzyMatches += 0.5;
+            debugTrace.push(`[WEAR MATCH] Partial wear pattern match`);
         }
     } else if ((scan.distinctiveWear && !dbWear) || (!scan.distinctiveWear && dbWear)) {
         strictFailures += 1;
@@ -248,10 +254,10 @@ export function computeMatch(
     const safeScanTokens = Array.isArray(scan.tokens) ? scan.tokens : []; // Failsafe
     const jaccard = calculateWeightedJaccard(dbTokens, safeScanTokens, idfMap);
     
-    if (jaccard > 0.45) {
+    if (jaccard >= 0.50) {
         fuzzyMatches += 3.0;
         debugTrace.push(`[NLP MATCH] Strong semantic physical overlap (${(jaccard * 100).toFixed(1)}%)`);
-    } else if (jaccard > 0.25) {
+    } else if (jaccard >= 0.35) {
         fuzzyMatches += 1.0;
         debugTrace.push(`[NLP PARTIAL] Weak semantic physical overlap (${(jaccard * 100).toFixed(1)}%)`);
     } else if (safeScanTokens.length > 0 && dbTokens.length > 0) {
