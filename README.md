@@ -25,10 +25,10 @@ If feeling particularly ambitious on a day, you can also:
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
-### Screenshots
+### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything
 about the visuals ... But, let's get the ball rolling in 2026, the first screenshot:
-<img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="50%" alt="itemLens Logo" />
+<img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="100%" alt="Screenshot 1" />
 
 
 ### Features
