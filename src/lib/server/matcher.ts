@@ -19,13 +19,43 @@ export function getSimilarity(s1: string, s2: string): number {
     return 1 - (dp[len1][len2] / Math.max(len1, len2));
 }
 
+function rgbToLab(rgb: [number, number, number]): [number, number, number] {
+    let r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+    
+    r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+    g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+    b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+    
+    let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+    let y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 1.00000;
+    let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+    
+    x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x) + 16/116;
+    y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y) + 16/116;
+    z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z) + 16/116;
+    
+    return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)];
+}
+
 function colorDistance(c1: string, c2: string): number {
     const rgb1 = Object.entries(BASE_COLORS_RGB).find(([k]) => k.toLowerCase() === c1.toLowerCase())?.[1];
     const rgb2 = Object.entries(BASE_COLORS_RGB).find(([k]) => k.toLowerCase() === c2.toLowerCase())?.[1];
     if (!rgb1 || !rgb2) return 1; // max distance if unknown
+    
+    /*
     // Calculate Euclidean distance. Max distance in 3D RGB space is sqrt(255^2 * 3) ~= 441.67
     const dist = Math.sqrt(Math.pow(rgb1[0]-rgb2[0], 2) + Math.pow(rgb1[1]-rgb2[1], 2) + Math.pow(rgb1[2]-rgb2[2], 2));
     return dist / 441.67;
+    */
+
+    // Convert to CIELAB space and calculate Delta E (CIE76 visual distance metric)
+    const lab1 = rgbToLab(rgb1);
+    const lab2 = rgbToLab(rgb2);
+    const deltaE = Math.sqrt(Math.pow(lab1[0]-lab2[0], 2) + Math.pow(lab1[1]-lab2[1], 2) + Math.pow(lab1[2]-lab2[2], 2));
+    
+    // A Delta E of ~50+ represents completely different colors to the human eye.
+    // We use a slight curve to aggressively penalize visual mismatches.
+    return Math.min(1.0, Math.pow(deltaE / 50.0, 1.5));
 }
 
 function calculateColorMixSimilarity(mixAStr: string | any, mixBStr: string | any): number {

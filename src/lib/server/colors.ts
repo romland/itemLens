@@ -9,6 +9,10 @@ export function getTopColorsNamed(imagePath : string, callback: any)
 
     // args: path, num colors, quality (step pixels to skip between sampling)
     getPalette(imagePath, 5, 1).then(palette => { 
+        if (!palette || !palette.length) {
+            return callback(null, {}); // Graceful exit if image is transparent/empty
+        }
+        
         // const colorNames = [];
         const ret = {};
         console.log("colorThief palette:", palette);

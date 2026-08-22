@@ -74,7 +74,16 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
                 () => crop(outputFileNoBkg, { outputFormat: "png" }),
                 tracking ? { ...tracking, description: 'Cropping image' } : undefined
             );
-            await sharp(cropped).webp({ quality: 85 }).toFile(finalCropPath);
+            
+            const meta = await sharp(cropped).metadata();
+            // If RemBG stripped too much (e.g., tight crop of a patterned shirt), it outputs a tiny/transparent image.
+            if (!meta.width || !meta.height || meta.width <= 10 || meta.height <= 10) {
+                console.log(`[Image Processor] RemBG stripped the entire image. Falling back to original.`);
+                await sharp(pathForRembg).webp({ quality: 85 }).toFile(finalCropPath);
+            } else {
+                await sharp(cropped).webp({ quality: 85 }).toFile(finalCropPath);
+            }
+            
             fs.unlinkSync(outputFileNoBkg);
             
             if (tempBoxCrop && fs.existsSync(tempBoxCrop)) {
