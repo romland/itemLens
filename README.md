@@ -28,6 +28,7 @@ If feeling particularly ambitious on a day, you can also:
 ### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything
 about the visuals ... But, let's get the ball rolling in 2026, the first screenshot:
+
 <img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="100%" alt="Screenshot 1" />
 
 
