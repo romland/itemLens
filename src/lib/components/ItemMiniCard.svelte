@@ -2,17 +2,23 @@
     export let item: any;
     import { createEventDispatcher } from 'svelte';
     const dispatch = createEventDispatcher();
+
+    $: colorSource = item?.colors || item?.photos?.[0]?.colors;
+    $: cols = colorSource && colorSource.length > 2 ? Object.keys(JSON.parse(colorSource)) : [];
 </script>
 
 <div class="flex items-center gap-3 bg-base-100 border border-base-200 p-2 rounded-xl shadow-sm w-full text-left group">
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-base-200 flex items-center justify-center border border-base-300 cursor-zoom-in hover:opacity-80 transition-opacity" on:click={() => dispatch('zoom', item)}>
+        <div class="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-base-200 flex items-center justify-center border border-base-300 cursor-zoom-in hover:opacity-80 transition-opacity relative" on:click={() => dispatch('zoom', item)}>
+            {#if cols.length > 0}
+                <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+            {/if}
         {#if item.thumbPath}
-            <img src={item.thumbPath} alt={item.title} class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal" />
+                <img src={item.thumbPath} alt={item.title} class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md" />
             <i class="bi bi-box text-xl text-gray-400 hidden"></i>
         {:else}
-            <i class="bi bi-box text-xl text-gray-400"></i>
+                <i class="bi bi-box text-xl text-gray-400 relative z-10"></i>
         {/if}
     </div>
     <a href="/{item.id}/{item.slug || 'view'}" class="flex-1 min-w-0 block">

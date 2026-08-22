@@ -243,9 +243,9 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     <div class="flex flex-col md:flex-row w-full gap-6 md:gap-4 mb-6">
         <div class="w-full md:w-2/3 pl-2">
             {#if productPhotos?.length > 0}
-                <div class="carousel carousel-center w-full max-w-md p-4 space-x-4 rounded-box max-h-80 bg-gradient-to-br from-primary/10 via-base-200 to-base-300 shadow-inner border border-base-300/50">
+                <div class="carousel carousel-center w-full max-w-md p-4 space-x-4 rounded-box max-h-80 bg-base-200 shadow-inner border border-base-300/50">
                     {#each productPhotos as photo, i}
-                        <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group">
+                        <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group rounded-2xl overflow-hidden bg-base-100 shadow-sm border border-base-200/60">
                             {#if productPhotos[i].cropPath}
                                <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <input type="hidden" name="photoId" value={productPhotos[i].id} />
@@ -255,36 +255,45 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                     </button>
                                 </form>                            
 
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
+                                {@const cols = productPhotos[i].colors?.length > 2 ? Object.keys(JSON.parse(productPhotos[i].colors)) : []}
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative overflow-hidden" on:click={() => lightbox.open(productPhotos[i])}>
+                                    {#if cols.length > 0}
+                                        <!-- Ambient Dynamic Lighting Effect -->
+                                        <div class="absolute inset-0 opacity-20 dark:opacity-30 mix-blend-screen pointer-events-none transition-opacity duration-500 group-hover:opacity-40" style="background: radial-gradient(circle at 20% 20%, {cols[0]}, transparent 60%), radial-gradient(circle at 80% 80%, {cols[1] || cols[0]}, transparent 60%);"></div>
+                                    {/if}
                                     {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
-                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl" muted playsinline></video>
-                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl">
+                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl relative z-10" muted playsinline></video>
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl z-20">
                                             <i class="bi bi-play-circle-fill text-5xl text-white drop-shadow-md"></i>
                                         </div>
                                     {:else}
-                                        <img src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}" class="object-scale-down max-h-full max-w-full">
+                                        <img src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}" class="object-scale-down max-h-full max-w-full relative z-10 drop-shadow-2xl">
                                     {/if}
                                 </button>
 
                                 <!-- Photo Import Date Overlay -->
-                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none z-20">
                                     <span class="text-[10px] font-medium text-base-content/80"><RelativeDate date={productPhotos[i].createdAt} /></span>
                                 </div>
 
                             {:else}
-                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative" on:click={() => lightbox.open(productPhotos[i])}>
+                                {@const cols = productPhotos[i].colors?.length > 2 ? Object.keys(JSON.parse(productPhotos[i].colors)) : []}
+                                <button type="button" class="p-0 border-none bg-transparent h-full w-full flex justify-center items-center relative overflow-hidden" on:click={() => lightbox.open(productPhotos[i])}>
+                                    {#if cols.length > 0}
+                                        <div class="absolute inset-0 opacity-20 dark:opacity-30 mix-blend-screen pointer-events-none transition-opacity duration-500 group-hover:opacity-40" style="background: radial-gradient(circle at 20% 20%, {cols[0]}, transparent 60%), radial-gradient(circle at 80% 80%, {cols[1] || cols[0]}, transparent 60%);"></div>
+                                    {/if}
                                     {#if productPhotos[i].orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
-                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl" muted playsinline></video>
-                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl">
+                                        <video src="{productPhotos[i].orgPath}#t=0.1" class="object-scale-down max-h-full max-w-full rounded-xl relative z-10" muted playsinline></video>
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 rounded-xl z-20">
                                             <i class="bi bi-play-circle-fill text-5xl text-white drop-shadow-md"></i>
                                         </div>
                                     {:else}
-                                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full">
+                                        <img src="{productPhotos[i].orgPath}" alt="{data.item?.title}" class="object-scale-down max-h-full max-w-full relative z-10 drop-shadow-2xl">
                                     {/if}
                                 </button>
 
                                 <!-- Photo Import Date Overlay -->
-                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <div class="absolute bottom-2 left-2 bg-base-100/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none z-20">
                                     <span class="text-[10px] font-medium text-base-content/80"><RelativeDate date={productPhotos[i].createdAt} /></span>
                                 </div>
                             {/if}
@@ -293,11 +302,15 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                 </div>
                 <div class="flex justify-start w-full py-2 gap-2 overflow-x-auto hide-scrollbar">
                     {#each productPhotos as photo, i}
-                        <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn shrink-0">
+                                {@const cols = photo.colors?.length > 2 ? Object.keys(JSON.parse(photo.colors)) : []}
+                        <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn shrink-0 p-0 overflow-hidden relative border border-base-300 bg-base-100 hover:border-primary transition-colors">
+                                    {#if cols.length > 0}
+                                        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+                                    {/if}
                             {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
-                                <video class="object-cover w-10 h-10 bg-black rounded" src="{photo.orgPath}#t=0.1" muted playsinline></video>
+                                <video class="object-cover w-12 h-12 bg-black rounded relative z-10" src="{photo.orgPath}#t=0.1" muted playsinline></video>
                             {:else}
-                                <img class="object-scale-down w-10 h-10 bg-transparent" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                                <img class="object-scale-down w-12 h-12 bg-transparent relative z-10" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                             {/if}
                         </button>
                     {/each}

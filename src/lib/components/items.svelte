@@ -70,17 +70,21 @@
                     -->
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                     {@const mainPhoto = getFirstProductPhoto(item)}
-                    
-                   <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}">
+                    {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
+
+                    <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}">
                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
-                                   <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center">
-                                       <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent">
+                                   <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center relative">
+                                       {#if cols.length > 0}
+                                           <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+                                       {/if}
+                                       <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent relative z-10">
                                            {#if mainPhoto.thumbPath || mainPhoto.orgPath}
-                                               <img class="object-contain w-full h-full p-1 rounded-xl" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                                               <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                                            {:else}
-                                               <i class="bi bi-box text-2xl text-gray-300"></i>
+                                               <i class="bi bi-box text-2xl text-gray-300 relative z-10"></i>
                                            {/if}
                                        </a>
                                    </div>
@@ -183,17 +187,21 @@
             {#each items as item}
                 {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                 {@const mainPhoto = getFirstProductPhoto(item)}
+                {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
                 
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <div class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}" on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
+                        {#if cols.length > 0}
+                            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+                        {/if}
                         {#if item.hasDuplicate}
                             <div class="absolute top-3 right-3 w-3 h-3 bg-error rounded-full border-2 border-base-100 shadow-sm z-10" title="Potential duplicate detected"></div>
                         {/if}
                         {#if mainPhoto.thumbPath || mainPhoto.orgPath}
-                            <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
+                            <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
                         {:else}
-                            <i class="bi bi-box text-4xl text-gray-300"></i>
+                            <i class="bi bi-box text-4xl text-gray-300 relative z-10"></i>
                         {/if}
                         {#if isNavigatingToThis}
                             <div class="absolute inset-0 bg-base-100/50 flex items-center justify-center">
