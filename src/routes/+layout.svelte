@@ -33,6 +33,15 @@
     if (browser) {
         let evtSource: EventSource | null = null;
 
+        const safeInvalidate = () => {
+            const path = window.location.pathname;
+            if (path === '/add' || path.includes('/edit') || path.includes('/delete')) {
+                console.log("[DEBUG-CACHE] User is mid-workflow. Deferring UI invalidation.");
+                return;
+            }
+            invalidateAll();
+        };
+
         const connectSync = () => {
             if (evtSource) return;
             console.log("[DEBUG-CACHE] 🔌 Attempting to connect SSE...");
@@ -43,7 +52,8 @@
                 window.dispatchEvent(new CustomEvent('app-sync'));
 
                 // Refresh SvelteKit UI seamlessly
-                invalidateAll(); 
+                // invalidateAll();
+                safeInvalidate();
             };
         };
 
@@ -114,7 +124,8 @@
             						console.log("[DEBUG-LAYOUT] Outbox item synced. Firing sync event.");
 
                         // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
-                        invalidateAll();
+                        // invalidateAll();
+                        safeInvalidate();
                     } else if (res.status === 400 || res.status === 403 || res.status === 404) {
                         // Unrecoverable error (e.g., item deleted, inventory changed, validation failed).
                         // We drop the queue item to prevent an infinite sync loop.

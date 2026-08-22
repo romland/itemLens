@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
+    import { beforeNavigate } from "$app/navigation";
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from '@sveltejs/kit';
@@ -14,8 +15,17 @@
 
     let saving = false;
     let isDirty = false;
+    let hasSubmitted = false;
     let pastedDocCount = 0;
     let notifications: any[] = [];
+
+    beforeNavigate(({ cancel }) => {
+        if (isDirty && !hasSubmitted) {
+            if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                cancel();
+            }
+        }
+    });
 
     const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
         // Stop SvelteKit from natively submitting the form
@@ -24,13 +34,22 @@
             return;
         }        
         saving = true;
-        await saveToQueue(`/${data.item?.id}/edit`, formData);
-        saving = false;
-        isDirty = false;
-        notify("success", "Changes queued! Returning...");
-        window.dispatchEvent(new CustomEvent('outbox-trigger'));
-        
-        history.back(); // Rapid workflow: get out of edit screen immediately
+
+        hasSubmitted = true;
+        try {
+            await saveToQueue(`/${data.item?.id}/edit`, formData);
+            notify("success", "Changes queued! Returning...");
+            window.dispatchEvent(new CustomEvent('outbox-trigger'));
+            
+            // Detach execution to ensure router cleanly navigates away
+            setTimeout(() => {
+                history.back();
+            }, 10);
+        } catch (err) {
+            saving = false;
+            hasSubmitted = false;
+            notify("error", "Failed to queue changes.");
+        }       
     }
     
     function notify(status: string, message: string, id: string | null = null) {

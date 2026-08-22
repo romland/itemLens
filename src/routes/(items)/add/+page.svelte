@@ -20,6 +20,7 @@
     let modeLoaded = false;
     let saving = false;
     let isDirty = false;
+    let hasSubmitted = false;
     let pastedDocCount = 0;
     let notifications: any[] = [];
     
@@ -40,7 +41,7 @@
     const CONTINUOUS_SCANNING = false;
 
     beforeNavigate(({ cancel }) => {
-        if (isDirty && !saving) {
+        if (isDirty && !hasSubmitted) {
             if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
                 cancel();
             }
@@ -58,27 +59,30 @@
             return;
         }
         saving = true;
+        hasSubmitted = true;
         formData.append('clientId', clientId);
         try {
             await saveToQueue('/add', formData);
             notify("success", "Item saved in background!");
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
             
-            // CRITICAL FIX: Wipe the component state immediately to prevent Svelte's 
-            // reactivity from flipping `isDirty` back to true and triggering the `beforeNavigate` trap.
-            if (itemHubComponent) itemHubComponent.reset();
-            isDirty = false;
-            
-            if (CONTINUOUS_SCANNING) {
-                clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                await goto('/', { invalidateAll: true });
-            }
+            // Detach router execution from the current microtask to bypass deadlock
+            setTimeout(async () => {
+                if (CONTINUOUS_SCANNING) {
+                    clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                    if (itemHubComponent) itemHubComponent.reset();
+                    isDirty = false;
+                    hasSubmitted = false;
+                    saving = false;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    await goto('/', { invalidateAll: true });
+                }
+            }, 10);
         } catch (err) {
             console.error("Queue Error:", err);
             notify("error", "Failed to save item. Please try again.");
-        } finally {
+            hasSubmitted = false;
             saving = false;
         }
 
