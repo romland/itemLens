@@ -165,7 +165,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                 <ul tabindex="-1" role="menu" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 border border-base-200 mt-2 gap-1">
                     <li>
                         <a href="/{data.item?.id}/edit" class="font-medium text-base-content hover:text-primary">
-                            <i class="bi bi-pencil-square text-lg opacity-70"></i> Modify
+                            <i class="bi bi-pencil-square text-lg opacity-70"></i> Edit
                         </a>
                     </li>
                     <!--
