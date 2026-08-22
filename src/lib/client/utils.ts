@@ -20,3 +20,23 @@ export function copyDuplicateDebugPayload(title: string, scannedItem: any, dbIte
         alert("Debug data dumped to console AND copied to clipboard!");
     }).catch(() => alert("Debug data dumped to console! (Clipboard copy failed)"));
 }
+
+export async function nukeAllCaches() {
+	if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
+	if (typeof window !== 'undefined') {
+		try { sessionStorage.clear(); localStorage.clear(); } catch(e) { console.warn("Storage clear blocked:", e); }
+		try {
+			if ('caches' in window) {
+				const keys = await caches.keys();
+				await Promise.all(keys.map(key => caches.delete(key)));
+			}
+		} catch(e) { console.warn("Cache clear blocked:", e); }
+		try {
+			if ('serviceWorker' in navigator) {
+				const regs = await navigator.serviceWorker.getRegistrations();
+				for (const r of regs) await r.unregister();
+			}
+		} catch(e) { console.warn("SW clear blocked:", e); }
+		window.location.reload();
+	}
+}

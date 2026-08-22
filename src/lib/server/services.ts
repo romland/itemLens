@@ -117,6 +117,7 @@ export async function createItemEntity(params: {
     prominent_text_or_graphic?: string | null;
     distinctive_blemishes_or_wear?: string | null;
     color_mix?: any;
+    clientId?: string;
     timelineNoteId?: number | null;
     duplicateDismissed?: boolean;
 }) {
@@ -165,6 +166,17 @@ export async function createItemEntity(params: {
         }
     }
 
+    // Idempotency: Protect against outbox retries and rapid double-saves
+    if (params.clientId) {
+        const existing = await db.item.findUnique({
+            where: { clientId: params.clientId },
+            include: { photos: true }
+        });
+        if (existing) {
+            return existing;
+        }
+    }
+
     const safeTitle = params.title.trim() || "New Item";
 
     const { tokenizeAndStem } = await import('$lib/server/nlp');
@@ -176,6 +188,7 @@ export async function createItemEntity(params: {
 
     const item = await db.item.create({
         data: {
+            clientId: params.clientId,
             title: safeTitle,
             description: params.description?.trim() || "",
             slug: slugify(safeTitle.toLowerCase()) || "new-item",

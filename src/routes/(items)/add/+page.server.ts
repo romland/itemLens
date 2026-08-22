@@ -22,6 +22,7 @@ export const actions = {
         const title = data.title as string;
         const description = data.description as string;
         const tagcsv = data.tagcsv as string;
+        const clientId = data.clientId as string;
 
         /*
         if (title.length == 0) {
@@ -71,6 +72,7 @@ return fail(400, {
         const item = await createItemEntity({
             title: safeTitle,
             description: finalDesc,
+            clientId,
             reason: data.reason as string || "",
             amount: isNaN(parsedAmount) ? null : parsedAmount,
             inventoryId: locals.activeInventoryId,

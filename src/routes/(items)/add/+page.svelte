@@ -15,16 +15,29 @@
     import { saveToQueue } from '$lib/client/offlineQueue';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-
+    
     let mode: 'single' | 'collection' | 'compare' = 'single';
     let modeLoaded = false;
     let saving = false;
     let isDirty = false;
     let pastedDocCount = 0;
     let notifications: any[] = [];
+    
+    // Generate an idempotency key (Browser-safe fallback for SSR)
+    let clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+    
+    let bulkTriageComponent: BulkTriage;
+    let compareHubComponent: CompareHub;
+    let itemHubComponent: ItemHub;
 
-   let bulkTriageComponent: BulkTriage;
-   let compareHubComponent: CompareHub;
+    // =========================================================================================
+    // TODO: USER PREFERENCES WIRING
+    // In the future, to make this togglable in the UI:
+    // 1. Add `continuousScanning Boolean @default(false)` to the User model in schema.prisma.
+    // 2. Add a toggle in settings.
+    // 3. Read it here via SvelteKit data: `const CONTINUOUS_SCANNING = data.user.continuousScanning;`
+    // =========================================================================================
+    const CONTINUOUS_SCANNING = false;
 
     beforeNavigate(({ cancel }) => {
         if (isDirty && !saving) {
@@ -33,10 +46,10 @@
             }
         }
     });
-
+    
     export let form: ActionData;
     export let data: PageServerData;
-
+    
     const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
         // Stop SvelteKit from natively submitting the form! 
         // If missing, SvelteKit AND our Outbox will both upload it, causing duplicates.
@@ -45,19 +58,30 @@
             return;
         }
         saving = true;
-        await saveToQueue('/add', formData);
-        saving = false;
-        isDirty = false;
-        notify("success", "Item queued for upload! Ready for next.");
-        window.dispatchEvent(new CustomEvent('outbox-trigger'));
-        
-        // // Fast workflow: Reset form to allow immediate scanning of next item
-        // const eltForm = document.getElementById('eltForm') as HTMLFormElement;
-        // if (eltForm) eltForm.reset();
-        // await goto('/add', { invalidateAll: true });
+        formData.append('clientId', clientId);
+        try {
+            await saveToQueue('/add', formData);
+            notify("success", "Item saved in background!");
+            window.dispatchEvent(new CustomEvent('outbox-trigger'));
+            
+            // CRITICAL FIX: Wipe the component state immediately to prevent Svelte's 
+            // reactivity from flipping `isDirty` back to true and triggering the `beforeNavigate` trap.
+            if (itemHubComponent) itemHubComponent.reset();
+            isDirty = false;
+            
+            if (CONTINUOUS_SCANNING) {
+                clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                await goto('/', { invalidateAll: true });
+            }
+        } catch (err) {
+            console.error("Queue Error:", err);
+            notify("error", "Failed to save item. Please try again.");
+        } finally {
+            saving = false;
+        }
 
-        // Fast workflow: Return to home so user can seamlessly add another
-        await goto('/', { invalidateAll: true });
     }
     
     function notify(status: string, message: string, id: string | null = null) {
@@ -75,7 +99,7 @@
         if (status !== 'loading') setTimeout(() => removeNotification(newId), 3000);
         return newId;
     }
-
+    
     onMount(() => {
         if (typeof sessionStorage !== 'undefined') {
             const savedMode = sessionStorage.getItem('itemlens_add_mode');
@@ -89,42 +113,42 @@
     $: if (modeLoaded && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('itemlens_add_mode', mode);
     }
-
+    
     function removeNotification(id: string) {
         notifications = notifications.filter(n => n.id !== id);
     }
-
+    
     pageTitle.set("Add new product");
-$:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : "Compare Collection");
-
+    $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : "Compare Collection");
+    
 </script>
 
 <PasteHandler 
-    formId="eltForm" 
-    forcePhotoType={mode === 'collection' || mode === 'compare' ? 'product' : null}
-   on:save={(ev) => {
-       if (mode === 'collection' && ev.detail.file) {
-           bulkTriageComponent?.processPastedFile(ev.detail.file);
-       }
-       else if (mode === 'compare' && ev.detail.file) {
-           compareHubComponent?.processPastedFile(ev.detail.file);
-       }
-   }}
-    on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
-    on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-    on:processingComplete={(ev) => { 
-        notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
-        if (ev.detail.status === 'success') {
-            isDirty = true;
-            pastedDocCount++;
-        }
-    }}
+formId="eltForm" 
+forcePhotoType={mode === 'collection' || mode === 'compare' ? 'product' : null}
+on:save={(ev) => {
+    if (mode === 'collection' && ev.detail.file) {
+        bulkTriageComponent?.processPastedFile(ev.detail.file);
+    }
+    else if (mode === 'compare' && ev.detail.file) {
+        compareHubComponent?.processPastedFile(ev.detail.file);
+    }
+}}
+on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
+on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+on:processingComplete={(ev) => { 
+    notify(ev.detail.status, ev.detail.message, ev.detail.taskId);
+    if (ev.detail.status === 'success') {
+        isDirty = true;
+        pastedDocCount++;
+    }
+}}
 />
 
 {#if form?.error}
-    <div class="mb-6 max-w-2xl mx-auto">
-        <Alert>{@html form?.message}</Alert>
-    </div>
+<div class="mb-6 max-w-2xl mx-auto">
+    <Alert>{@html form?.message}</Alert>
+</div>
 {/if}
 
 <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
@@ -138,7 +162,7 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
         isDirty = false;
         mode = 'collection';
     }}>Collection</button>
-
+    
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         isDirty = false;
         mode = 'compare';
@@ -146,36 +170,37 @@ $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' 
 </div>
 
 {#if mode === 'single'}
-    <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
-        <ItemHub 
-            containers={data.containers} 
-            saving={saving}
-            bind:isDirty
-            pastedDocCount={pastedDocCount}
-            on:success={(ev) => notify("success", ev.detail)} 
-            on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-            on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-        />
-    </form>
+<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
+    <ItemHub 
+    bind:this={itemHubComponent}
+    containers={data.containers} 
+    saving={saving}
+    bind:isDirty
+    pastedDocCount={pastedDocCount}
+    on:success={(ev) => notify("success", ev.detail)} 
+    on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+    on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+    />
+</form>
 {:else if mode === 'collection'}
-    <BulkTriage 
-       bind:this={bulkTriageComponent}
-        containers={data.containers} 
-        categories={data.categories}
-        bind:isDirty
-        on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-        on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-    />
+<BulkTriage 
+bind:this={bulkTriageComponent}
+containers={data.containers} 
+categories={data.categories}
+bind:isDirty
+on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+/>
 {:else}
-    <CompareHub 
-        bind:this={compareHubComponent}
-        containers={data.containers}
-        categories={data.categories}
-        tags={data.tags}
-        on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-        on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-        on:success={(ev) => notify("success", ev.detail)}
-    />
+<CompareHub 
+bind:this={compareHubComponent}
+containers={data.containers}
+categories={data.categories}
+tags={data.tags}
+on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+on:success={(ev) => notify("success", ev.detail)}
+/>
 {/if}
 
 <Notifications bind:notifications />

@@ -20,6 +20,26 @@
     export let isDirty = false;
     export let pastedDocCount = 0;
 
+    // Expose a hard-reset function for continuous scanning workflows
+    export function reset() {
+        currentTitle = "";
+        currentDescription = "";
+        amount = "";
+        reason = "";
+        tagcsv = "";
+        currentAttributes = [];
+        pendingPhotos = [];
+        qrScannerCount = 0;
+        pastedDocCount = 0;
+        selectedLocations = [];
+        currentDraftPath = "";
+        isDuplicateWarning = false;
+        duplicateDetails = null;
+        duplicateDismissed = false;
+        activeView = 'hub';
+        isDirty = false;
+    }
+
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
     let activeView = 'hub';
 

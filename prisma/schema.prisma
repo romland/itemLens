@@ -148,6 +148,7 @@ model Tag {
 
 model Item {
   id          Int      @id @unique @default(autoincrement())
+  clientId    String?  @unique
   slug        String
   amount      Int?
   title       String?

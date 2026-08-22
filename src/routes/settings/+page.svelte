@@ -8,6 +8,7 @@
     import { goto } from "$app/navigation";
 	import Notifications from "$lib/components/Notifications.svelte";
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
+	import { nukeAllCaches } from "$lib/client/utils";
 
     export let form: ActionData;
 
@@ -73,26 +74,6 @@
 		const target = event.target as HTMLInputElement;
 		if (target.files && target.files.length > 0) {
 			avatarPreview = URL.createObjectURL(target.files[0]);
-		}
-	}
-
-	async function nukeAllCaches() {
-		if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
-		if (typeof window !== 'undefined') {
-			try { sessionStorage.clear(); localStorage.clear(); } catch(e) { }
-			try {
-				if ('caches' in window) {
-					const keys = await caches.keys();
-					await Promise.all(keys.map(key => caches.delete(key)));
-				}
-			} catch(e) { }
-			try {
-				if ('serviceWorker' in navigator) {
-					const regs = await navigator.serviceWorker.getRegistrations();
-					for (const r of regs) await r.unregister();
-				}
-			} catch(e) { }
-			window.location.reload();
 		}
 	}
 

@@ -19,6 +19,7 @@
     // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
     import { outboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
+	import { nukeAllCaches } from '$lib/client/utils';
     
     let mounted = false;    
 
@@ -212,33 +213,6 @@
             });
         });
     });    
-
-    async function nukeAllCaches() {
-      if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
-      
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.clear();
-          localStorage.clear();
-        } catch(e) { console.warn("Storage clear blocked:", e); }
-        
-        try {
-          if ('caches' in window) {
-            const keys = await caches.keys();
-            await Promise.all(keys.map(key => caches.delete(key)));
-          }
-        } catch(e) { console.warn("Cache clear blocked:", e); }
-        
-        try {
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) await registration.unregister();
-          }
-        } catch(e) { console.warn("SW clear blocked:", e); }
-        
-        window.location.reload();
-      }
-    }
 
     $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : '';
 
@@ -508,6 +482,15 @@ $:  isDemoMode =
 						<div class="flex-1 font-semibold text-lg">Settings & Profile</div>
                         <i class="bi bi-chevron-right text-gray-400"></i>
                     </a>
+
+				{#if $page.data.user?.isAdmin}
+					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={() => { mobileMenuModal.close(); nukeAllCaches(); }}>
+						<div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
+							<i class="bi bi-trash3 text-xl"></i>
+						</div>
+						<div class="flex-1 font-semibold text-lg">Clear Offline Cache</div>
+					</button>
+				{/if}
 
                 {#if !$page.data.user}
                     <a href="/login" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
