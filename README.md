@@ -7,14 +7,15 @@ The primary use is:
 `Do I have that, where the heck is it?` and `Why did I buy it?`
 
 I am no fan of data-entry, so, adding new products/items should be as automated as 
-possible (using any device). Most of the effort went into this bit using machine learning
-(LLMs, object classification, OCR, etc).
+possible (using any device). Most of the effort of making this app went into making
+a pleasant and fast work-flow. It optionally uses machine learning of various types:
+language and vision models, object classification, OCR.
 
 ### How to use
-To add a product, grab your phone and take a picture of the product. Then scan the
-QR-code on the container to place it in. (Note: this is the goal. Getting there.)
+To add a product, grab your phone and take a picture, scan the QR-code on the container
+to place it in and that's it.  
 
-That's it.
+But wait... there's more.
 
 If feeling particularly ambitious on a day, you can also:
 - take a picture of an invoice/receipt (itemLens will use image classification/OCR/LLM to get the juicy bits)
@@ -24,6 +25,20 @@ If feeling particularly ambitious on a day, you can also:
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
+
+### Here's a text about taxonomy that will be incorporated naturally in this README one day:
+We’re building a self-organizing inventory app. The basic idea is that you take a photo of any object—from a book to a winter coat to a spark plug—and the app automatically figures out what it is, what details matter, and how to file it away.
+
+Because it has to handle a bit of everything, we can't pre-program it with rigid spreadsheet columns like "Brand" or "Shoe Size." Instead, the system creates its own structure on the fly. Doing this brings up two practical hurdles:
+
+Keeping the language consistent
+Image-recognition tools are naturally a bit messy with words. If you feed the system photos of three different t-shirts, it might label one with "short sleeves," another with "arm style," and a third with "sleeve length." You can't build a useful search tool out of that. To fix this, the first time the app sees a new category, it locks in a specific set of labels and forces the software to reuse those exact terms for all future items in that group. It turns messy, fluid text into a clean, predictable database.
+
+Spotting duplicates from photos
+The other challenge is figuring out if you’ve just photographed an item you already logged. Since we don't rely on barcodes, we have to use the photos themselves. If you take a picture of a jacket on your bed today, the lighting and folds will look completely different than when you first logged it hanging in a closet months ago. The system might pull the color "Navy" today instead of "Dark Blue," or it might miss a pocket. To handle this, the app mathematically cross-references the visual details and the text to figure out if it's the exact same item, ensuring it doesn't log a duplicate or confuse two completely different blue shirts.
+
+Ultimately, we're just using modern vision and language models to handle the tedious work of standardizing and deduplicating data. It figures out how much detail is actually needed—like knowing when an item is just a "hammer" versus a "16oz fiberglass handle"—so you can just snap a picture and let the software organize it.
+
 
 ### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything
