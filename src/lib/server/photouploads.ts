@@ -15,12 +15,26 @@ import crypto from 'crypto';
 
 // Global memory lock to synchronize fast-workflow draft uploads with background LLM tasks
 export const activeDrafts = new Map<string, { promise: Promise<any>, draftPath: string }>();
+// Global memory lock for the heavy background pipeline (OCR, RemBG, Crops)
+export const activeHeavyTasks = new Map<string, Promise<void>>();
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
 import QRUrlDownloader from "$lib/server/urldownloader";
 // import { analyzePhoto } from '$lib/server/gemini-classification';
 // import { getExistingCategoryNames, getOrCreateCategory } from '$lib/server/categories';
+
+export function readValidSidecar(jsonPath: string) {
+    if (!fs.existsSync(jsonPath)) return null;
+    try {
+        const sidecar = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        if (sidecar.ocr || sidecar.thumbPath || sidecar.colors) return sidecar;
+    } catch (e) {
+        console.error(`[Background Task] Failed to read/parse sidecar at ${jsonPath}:`, e);
+    }
+    return null;
+}
+
 
 export async function enrichPhotoData(localPath: string, webPath: string, type: string, inventoryId: number, tracking?: TaskContext, skipLlm: boolean = false, precomputedBox?: number[] | null): Promise<any> {
     const tempPhoto = { id: -1, orgPath: webPath, type } as any;
@@ -132,21 +146,32 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
 }
 
 export async function processDraftPhotoBackground(webPath: string, type: string, inventoryId: number, precomputedAi?: any) {
-    const tracking = { targetType: 'global' as const, targetId: 0 };
-    const localPath = `static${webPath}`;
-    const box = precomputedAi?.foregroundBox || precomputedAi?.box || null;
-    const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking, !!precomputedAi, box);
-    
-    if (precomputedAi) {
-        data.llmAnalysis = JSON.stringify(precomputedAi);
-        data.categoryName = precomputedAi.subCategory;
-        data.extractedAttributes = precomputedAi.extractedAttributes ? JSON.stringify(precomputedAi.extractedAttributes) : null;
-        data.title = precomputedAi.title;
-        data.description = precomputedAi.description || precomputedAi.subtitle || null;
-    }
-    
-    fs.writeFileSync(`${localPath}.json`, JSON.stringify(data), 'utf8');
-    console.log(`[Background Task] Finished heavy processing for draft image: ${webPath}`);
+	const heavyPromise = (async () => {
+		try {
+			const tracking = { targetType: 'global' as const, targetId: 0 };
+			const localPath = `static${webPath}`;
+			const box = precomputedAi?.foregroundBox || precomputedAi?.box || null;
+			const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking, !!precomputedAi, box);
+			
+			if (precomputedAi) {
+				data.llmAnalysis = JSON.stringify(precomputedAi);
+				data.categoryName = precomputedAi.subCategory;
+				data.extractedAttributes = precomputedAi.extractedAttributes ? JSON.stringify(precomputedAi.extractedAttributes) : null;
+				data.title = precomputedAi.title;
+				data.description = precomputedAi.description || precomputedAi.subtitle || null;
+			}
+			
+			fs.writeFileSync(`${localPath}.json`, JSON.stringify(data), 'utf8');
+			console.log(`[Background Task] Finished heavy processing for draft image: ${webPath}`);
+		} catch (error) {
+			console.error(`[Background Task] Heavy processing failed for ${webPath}. Saving raw photo gracefully.`, error);
+		} finally {
+			activeHeavyTasks.delete(webPath);
+		}
+	})();
+
+	activeHeavyTasks.set(webPath, heavyPromise);
+	await heavyPromise;
 }
 
 export async function processItemPhotosBackground(item: any) {
@@ -170,60 +195,48 @@ export async function processItemPhotosBackground(item: any) {
             let skipEnrichPhotoData = false;
             let enriched: any = {};
 
-            // FAST WORKFLOW FIX: Polling natively in the background worker
+            // FAST WORKFLOW FIX: Event-Driven Background Synchronization
             // If this photo is a draft, processDraftPhotoBackground might still be generating the heavy ML derivatives.
             if (photo.orgPath.includes('-draft-') && (!photo.thumbPath || !photo.ocr)) {
                 const jsonPath = `static${photo.orgPath}.json`;
-                let attempts = 0;
-                const MAX_ATTEMPTS = 120; // Allow up to 2 full minutes for ML processing on slow hardware
-                console.log(`\n[Background Task] ⏳ Polling initiated. Photo is a draft but missing ML data.`);
-                console.log(`[Background Task] ⏳ Waiting up to ${MAX_ATTEMPTS}s for FULL draft ML sidecar to appear at ${jsonPath}...`);
+                console.log(`\n[Background Task] ⏳ Photo is a draft but missing ML data. Checking for sidecar...`);
                 
-                while (attempts < MAX_ATTEMPTS) {
-                    if (fs.existsSync(jsonPath)) {
-                        try {
-                            const sidecar = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-                            // Validate the sidecar actually contains the post-processed ML data, not just the initial LLM pass
-                            if (sidecar.ocr || sidecar.thumbPath || sidecar.colors) {
-                                console.log(`[Background Task] 🟢 SUCCESS! Found fully populated draft sidecar at attempt ${attempts + 1} for ${photo.orgPath}! Parsing...`);
-                                photo.ocr = sidecar.ocr || photo.ocr;
-                                photo.colors = sidecar.colors || photo.colors;
-                                photo.cropPath = sidecar.cropPath || photo.cropPath;
-                                photo.thumbPath = sidecar.thumbPath || photo.thumbPath;
-                                photo.llmAnalysis = sidecar.llmAnalysis || photo.llmAnalysis;
-                                photo.exifData = sidecar.exifData || photo.exifData;
-                                
-                                skipEnrichPhotoData = true;
-                                enriched = {
-                                    ocr: photo.ocr,
-                                    colors: photo.colors,
-                                    cropPath: photo.cropPath,
-                                    thumbPath: photo.thumbPath,
-                                    llmAnalysis: photo.llmAnalysis,
-                                    categoryName: photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null,
-                                    orgPath: photo.orgPath,
-                                    exifData: photo.exifData,
-                                    extractedAttributes: photo.llmAnalysis && JSON.parse(photo.llmAnalysis).extractedAttributes ? JSON.stringify(JSON.parse(photo.llmAnalysis).extractedAttributes) : null
-                                };
-                                await logActivity(item.id, 'Image Processing', `Reused ML results from draft sidecar for photo ID ${photo.id}`, 'success');
-                                break;
-                            } else {
-                                console.log(`[Background Task] 🟡 Sidecar exists at ${jsonPath}, but heavy ML data (OCR/Colors/Crops) is not written yet. Waiting... (Attempt ${attempts + 1}/${MAX_ATTEMPTS})`);
-                            }
-                        } catch(e) {
-                            console.error(`[Background Task] 🔴 Failed to read/parse draft sidecar in background worker:`, e);
-                        }
-                    } else {
-                        if (attempts % 5 === 0) { // Log every 5s to avoid terminal spam, but ensure visibility
-                            console.log(`[Background Task] ⏳ Still waiting for sidecar creation at ${jsonPath}... (Attempt ${attempts + 1}/${MAX_ATTEMPTS})`);
-                        }
-                    }
-                    await new Promise(r => setTimeout(r, 1000));
-                    attempts++;
+                let sidecar = readValidSidecar(jsonPath);
+                
+                if (!sidecar) {
+		            if (activeHeavyTasks.has(photo.orgPath)) {
+		                console.log(`[Background Task] ⏳ Photo is a draft. Awaiting active heavy ML task directly for ${photo.orgPath}...`);
+		                await activeHeavyTasks.get(photo.orgPath);
+		                console.log(`[Background Task] 🟢 Heavy ML task resolved! Parsing sidecar...`);
+		                sidecar = readValidSidecar(jsonPath);
+		            } else {
+		                console.warn(`\n[Background Task] ❌ No active task found for ${photo.orgPath}. Proceeding with redundant standard ML pipeline.\n`);
+		            }
+                } else {
+                    console.log(`[Background Task] 🟢 SUCCESS! Found fully populated draft sidecar instantly for ${photo.orgPath}! Parsing...`);
                 }
-                
-                if (!skipEnrichPhotoData) {
-                    console.warn(`\n[Background Task] ❌ TIMED OUT waiting ${MAX_ATTEMPTS}s for sidecar for ${photo.orgPath}. Proceeding with redundant standard ML pipeline.\n`);
+
+                if (sidecar) {
+                    photo.ocr = sidecar.ocr || photo.ocr;
+                    photo.colors = sidecar.colors || photo.colors;
+                    photo.cropPath = sidecar.cropPath || photo.cropPath;
+                    photo.thumbPath = sidecar.thumbPath || photo.thumbPath;
+                    photo.llmAnalysis = sidecar.llmAnalysis || photo.llmAnalysis;
+                    photo.exifData = sidecar.exifData || photo.exifData;
+                    
+                    skipEnrichPhotoData = true;
+                    enriched = {
+                        ocr: photo.ocr,
+                        colors: photo.colors,
+                        cropPath: photo.cropPath,
+                        thumbPath: photo.thumbPath,
+                        llmAnalysis: photo.llmAnalysis,
+                        categoryName: photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null,
+                        orgPath: photo.orgPath,
+                        exifData: photo.exifData,
+                        extractedAttributes: photo.llmAnalysis && JSON.parse(photo.llmAnalysis).extractedAttributes ? JSON.stringify(JSON.parse(photo.llmAnalysis).extractedAttributes) : null
+                    };
+                    await logActivity(item.id, 'Image Processing', `Reused ML results from draft sidecar for photo ID ${photo.id}`, 'success');
                 }
             }
             
