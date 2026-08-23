@@ -38,7 +38,10 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
         whereClause.OR = [{ categoryId: null }, ...(categoryId ? [{ categoryId }] : [])];
     }
     
-    const dbFields = await db.templateField.findMany({ where: whereClause });
+    const dbFields = await db.templateField.findMany({ 
+        where: whereClause,
+        include: { category: { select: { name: true } } }
+    });
 
     const globalBaseFields = [];
 
@@ -56,7 +59,7 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
 
     return [
         ...globalBaseFields,
-        ...dbFields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod, categoryId: f.categoryId }))
+        ...dbFields.map(f => ({ id: f.id, name: f.name, uiLabel: f.uiLabel, type: f.type, options: f.options ? JSON.parse(f.options) : null, matchWeight: f.matchWeight, extractionMethod: f.extractionMethod, categoryId: f.categoryId, categoryName: (f as any).category?.name }))
     ];
 }
 
@@ -100,10 +103,10 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
 
 2. ONE "Macro Functional Group" (extractionMethod: "VISION_STRICT").
    - The abstract grouping of WHERE it goes or WHAT it does, to group interchangeable items together.
-   - E.g., Body Placement (Torso, Legs, Feet, Head), Primary Action (Cutting, Fastening, Measuring).
+   - E.g., Body Zone (Upper, Lower, Feet), Primary Action (Cutting, Fastening, Measuring).
 
-3. TWO "Micro Visual Traits" (extractionMethod: "VISION_STRICT" or "HYBRID").
-   - E.g., Pattern, Texture, Sleeve Length, Connector Type.
+3. TWO "Universal Material or Finish Traits" (extractionMethod: "VISION_STRICT" or "HYBRID").
+   - E.g., Primary Material, Textile Pattern, Surface Finish.
 
 4. ONE or TWO "Human Context" fields (extractionMethod: "HUMAN_REQUIRED").
    - Context the camera cannot accurately know without reading a physical tag.
@@ -111,6 +114,7 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
 
 CRITICAL BANS:
 - NO "Color", "Brand", "Manufacturer", "Creator", or "Publisher" fields (these are tracked globally). DO NOT output any field containing these words.
+- UNIVERSAL APPLICABILITY: These fields will be applied to EVERY item in the inventory. Do NOT generate part-specific geometry (like sleeves, ports, lenses, or pages) because not every item in the domain has those parts. Keep them abstract.
 - 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", "SUBJECTIVE_TEXT", or "METADATA_ONLY".
 - For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
@@ -183,7 +187,28 @@ export async function bootstrapCategorySchema(categoryId: number, categoryName: 
             const fields = JSON.parse(res.text!);
             console.log(`[Taxonomy Engine] 🟢 Received ${fields.length} fields for category "${categoryName}". Saving to DB:`, JSON.stringify(fields, null, 2));
 
+            const { calculateKeySimilarity } = await import('$lib/server/matcher');
+            const allExistingFields = await db.templateField.findMany({ where: { inventoryId } });
+
             for (const f of fields) {
+                let bestSim = 0;
+                let matchedField: any = null;
+                
+                for (const existing of allExistingFields) {
+                    const sim = calculateKeySimilarity(f.name, existing.name);
+                    if (sim > bestSim) { bestSim = sim; matchedField = existing; }
+                }
+                
+                if (bestSim > 0.82 && matchedField) {
+                    if (matchedField.categoryId === null) {
+                        console.log(`[Taxonomy Engine] 🛑 Vetoed local field '${f.name}': Already exists globally as '${matchedField.name}'`);
+                        continue; // Drop it completely to protect the global namespace
+                    } else {
+                        console.log(`[Taxonomy Engine] 🔗 Snapped proposed field '${f.name}' to existing local trait '${matchedField.name}'`);
+                        f.name = matchedField.name; // Standardize the key across categories
+                    }
+                }
+
                 const existing = await db.templateField.findFirst({
                     where: { inventoryId, categoryId, name: f.name }
                 });

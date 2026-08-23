@@ -19,6 +19,42 @@ export function getSimilarity(s1: string, s2: string): number {
     return 1 - (dp[len1][len2] / Math.max(len1, len2));
 }
 
+export function tokenizeKey(key: string): string[] {
+    return key.toLowerCase().replace(/[^a-z0-9]+/g, '_').split('_').filter(t => t.length > 0);
+}
+
+export function shareRootToken(keyA: string, keyB: string): boolean {
+    const tkA = tokenizeKey(keyA);
+    const tkB = tokenizeKey(keyB);
+    if (tkA.length === 0 || tkB.length === 0) return false;
+    
+    const intersect = tkA.filter(t => tkB.includes(t));
+    if (intersect.length >= 2) return true;
+    if (intersect.length === 1 && (tkA[0] === tkB[0] || tkA[0] === intersect[0] || tkB[0] === intersect[0])) return true;
+    return false;
+}
+
+export function calculateKeySimilarity(keyA: string, keyB: string): number {
+    const normA = normalizeStr(keyA).replace(/[^a-z0-9]/g, '');
+    const normB = normalizeStr(keyB).replace(/[^a-z0-9]/g, '');
+    let sim = getSimilarity(normA, normB);
+    if (normA.length > 5 && normB.length > 5) {
+        if (normA.includes(normB) || normB.includes(normA)) sim = Math.max(sim, 0.85);
+    }
+    const tkA = tokenizeKey(keyA);
+    const tkB = tokenizeKey(keyB);
+    if (tkA.length > 0 && tkB.length > 0) {
+        const intersect = tkA.filter(t => tkB.includes(t));
+        const isSubset = intersect.length === Math.min(tkA.length, tkB.length);
+        if (isSubset && intersect.length >= 2) {
+            sim = Math.max(sim, 0.90);
+        } else if (isSubset && intersect.length === 1 && Math.max(tkA.length, tkB.length) === 2 && tkA[0] === tkB[0]) {
+            sim = Math.max(sim, 0.85);
+        }
+    }
+    return sim;
+}
+
 function rgbToLab(rgb: [number, number, number]): [number, number, number] {
     let r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
     

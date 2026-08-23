@@ -212,6 +212,7 @@ console.log("formData:", orgData);
         const allExistingPhotoIds = item.photos.map(p=>p.id);
         const allExistingDocumentIds = item.documents.map(p=>p.id);
 
+        data.urls = data.urls || "";
         const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
         if (pastedUrls.length > 0) {
             data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");

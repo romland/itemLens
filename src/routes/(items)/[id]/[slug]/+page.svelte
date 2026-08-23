@@ -22,6 +22,15 @@
     let isProcessingItem = false;
     let attrModal: HTMLDialogElement;
 
+    let payloadModal: HTMLDialogElement;
+    let payloadModalTitle = "";
+    let payloadModalContent = "";
+    function openPayloadModal(log: any) {
+        payloadModalTitle = log.action;
+        payloadModalContent = log.payload;
+        payloadModal.showModal();
+    }
+
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
     // this block automatically re-runs and updates our local state instantly.
     $: {
@@ -622,7 +631,12 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                 {log.level === 'success' ? 'text-success' : log.level === 'warning' ? 'text-warning' : log.level === 'error' ? 'text-error' : 'text-info'}">
                                 [{log.action}]
                             </span>
-                            <span class="text-gray-600 break-words">{log.message}</span>
+                            <span class="text-gray-600 break-words flex-1">
+                                {log.message}
+                                {#if log.payload}
+                                    <button type="button" class="btn btn-xs btn-outline btn-ghost ml-2 py-0 h-5 min-h-0 text-[10px]" on:click={() => openPayloadModal(log)}>View Details</button>
+                                {/if}
+                            </span>
                         </li>
                     {/each}
                 </ul>
@@ -638,6 +652,19 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 }}>
     <input type="hidden" name="attributes" id="attrsInput" />
 </form>
+
+<dialog bind:this={payloadModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem] w-11/12 max-w-5xl flex flex-col max-h-[90vh]">
+        <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
+            <h3 class="font-bold text-lg leading-tight">{payloadModalTitle}</h3>
+            <button class="btn btn-sm btn-circle btn-ghost" on:click={() => payloadModal.close()}><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="p-4 overflow-y-auto bg-base-200/50">
+            <pre class="text-[10px] font-mono whitespace-pre-wrap break-words">{payloadModalContent}</pre>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <dialog bind:this={attrModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
     <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">

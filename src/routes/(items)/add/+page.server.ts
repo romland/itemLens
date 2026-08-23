@@ -89,6 +89,7 @@ return fail(400, {
             color_mix
         });
 
+        data.urls = data.urls || "";
         const pastedUrls = orgData.getAll("pasted_urls[]") as string[];
         if (pastedUrls.length > 0) {
             data.urls = (data.urls as string || "") + "\n" + pastedUrls.join("\n");

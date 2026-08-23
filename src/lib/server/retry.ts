@@ -1,6 +1,7 @@
 import { logActivity } from './logger';
 import { taskManager } from './taskManager';
 import { recordLLMLog } from './llmLogger';
+import { dev } from '$app/environment';
 
 // Define limits per service
 const serviceQuotas: Record<string, { maxRPM: number, requests: number, minuteResetTime: number }> = {
@@ -54,6 +55,11 @@ export async function withRetry<T>(
                 const tokensIn = (result as any)?.usageMetadata?.promptTokenCount || (result as any)?.usage?.prompt_tokens || 0;
                 const tokensOut = (result as any)?.usageMetadata?.candidatesTokenCount || (result as any)?.usage?.completion_tokens || 0;
                 recordLLMLog(taskName, service, context.prompt, (result as any)?.text || (result as any)?.choices || result, durationMs, tokensIn, tokensOut, context.itemId, context.path);
+                
+                if (context.itemId && dev) {
+                    const payload = JSON.stringify({ prompt: context.prompt, response: (result as any)?.text || (result as any)?.choices || result }, null, 2);
+                    await logActivity(context.itemId, 'LLM Debug', `Dev Mode: Prompt & Response for ${taskName}`, 'info', payload);
+                }
             }
             
             return result;

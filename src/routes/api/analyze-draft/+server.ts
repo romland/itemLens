@@ -84,13 +84,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 }
             }
 
+            let snappedAttrs = classificationData?.extractedAttributes || {};
+            if (classificationData && classificationData.extractedAttributes) {
+                const { cleanAndSnapAttributes } = await import('$lib/server/services');
+                snappedAttrs = await cleanAndSnapAttributes(classificationData.extractedAttributes, activeSchema);
+                classificationData.extractedAttributes = snappedAttrs;
+            }
+
             aiData = {
                 title: classificationData?.title,
                 description: classificationData?.description || classificationData?.subtitle || null,
                 photoType: classificationData?.photoType,
                 subCategory: classificationData?.subCategory,
                 isDuplicate,
-                duplicateItemDetails
+                duplicateItemDetails,
+                extractedAttributes: snappedAttrs
             };
 
             if (classificationData) {
@@ -103,7 +111,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     prominent_text_or_graphic: classificationData.prominent_text_or_graphic,
                     distinctive_blemishes_or_wear: classificationData.distinctive_blemishes_or_wear,
                     color_mix: classificationData.color_mix,
-                    foregroundBox: classificationData.foregroundBox || null
+                    foregroundBox: classificationData.foregroundBox || null,
+                    extractedAttributes: snappedAttrs
                 };
                 fs.writeFileSync(`${localPath}.json`, JSON.stringify(initialDraftData), 'utf8');
             }

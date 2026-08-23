@@ -15,7 +15,7 @@ export function getTopColorsNamed(imagePath : string, callback: any)
         
         // const colorNames = [];
         const ret = {};
-        console.log("colorThief palette:", palette);
+        // console.log("colorThief palette:", palette);
         const maxColors = Math.min(palette.length, 2);
         for(let i = 0; i < maxColors; i++) {
             const hexCol = rgbToHex(palette[i][0], palette[i][1], palette[i][2]).toUpperCase();

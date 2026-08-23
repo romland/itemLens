@@ -3,6 +3,7 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import fs from 'fs';
 import path from 'path';
 import { withRetry } from './retry';
+import { dev } from '$app/environment';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -20,13 +21,15 @@ export interface ImageAnalysisResult {
   searchSynonyms?: string[];
   foregroundBox?: number[];
   extractedAttributes?: Record<string, any>;
+  _debugPayload?: string;
 }
 
 export async function analyzePhoto(
   localFilePath: string,
   existingCategories: string[] = [],
   allowNewCategories: boolean = true,
-  activeSchema: any[] = []
+  activeSchema: any[] = [],
+  itemId?: number
 ): Promise<ImageAnalysisResult> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const base64Data = fileBuffer.toString('base64');
@@ -36,14 +39,15 @@ export async function analyzePhoto(
   if (ext === '.png') mimeType = 'image/png';
   else if (ext === '.webp') mimeType = 'image/webp';
 
-  const visibleFields = activeSchema.filter(f => f.extractionMethod !== 'HUMAN_REQUIRED');
+  const rootKeys = new Set(['color_mix', 'distinctive_blemishes_or_wear', 'prominent_text_or_graphic']);
+  const visibleFields = activeSchema.filter(f => f.extractionMethod !== 'HUMAN_REQUIRED' && !rootKeys.has(f.name));
   let dictionaryPrompt = '';
   if (visibleFields.length > 0) {
       const dict: any = {};
       visibleFields.forEach(f => {
-          const cat = f.categoryId ? f.categoryId.toString() : 'global';
-          if (!dict[cat]) dict[cat] = {};
-          dict[cat][f.name] = f.options || f.type;
+          const cat = f.categoryName ? f.categoryName : 'global';
+          if (!dict[cat]) dict[cat] = [];
+          dict[cat].push(f.name); // Send only the keys to prevent prompt explosion
       });
       dictionaryPrompt = `\nSCHEMA DICTIONARY:\n${JSON.stringify(dict)}\n`;
   }
@@ -63,7 +67,18 @@ export async function analyzePhoto(
     physical_traits: { type: 'array', items: { type: 'string' } },
     searchSynonyms: { type: 'array', items: { type: 'string' } },
     foregroundBox: { type: 'array', items: { type: 'number' }, description: 'Bounding box [ymin, xmin, ymax, xmax] normalized 0-1000 for the primary foreground object. Ignore background clutter.' },
-    extractedAttributes: { type: 'object', description: 'Key-value mapping based strictly on the SCHEMA DICTIONARY.' }
+    extractedAttributes: { 
+        type: 'array', 
+        description: 'Extract visual values for ALL keys in the \'global\' list. Then, extract values for ALL keys in your chosen \'subCategory\' list. IF your subCategory is NOT in the dictionary, you MUST still extract the \'global\' keys, and then invent 3-5 new descriptive keys for the item. IF a dictionary key is logically impossible for the specific object, output "N/A".',
+        items: {
+            type: 'object',
+            properties: {
+                key: { type: 'string' },
+                value: { type: 'string' }
+            },
+            required: ['key', 'value']
+        }
+    }
   };
   const required = ['photoType', 'title', 'subCategory', 'isNewCategory', 'color_mix', 'prominent_text_or_graphic', 'distinctive_blemishes_or_wear', 'physical_traits', 'searchSynonyms', 'foregroundBox', 'extractedAttributes'];
 
@@ -78,7 +93,7 @@ CRITICAL GROUNDING RULES:
 4. NEVER write plot summaries, historical context, or fun facts.
 5. SEPARATE DESCRIPTORS FROM DISCRIMINATORS: "physical_traits" are generic properties (e.g., cotton, white, v-neck). Do NOT put graphics, text, brands, or wear into physical_traits.
 6. THE SCALE & MATERIAL FALLACY: A photo has no absolute scale. You cannot tell a Small shirt from a Large shirt, or a 10mm wrench from a 12mm wrench. DO NOT guess sizes, dimensions, or invisible materials. If it is not explicitly printed in visible text, you do not know it.
-7. DICTIONARY ENFORCEMENT: If SCHEMA DICTIONARY is provided, check the 'global' keys and the keys matching your chosen subCategory. Output EXACTLY those keys into 'extractedAttributes'. Use the provided enums. Output null if visually obscured. Do not invent keys.
+7. DICTIONARY ENFORCEMENT: Output values for the 'global' keys and the keys matching your chosen subCategory in the SCHEMA DICTIONARY. IF your chosen subCategory is NOT in the dictionary, you MUST invent 3 to 5 highly distinct, descriptive visual keys (e.g., 'fastening_type', 'lens_mount', 'collar_style'). Do not use generic keys like 'type'.
 
 TASKS:
 1. photoType: Identify if this photo is a 'product' (physical item), 'invoice', 'information', or 'other'.
@@ -91,7 +106,8 @@ TASKS:
 8. distinctive_blemishes_or_wear: Specific damage, fading, or wear (e.g., "hole in knee", "scratched screen"). Null if pristine.
 9. physical_traits: An array of 5-10 generic descriptive strings (e.g., ["cotton", "crew-neck", "short-sleeves", "stainless steel"]). Describe form and structure.
 10. searchSynonyms: An array of 3-5 broad synonyms/hypernyms for the object.
-11. foregroundBox: Provide the bounding box of the isolated primary object.`;
+11. foregroundBox: Provide the bounding box of the isolated primary object.
+12. extractedAttributes: Return an array of key-value objects. Look at the SCHEMA DICTIONARY. You MUST extract values for ALL keys in the 'global' list. Then, extract values for ALL keys in your chosen 'subCategory' list. IF your subCategory is NOT in the dictionary, you MUST still extract the 'global' keys, and then invent 3-5 new descriptive keys for the item. IF a dictionary key is logically impossible for the specific object, output "N/A".`;
 
   properties.description = { type: 'string', description: 'Brief visual description' };
   properties.subtitle = { type: 'string', description: 'Author, maker, or secondary text' };
@@ -114,12 +130,32 @@ TASKS:
         type: 'object', properties, required
       }
     }
-  }), 3, 2000, 'Gemini Classification', { prompt: promptText, path: localFilePath });
+  }), 3, 2000, 'Gemini Classification', { prompt: promptText, path: localFilePath, itemId });
 
-  return JSON.parse(response.text!);
+  let rawText = response.text!;
+  // Failsafe for the Gemini space-loop token-exhaustion bug
+  if (rawText.length > 10000) {
+      rawText = rawText.replace(/\s{10,}/g, ' ');
+  }
+  
+  const result = JSON.parse(rawText);
+
+  // Convert the array of {key, value} objects back into a standard dictionary object for the rest of the app
+  if (Array.isArray(result.extractedAttributes)) {
+      const mappedAttrs: Record<string, string> = {};
+      result.extractedAttributes.forEach((attr: any) => {
+          if (attr.key && attr.value) mappedAttrs[attr.key] = attr.value;
+      });
+      result.extractedAttributes = mappedAttrs;
+  }
+
+  if (dev) {
+      result._debugPayload = "Prompt:\n" + promptText + "\n\n\nModel Response:\n" + JSON.stringify(result, null, 4);
+  }
+  return result;
 }
 
-export async function guessProductDetails(localFilePath: string, hint: string = ""): Promise<{title: string, description: string}> {
+export async function guessProductDetails(localFilePath: string, hint: string = "", itemId?: number): Promise<{title: string, description: string}> {
   const fileBuffer = fs.readFileSync(localFilePath);
   const ext = path.extname(localFilePath).toLowerCase();
   const mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
@@ -152,7 +188,7 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
         required: ['title', 'description']
       }
     }
-  }), 3, 2000, 'Product Details Guess', { prompt: promptText, path: localFilePath });
+  }), 3, 2000, 'Product Details Guess', { prompt: promptText, path: localFilePath, itemId });
 
   return JSON.parse(response.text!);
 }

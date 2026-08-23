@@ -101,6 +101,151 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
     }
 }
 
+// --- SEMANTIC TAXONOMY ENGINE (ABSTRACTIONS) ---
+
+/**
+ * TRIGGER: Guardrail against collapsing low-entropy data.
+ * ACTION: Returns false for numbers, booleans, tiny strings, and null-equivalents.
+ * EXPLANATION: We cannot use values like "yes", "10", or "M" to prove two keys are identical.
+ */
+function isHighEntropyValue(valStr: string): boolean {
+    const v = valStr.trim().toLowerCase();
+    if (!v || ['null', 'undefined', 'none', 'n/a', 'unknown', '{}', '[object object]'].includes(v)) return false;
+    if (v.length <= 2) return false; // Protects sizes (S, M, L, XL) and short numbers
+    if (['yes', 'no', 'true', 'false', 'y', 'n'].includes(v)) return false;
+    if (!isNaN(Number(v))) return false; // Protects strict numerical values
+    return true;
+}
+
+export async function cleanAndSnapAttributes(rawAttrs: Record<string, any>, activeSchema: any[]) {
+    if (!rawAttrs || Object.keys(rawAttrs).length === 0) return {};
+
+    const { getSimilarity, normalizeStr, shareRootToken, calculateKeySimilarity } = await import('$lib/server/matcher');
+    const finalAttrs: Record<string, string> = {};
+
+    console.log("\n[SNAPPER DEBUG] --- SEMANTIC ENGINE STARTED ---");
+    console.log("[SNAPPER DEBUG] Input Payload:", rawAttrs);
+
+    // Pre-process to filter out pure garbage
+    const validPairs: { k: string, v: string, normV: string, isHighEnt: boolean }[] = [];
+
+    for (const [k, v] of Object.entries(rawAttrs)) {
+        let valStr = typeof v === 'object' ? JSON.stringify(v) : String(v).trim();
+        const lowVal = valStr.toLowerCase();
+        if (valStr === '{}' || valStr === '[object Object]' || !valStr || ['null', 'undefined', 'n/a', 'none', 'unknown'].includes(lowVal)) continue;
+        validPairs.push({ k, v: valStr, normV: normalizeStr(valStr), isHighEnt: isHighEntropyValue(valStr) });
+        console.log(`[SNAPPER DEBUG] Valid Pair: [${k}] -> '${valStr}' (highEnt: ${isHighEntropyValue(valStr)})`);
+    }
+
+    // PHASE 1: Intra-Payload Stutter Resolution
+    // TRIGGER: LLM outputs multiple keys with identical high-entropy values (The "Stutter").
+    // ACTION: Collapse them immediately so they don't pollute the next phases.
+    const stutterResolved = new Map<string, string>();
+    const processedKeys = new Set<string>();
+
+    for (let i = 0; i < validPairs.length; i++) {
+        const pairA = validPairs[i];
+        if (processedKeys.has(pairA.k)) continue;
+
+        let group = [pairA];
+        if (pairA.isHighEnt) {
+            for (let j = i + 1; j < validPairs.length; j++) {
+                const pairB = validPairs[j];
+                if (!processedKeys.has(pairB.k) && pairB.isHighEnt && pairA.normV === pairB.normV) {
+                    if (shareRootToken(pairA.k, pairB.k)) group.push(pairB);
+                }
+            }
+            if (group.length > 1) console.log(`[SNAPPER DEBUG] PHASE 1: Detected Stutter Group:`, group.map(g => g.k));
+        }
+
+        // Pick the best key from the stutter block (prefer existing DB schema matches)
+        let winner = group[0];
+        if (group.length > 1) {
+            winner = group.reduce((best, current) => {
+                const bestInSchema = activeSchema.some(f => f.name === best.k);
+                const currentInSchema = activeSchema.some(f => f.name === current.k);
+                if (bestInSchema && !currentInSchema) return best;
+                if (!bestInSchema && currentInSchema) return current;
+                return best.k.length <= current.k.length ? best : current;
+            });
+        }
+
+        for (const p of group) processedKeys.add(p.k);
+        stutterResolved.set(winner.k, winner.v);
+        if (group.length > 1) console.log(`[SNAPPER DEBUG] PHASE 1: Collapsed to Winner -> '${winner.k}'`);
+    }
+
+    // PHASE 2 & 3: Schema Snapping & Orphan Triangulation
+    for (const [rawKey, rawVal] of stutterResolved.entries()) {
+        const isHighEnt = isHighEntropyValue(rawVal);
+        const normV = normalizeStr(rawVal);
+        
+        let snappedKey = rawKey;
+        let bestKeySim = 0;
+        let targetSchemaField: any = null;
+
+        for (const field of activeSchema) {
+            const sim = calculateKeySimilarity(rawKey, field.name);
+            if (sim > bestKeySim) { bestKeySim = sim; snappedKey = field.name; targetSchemaField = field; }
+        }
+
+        // PHASE 3: Orphan Triangulation (The Near-Miss trigger)
+        // TRIGGER: The key failed strict matching (<=0.82) but has a high-entropy value.
+        // ACTION: Cross-reference its value against schema enums that share a root token.
+        if (bestKeySim <= 0.82 && isHighEnt) {
+            for (const field of activeSchema) {
+                if (field.type === 'enum' && field.options && shareRootToken(rawKey, field.name)) {
+                    for (const opt of field.options) {
+                        if (getSimilarity(normV, normalizeStr(opt)) > 0.85) {
+                            bestKeySim = 0.95; // Force the snap!
+                            snappedKey = field.name;
+                            console.log(`[SNAPPER DEBUG] PHASE 3: Orphan Triangulation SNAPPED '${rawKey}' -> '${field.name}' based on value '${opt}'`);
+                            targetSchemaField = field;
+                            break;
+                        }
+                    }
+                    if (bestKeySim > 0.82) break;
+                }
+            }
+        }
+
+        // Fallback: try snapping against other finalized keys to group remaining anomalies
+        if (bestKeySim <= 0.82) {
+            for (const existingKey of Object.keys(finalAttrs)) {
+                const sim = calculateKeySimilarity(rawKey, existingKey);
+                if (sim > bestKeySim) { bestKeySim = sim; snappedKey = existingKey; targetSchemaField = activeSchema.find(f => f.name === existingKey); }
+            }
+        }
+
+        if (bestKeySim <= 0.82) {
+            snappedKey = rawKey;
+            targetSchemaField = null;
+        }
+
+        let finalVal = rawVal;
+        if (targetSchemaField && targetSchemaField.type === 'enum' && targetSchemaField.options) {
+            let bestValSim = 0;
+            let snappedVal = rawVal;
+            for (const opt of targetSchemaField.options) {
+                const sim = getSimilarity(normV, normalizeStr(opt));
+                if (sim > bestValSim) { bestValSim = sim; snappedVal = opt; }
+            }
+            // Restore the strict 80% threshold required to format values
+            if (bestValSim > 0.80) {
+                finalVal = snappedVal;
+                if (finalVal !== rawVal) console.log(`[SNAPPER DEBUG] Enum Formatted: '${rawVal}' -> '${finalVal}'`);
+            }
+        }
+
+        if (!finalAttrs[snappedKey]) {
+            finalAttrs[snappedKey] = finalVal;
+        }
+    }
+
+    console.log("[SNAPPER DEBUG] --- FINAL OUTPUT ---", finalAttrs, "\n");
+    return finalAttrs;
+}
+
 export async function createItemEntity(params: {
     title: string;
     description?: string;
@@ -122,35 +267,72 @@ export async function createItemEntity(params: {
     duplicateDismissed?: boolean;
 }) {
     const { getActiveSchema } = await import('$lib/server/ontology');
-    const activeSchema = await getActiveSchema(params.inventoryId, null, true);
+    const { getSimilarity, normalizeStr } = await import('$lib/server/matcher');
+    
+    let catId = null;
+    if (params.photos && Array.isArray(params.photos)) {
+        const prodPhoto = params.photos.find((p: any) => p.categoryId);
+        if (prodPhoto) catId = prodPhoto.categoryId;
+    }
+    const activeSchema = await getActiveSchema(params.inventoryId, catId, false);
 
-    const finalAttributes = params.attributes ? [...params.attributes] : [];
+    const finalAttributes: { key: string, value: string, isAutoGenerated: boolean }[] = [];
+    const taxonomyLogs: string[] = [];
 
+    const uiAttrs: Record<string, string> = {};
+    if (params.attributes) {
+        for (const a of params.attributes) uiAttrs[a.key] = a.value;
+    }
+    const snappedUiAttrs = await cleanAndSnapAttributes(uiAttrs, activeSchema);
+    
+    const aiAttrs: Record<string, string> = {};
     if (params.extractedAttributes) {
         try {
-            const attrs = typeof params.extractedAttributes === 'string' 
-                ? JSON.parse(params.extractedAttributes) 
-                : params.extractedAttributes;
+            const parsed = typeof params.extractedAttributes === 'string' ? JSON.parse(params.extractedAttributes) : params.extractedAttributes;
+            Object.assign(aiAttrs, parsed);
+        } catch(e) {}
+    }
 
-            for (const [k, v] of Object.entries(attrs)) {
-                if (v !== null && v !== '') {
-                    const valStr = typeof v === 'object' ? JSON.stringify(v) : String(v).trim();
-                    if (valStr === '{}' || valStr === '[object Object]') continue; // Do not save empty JSON objects or literal garbage strings
-                    // Prioritize Human UI edits: Only append if the form didn't already send this exact key
-                    if (!finalAttributes.some(a => a.key === k)) {
-                        finalAttributes.push({ key: k, value: valStr });
+    // Funnel unstructured physical traits directly into the Snapper for deduplication
+    if (params.physical_traits) {
+        for (const field of activeSchema) {
+            if (field.extractionMethod === 'HUMAN_REQUIRED') continue;
+            if (field.type === 'enum' && field.options) {
+                for (const trait of params.physical_traits) {
+                    let bestSim = 0;
+                    let matchStr = null;
+                    for (const opt of field.options) {
+                        const sim = getSimilarity(normalizeStr(opt), normalizeStr(trait));
+                        if (sim > bestSim) { bestSim = sim; matchStr = opt; }
+                    }
+                    if (bestSim > 0.82 && matchStr && !aiAttrs[field.name]) {
+                        aiAttrs[field.name] = matchStr;
                     }
                 }
             }
-        } catch(e) { console.error("Failed to parse extracted attributes", e); }
+        }
+    }
+
+    const snappedAiAttrs = await cleanAndSnapAttributes(aiAttrs, activeSchema);
+
+    for (const [k, v] of Object.entries(snappedUiAttrs)) {
+        finalAttributes.push({ key: k, value: v, isAutoGenerated: false });
+    }
+    for (const [k, v] of Object.entries(snappedAiAttrs)) {
+        if (!finalAttributes.some(a => a.key === k)) {
+            finalAttributes.push({ key: k, value: v, isAutoGenerated: true });
+            taxonomyLogs.push(`Auto-generated attribute '${k}': '${v}'`);
+        }
+
     }
 
     // Ensure discriminators are saved cleanly as Attributes, separate from the generic NLP pool
-    if (params.prominent_text_or_graphic && !finalAttributes.some(a => a.key === 'prominent_text_or_graphic')) {
-        finalAttributes.push({ key: 'prominent_text_or_graphic', value: params.prominent_text_or_graphic });
+    const isValValid = (v: any) => v && !['null', 'none', 'n/a', 'undefined', 'unknown', '{}'].includes(String(v).trim().toLowerCase());
+    if (isValValid(params.prominent_text_or_graphic) && !finalAttributes.some(a => a.key === 'prominent_text_or_graphic')) {
+        finalAttributes.push({ key: 'prominent_text_or_graphic', value: params.prominent_text_or_graphic as string, isAutoGenerated: true });
     }
-    if (params.distinctive_blemishes_or_wear && !finalAttributes.some(a => a.key === 'distinctive_blemishes_or_wear')) {
-        finalAttributes.push({ key: 'distinctive_blemishes_or_wear', value: params.distinctive_blemishes_or_wear });
+    if (isValValid(params.distinctive_blemishes_or_wear) && !finalAttributes.some(a => a.key === 'distinctive_blemishes_or_wear')) {
+        finalAttributes.push({ key: 'distinctive_blemishes_or_wear', value: params.distinctive_blemishes_or_wear as string, isAutoGenerated: true });
     }
 
     // Organic Schema Evolution - run across the final merged set (both AI-extracted and Human-edited)
@@ -211,40 +393,16 @@ export async function createItemEntity(params: {
         include: { photos: true }
     });
 
-    // Organic Background Schema Mapping
-    if (params.physical_traits && params.physical_traits.length > 0) {
-        const { ioQueue } = await import('$lib/server/queue/index');
-        
-        ioQueue.add(async () => {
-            const kvpsToCreate = [];
-            for (const field of activeSchema) {
-                if (field.extractionMethod === 'HUMAN_REQUIRED') continue;
-                if (field.type === 'enum' && field.options) {
-                    for (const trait of params.physical_traits!) {
-                        const normTrait = trait.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        const match = field.options.find((opt: string) => opt.toLowerCase().replace(/[^a-z0-9]/g, '') === normTrait);
-                        if (match) {
-                            const existing = await db.kVP.findFirst({ where: { itemId: item.id, key: field.name } });
-                            if (!existing && !kvpsToCreate.some(k => k.key === field.name)) {
-                                kvpsToCreate.push({ itemId: item.id, key: field.name, value: match });
-                            }
-                        }
-                    }
-                }
-            }
-            if (kvpsToCreate.length > 0) {
-                await db.kVP.createMany({ data: kvpsToCreate });
-                await logActivity(item.id, 'Semantic Extraction', `Structured ${kvpsToCreate.length} attributes in background`, 'success');
-            }
-        });
-    }
-
     if (params.color_mix && !finalAttributes.some(a => a.key === 'color_mix')) {
-        await db.kVP.create({ data: { itemId: item.id, key: 'color_mix', value: typeof params.color_mix === 'string' ? params.color_mix : JSON.stringify(params.color_mix) } });
+        await db.kVP.create({ data: { itemId: item.id, key: 'color_mix', value: typeof params.color_mix === 'string' ? params.color_mix : JSON.stringify(params.color_mix), isAutoGenerated: true } });
     }
 
     const { processItemPhotosBackground } = await import('$lib/server/photouploads');
     processItemPhotosBackground(item).catch(e => console.error(e));
+
+    for (const msg of taxonomyLogs) {
+        await logActivity(item.id, 'Taxonomy Engine', msg, 'info');
+    }
 
     return item;
 }

@@ -311,6 +311,7 @@ model ActivityLog {
   level     String   @default("info")
   action    String
   message   String
+  payload   String?
   
   item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId    Int

@@ -46,7 +46,7 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
         
         if (response.ok) {
           const result = await response.json();
-          console.log("OCR result", JSON.stringify(result));
+          // console.log("OCR result", JSON.stringify(result));
           return result;
         } else {
           console.log('OCR Error:', response.statusText, response);
@@ -67,7 +67,7 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
       
       if (response.ok) {
         const result = await response.json();
-        console.log("OCR result", JSON.stringify(result));
+        // console.log("OCR result", JSON.stringify(result));
         return result;
       } else {
         console.log('OCR Error:', response.statusText, response);
