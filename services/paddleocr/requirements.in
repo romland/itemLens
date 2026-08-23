@@ -1,7 +1,8 @@
 FastAPI
-paddlepaddle
+paddlepaddle>=3.0.0
 paddleocr
 uvicorn
-python-multipart
-requests
+python-multipart>=0.0.12
+requests>=2.32.2
 numpy
+crc32c<=2.8

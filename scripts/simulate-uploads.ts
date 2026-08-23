@@ -60,10 +60,11 @@ const singleImages2: string[] = [
     CLOTHES_PATH+"/41890.jpg",
     CLOTHES_PATH+"/7651.jpg",
     CLOTHES_PATH+"/7687.jpg",
+    // 5026.jpg 7032.jpg 7049.jpg 7051.jpg 7053.jpg 7054.jpg
 ];
 
 // Bright t-shirts
-const singleImages: string[] = [
+const singleImages3: string[] = [
     CLOTHES_PATH+"/3339.jpg",
     CLOTHES_PATH+"/3345.jpg",
     CLOTHES_PATH+"/3351.jpg",
@@ -97,12 +98,61 @@ const singleImages: string[] = [
     CLOTHES_PATH+"/3869.jpg",
     CLOTHES_PATH+"/3870.jpg",
 ];
-    // CLOTHES_PATH+"/",
+// CLOTHES_PATH+"/",
 
+// Pants
+const singleImages: string[] = [
+    CLOTHES_PATH+"/4770.jpg",
+    CLOTHES_PATH+"/4773.jpg",
+    CLOTHES_PATH+"/4774.jpg",
+    CLOTHES_PATH+"/4775.jpg",
+    CLOTHES_PATH+"/4785.jpg",
+    CLOTHES_PATH+"/4786.jpg",
+    CLOTHES_PATH+"/4787.jpg",
+    CLOTHES_PATH+"/4796.jpg",
+    CLOTHES_PATH+"/4797.jpg",
+    CLOTHES_PATH+"/4808.jpg",
+    CLOTHES_PATH+"/4825.jpg",
+    CLOTHES_PATH+"/4826.jpg",
+    CLOTHES_PATH+"/4827.jpg",
+    CLOTHES_PATH+"/4828.jpg",
+    CLOTHES_PATH+"/4829.jpg",
+    CLOTHES_PATH+"/4830.jpg",
+    CLOTHES_PATH+"/4831.jpg",
+    CLOTHES_PATH+"/4832.jpg",
+    CLOTHES_PATH+"/4833.jpg",
+    CLOTHES_PATH+"/4834.jpg",
+    CLOTHES_PATH+"/4835.jpg",
+    CLOTHES_PATH+"/4849.jpg",
+    CLOTHES_PATH+"/4851.jpg",
+    CLOTHES_PATH+"/4965.jpg",
+    CLOTHES_PATH+"/4966.jpg",
+    CLOTHES_PATH+"/5027.jpg",
+    CLOTHES_PATH+"/5809.jpg",
+    CLOTHES_PATH+"/6579.jpg",
+    CLOTHES_PATH+"/6588.jpg",
+];
+
+// Jerseys
+const singleImages5: string[] = [
+    CLOTHES_PATH+"/4857.jpg",
+    CLOTHES_PATH+"/4858.jpg",
+    CLOTHES_PATH+"/4859.jpg",
+    CLOTHES_PATH+"/4860.jpg",
+    CLOTHES_PATH+"/4861.jpg",
+    CLOTHES_PATH+"/4862.jpg",
+    CLOTHES_PATH+"/4863.jpg",
+    CLOTHES_PATH+"/4864.jpg",
+    CLOTHES_PATH+"/4865.jpg",
+    CLOTHES_PATH+"/4866.jpg",
+    CLOTHES_PATH+"/4867.jpg",
+    CLOTHES_PATH+"/4986.jpg",
+];
 
 const collectionImages: string[] = [
     // "./test-images/bookshelf.jpg",
     // "./test-images/crate-of-games.jpg",
+    // 7020.jpg 7021.jpg 7023.jpg 7026.jpg 7027.jpg
 ];
 // ==========================================
 
