@@ -1,5 +1,5 @@
 # itemLens
-<img src="static/itemlens-512.webp" align="right" width="300" alt="itemLens Logo" />
+<img src="static/itemlens-512.webp" align="right" width="40%" alt="itemLens Logo" />
 
 Inventory management (for at home). There are many like it, but this one is mine.
 
@@ -45,7 +45,13 @@ Ultimately, we're just using modern vision and language models to handle the ted
 I've been waiting couple of years to actually show a screenshot because I never really did anything
 about the visuals ... But, let's get the ball rolling in 2026, the first screenshot:
 
-<img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="100%" alt="Screenshot 1" />
+<img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="80%" alt="List of items" />
+
+
+...and only mere days after that, a second one! (whoop!):
+
+<img src="./.github/screenshots/itemlens-screenshot-002.webp" align="center" width="80%" alt="Add new item" />
+
 
 
 ### Features
