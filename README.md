@@ -9,7 +9,7 @@ The primary use is:
 I am no fan of data-entry, so, adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into making
 a pleasant and fast work-flow. It optionally uses machine learning of various types:
-language and vision models, object classification, OCR.
+language and vision models, object classification, OCR, background removal, segmentation.
 
 ### How to use
 To add a product, grab your phone and take a picture, scan the QR-code on the container
