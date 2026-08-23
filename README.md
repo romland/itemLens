@@ -32,10 +32,10 @@ We’re building a self-organizing inventory app. The basic idea is that you tak
 
 Because it has to handle a bit of everything, we can't pre-program it with rigid spreadsheet columns like "Brand" or "Shoe Size." Instead, the system creates its own structure on the fly. Doing this brings up two practical hurdles:
 
-Keeping the language consistent
+**Keeping the language consistent**  
 Image-recognition tools are naturally a bit messy with words. If you feed the system photos of three different t-shirts, it might label one with "short sleeves," another with "arm style," and a third with "sleeve length." You can't build a useful search tool out of that. To fix this, the first time the app sees a new category, it locks in a specific set of labels and forces the software to reuse those exact terms for all future items in that group. It turns messy, fluid text into a clean, predictable database.
 
-Spotting duplicates from photos
+**Spotting duplicates from photos**  
 The other challenge is figuring out if you’ve just photographed an item you already logged. Since we don't rely on barcodes, we have to use the photos themselves. If you take a picture of a jacket on your bed today, the lighting and folds will look completely different than when you first logged it hanging in a closet months ago. The system might pull the color "Navy" today instead of "Dark Blue," or it might miss a pocket. To handle this, the app mathematically cross-references the visual details and the text to figure out if it's the exact same item, ensuring it doesn't log a duplicate or confuse two completely different blue shirts.
 
 Ultimately, we're just using modern vision and language models to handle the tedious work of standardizing and deduplicating data. It figures out how much detail is actually needed—like knowing when an item is just a "hammer" versus a "16oz fiberglass handle"—so you can just snap a picture and let the software organize it.
