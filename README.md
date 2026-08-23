@@ -23,6 +23,7 @@ If feeling particularly ambitious on a day, you can also:
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
+- never run into a dead link again, all pages you link to are downloaded and stored locally on your disk
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
