@@ -26,6 +26,7 @@ export const load = async ({ locals }) => {
                 deepScanCollections: true,
                 bgRemovalEnabled: true,
                 bgRemovalPreCrop: true,
+                enablePaddleOCR: true,
                 duplicateStrategy: true,
                 templateFields: {
                     select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
@@ -290,6 +291,15 @@ export const actions = {
         const allow = data.get('bgRemovalPreCrop') === 'true';
         await db.inventory.update({ where: { id }, data: { bgRemovalPreCrop: allow } });
         return { success: true, message: "Pre-crop settings updated." };
+    },
+
+    togglePaddleOCR: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('enablePaddleOCR') === 'true';
+        await db.inventory.update({ where: { id }, data: { enablePaddleOCR: allow } });
+        return { success: true, message: "OCR settings updated." };
     },
 
     updateInventoryStrategy: async ({ request, locals }) => {

@@ -358,6 +358,12 @@
                                         <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.bgRemovalPreCrop} disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
                                         <span class="text-xs text-gray-500 font-medium" class:opacity-50={!v.bgRemovalEnabled}>Pre-crop image before background removal (good for some item-types)</span>
                                     </form>
+									<form method="POST" action="?/togglePaddleOCR" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+										<input type="hidden" name="id" value={v.id}>
+										<input type="hidden" name="enablePaddleOCR" value={(!v.enablePaddleOCR).toString()}>
+										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.enablePaddleOCR} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+										<span class="text-xs text-gray-500 font-medium">Enable local PaddleOCR text extraction</span>
+									</form>
 
                                     <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import InteractiveColorMix from '../InteractiveColorMix.svelte';
     const dispatch = createEventDispatcher();
 
     export let item: any = null;
@@ -69,6 +70,8 @@
                     </div>
                 {:else if field.type === 'number'}
                     <input type="number" bind:value={localAttributes[field.name]} placeholder="0" class="input input-bordered w-full rounded-xl bg-base-50" />
+                {:else if field.name === 'color_mix'}
+                    <InteractiveColorMix initialMixStr={item?.extractedAttributes?.color_mix || item?.color_mix || '[]'} bind:valueStr={localAttributes[field.name]} />
                 {:else}
                     <input type="text" bind:value={localAttributes[field.name]} placeholder="..." class="input input-bordered w-full rounded-xl bg-base-50" />
                 {/if}

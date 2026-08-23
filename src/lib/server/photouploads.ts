@@ -42,8 +42,9 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let exifDataJson: string | null = null;
     let bgRemovalEnabled = true;
     let bgRemovalPreCrop = false;
+    let enablePaddleOCR = true;
     try {
-        const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true }});
+        const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true, enablePaddleOCR: true }});
         if (vault?.extractExif) {
             const metadata = await sharp(localPath).metadata();
             if (metadata.exif) {
@@ -65,6 +66,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
         }
         bgRemovalEnabled = vault?.bgRemovalEnabled ?? true;
         bgRemovalPreCrop = vault?.bgRemovalPreCrop ?? false;
+        enablePaddleOCR = vault?.enablePaddleOCR ?? true;
     } catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
     
     let finalOrgPath = webPath;
@@ -120,7 +122,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     
     // 2. RUN OCR & DERIVATIVES (Passing the new foregroundBox down to guide RemBG!)
     const [ocrResult, imgUpdates] = await Promise.all([
-        getOCRdata(currentLocalPath, tracking).catch(() => null),
+        enablePaddleOCR ? getOCRdata(currentLocalPath, tracking).catch(() => null) : Promise.resolve(null),
         generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled)
     ]);
     
