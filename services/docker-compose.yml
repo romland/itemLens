@@ -2,7 +2,7 @@ services:
   rembg:
     container_name: itemlens-rembg
     image: danielgatis/rembg
-    command: s
+    command: s --no-ui
     ports:
       - "7000:7000"
     restart: unless-stopped
@@ -13,11 +13,17 @@ services:
     image: paddleocrfastapi:paddlejr
     environment:
       - TZ=Europe/Amsterdam
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - FLAGS_use_mkldnn=0
+      - PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0
+      - OMP_WAIT_POLICY=PASSIVE
+      - OMP_NUM_THREADS=2
     ports:
       - "8000:8000"
     volumes:
       # Map host folder containing the model files to the container's cache path
       - ./paddleocr/downloads:/root/.paddleocr
+      - ./paddleocr/paddlex_cache:/root/.paddlex
     restart: unless-stopped
 
   singlefile:

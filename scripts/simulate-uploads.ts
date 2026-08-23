@@ -101,7 +101,7 @@ const singleImages3: string[] = [
 // CLOTHES_PATH+"/",
 
 // Pants
-const singleImages: string[] = [
+const singleImages4: string[] = [
     CLOTHES_PATH+"/4770.jpg",
     CLOTHES_PATH+"/4773.jpg",
     CLOTHES_PATH+"/4774.jpg",
@@ -134,7 +134,7 @@ const singleImages: string[] = [
 ];
 
 // Jerseys
-const singleImages5: string[] = [
+const singleImages: string[] = [
     CLOTHES_PATH+"/4857.jpg",
     CLOTHES_PATH+"/4858.jpg",
     CLOTHES_PATH+"/4859.jpg",
