@@ -291,8 +291,13 @@
                 <i class="bi bi-images text-xl"></i>
             </button>
 
-            <div class="relative">
-                <button type="button" class="btn btn-primary btn-circle h-28 w-28 shadow-xl hover:scale-105 active:scale-95 transition-transform overflow-hidden p-0" aria-label="Quick Take Photo"
+            <div class="relative flex items-center justify-center">
+                {#if !previewImagePath && photoCount === 0}
+                    <!-- Soft radar pulse to draw the eye -->
+                    <div class="absolute w-28 h-28 rounded-full bg-primary/40 animate-ping pointer-events-none" style="animation-duration: 3s;"></div>
+                {/if}
+
+                <button type="button" class="btn btn-primary btn-circle relative h-28 w-28 shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden p-0 z-10 border-4 border-base-100 group" aria-label="Quick Take Photo"
                 on:click={() => {
                     const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
                     const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
@@ -313,7 +318,9 @@
                 {#if previewImagePath}
                     <img src={previewImagePath} alt="Preview" class="w-full h-full object-cover" />
                 {:else}
-                    <i class="bi bi-camera text-5xl"></i>
+                    <!-- Apple-style glass sheen sweep -->
+                    <div class="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] animate-shimmer pointer-events-none"></div>
+                    <i class="bi bi-camera text-5xl relative z-10 drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>
                 {/if}
                 </button>
                 {#if photoCount > 0}
@@ -641,3 +648,14 @@
 </dialog>
 
 <ImageLightbox bind:this={lightbox} />
+
+<style>
+    @keyframes shimmer {
+        0% { left: -100%; }
+        20% { left: 200%; }
+        100% { left: 200%; }
+    }
+    .animate-shimmer {
+        animation: shimmer 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+</style>
