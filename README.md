@@ -54,7 +54,7 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 
 <div>
   <img src="./.github/screenshots/itemlens-screenshot-002.webp" align="left" width="40%" alt="Add new item" />
-  <img src="./.github/screenshots/itemlens-screenshot-003.webp" align="left" width="40%" alt="Search result" />
+  <img src="./.github/screenshots/itemlens-screenshot-003.webp" width="40%" alt="Search result" />
 </div>
 
 
