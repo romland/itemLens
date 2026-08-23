@@ -60,7 +60,12 @@ const singleImages2: string[] = [
     CLOTHES_PATH+"/41890.jpg",
     CLOTHES_PATH+"/7651.jpg",
     CLOTHES_PATH+"/7687.jpg",
-    // 5026.jpg 7032.jpg 7049.jpg 7051.jpg 7053.jpg 7054.jpg
+    CLOTHES_PATH+"/5026.jpg",
+    CLOTHES_PATH+"/7032.jpg",
+    CLOTHES_PATH+"/7049.jpg",
+    CLOTHES_PATH+"/7051.jpg",
+    CLOTHES_PATH+"/7053.jpg",
+    CLOTHES_PATH+"/7054.jpg",
 ];
 
 // Bright t-shirts

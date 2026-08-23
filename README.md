@@ -11,6 +11,8 @@ possible (using any device). Most of the effort of making this app went into mak
 a pleasant and fast work-flow. It optionally uses machine learning of various types:
 language and vision models, object classification, OCR, background removal, segmentation.
 
+_This readme is very much a work in progress; it's currently not organized or complete at all._
+
 ### How to use
 To add a product, grab your phone and take a picture, scan the QR-code on the container
 to place it in and that's it.  
@@ -48,9 +50,10 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 <img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="80%" alt="List of items" />
 
 
-...and only mere days after that, a second one! (whoop!):
+...and only mere days after that, a second and a third one! (whoop!):
 
-<img src="./.github/screenshots/itemlens-screenshot-002.webp" align="center" width="80%" alt="Add new item" />
+<img src="./.github/screenshots/itemlens-screenshot-002.webp" width="40%" alt="Add new item" />
+<img src="./.github/screenshots/itemlens-screenshot-003.webp" width="40%" alt="Search result" />
 
 
 
