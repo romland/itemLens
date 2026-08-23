@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
             const analyzePromise = apiQueue.add(() => analyzePhoto(localPath, existingCategories, allowNew, activeSchema), { targetType: 'global', targetId: 0, description: 'Extracting physical traits and title' });
 
-            activeDrafts.set(hash, analyzePromise);
+            activeDrafts.set(hash, { promise: analyzePromise, draftPath: webPath });
             setTimeout(() => activeDrafts.delete(hash), 5 * 60 * 1000); // 5 min TTL
             
             classificationData = await analyzePromise;
