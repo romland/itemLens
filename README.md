@@ -38,7 +38,7 @@ Image-recognition tools are naturally a bit messy with words. If you feed the sy
 **Spotting duplicates from photos**  
 The other challenge is figuring out if you’ve just photographed an item you already logged. Since we don't rely on barcodes, we have to use the photos themselves. If you take a picture of a jacket on your bed today, the lighting and folds will look completely different than when you first logged it hanging in a closet months ago. The system might pull the color "Navy" today instead of "Dark Blue," or it might miss a pocket. To handle this, the app mathematically cross-references the visual details and the text to figure out if it's the exact same item, ensuring it doesn't log a duplicate or confuse two completely different blue shirts.
 
-Ultimately, we're just using modern vision and language models to handle the tedious work of standardizing and deduplicating data. It figures out how much detail is actually needed—like knowing when an item is just a "hammer" versus a "16oz fiberglass handle"—so you can just snap a picture and let the software organize it.
+Ultimately, we're just using modern vision and language models to handle the tedious work of standardizing and deduplicating data. It figures out how much detail is actually needed; like knowing when an item is just a "hammer" versus a "16oz fiberglass handle". Just snap a picture and let this organize it (okay, I also put QR codes on a lot of containers, so maybe _two_ snaps, although the QR-reader does not require a tap, per se).
 
 
 ### Screenshot(s)
