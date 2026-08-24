@@ -20,6 +20,25 @@
     export let brief: boolean = false;
     export let showControls: boolean = true;
 
+    const sortOptions = [
+        { id: 'newest', label: 'Newest First', icon: 'bi-sort-numeric-down-alt' },
+        { id: 'oldest', label: 'Oldest First', icon: 'bi-sort-numeric-down' },
+        { id: 'name_asc', label: 'Name (A-Z)', icon: 'bi-sort-alpha-down' },
+        { id: 'name_desc', label: 'Name (Z-A)', icon: 'bi-sort-alpha-down-alt' },
+        { id: 'updated', label: 'Recently Updated', icon: 'bi-clock-history' },
+        { id: 'amount_asc', label: 'Quantity (Low)', icon: 'bi-sort-numeric-down' },
+        { id: 'amount_desc', label: 'Quantity (High)', icon: 'bi-sort-numeric-down-alt' }
+    ];
+    $: activeSort = $page.url.searchParams.get('sort') || 'newest';
+    $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest First';
+
+    function applySort(sortId: string) {
+        const url = new URL($page.url);
+        url.searchParams.set('sort', sortId);
+        goto(url.toString(), { keepFocus: true, noScroll: true });
+        if (typeof document !== 'undefined') (document.activeElement as HTMLElement)?.blur();
+    }
+
     function getFirstProductPhoto(item) {
         if (item?.photos?.length > 0) {
             for (let i = 0; i < item.photos.length; i++) {
@@ -109,7 +128,25 @@
     {/if}
 {:else}
     {#if showControls}
-        <div class="flex justify-end mb-3 mt-1">
+        <div class="flex justify-between items-center mb-3 mt-1 gap-2">
+            <div class="dropdown dropdown-bottom">
+                <button tabindex="0" class="btn btn-sm bg-base-200/60 border-base-300/50 shadow-sm font-medium text-base-content hover:bg-base-300 gap-1.5 sm:gap-2 rounded-lg h-8 min-h-0">
+                    <i class="bi bi-sort-down text-gray-500 text-lg"></i>
+                    <span class="hidden sm:inline">Sort:</span> {activeSortLabel}
+                    <i class="bi bi-chevron-down text-[10px] opacity-50 ml-0.5"></i>
+                </button>
+                <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-xl w-56 border border-base-200 mt-2 gap-1">
+                    {#each sortOptions as opt}
+                        <li>
+                            <button type="button" class="flex justify-between items-center py-2.5 {activeSort === opt.id ? 'text-primary font-bold bg-primary/5' : 'text-base-content hover:bg-base-200'}" on:click={() => applySort(opt.id)}>
+                                <span class="flex items-center gap-3"><i class="bi {opt.icon} opacity-60 text-lg"></i> {opt.label}</span>
+                                {#if activeSort === opt.id}<i class="bi bi-check-lg text-lg"></i>{/if}
+                            </button>
+                        </li>
+                    {/each}
+                </ul>
+            </div>
+
             <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
                 <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
                 <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>

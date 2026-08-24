@@ -5,6 +5,7 @@
     import Search from "$lib/components/search.svelte";
     
     export let data: PageServerData;
+    import { page } from '$app/stores';
 
     import pageTitle from '$lib/stores';
     pageTitle.set(":)");
@@ -25,4 +26,4 @@
 
 <Items items={data.items} showControls={true} />
 
-<Navigation href="/?" prevPage={data.prevPage} nextPage={data.nextPage} />
+<Navigation href={$page.url.search ? `/${$page.url.search}&` : '/?'} prevPage={data.prevPage} nextPage={data.nextPage} />

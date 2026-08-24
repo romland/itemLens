@@ -5,6 +5,17 @@ import { flagDuplicatesInList } from '$lib/server/matcher';
 
 export const load = (async ({ locals, url }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
+    const sort = url.searchParams.get('sort') || 'newest';
+
+    let orderBy: any = [{ id: 'desc' }];
+    switch(sort) {
+        case 'oldest': orderBy = [{ id: 'asc' }]; break;
+        case 'name_asc': orderBy = [{ title: 'asc' }]; break;
+        case 'name_desc': orderBy = [{ title: 'desc' }]; break;
+        case 'updated': orderBy = [{ updatedAt: 'desc' }]; break;
+        case 'amount_asc': orderBy = [{ amount: 'asc' }]; break;
+        case 'amount_desc': orderBy = [{ amount: 'desc' }]; break;
+    }
 
     const unassignedCount = await db.item.count({
         where: {
@@ -17,7 +28,7 @@ export const load = (async ({ locals, url }) => {
         where: { inventoryId: locals.activeInventoryId },
         take: 12,
         skip: page == 1 ? 0 : (page - 1) * 12,
-        orderBy: [{ id: 'desc' }],
+        orderBy,
         include: {
             locations: {
                 include: {  
