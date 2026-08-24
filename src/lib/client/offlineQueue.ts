@@ -11,6 +11,7 @@ export interface OutboxItem {
 
 // Reactive store so the UI can show upload progress/status globally
 export const outboxStore = writable<OutboxItem[]>([]);
+export const completedOutboxStore = writable<OutboxItem[]>([]);
 
 const DB_NAME = 'ItemLensOutbox';
 const STORE_NAME = 'outboxQueue';

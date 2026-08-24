@@ -4,9 +4,12 @@
     import Delete from "./delete.svelte";
     import { navigating } from '$app/stores';
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { page } from '$app/stores';
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import { outboxStore, completedOutboxStore } from "$lib/client/offlineQueue";
+    import { flip } from 'svelte/animate';
+    import { fade } from 'svelte/transition';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -37,6 +40,53 @@
     let viewModeLoaded = false;
     let lightbox: ImageLightbox;
 
+    // --- Unified Reactive Projection ---
+    const ghostUrls = new Map<string, string>();
+    
+    onDestroy(() => {
+        ghostUrls.forEach(url => URL.revokeObjectURL(url));
+    });
+
+    let loadedUrls = new Set<string>();
+    function markLoaded(url: string) {
+        loadedUrls.add(url);
+        loadedUrls = loadedUrls; // trigger Svelte reactivity
+    }
+
+    $: serverClientIds = new Set(items.map(i => i.clientId).filter(Boolean));
+    
+    $: combinedOutbox = [...$outboxStore, ...$completedOutboxStore];
+    
+    $: ghostItems = combinedOutbox
+        .filter(job => job.endpoint === '/add')
+        .map(job => {
+            const getVal = (key: string) => Array.isArray(job.payload[key]) ? job.payload[key][0] : job.payload[key];
+            const clientId = getVal('clientId');
+            if (!clientId || serverClientIds.has(clientId)) return null;
+            
+            if (!ghostUrls.has(clientId)) {
+                const fileObj = getVal('file.0') || getVal('file');
+                if (fileObj && fileObj._isFile && fileObj.buffer) {
+                    const blob = new Blob([fileObj.buffer], { type: fileObj.type });
+                    ghostUrls.set(clientId, URL.createObjectURL(blob));
+                }
+            }
+            
+            return {
+                id: 'ghost-' + clientId,
+                clientId: clientId,
+                title: getVal('title') || "Saving item...",
+                description: getVal('description') || "",
+                isGhost: true,
+                status: job.status,
+                photos: ghostUrls.has(clientId) ? [{ thumbPath: ghostUrls.get(clientId), orgPath: ghostUrls.get(clientId), type: 'product', showOriginal: false }] : [],
+                locations: []
+            };
+        })
+        .filter(Boolean);
+        
+    $: displayItems = [...ghostItems, ...items];
+
     onMount(() => {
         const cached = localStorage.getItem('itemlens_viewmode_' + $page.data.activeInventoryId);
         if (cached === 'list' || cached === 'grid') viewMode = cached;
@@ -63,7 +113,7 @@
         <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
             <tbody>
-                {#each items as item}
+                {#each displayItems as item (item.clientId || item.id)}
                     <!-- 
                         Check if the URL we are waiting for starts with this item's ID.
                         This catches clicks on the image, the title, AND the edit button!
@@ -71,8 +121,11 @@
                     {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
+                    {@const serverSrc = mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : (mainPhoto.thumbPath || mainPhoto.orgPath)}
+                    {@const localBlob = item.clientId ? ghostUrls.get(item.clientId) : null}
+                    {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
 
-                    <tr on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}">
+                    <tr animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} on:click={(e) => { if (item.isGhost || e.target.closest('a') || e.target.closest('button')) return; goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}">
                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
@@ -81,11 +134,20 @@
                                            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
                                        {/if}
                                        <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent relative z-10">
-                                           {#if mainPhoto.thumbPath || mainPhoto.orgPath}
-                                               <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
-                                           {:else}
-                                               <i class="bi bi-box text-2xl text-gray-300 relative z-10"></i>
-                                           {/if}
+                                           <div class="relative w-full h-full flex items-center justify-center">
+                                               {#if localBlob && !isLoaded}
+                                                   <img src={localBlob} class="absolute inset-0 object-contain w-full h-full p-1 rounded-xl z-0 blur-[2px] opacity-60 transition-opacity duration-700" alt="Preview"/>
+                                               {/if}
+                                               {#if serverSrc}
+                                                   <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
+                                                        src={serverSrc} 
+                                                        on:load={() => markLoaded(serverSrc)}
+                                                        on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
+                                                        alt="{item.title || 'Item image'}"/>
+                                               {:else if !localBlob}
+                                                   <i class="bi bi-box text-2xl text-gray-300 relative z-10"></i>
+                                               {/if}
+                                           </div>
                                        </a>
                                    </div>
                                 </div>
@@ -114,6 +176,10 @@
                                 <!-- Show a loading spinner right next to the title while we wait -->
                                 {#if isNavigatingToThis}
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
+                                {/if}
+                                {#if item.isGhost}
+                                    <span class="loading loading-ring loading-xs text-gray-400"></span>
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-wider font-bold ml-1">Syncing</span>
                                 {/if}
                             </div>
 
@@ -184,13 +250,16 @@
     </div>
     {:else}
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 pb-4">
-            {#each items as item}
+            {#each displayItems as item (item.clientId || item.id)}
                 {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                 {@const mainPhoto = getFirstProductPhoto(item)}
                 {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
+                {@const serverSrc = mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : (mainPhoto.thumbPath || mainPhoto.orgPath)}
+                {@const localBlob = item.clientId ? ghostUrls.get(item.clientId) : null}
+                {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
                 
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <div class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''}" on:click={(e) => { if (!e.target.closest('a') && !e.target.closest('button')) goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
+                <div animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}" on:click={(e) => { if (item.isGhost || e.target.closest('a') || e.target.closest('button')) return; goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
                         {#if cols.length > 0}
                             <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
@@ -198,14 +267,31 @@
                         {#if item.hasDuplicate}
                             <div class="absolute top-3 right-3 w-3 h-3 bg-error rounded-full border-2 border-base-100 shadow-sm z-10" title="Potential duplicate detected"></div>
                         {/if}
-                        {#if mainPhoto.thumbPath || mainPhoto.orgPath}
-                            <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md" src="{mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : mainPhoto.thumbPath}" on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.thumbPath || mainPhoto.orgPath || ''; } }} alt="{item.title || 'Item image'}"/>
-                        {:else}
-                            <i class="bi bi-box text-4xl text-gray-300 relative z-10"></i>
-                        {/if}
+                        <div class="relative w-full h-full flex items-center justify-center">
+                            {#if localBlob && !isLoaded}
+                                <img src={localBlob} class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-0 blur-[2px] opacity-60 transition-opacity duration-700" alt="Preview"/>
+                            {/if}
+                            {#if serverSrc}
+                                <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
+                                     src={serverSrc} 
+                                     on:load={() => markLoaded(serverSrc)}
+                                     on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
+                                     alt="{item.title || 'Item image'}"/>
+                            {:else if !localBlob}
+                                <i class="bi bi-box text-4xl text-gray-300 relative z-10"></i>
+                            {/if}
+                        </div>
                         {#if isNavigatingToThis}
                             <div class="absolute inset-0 bg-base-100/50 flex items-center justify-center">
                                 <span class="loading loading-spinner text-primary"></span>
+                            </div>
+                        {/if}
+                        {#if item.isGhost}
+                            <div class="absolute inset-0 bg-base-100/30 flex items-center justify-center backdrop-blur-[1px]">
+                                <div class="bg-base-100 shadow-lg rounded-full px-3 py-1 flex items-center gap-2 border border-base-200">
+                                    <span class="loading loading-ring loading-xs text-gray-500"></span>
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Syncing</span>
+                                </div>
                             </div>
                         {/if}
                     </figure>

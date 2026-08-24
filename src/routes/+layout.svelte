@@ -18,7 +18,7 @@
     import { onMount, onDestroy } from 'svelte'
     // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
-    import { outboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
+    import { outboxStore, completedOutboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
 	import { nukeAllCaches } from '$lib/client/utils';
     
     let mounted = false;    
@@ -119,13 +119,14 @@
                     });
 
                     if (res.ok) {
+                        // Bridge the temporal gap between IndexedDB deletion and SvelteKit's fetch resolving
+                        completedOutboxStore.update(s => [...s, item]);
+                        setTimeout(() => completedOutboxStore.update(s => s.filter(i => i.id !== item.id)), 10000);
+
                         await clearQueueItem(item.id!);
 
                         console.log("[DEBUG-LAYOUT] Outbox item synced. Firing sync event.");
 
-                        // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
-                        // invalidateAll();
-                        safeInvalidate();
                     } else if (res.status === 400 || res.status === 403 || res.status === 404) {
                         // Unrecoverable error (e.g., item deleted, inventory changed, validation failed).
                         // We drop the queue item to prevent an infinite sync loop.
@@ -284,10 +285,6 @@ $:  isDemoMode =
         $page.url.hostname === 'localhost' || 
         $page.url.hostname.startsWith('192.168.178.');
 
-
-    function safeInvalidate() {
-        throw new Error("Function not implemented.");
-    }
 </script>
 
 <svelte:head> 
