@@ -1,3 +1,8 @@
+<script context="module">
+    import { writable } from 'svelte/store';
+    export const sharedViewMode = writable('list');
+</script>
+
 <script lang="ts">
     import Alert from "$lib/components/alert.svelte";
     import type { Item } from "@prisma/client";
@@ -36,7 +41,6 @@
         return false;
     }
 
-    let viewMode = 'list';
     let viewModeLoaded = false;
     let lightbox: ImageLightbox;
 
@@ -85,31 +89,34 @@
         })
         .filter(Boolean);
         
-    $: displayItems = [...ghostItems, ...items];
+    // Only prepend ghost items to the primary container to prevent duplicates on infinite scroll pages
+    $: displayItems = showControls ? [...ghostItems, ...items] : [...items];
 
     onMount(() => {
         const cached = localStorage.getItem('itemlens_viewmode_' + $page.data.activeInventoryId);
-        if (cached === 'list' || cached === 'grid') viewMode = cached;
+        if (cached === 'list' || cached === 'grid') $sharedViewMode = cached;
         viewModeLoaded = true;
     });
 
-    $: if (viewModeLoaded) {
-        localStorage.setItem('itemlens_viewmode_' + $page.data.activeInventoryId, viewMode);
+    $: if (viewModeLoaded && $sharedViewMode) {
+        localStorage.setItem('itemlens_viewmode_' + $page.data.activeInventoryId, $sharedViewMode);
     }
 </script>
 
-{#if (!items || items.length === 0)}
-    <Alert>Empty.</Alert>
+{#if (!displayItems || displayItems.length === 0)}
+    {#if showControls}
+        <Alert>Empty.</Alert>
+    {/if}
 {:else}
     {#if showControls}
         <div class="flex justify-end mb-3 mt-1">
             <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {viewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => viewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
             </div>
         </div>
     {/if}
-    {#if viewMode === 'list'}
+    {#if $sharedViewMode === 'list'}
         <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
             <tbody>
