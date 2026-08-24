@@ -4,6 +4,7 @@
     import { beforeNavigate } from '$app/navigation';
     import { createEventDispatcher } from 'svelte';
     import Items from "$lib/components/items.svelte";
+    import { page } from '$app/stores';
     
     export let prevPage: number;
     export let nextPage: number;
@@ -16,7 +17,8 @@
     const dispatch = createEventDispatcher();
 
     let currentHref = href;
-    let cacheKey = `nav-cache-${href}`;
+    let currentInvId = $page.data.activeInventoryId;
+    let cacheKey = `nav-cache-${currentInvId}-${href}`;
 
     // 1. SYNCHRONOUS CACHE READ
     // By doing this here instead of in onMount, Svelte renders the full height on the VERY FIRST DOM frame.
@@ -36,10 +38,11 @@
     }
 
     // 2. REACTIVE CACHE RESET FOR URL CHANGES
-    $: if (href !== currentHref) {
-        console.log(`[DEBUG-SCROLL] 🛑 reactive check for changed href: ${href}`);
+    $: if (href !== currentHref || $page.data.activeInventoryId !== currentInvId) {
+        console.log(`[DEBUG-SCROLL] 🛑 reactive check for changed href or vault: ${href}`);
         currentHref = href;
-        cacheKey = `nav-cache-${href}`;
+        currentInvId = $page.data.activeInventoryId;
+        cacheKey = `nav-cache-${currentInvId}-${href}`;
         if (browser && typeof sessionStorage !== 'undefined') {
             const cached = sessionStorage.getItem(cacheKey);
             if (cached) {
