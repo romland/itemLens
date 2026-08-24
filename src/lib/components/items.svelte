@@ -21,16 +21,18 @@
     export let showControls: boolean = true;
 
     const sortOptions = [
-        { id: 'newest', label: 'Newest First', icon: 'bi-sort-numeric-down-alt' },
-        { id: 'oldest', label: 'Oldest First', icon: 'bi-sort-numeric-down' },
+        { id: 'newest', label: 'Newest Added', icon: 'bi-sort-numeric-down-alt' },
+        { id: 'oldest', label: 'Oldest Added', icon: 'bi-sort-numeric-down' },
         { id: 'name_asc', label: 'Name (A-Z)', icon: 'bi-sort-alpha-down' },
         { id: 'name_desc', label: 'Name (Z-A)', icon: 'bi-sort-alpha-down-alt' },
         { id: 'updated', label: 'Recently Updated', icon: 'bi-clock-history' },
-        { id: 'amount_asc', label: 'Quantity (Low)', icon: 'bi-sort-numeric-down' },
-        { id: 'amount_desc', label: 'Quantity (High)', icon: 'bi-sort-numeric-down-alt' }
+        { id: 'dust', label: 'Dust Collectors', icon: 'bi-hourglass-bottom' },
+        { id: 'amount_asc', label: 'Quantity (Low-High)', icon: 'bi-sort-numeric-down' },
+        { id: 'amount_desc', label: 'Quantity (High-Low)', icon: 'bi-sort-numeric-down-alt' },
+        { id: 'attention', label: 'Needs Attention', icon: 'bi-exclamation-circle' }
     ];
     $: activeSort = $page.url.searchParams.get('sort') || 'newest';
-    $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest First';
+    $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest Added';
 
     function applySort(sortId: string) {
         const url = new URL($page.url);

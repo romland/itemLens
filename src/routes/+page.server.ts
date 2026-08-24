@@ -8,13 +8,16 @@ export const load = (async ({ locals, url }) => {
     const sort = url.searchParams.get('sort') || 'newest';
 
     let orderBy: any = [{ id: 'desc' }];
+    let isAttention = false;
     switch(sort) {
         case 'oldest': orderBy = [{ id: 'asc' }]; break;
         case 'name_asc': orderBy = [{ title: 'asc' }]; break;
         case 'name_desc': orderBy = [{ title: 'desc' }]; break;
         case 'updated': orderBy = [{ updatedAt: 'desc' }]; break;
+        case 'dust': orderBy = [{ updatedAt: 'asc' }]; break;
         case 'amount_asc': orderBy = [{ amount: 'asc' }]; break;
         case 'amount_desc': orderBy = [{ amount: 'desc' }]; break;
+        case 'attention': orderBy = [{ updatedAt: 'desc' }]; isAttention = true; break;
     }
 
     const unassignedCount = await db.item.count({
@@ -24,8 +27,13 @@ export const load = (async ({ locals, url }) => {
         }
     });
 
+    const baseWhere: any = { inventoryId: locals.activeInventoryId };
+    if (isAttention) {
+        baseWhere.OR = [{ locations: { none: {} } }, { title: 'New Item' }, { title: '' }];
+    }
+
     const items = await db.item.findMany({
-        where: { inventoryId: locals.activeInventoryId },
+        where: baseWhere,
         take: 12,
         skip: page == 1 ? 0 : (page - 1) * 12,
         orderBy,
