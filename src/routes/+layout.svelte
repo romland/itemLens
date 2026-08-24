@@ -121,7 +121,7 @@
                     if (res.ok) {
                         await clearQueueItem(item.id!);
 
-            						console.log("[DEBUG-LAYOUT] Outbox item synced. Firing sync event.");
+                        console.log("[DEBUG-LAYOUT] Outbox item synced. Firing sync event.");
 
                         // Tell SvelteKit to refresh the current page (e.g. Item List) since the DB changed!
                         // invalidateAll();
@@ -283,6 +283,11 @@
 $:  isDemoMode = 
         $page.url.hostname === 'localhost' || 
         $page.url.hostname.startsWith('192.168.178.');
+
+
+    function safeInvalidate() {
+        throw new Error("Function not implemented.");
+    }
 </script>
 
 <svelte:head> 
