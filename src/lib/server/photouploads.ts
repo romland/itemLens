@@ -252,13 +252,6 @@ export async function processItemPhotosBackground(item: any) {
                         const parsed = JSON.parse(photo.llmAnalysis);
                         box = parsed.foregroundBox || parsed.box || null; 
                         
-                        if (parsed._debugPayload) {
-                            const { logActivity } = await import('$lib/server/logger');
-                            const { dev } = await import('$app/environment');
-                            if (dev) await logActivity(item.id, 'LLM Debug', `Dev Mode: Vision Extraction Payload`, 'info', parsed._debugPayload);
-                            delete parsed._debugPayload;
-                            photo.llmAnalysis = JSON.stringify(parsed);
-                        }
                     } catch(e) {}
                 }
                 
@@ -343,6 +336,20 @@ export async function processItemPhotosBackground(item: any) {
                 photo.categoryId = cat.id;
             }
             
+            // Always check for and extract the debug payload for the activity log before saving
+            if (photo.llmAnalysis) {
+                try {
+                    const parsed = JSON.parse(photo.llmAnalysis);
+                    if (parsed._debugPayload) {
+                        const { logActivity } = await import('$lib/server/logger');
+                        const { dev } = await import('$app/environment');
+                        if (dev) await logActivity(item.id, 'LLM Debug', `Dev Mode: Vision Extraction Payload`, 'info', parsed._debugPayload);
+                        delete parsed._debugPayload;
+                        photo.llmAnalysis = JSON.stringify(parsed);
+                    }
+                } catch(e) {}
+            }
+
             await updatePhoto(photo.id, photo);
             
             if (photo.type !== 'invoice or receipt') {
