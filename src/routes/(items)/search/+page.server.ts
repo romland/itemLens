@@ -3,93 +3,38 @@ import { db } from '$lib/server/database';
 import { fail } from '@sveltejs/kit';
 import { flagDuplicatesInList } from '$lib/server/matcher';
 
-export const load = (async ({ locals, url }) => {
-	const q = (url.searchParams.get('q') || '').trim();
-	const cat = (url.searchParams.get('category') || '').trim();
-	const tag = (url.searchParams.get('tag') || '').trim();
-	const container = (url.searchParams.get('container') || '').trim();
-	const unassigned = url.searchParams.get('unassigned') === 'true';
-	const titleStr = (url.searchParams.get('title') || '').trim();
-	const descStr = (url.searchParams.get('desc') || '').trim();
-	const docStr = (url.searchParams.get('doc') || '').trim();
-	const reasonStr = (url.searchParams.get('reason') || '').trim();
-	const minAmount = url.searchParams.get('minAmount') || '';
-	const maxAmount = url.searchParams.get('maxAmount') || '';
-    const page = Number(url.searchParams.get('page') ?? '1');
+export const load = (async ({ locals, url, fetch }) => {
+    // Forward all URL parameters directly to our master API
+    const apiUrl = new URL('/api/items', url.origin);
+    url.searchParams.forEach((val, key) => apiUrl.searchParams.append(key, val));
+    if (!apiUrl.searchParams.has('c')) apiUrl.searchParams.set('c', '12'); // Ensure standard grid sizing
 
-	const whereClause: any = { inventoryId: locals.activeInventoryId };
-
-	if (q) {
-		whereClause.OR = [
-			{ title: { contains: q }},
-			{ description: { contains: q }},
-			{ locations: { some: { container: { name: { contains: q } } } } }
-		];
-	}
-	if (cat) {
-		whereClause.photos = { some: { category: { name: cat } } };
-	}
-	if (tag) {
-		whereClause.tags = { some: { name: tag } };
-	}
-	if (container) {
-		whereClause.locations = { some: { container: { name: container } } };
-	}
-	if (unassigned) {
-		whereClause.locations = { none: {} };
-	}
-	if (titleStr) whereClause.title = { contains: titleStr };
-	if (descStr) whereClause.description = { contains: descStr };
-	if (reasonStr) whereClause.reason = { contains: reasonStr };
-	if (docStr) {
-		whereClause.documents = {
-			some: {
-				OR: [
-					{ title: { contains: docStr } },
-					{ extracts: { contains: docStr } },
-					{ summary: { contains: docStr } }
-				]
-			}
-		};
-	}
-	if (minAmount || maxAmount) {
-		whereClause.amount = {};
-		if (minAmount) whereClause.amount.gte = Number(minAmount);
-		if (maxAmount) whereClause.amount.lte = Number(maxAmount);
-	}
-
-	const [items, totalCount] = await Promise.all([
-		db.item.findMany({
-			where: whereClause,
-			take: 10,
-			skip: page == 1 ? 0 : (page - 1) * 10,
-			orderBy: [{ id: 'desc'}],
-			include: {
-				locations: {
-					include: { 	
-						container: true,
-					}
-				},
-                    photos: { include: { category: true } },
-				"tags" : true,
-				"documents": true,      // a bit wasteful as I really only need the count()
-                    attributes: true,
-			}
-		}),
-		db.item.count({ where: whereClause })
-	]);
-
-    await flagDuplicatesInList(items, locals.activeInventoryId);
+    const res = await fetch(apiUrl.toString());
+    const data = await res.json();
 
 	const categories = await db.category.findMany({
 		where: { inventoryId: locals.activeInventoryId },
 		orderBy: { name: 'asc' }
 	});
 	
-    const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = items.length < 10 ? 0 : page + 1;
-
-	return { q, cat, tag, container, unassigned, titleStr, descStr, docStr, reasonStr, minAmount, maxAmount, items, totalCount, prevPage, nextPage, categories };
+    return { 
+        q: url.searchParams.get('q') || '', 
+        cat: url.searchParams.get('category') || '', 
+        tag: url.searchParams.get('tag') || '', 
+        container: url.searchParams.get('container') || '', 
+        unassigned: url.searchParams.get('unassigned') === 'true', 
+        titleStr: url.searchParams.get('title') || '', 
+        descStr: url.searchParams.get('desc') || '', 
+        docStr: url.searchParams.get('doc') || '', 
+        reasonStr: url.searchParams.get('reason') || '', 
+        minAmount: url.searchParams.get('minAmount') || '', 
+        maxAmount: url.searchParams.get('maxAmount') || '', 
+        items: data.items, 
+        totalCount: data.totalCount, 
+        prevPage: data.prevPage, 
+        nextPage: data.nextPage, 
+        categories 
+    };
 }) satisfies PageServerLoad;
 
 export const actions = {

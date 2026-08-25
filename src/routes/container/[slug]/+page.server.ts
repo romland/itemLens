@@ -2,8 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/database';
 import { error } from "@sveltejs/kit";
 
-export const load = (async ({ locals, params }) => {
-    console.log(params)
+export const load = (async ({ locals, params, url, fetch }) => {
     const item = await db.container.findFirst({
         where: {
             AND: [
@@ -28,29 +27,17 @@ export const load = (async ({ locals, params }) => {
         error(404, 'Container not found.');
     }
 
-    // Gather this container + all its child trays to fetch their items
-    const containerIds = [item.id, ...item.children.map(c => c.id)];
+    const apiUrl = new URL('/api/items', url.origin);
+    url.searchParams.forEach((val, key) => apiUrl.searchParams.append(key, val));
+    apiUrl.searchParams.set('container', item.name); // Force the API to filter by this container
 
-    const items = await db.item.findMany({
-        where: {
-            inventoryId: locals.activeInventoryId,
-            locations: {
-                some: {
-                    containerId: { in: containerIds }
-                }
-            }
-        },
-        include: {
-            photos: true,
-            tags: true,
-            documents: true,
-            locations: { include: { container: true } }
-        },
-        orderBy: { id: 'desc' }
-    });
+    const res = await fetch(apiUrl.toString());
+    const data = await res.json();
 
     return {
         item: item,
-        items: items
+        items: data.items,
+        prevPage: data.prevPage,
+        nextPage: data.nextPage
     };
 }) satisfies PageServerLoad;

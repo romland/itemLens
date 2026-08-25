@@ -1,9 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/database';
 
-export const load = (async ({ params, url, locals }) => {
-    const page = Number(url.searchParams.get('page') ?? '1');
-
+export const load = (async ({ params, url, locals, fetch }) => {
     const tag = await db.tag.findFirst({
         where: { 
             slug: params.slug,
@@ -11,32 +9,12 @@ export const load = (async ({ params, url, locals }) => {
         }
     });
 
-    const items = await db.item.findMany({
-        take: 10,
-        skip: page == 1 ? 0 : (page - 1) * 10,
-        orderBy: [{ id: 'desc'}],
-        where: {
-            inventoryId: locals.activeInventoryId,
-            tags: {
-                some: {
-                    slug: tag?.slug
-                }
-            }
-        },
-        include: {
-            locations: {
-                include: {  
-                    container: true,
-                }
-            },
-            "photos" : true,
-            "tags" : true,
-            "documents": true,      // a bit wasteful as I really only need the count()
-        }
-    });
+    const apiUrl = new URL('/api/items', url.origin);
+    url.searchParams.forEach((val, key) => apiUrl.searchParams.append(key, val));
+    if (tag) apiUrl.searchParams.set('tag', tag.name); // Apply the tag filter
 
-    const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = items.length < 10 ? 0 : page + 1;
+    const res = await fetch(apiUrl.toString());
+    const data = await res.json();
 
-    return { tag, items, prevPage, nextPage };
+    return { tag, items: data.items, prevPage: data.prevPage, nextPage: data.nextPage };
 }) satisfies PageServerLoad;

@@ -24,6 +24,16 @@ export async function GET({ url, setHeaders, locals }) {
     const attrVal = url.searchParams.get('attrVal');
     const sort = url.searchParams.get('sort') || (locals as any).activeSort || 'newest';
 
+    // Advanced Search/Bulk Filters
+    const tag = String(url.searchParams.get('tag') || "").trim();
+    const container = String(url.searchParams.get('container') || "").trim();
+    const titleStr = String(url.searchParams.get('title') || "").trim();
+    const descStr = String(url.searchParams.get('desc') || "").trim();
+    const docStr = String(url.searchParams.get('doc') || "").trim();
+    const reasonStr = String(url.searchParams.get('reason') || "").trim();
+    const minAmount = url.searchParams.get('minAmount');
+    const maxAmount = url.searchParams.get('maxAmount');
+
     let orderBy: any = [{ id: 'desc' }];
     let isAttention = false;
     switch(sort) {
@@ -71,24 +81,37 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
 	if (cat && cat.length > 0) {
-		query.where = {
-			...query.where,
-			photos: { some: { category: { name: cat } } }
-		};
+        query.where = { ...query.where, photos: { some: { category: { name: cat } } } };
 	}
 
-    if (attrKey && attrVal) {
-        query.where = {
-            ...query.where,
-            attributes: { some: { key: attrKey, value: attrVal } }
-        };
+    if (tag && tag.length > 0) {
+        query.where = { ...query.where, tags: { some: { OR: [{ name: tag }, { slug: tag }] } } };
+    }
+
+    if (container && container.length > 0) {
+        query.where = { ...query.where, locations: { some: { container: { name: container } } } };
     }
 
     if (unassigned) {
-        query.where = {
-            ...query.where,
-            locations: { none: {} }
-        };
+        query.where = { ...query.where, locations: { none: {} } };
+    }
+
+    if (titleStr) query.where = { ...query.where, title: { contains: titleStr } };
+    if (descStr) query.where = { ...query.where, description: { contains: descStr } };
+    if (reasonStr) query.where = { ...query.where, reason: { contains: reasonStr } };
+    
+    if (docStr) {
+        query.where = { ...query.where, documents: { some: { OR: [ { title: { contains: docStr } }, { extracts: { contains: docStr } }, { summary: { contains: docStr } } ] } } };
+    }
+
+    if (minAmount || maxAmount) {
+        query.where = { ...query.where, amount: {} };
+        if (minAmount) (query.where as any).amount.gte = Number(minAmount);
+        if (maxAmount) (query.where as any).amount.lte = Number(maxAmount);
+    }
+
+    if (attrKey && attrVal) {
+        query.where = { ...query.where, attributes: { some: { key: attrKey, value: attrVal } } };
     }
 
     if (isAttention) {
@@ -102,12 +125,15 @@ export async function GET({ url, setHeaders, locals }) {
         }
     }
 
-    const items = await db.item.findMany(query);
+    const [items, totalCount] = await Promise.all([
+        db.item.findMany(query),
+        db.item.count({ where: query.where })
+    ]);
 
     await flagDuplicatesInList(items, locals.activeInventoryId);
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < count ? 0 : page + 1;
 
-    return new Response(JSON.stringify({ q, items, prevPage, nextPage }));
+    return new Response(JSON.stringify({ q, items, totalCount, prevPage, nextPage }));
 }

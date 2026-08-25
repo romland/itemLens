@@ -1,25 +1,8 @@
 import type { Actions, PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
-import { flagDuplicatesInList } from '$lib/server/matcher';
 
-export const load = (async ({ locals, url }) => {
-    const page = Number(url.searchParams.get('page') ?? '1');
-    const sort = url.searchParams.get('sort') || (locals as any).activeSort || 'newest';
-
-    let orderBy: any = [{ id: 'desc' }];
-    let isAttention = false;
-    switch(sort) {
-        case 'oldest': orderBy = [{ id: 'asc' }]; break;
-        case 'name_asc': orderBy = [{ title: 'asc' }]; break;
-        case 'name_desc': orderBy = [{ title: 'desc' }]; break;
-        case 'updated': orderBy = [{ updatedAt: 'desc' }]; break;
-        case 'dust': orderBy = [{ updatedAt: 'asc' }]; break;
-        case 'amount_asc': orderBy = [{ amount: 'asc' }]; break;
-        case 'amount_desc': orderBy = [{ amount: 'desc' }]; break;
-        case 'attention': orderBy = [{ updatedAt: 'desc' }]; isAttention = true; break;
-    }
-
+export const load = (async ({ locals, url, fetch }) => {
     const unassignedCount = await db.item.count({
         where: {
             inventoryId: locals.activeInventoryId,
@@ -27,35 +10,14 @@ export const load = (async ({ locals, url }) => {
         }
     });
 
-    const baseWhere: any = { inventoryId: locals.activeInventoryId };
-    if (isAttention) {
-        baseWhere.OR = [{ locations: { none: {} } }, { title: 'New Item' }, { title: '' }];
-    }
+    const apiUrl = new URL('/api/items', url.origin);
+    url.searchParams.forEach((val, key) => apiUrl.searchParams.append(key, val));
+    if (!apiUrl.searchParams.has('c')) apiUrl.searchParams.set('c', '12');
 
-    const items = await db.item.findMany({
-        where: baseWhere,
-        take: 12,
-        skip: page == 1 ? 0 : (page - 1) * 12,
-        orderBy,
-        include: {
-            locations: {
-                include: {  
-                    container: true,
-                }
-            },
-            photos: { include: { category: true } },
-            "tags" : true,
-            "documents": true,      // a bit wasteful as I really only need the count()
-                attributes: true,
-        }
-    });
+    const res = await fetch(apiUrl.toString());
+    const data = await res.json();
 
-    await flagDuplicatesInList(items, locals.activeInventoryId);
-
-    const prevPage = page == 1 ? 0 : page - 1;
-    const nextPage = items.length < 12 ? 0 : page + 1;
-
-    return { items, prevPage, nextPage, unassignedCount };
+    return { items: data.items, prevPage: data.prevPage, nextPage: data.nextPage, unassignedCount };
 }) satisfies PageServerLoad;
 
 export const actions = {
