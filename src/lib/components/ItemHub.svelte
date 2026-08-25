@@ -253,6 +253,11 @@
     <div class="{activeView === 'hub' ? 'flex' : 'hidden'} flex-col flex-1 p-4 sm:p-8 pb-0 animate-fade-in">
         <div class="text-center mb-8">
             <h2 class="text-2xl font-bold">{currentTitle || (item ? 'Edit Item' : 'New Item')}</h2>
+            {#if !item && $page.data.inventories}
+                <div class="text-[10px] uppercase tracking-wider font-bold text-primary mt-1 mb-1">
+                    Adding to: {$page.data.inventories.find(i => i.id === $page.data.activeInventoryId)?.name || 'Collection'}
+                </div>
+            {/if}
             <p class="text-gray-500 text-sm">
                 {#if isAnalyzing}
                     <span class="loading loading-spinner loading-xs text-primary align-middle mr-1"></span> Analyzing...

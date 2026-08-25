@@ -226,6 +226,9 @@
                                 {#if isNavigatingToThis}
                                     <span class="loading loading-spinner loading-sm text-primary"></span>
                                 {/if}
+                                {#if item.photos?.some(p => !p.thumbPath && p.orgPath)}
+                                    <span class="loading loading-dots loading-xs text-primary" title="Processing AI background tasks"></span>
+                                {/if}
                                 {#if item.isGhost}
                                     <span class="loading loading-ring loading-xs text-gray-400"></span>
                                     <span class="text-[10px] text-gray-500 uppercase tracking-wider font-bold ml-1">Syncing</span>
@@ -333,6 +336,12 @@
                         {#if isNavigatingToThis}
                             <div class="absolute inset-0 bg-base-100/50 flex items-center justify-center">
                                 <span class="loading loading-spinner text-primary"></span>
+                            </div>
+                        {:else if item.photos?.some(p => !p.thumbPath && p.orgPath)}
+                            <div class="absolute inset-0 bg-base-100/20 backdrop-blur-[1px] flex items-center justify-center pointer-events-none z-20">
+                                <div class="bg-base-100/80 px-2 py-1 rounded-full shadow-sm">
+                                    <span class="loading loading-dots loading-sm text-primary"></span>
+                                </div>
                             </div>
                         {/if}
                         {#if item.isGhost}

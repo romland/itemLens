@@ -123,6 +123,16 @@ export const load = (async ({ locals, params }) => {
   // console.log("add/page.server.ts:", locals, params);
   // TODO: Security -- can be fetched without being logged in now
   // TODO: only get containers for current inventory type (not sure where to set this yet)
+
+  const vault = await db.inventory.findUnique({
+      where: { id: locals.activeInventoryId },
+      include: { templateFields: true }
+  });
+  
+  if (vault?.allowAutoTaxonomy && vault.templateFields.length === 0) {
+      return { isBootstrapping: true, containers: [], categories: [], tags: [] };
+  }
+
   const containers = await db.container.findMany({
       select : {
         name : true,

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { flip } from 'svelte/animate';
     import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
     import { createEventDispatcher, onMount } from 'svelte';
     import pageTitle from '$lib/stores';
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
@@ -10,6 +11,7 @@
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import BottomSheet from "$lib/components/BottomSheet.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
+    import { pluralize } from '$lib/client/utils';
 
     export let isDirty = false;
     export let containers = [];
@@ -235,7 +237,13 @@
             <div class="bg-primary/10 text-primary w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-sm">
                 <i class="bi bi-collection text-4xl"></i>
             </div>
-            <h2 class="text-2xl font-bold mb-3 tracking-tight">New Collection</h2>
+            <h2 class="text-2xl font-bold mb-3 tracking-tight">
+                {#if $page.data.inventories}
+                    Add to {$page.data.inventories.find(i => i.id ===$page.data.activeInventoryId)?.name || 'Collection'}
+                {:else}
+                    New Collection
+                {/if}
+            </h2>
             <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, whiskys, stamps, coins or CDs/DVDs. Sky's the limit. We'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
 
 			{#if !showHintInput}
@@ -300,7 +308,7 @@
                     {@const catItems = items.filter(i => (i.category || 'unknown') === cat)}
                     {@const allOut = catItems.every(i => i.optedOut)}
                     <button type="button" class="badge {allOut ? 'badge-success text-white border-transparent' : 'badge-outline bg-base-100 hover:bg-error/10 hover:text-error hover:border-error/50'} gap-1 p-3 cursor-pointer whitespace-nowrap active:scale-95 transition-transform font-medium" on:click={() => toggleCategory(cat)}>
-                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-trash3'}"></i> All {cat}s ({catItems.length})
+                        <i class="bi {allOut ? 'bi-arrow-counterclockwise' : 'bi-trash3'}"></i> All {pluralize(cat)} ({catItems.length})
                     </button>
                 {/each}
             </div>
@@ -363,7 +371,7 @@
                                 <div class="flex gap-2 mt-1">
                                     <span class="badge badge-ghost badge-sm text-[10px] uppercase font-bold border-base-300">{item.category}</span>
                                     {#if item.category && !categories.some(c => c.name.toLowerCase() === item.category.toLowerCase())}
-                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New</span>
+                                        <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold text-warning-content shadow-sm" title="This will create a new category"><i class="bi bi-stars mr-1"></i> New Category</span>
                                     {/if}
                                     {#if isCompletelyUnknown(item)}
                                         <span class="badge badge-warning badge-sm text-[10px] uppercase font-bold whitespace-nowrap" title="Missing all identifiable information"><i class="bi bi-question-circle mr-1"></i> Unknown</span>

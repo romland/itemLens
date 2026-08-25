@@ -27,37 +27,37 @@
         { 
             id: 'hardware', name: 'Hardware & Equipment', icon: 'bi-tools', 
             examples: 'Cameras, instruments, sports, electronics, tools, laptops, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true}] 
+            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Automatically generates a dynamic schema based on item properties'}] 
         },
         { 
             id: 'apparel', name: 'Apparel & Soft Goods', icon: 'bi-handbag', 
             examples: 'Clothes, shoes, scarves, belts, bags, textiles, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true}, {label: 'Deep Scan', icon: 'bi-search', highlight: true}] 
+            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}, {label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images to find multiple distinct items'}] 
         },
         { 
             id: 'media', name: 'Media & Publications', icon: 'bi-book', 
             examples: 'Books, comics, CDs, DVDs, vinyls, games, etc.', 
-            defaults: [{label: 'Deep Scan', icon: 'bi-search', highlight: true}, {label: 'No BG Removal', icon: 'bi-image-fill', highlight: false}] 
+            defaults: [{label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images'}, {label: 'No BG Removal', icon: 'bi-image-fill', highlight: false, tooltip: 'Leaves the background intact, better for books and flat media'}] 
         },
         { 
             id: 'consumables', name: 'Consumables & Pantry', icon: 'bi-basket', 
             examples: 'Whiskys, wines, groceries, canned veggies, spices, etc', 
-            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false}] 
+            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false, tooltip: 'Standard default extraction'}] 
         },
         { 
             id: 'collectibles', name: 'Valuables/Collectibles', icon: 'bi-gem', 
             examples: 'Coins, stamps, cards, sculptures, toys, Lego, posters, pet rocks, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true}, {label: 'Deep Scan', icon: 'bi-search', highlight: true}] 
+            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}, {label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images'}] 
         },
         { 
             id: 'natural', name: 'Natural Specimens', icon: 'bi-tree', 
             examples: 'Plants, rocks, crystals, seashells, fossils, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true}] 
+            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}] 
         },
         { 
             id: 'generic', name: 'Generic / Mixed', icon: 'bi-box-seam', 
             examples: 'A mix of various unrelated items.', 
-            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false}] 
+            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false, tooltip: 'Standard default extraction'}] 
         }
     ];
 
@@ -115,7 +115,7 @@
                                             <span class="text-xs text-gray-500 leading-snug mb-3">{type.examples}</span>
                                             <div class="mt-auto pt-3 border-t border-base-200/60 flex flex-wrap gap-1.5 w-full min-w-0">
                                                 {#each type.defaults as def}
-                                                    <span class="badge badge-sm badge-ghost text-[10px] font-bold uppercase tracking-wider max-w-full transition-colors {def.highlight ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : 'opacity-70 hover:opacity-100 hover:bg-base-200'}" title="{def.label}">
+                                                    <span class="badge badge-sm badge-ghost text-[10px] font-bold uppercase tracking-wider max-w-full transition-colors {def.highlight ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : 'opacity-70 hover:opacity-100 hover:bg-base-200'}" title="{def.tooltip}">
                                                         <i class="bi {def.icon} mr-1 shrink-0"></i> 
                                                         <span class="truncate">{def.label}</span>
                                                     </span>

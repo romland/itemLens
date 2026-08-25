@@ -4,6 +4,7 @@
 	import { spring } from 'svelte/motion';
     import { enhance } from '$app/forms';
     import { invalidateAll } from '$app/navigation';
+    import { notify } from "$lib/client/notifications";
 
     export let itemTitle = "";
     export let categories: any[] = [];
@@ -30,6 +31,7 @@
 	let dragHasMoved = false;
 
 	// Momentum (Gliding) Trackers
+    let swipeOffsetY = 0;
 	let lastDragX = 0;
 	let lastDragY = 0;
 	let lastDragTime = 0;
@@ -186,6 +188,13 @@
 		let rawX = clientX - startX;
 		let rawY = clientY - startY;
 
+        // If fully zoomed out, track vertical drag for swipe-to-close
+        if ($scaleVal === 1) {
+            swipeOffsetY = rawY;
+            translateY.set(rawY, { hard: true });
+            return;
+        }
+
 		// Determine bounds based on scale
 		const maxTx = Math.max(0, (window.innerWidth * ($scaleVal - 1)) / 2);
 		const maxTy = Math.max(0, (window.innerHeight * ($scaleVal - 1)) / 2);
@@ -211,8 +220,19 @@
 			scaleVal.set(1);
 			translateX.set(0);
 			translateY.set(0);
+            swipeOffsetY = 0;
 			return;
 		}
+
+        if ($scaleVal === 1) {
+            if (swipeOffsetY > 100) {
+                close();
+            } else {
+                translateY.set(0);
+            }
+            swipeOffsetY = 0;
+            return;
+        }
 
 		const maxTx = Math.max(0, (window.innerWidth * ($scaleVal - 1)) / 2);
 		const maxTy = Math.max(0, (window.innerHeight * ($scaleVal - 1)) / 2);
@@ -309,7 +329,39 @@
 		const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
 		navigator.clipboard.writeText(window.location.origin + path);
 		showMenu = false;
+        notify('success', 'Link copied to clipboard!');
 	}
+
+    async function copyImageToClipboard() {
+        try {
+            const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
+            const res = await fetch(path);
+            const blob = await res.blob();
+            
+            // The Clipboard API strictly rejects WebP and JPEG in most browsers.
+            // We must transcode it to a pure PNG via Canvas before copying.
+            if (blob.type === 'image/webp' || blob.type === 'image/jpeg') {
+                const img = new Image();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = URL.createObjectURL(blob); });
+                
+                canvas.width = img.width; canvas.height = img.height;
+                ctx?.drawImage(img, 0, 0);
+                
+                const pngBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (pngBlob) await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+            } else {
+                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+            }
+            showMenu = false;
+            notify('success', 'Image copied to clipboard!');
+        } catch (e) {
+            console.error('Copy image failed', e);
+            notify('error', 'Failed to copy image');
+        }
+    }
 
     // Rotation State
     let rotation = 0;
@@ -347,6 +399,8 @@
 
 {#if isOpen}
     <!-- Backdrop & Container -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
         class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center overscroll-none touch-none overflow-y-scroll"
         transition:fade={{ duration: 250, easing: cubicOut }}
@@ -385,6 +439,8 @@
 					<i class="bi bi-three-dots-vertical text-xl"></i>
 				</button>
 				{#if showMenu}
+                    <!-- Invisible backdrop to catch clicks outside the menu -->
+                    <div class="fixed inset-0 z-40" on:click|stopPropagation={() => showMenu = false} role="button" tabindex="0" aria-label="Close menu"></div>
 					<div class="absolute top-14 right-0 w-56 bg-black/60 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden flex flex-col p-1 animate-fade-in z-50">
 						<div class="px-3 py-2 border-b border-white/10 flex flex-col mb-1">
 							<span class="text-xs text-white/50 uppercase tracking-wider font-semibold mb-1">Details</span>
@@ -394,22 +450,32 @@
 						</div>
 
                         {#if allowCategoryEdit && photo?.type === 'product' && photo?.id}
-                            <form method="POST" action="?/changeCategory" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="border-b border-white/10 pb-1 mb-1">
-                                <input type="hidden" name="photoId" value={photo.id} />
+                            <div class="border-b border-white/10 pb-1 mb-1">
                                 <div class="relative w-full">
                                     <i class="bi bi-tag text-lg w-5 opacity-70 absolute left-3 top-2 pointer-events-none text-white"></i>
-                                    <select name="categoryName" class="select select-sm bg-transparent text-white hover:bg-white/20 border-none font-medium text-sm h-10 min-h-0 pl-10 pr-8 w-full rounded-xl outline-none cursor-pointer appearance-none" 
+                                    <select class="select select-sm bg-transparent text-white hover:bg-white/20 border-none font-medium text-sm h-10 min-h-0 pl-10 pr-8 w-full rounded-xl outline-none cursor-pointer appearance-none" 
                                         value={photo.category?.name || ''} 
-                                        on:change={(e) => {
+                                        on:change={async (e) => {
                                             e.currentTarget.blur();
-                                            if (e.currentTarget.value === '_new') {
-                                                const newCat = prompt('Enter new category name:');
-                                                if (newCat && newCat.trim()) {
-                                                    const hi = document.createElement('input'); hi.type = 'hidden'; hi.name = 'categoryName'; hi.value = newCat;
-                                                    e.currentTarget.form?.appendChild(hi); e.currentTarget.name = '_ignore'; e.currentTarget.form?.requestSubmit();
-                                                } else e.currentTarget.value = photo.category?.name || '';
-                                            } else e.currentTarget.form?.requestSubmit();
+                                            let newCat = e.currentTarget.value;
+                                            if (newCat === '_new') {
+                                                newCat = prompt('Enter new category name:');
+                                                if (!newCat || !newCat.trim()) {
+                                                    e.currentTarget.value = photo.category?.name || '';
+                                                    return;
+                                                }
+                                            }
                                             showMenu = false;
+                                            
+                                            const fd = new FormData();
+                                            fd.append('photoId', photo.id.toString());
+                                            fd.append('categoryName', newCat.trim());
+                                            await fetch(window.location.pathname + '?/changeCategory', {
+                                                method: 'POST',
+                                                body: fd,
+                                                headers: { 'x-sveltekit-action': 'true', 'accept': 'application/json' }
+                                            });
+                                            await invalidateAll();
                                         }}>
                                         <option value="" disabled>Category...</option>
                                         {#each categories as c}
@@ -418,9 +484,12 @@
                                         <option value="_new" class="bg-base-100 text-base-content">+ New Category...</option>
                                     </select>
                                 </div>
-                            </form>
+                            </div>
                         {/if}
-
+                        
+                        <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={copyImageToClipboard}>
+                            <i class="bi bi-clipboard text-lg w-5 opacity-70"></i> Copy Image
+                        </button>
 						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
 							<i class="bi bi-download text-lg w-5 opacity-70"></i> Save to Device
 						</button>
@@ -458,6 +527,7 @@
                 class="w-full h-full flex items-center justify-center origin-center"
 				style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal}); will-change: transform;"
                 in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
+                on:click|self={handleBackgroundClick}
             >
                 <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
                 <div class="relative inline-flex max-w-full max-h-full shadow-2xl transition-transform duration-300 ease-out {photo?.box ? 'overflow-hidden rounded-xl' : ''}" style="transform: rotate({rotation}deg);">
@@ -563,5 +633,5 @@
             </button>
         </div>
     </div>
-    <form method="dialog" class="modal-backdrop"><button disabled={isSavingRotation}>close</button></form>
+    <div class="modal-backdrop" role="button" tabindex="0" on:click={() => { if (!isSavingRotation) saveRotationModal.close(); }}></div>
 </dialog>

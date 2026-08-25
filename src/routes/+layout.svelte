@@ -22,10 +22,11 @@
 	import { nukeAllCaches } from '$lib/client/utils';
     
 	import Notifications from "$lib/components/Notifications.svelte";
-	import { notifications } from "$lib/client/notifications";
+	import { notifications, notify } from "$lib/client/notifications";
 
     import KeyboardManager from '$lib/components/KeyboardManager.svelte';
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
+    import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
 
     let mounted = false;    
@@ -167,6 +168,7 @@
     }
 
     let mobileMenuModal: HTMLDialogElement;
+    let createInventoryModal: CreateInventoryModal;
 
     let quickNoteModal: HTMLDialogElement;
     let quickNoteTimer: any;
@@ -342,12 +344,19 @@ $:  isDemoMode =
 
         {#if $page.data.inventories && $page.data.inventories.length > 0}
             <form action="/?/switchVault" method="POST" data-sveltekit-reload class="ml-4">
-                <select name="inventoryId" class="select select-sm select-ghost font-bold bg-base-200/50" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={$page.data.activeInventoryId}>
+                <select name="inventoryId" class="select select-sm select-ghost font-bold bg-base-200/50" on:change={(e) => { if (e.currentTarget.value === '_new') { e.currentTarget.value = $page.data.activeInventoryId; createInventoryModal.showModal(); } else e.currentTarget.form?.requestSubmit(); }} value={$page.data.activeInventoryId}>
                     {#each $page.data.inventories as inv}
                         <option value={inv.id}>{inv.name}</option>
                     {/each}
+                    <!--
+                    <option value="_new">+ Create Vault...</option>
+                    -->
                 </select>
             </form>
+        {:else if $page.data.user}
+            <button class="btn btn-sm btn-primary ml-4 rounded-xl shadow-sm" on:click={() => createInventoryModal.showModal()}>
+                <i class="bi bi-plus-lg"></i> Create Vault
+            </button>
         {/if}
 
     </div>
@@ -478,6 +487,8 @@ $:  isDemoMode =
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => { notify('success', e.detail); window.location.reload(); }} on:error={(e) => notify('error', e.detail)} />
+
 <!-- Bottom Sheet Menu -->
 <dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
     <div class="modal-box sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
@@ -496,10 +507,13 @@ $:  isDemoMode =
                         <div class="flex-1">
 							<div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Inventory</div>
                             <form action="/?/switchVault" method="POST" data-sveltekit-reload>
-                                <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={$page.data.activeInventoryId}>
+                                <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => { if (e.currentTarget.value === '_new') { mobileMenuModal.close(); e.currentTarget.value = $page.data.activeInventoryId; createInventoryModal.showModal(); } else e.currentTarget.form?.requestSubmit(); }} value={$page.data.activeInventoryId}>
                                     {#each $page.data.inventories as inv}
                                         <option value={inv.id}>{inv.name}</option>
                                     {/each}
+                                    <!--
+                                    <option value="_new">+ Create Vault...</option>
+                                    -->
                                 </select>
                             </form>
                         </div>

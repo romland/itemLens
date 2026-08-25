@@ -149,6 +149,19 @@ on:processingComplete={(ev) => {
 </div>
 {/if}
 
+{#if data.isBootstrapping}
+    <div class="flex flex-col items-center justify-center min-h-[50vh] text-center max-w-md mx-auto px-4">
+        <div class="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6 shadow-sm">
+            <span class="loading loading-ring loading-lg"></span>
+        </div>
+        <h2 class="text-2xl font-bold mb-3 tracking-tight">Initializing Vault...</h2>
+        <p class="text-gray-500 mb-8">The AI is currently analyzing your vault's archetype and building a custom taxonomy schema. This usually takes 10-20 seconds.</p>
+        <button type="button" class="btn btn-outline" on:click={() => window.location.reload()}>
+            <i class="bi bi-arrow-clockwise"></i> Refresh Status
+        </button>
+    </div>
+{:else}
+
 <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         if (mode !== 'single' && isDirty && !confirm('You have unsaved Collection Items. Switch modes and lose them?')) return;
@@ -185,6 +198,7 @@ on:processingComplete={(ev) => {
 bind:this={bulkTriageComponent}
 containers={data.containers} 
 categories={data.categories}
+tags={data.tags}
 bind:isDirty
 on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
 on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
@@ -199,4 +213,5 @@ on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskI
 on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
 on:success={(ev) => notify("success", ev.detail)}
 />
+{/if}
 {/if}

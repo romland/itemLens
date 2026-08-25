@@ -225,7 +225,24 @@
 						<option value="removeContainer">Remove Container</option>
 						<option value="setCategory">Set Category</option>
 					</select>
-					<input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" />
+                    {#if bulkAction === 'setCategory' && data.categories}
+                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200 capitalize">
+                            <option value="" disabled selected>Select category...</option>
+                            {#each data.categories as c} <option value={c.name}>{c.name}</option> {/each}
+                        </select>
+                    {:else if (bulkAction === 'addContainer' || bulkAction === 'removeContainer') && data.containers}
+                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200">
+                            <option value="" disabled selected>Select container...</option>
+                            {#each data.containers as c} <option value={c.name}>{c.name}</option> {/each}
+                        </select>
+                    {:else if bulkAction === 'removeTag'}
+                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200">
+                            <option value="" disabled selected>Select tag...</option>
+                            {#each data.tags as t} <option value={t.name}>{t.name}</option> {/each}
+                        </select>
+                    {:else}
+                        <input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" />
+                    {/if}
 					<button type="submit" class="btn btn-primary w-full sm:w-auto shadow-md shrink-0" disabled={isSubmitting || !bulkValue.trim()}>
 						{#if isSubmitting}<span class="loading loading-spinner"></span>{:else}Apply to {selectedIds.length}{/if}
 					</button>

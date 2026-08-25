@@ -49,11 +49,11 @@
                 <span class="font-medium text-base-content/80"><RelativeDate date={scannedCreatedAt} /></span>
             </div>
             {/if}
-            {#if matchDetails?.sharedAttributes?.length > 0}
+            {#if matchDetails?.dbAttributes?.length > 0}
             <div class="flex flex-col gap-1 mt-2">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Matched Attributes:</span>
+                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Existing Attributes:</span>
                 <div class="flex flex-wrap gap-1">
-                    {#each matchDetails.sharedAttributes as attr}
+                    {#each matchDetails.dbAttributes as attr}
                         {#if attr.key === 'color_mix'}
                             <div class="w-full my-0.5"><ColorMixBar colorMixStr={attr.value} /></div>
                         {:else}

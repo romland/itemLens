@@ -1,3 +1,11 @@
+// This is very naive. Just one word: Buses.
+export function pluralize(str: string): string {
+    if (!str) return '';
+    const lower = str.toLowerCase();
+    if (lower.endsWith('s') || lower.endsWith('x') || lower.endsWith('z') || lower.endsWith('ch') || lower.endsWith('sh')) return str;
+    return str + 's';
+}
+
 export function copyDuplicateDebugPayload(title: string, scannedItem: any, dbItem: any) {
     console.group(`🐞 DEBUG: ${title}`);
     console.log("--- SCANNED ITEM (NEW) ---", scannedItem);

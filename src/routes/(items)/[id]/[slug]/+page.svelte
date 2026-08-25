@@ -509,7 +509,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                             {#if attrib.key === 'color_mix'}
                                 <div class="sm:w-1/2 mt-1 sm:mt-0"><ColorMixBar colorMixStr={attrib.value} /></div>
                             {:else if attrib.value.startsWith('/images/')}
-                                <button type="button" class="text-sm font-bold text-primary hover:underline break-all text-left sm:text-right" on:click={() => lightbox.open({ orgPath: attrib.value, showOriginal: true })}>
+                                <button type="button" class="text-sm font-bold text-primary hover:underline break-all text-left sm:text-right line-clamp-1" on:click={() => lightbox.open({ orgPath: attrib.value, showOriginal: true })}>
                                     {attrib.value}
                                 </button>
                             {:else}

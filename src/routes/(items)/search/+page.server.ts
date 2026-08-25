@@ -16,6 +16,16 @@ export const load = (async ({ locals, url, fetch }) => {
 		where: { inventoryId: locals.activeInventoryId },
 		orderBy: { name: 'asc' }
 	});
+
+    const containers = await db.container.findMany({
+        where: { inventoryId: locals.activeInventoryId },
+        orderBy: { name: 'asc' }
+    });
+
+    const tags = await db.tag.findMany({
+        where: { inventoryId: locals.activeInventoryId },
+        orderBy: { name: 'asc' }
+    });
 	
     return { 
         q: url.searchParams.get('q') || '', 
@@ -33,7 +43,9 @@ export const load = (async ({ locals, url, fetch }) => {
         totalCount: data.totalCount, 
         prevPage: data.prevPage, 
         nextPage: data.nextPage, 
-        categories 
+        categories,
+        containers,
+        tags
     };
 }) satisfies PageServerLoad;
 

@@ -3,6 +3,7 @@
     import { marked } from 'marked';
 	import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
+    import { notify } from "$lib/client/notifications";
 
     export let note;
     
@@ -102,8 +103,13 @@
             </form>
         {:else}
             {#if note.content}
-                <div class="prose prose-sm max-w-none text-base-content leading-snug break-words" use:openLinksInNewTab>
-                    {@html marked.parse(note.content, { breaks: true })}
+                <div class="relative group">
+                    <button class="absolute -top-1 -right-1 btn btn-xs btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-primary" title="Copy text" on:click={() => { navigator.clipboard.writeText(note.content); notify('success', 'Note copied to clipboard!'); }}>
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <div class="prose prose-sm max-w-none text-base-content leading-snug break-words pr-6" use:openLinksInNewTab>
+                        {@html marked.parse(note.content, { breaks: true })}
+                    </div>
                 </div>
             {/if}
         {/if}
