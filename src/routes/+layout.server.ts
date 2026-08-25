@@ -21,6 +21,8 @@ export const load = (async ({ locals, setHeaders }) => {
         user: locals.user, 
         activeInventoryId: locals.activeInventoryId,
         activeSort: (locals as any).activeSort || 'newest',
+        activeViewMode: (locals as any).activeViewMode || 'list',
+        activeAddMode: (locals as any).activeAddMode || 'single',
         inventories 
     };
 

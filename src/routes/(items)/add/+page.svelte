@@ -16,8 +16,6 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     
-    let mode: 'single' | 'collection' | 'compare' = 'single';
-    let modeLoaded = false;
     let saving = false;
     let isDirty = false;
     let hasSubmitted = false;
@@ -51,6 +49,13 @@
     export let form: ActionData;
     export let data: PageServerData;
     
+    let mode: 'single' | 'collection' | 'compare' = data.activeAddMode;
+    
+    function setMode(newMode: 'single' | 'collection' | 'compare') {
+        mode = newMode;
+        document.cookie = `itemlens_add_mode=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
+
     const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
         // Stop SvelteKit from natively submitting the form! 
         // If missing, SvelteKit AND our Outbox will both upload it, causing duplicates.
@@ -104,20 +109,6 @@
         return newId;
     }
     
-    onMount(() => {
-        if (typeof sessionStorage !== 'undefined') {
-            const savedMode = sessionStorage.getItem('itemlens_add_mode');
-            if (savedMode === 'single' || savedMode === 'collection' || savedMode === 'compare') {
-                mode = savedMode;
-            }
-        }
-        modeLoaded = true;
-    });
-    
-    $: if (modeLoaded && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('itemlens_add_mode', mode);
-    }
-    
     function removeNotification(id: string) {
         notifications = notifications.filter(n => n.id !== id);
     }
@@ -159,17 +150,17 @@ on:processingComplete={(ev) => {
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         if (mode !== 'single' && isDirty && !confirm('You have unsaved Collection Items. Switch modes and lose them?')) return;
         isDirty = false;
-        mode = 'single';
+        setMode('single');
     }}>Single Item</button>
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'collection' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         if (mode !== 'collection' && isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
         isDirty = false;
-        mode = 'collection';
+        setMode('collection');
     }}>Collection</button>
     
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         isDirty = false;
-        mode = 'compare';
+        setMode('compare');
     }}>Comparison</button>
 </div>
 

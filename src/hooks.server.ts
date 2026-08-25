@@ -53,6 +53,10 @@ export const handle = (async ({ event, resolve }) => {
                 (event.locals as any).activeSort = event.cookies.get('itemlens_sort_' + event.locals.activeInventoryId) || 'newest';
             }
 
+            // UI View Modes
+            (event.locals as any).activeViewMode = event.cookies.get('itemlens_viewmode_' + event.locals.activeInventoryId) || 'list';
+            (event.locals as any).activeAddMode = event.cookies.get('itemlens_add_mode') || 'single';
+
         } else {
             // Destroy the invalid cookie so we don't keep querying a dead token
             event.cookies.delete('session', { path: '/' }); 

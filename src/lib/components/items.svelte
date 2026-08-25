@@ -1,6 +1,6 @@
 <script context="module">
     import { writable } from 'svelte/store';
-    export const sharedViewMode = writable('list');
+    export const sharedViewMode = writable(null);
 </script>
 
 <script lang="ts">
@@ -15,6 +15,7 @@
     import { outboxStore, completedOutboxStore } from "$lib/client/offlineQueue";
     import { flip } from 'svelte/animate';
     import { fade } from 'svelte/transition';
+    import { browser } from '$app/environment';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -62,8 +63,18 @@
         return false;
     }
 
-    let viewModeLoaded = false;
     let lightbox: ImageLightbox;
+
+    // Sync server-side cookie state to prevent hydration flash
+    // During SSR, always apply user's cookie to prevent leaking state between requests
+    if (!browser || !$sharedViewMode) {
+        $sharedViewMode = $page.data.activeViewMode || 'list';
+    }
+
+    function toggleViewMode(mode: string) {
+        $sharedViewMode = mode;
+        document.cookie = `itemlens_viewmode_${$page.data.activeInventoryId}=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
 
     // --- Unified Reactive Projection ---
     const ghostUrls = new Map<string, string>();
@@ -113,15 +124,6 @@
     // Only prepend ghost items to the primary container to prevent duplicates on infinite scroll pages
     $: displayItems = showControls ? [...ghostItems, ...items] : [...items];
 
-    onMount(() => {
-        const cached = localStorage.getItem('itemlens_viewmode_' + $page.data.activeInventoryId);
-        if (cached === 'list' || cached === 'grid') $sharedViewMode = cached;
-        viewModeLoaded = true;
-    });
-
-    $: if (viewModeLoaded && $sharedViewMode) {
-        localStorage.setItem('itemlens_viewmode_' + $page.data.activeInventoryId, $sharedViewMode);
-    }
 </script>
 
 {#if (!displayItems || displayItems.length === 0)}
@@ -150,8 +152,8 @@
             </div>
 
             <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'list'} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => $sharedViewMode = 'grid'} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('list')} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
+                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('grid')} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
             </div>
         </div>
     {/if}
