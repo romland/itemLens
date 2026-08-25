@@ -176,35 +176,29 @@
     let quickNoteReady = false;
 
     function quickNoteTouchStart(e: Event) {
+        clearTimeout(quickNoteTimer);
         quickNoteFired = false;
         quickNoteReady = false;
         quickNoteTimer = setTimeout(() => {
-                quickNoteFired = true;
+            quickNoteFired = true;
             quickNoteReady = true;
-                // Optional haptic feedback to let you know the long-press registered
-                if (typeof navigator !== 'undefined') {
-                    if (navigator.vibrate) navigator.vibrate(50);
-                    else {
-                        try {
-                            const cb = document.createElement('input');
-                            cb.type = 'checkbox'; cb.setAttribute('switch', '');
-                            cb.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
-                            document.body.appendChild(cb); cb.click(); cb.remove();
-                        } catch (e) {}
-                    }
-                }
-        }, 500); // 500ms long press
+            // Standard vibration for Android (iOS Safari ignores this natively)
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }, 400); // 400ms long press
     }
     function quickNoteTouchEnd(e: Event) {
         clearTimeout(quickNoteTimer);
-        quickNoteReady = false;
         if (quickNoteFired) {
                 e.preventDefault(); // stops the href from firing if long press was triggered
                 quickNoteModal.showModal();
                 const ta = quickNoteModal.querySelector('textarea');
                 if (ta) setTimeout(() => ta.focus(), 50);
-                // Keep the flag true for a split second to swallow the subsequent click event
-                setTimeout(() => { quickNoteFired = false; }, 300);
+                // Keep the flag true for a split second to swallow the subsequent click event and gracefully hand off the UI
+                setTimeout(() => { quickNoteFired = false; quickNoteReady = false; }, 300);
+        } else {
+            quickNoteReady = false;
         }
     }
 
@@ -426,7 +420,7 @@ $:  isDemoMode =
   <ReloadPrompt />
 {/if}
 
-<div class="btm-nav" style="z-index: 1; padding-bottom: env(safe-area-inset-bottom); height: calc(5rem + env(safe-area-inset-bottom));">
+<div class="btm-nav" style="z-index: 50; padding-bottom: env(safe-area-inset-bottom); height: calc(5rem + env(safe-area-inset-bottom));">
   <a class="active:scale-95 transition-transform duration-200 flex flex-col items-center justify-center gap-1 {$page.url.pathname==='/' ? 'active' : ''}" href="/">
     <i class="bi bi-house-door text-xl"></i>
     <span class="btm-nav-label text-[10px]">Home</span>
@@ -439,15 +433,23 @@ $:  isDemoMode =
       </a>
   {/if}
 
-  <a class="active:scale-95 transition-all duration-200 flex flex-col items-center justify-center gap-1 select-none {$page.url.pathname.startsWith('/timeline') ? 'active' : ''} {quickNoteReady ? 'text-primary scale-125 drop-shadow-md' : ''}" href="/timeline"
-     style="-webkit-touch-callout: none;"
+  <a class="active:scale-95 transition-all duration-200 flex flex-col items-center justify-center gap-1 select-none relative {$page.url.pathname.startsWith('/timeline') ? 'active' : ''} {quickNoteReady ? 'text-primary drop-shadow-md' : ''}" href="/timeline"
+     style="-webkit-touch-callout: none; touch-action: none;"
      on:click={(e) => { if (quickNoteFired) e.preventDefault(); }}
-     on:touchstart={(e) => quickNoteTouchStart(e)}
-     on:touchend={quickNoteTouchEnd}
-     on:touchcancel={quickNoteTouchEnd}
-     on:mousedown={(e) => quickNoteTouchStart(e)}
-     on:mouseup={quickNoteTouchEnd}
-     on:mouseleave={quickNoteTouchEnd}>
+     on:pointerdown={quickNoteTouchStart}
+     on:pointerup={quickNoteTouchEnd}
+     on:pointercancel={quickNoteTouchEnd}
+     on:pointerleave={quickNoteTouchEnd}
+     on:contextmenu|preventDefault>
+
+    <!-- Floating Indicator that pops up above the thumb when ready -->
+    <div class="absolute left-1/2 -translate-x-1/2 transition-all duration-200 pointer-events-none z-50 flex flex-col items-center {quickNoteReady ? '-top-20 opacity-100 scale-110' : 'top-0 opacity-0 scale-50'}">
+        <div class="bg-primary text-primary-content px-4 py-2 rounded-full shadow-2xl text-xs font-bold whitespace-nowrap flex items-center gap-2">
+            <i class="bi bi-pencil-square text-lg"></i> Release to write
+        </div>
+        <div class="w-2 h-2 bg-primary rotate-45 -mt-1 rounded-sm"></div>
+    </div>
+
     <i class="bi bi-journal-bookmark text-xl"></i>
     <span class="btm-nav-label text-[10px]">Notebook</span>
   </a>
@@ -459,7 +461,14 @@ $:  isDemoMode =
        <h3 class="font-bold text-lg mb-4">Quick Note</h3>
        <form method="POST" action="/timeline?/capture" use:enhance={({ formElement }) => {
            quickNoteModal.close();
-           return async ({ result }) => { if (result.type === 'success') formElement.reset(); };
+           return async ({ result }) => { 
+               if (result.type === 'success' || result.type === 'redirect') {
+                   formElement.reset(); 
+                   notify('success', 'Note saved to Notebook!');
+               } else {
+                   notify('error', 'Failed to save note.');
+               }
+           };
        }}>
            <textarea name="content" placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
            <div class="modal-action mt-0 flex gap-2">

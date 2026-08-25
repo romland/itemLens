@@ -239,4 +239,5 @@ sudo chmod a+rx THAT_PATH/yt-dlp
 - fetching interesting links (especially documentation/specs) for newly items should also be automatic
 
 # TODO README:
-Screenshot(s), logo, video(s)
+- Screenshot(s), video(s)
+- need to document that you can hold down "Notepad" button to add a new note without leaving current context
