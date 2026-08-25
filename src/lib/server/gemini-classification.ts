@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
 import fs from 'fs';
 import path from 'path';
@@ -229,6 +229,99 @@ ${text}`;
       }
     }
   }), 3, 2000, 'KVP Extraction', { prompt: promptText });
+
+  return JSON.parse(response.text!);
+}
+
+export async function analyzeBulkCollection(
+  localFilePath: string,
+  mimeType: string,
+  activeSchema: any[],
+  hint: string = "",
+  tracking?: any
+) {
+  const fileBuffer = fs.readFileSync(localFilePath);
+  const base64Data = fileBuffer.toString('base64');
+
+  let promptText = `Analyze this image containing a collection of physical items (e.g. Books, CDs, Vinyl, Board Games, Tools, Clothes).
+FIRST, count the total number of FULLY VISIBLE individual items.
+THEN, extract EVERY fully visible item.
+
+CRITICAL EXTRACTION RULES:
+1. YOU ARE A STRICT VISUAL EXTRACTOR.
+2. NO PARTIALS: Completely ignore items cut off by the edge of the image. Do not count them, do not extract them.
+3. UNKNOWN BUT PRESENT: If an item is fully visible but turned backward, unreadable, or blurry, you MUST still extract it using a generic title (e.g., 'Unknown') and set low_confidence to true.
+4. NO DUPLICATES: Draw exactly one bounding box per physical item. DO NOT group multiple adjacent items together into one bounding box.
+5. DO NOT TRANSLATE: Transcribe titles, text, and brands EXACTLY as printed in the original language.
+6. NO HALLUCINATION: If text is unreadable, output null. Do not guess based on probability.
+7. DICTIONARY ENFORCEMENT: Check the SCHEMA DICTIONARY. Output exact keys for 'global' and your chosen 'category' into 'extractedAttributes'. Output null if obscured.
+8. THE SCALE & MATERIAL FALLACY: A photo has no absolute scale. DO NOT guess sizes, dimensions, or invisible materials unless explicitly printed in visible text. Output null instead of guessing.
+
+For each item:
+- title: The actual name of the work itself (e.g., Book Title, Album Name, Movie Title, Product Name). NEVER put the author or artist here. If unreadable, use a placeholder (e.g., 'Unknown').
+- subtitle: The creator (e.g., Author, Band/Artist, Maker, Brand) or edition physically printed on the item. NEVER put the main work title here.
+- category: A STRICTLY SINGULAR, specific retail-style sub-category (e.g. 't-shirt', 'mug', 'wrench'). NEVER use plural. NEVER use broad macro-categories like 'clothing', 'media', or 'electronics'.
+- rawText: Literally every word you can read on the item, space separated. Do not format it.
+- color_mix: Array of dominant colors with percentages. Map to base colors (e.g. Red, Blue, Black, Clear, Metallic). e.g. [{"color": "Black", "pct": 0.9}].
+- prominent_text_or_graphic: Literal transcription of text or description of core graphic. Null if none.
+- distinctive_blemishes_or_wear: Specific damage, fading, or wear (e.g., "hole in knee", "scratched screen"). Null if pristine.
+- physical_traits: Array of 5-10 raw, unconstrained descriptive strings describing form, structure, material. e.g., ["cotton", "crew-neck", "short-sleeves", "distressed hem"].
+- extractedAttributes: Object containing strict key-value pairs matching the SCHEMA DICTIONARY.
+- box: The spatial bounding box of the item's spine or front, as [ymin, xmin, ymax, xmax] normalized from 0 to 1000.
+- low_confidence: Set to true if the text is blurry, occluded, or hard to read.`;
+
+  const visibleSchema = activeSchema.filter((s: any) => s.extractionMethod !== 'HUMAN_REQUIRED');
+  if (visibleSchema.length > 0) {
+      const dict: any = {};
+      visibleSchema.forEach((s: any) => {
+          const cat = s.categoryId ? s.categoryId.toString() : 'global';
+          if (!dict[cat]) dict[cat] = {};
+          dict[cat][s.name] = s.options || s.type;
+      });
+      promptText += `\n\nSCHEMA DICTIONARY:\n${JSON.stringify(dict)}`;
+  }
+
+  if (hint && hint.trim()) {
+      promptText += `\n\nUSER HINT: The user noted this collection is: "${hint.trim()}". Prioritize identifying the items within this context.`;
+  }
+
+  const response = await withRetry(() => ai.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: [
+          { role: 'user', parts: [{ text: promptText }, { inlineData: { mimeType, data: base64Data } }] }
+      ],
+      config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                  totalVisibleCount: { type: Type.INTEGER, description: 'The total number of items you counted' },
+                  collectionType: { type: Type.STRING },
+                  items: {
+                      type: Type.ARRAY,
+                      items: {
+                          type: Type.OBJECT,
+                          properties: {
+                              title: { type: Type.STRING },
+                              subtitle: { type: Type.STRING },
+                              category: { type: Type.STRING },
+                              rawText: { type: Type.STRING },
+                              color_mix: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { color: { type: Type.STRING }, pct: { type: Type.NUMBER } } } },
+                              prominent_text_or_graphic: { type: Type.STRING },
+                              distinctive_blemishes_or_wear: { type: Type.STRING },
+                              physical_traits: { type: Type.ARRAY, items: { type: Type.STRING } },
+                              extractedAttributes: { type: Type.OBJECT },
+                              box: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: '[ymin, xmin, ymax, xmax] normalized 0-1000' },
+                              low_confidence: { type: Type.BOOLEAN }
+                          },
+                          required: ['title', 'category', 'color_mix', 'prominent_text_or_graphic', 'distinctive_blemishes_or_wear', 'physical_traits', 'extractedAttributes', 'box']
+                      }
+                  }
+              },
+              required: ['totalVisibleCount', 'items']
+          }
+      }
+  }), 3, 2000, 'Bulk Collection Analysis (Vision)', { prompt: promptText, taskId: tracking?.targetId });
 
   return JSON.parse(response.text!);
 }

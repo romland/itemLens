@@ -7,6 +7,7 @@
     import CompareEmptyState from './CompareEmptyState.svelte';
     import CompareItemCard from './CompareItemCard.svelte';
     import CompareAttributeSheet from './CompareAttributeSheet.svelte';
+    import BottomSheet from "$lib/components/BottomSheet.svelte";
 
     export let results: {
         draftPath: string;
@@ -25,14 +26,14 @@
     const dispatch = createEventDispatcher();
     let savingTitles: Set<string> = new Set();
     let lightbox: ImageLightbox;
-    let mergeModal: HTMLDialogElement;
+    let mergeModal: BottomSheet;
     let mergeSourceItem: any = null;
-    let filterModal: HTMLDialogElement;
+    let filterModal: BottomSheet;
     let isRefiltering = false;
     let autoGuessed = false;
     let strictAuditMode = false;
 
-    let actionModal: HTMLDialogElement;
+    let actionModal: BottomSheet;
     let actionItem: any = null;
 
     let attributeSheetModal: HTMLDialogElement;
@@ -450,28 +451,21 @@
 <ImageLightbox bind:this={lightbox} itemTitle="Comparison Match" />
 
 <!-- Manual Link Assistant Modal -->
-<dialog bind:this={mergeModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => mergeSourceItem = null}>
-   <div class="modal-box sm:rounded-[2.5rem] p-0 bg-base-100 shadow-2xl border border-base-200 overflow-hidden flex flex-col max-h-[80vh]">
-       <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10">
-           <h3 class="font-bold text-lg leading-tight">Link to Existing Item</h3>
-           <p class="text-xs text-gray-500 mt-1">Select the inventory item that matches "{mergeSourceItem?.title}"</p>
-       </div>
-       <div class="overflow-y-auto p-4 flex flex-col gap-2">
-           {#each results.missingFromScope as missingItem}
-               <button type="button" class="btn btn-ghost h-auto py-3 px-4 w-full justify-start text-left border border-base-200 shadow-sm hover:border-warning hover:bg-warning/10 rounded-2xl flex-col items-start gap-1" on:click={() => confirmMerge(missingItem)}>
-                   <span class="font-bold text-sm text-base-content whitespace-normal">{missingItem.title}</span>
-                   {#if missingItem.locationName}
-                       <span class="text-[10px] text-gray-400 font-medium font-mono uppercase"><i class="bi bi-box-seam mr-1"></i> {missingItem.locationName}</span>
-                   {/if}
-               </button>
-           {/each}
-       </div>
-       <div class="p-4 pt-2 border-t border-base-200">
-           <button type="button" class="btn btn-neutral w-full rounded-xl" on:click={() => mergeModal.close()}>Cancel</button>
-       </div>
-   </div>
-   <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+<BottomSheet bind:this={mergeModal} title="Link to Existing Item" subtitle={`Select the inventory item that matches "${mergeSourceItem?.title}"`} on:close={() => mergeSourceItem = null}>
+    <div class="flex flex-col gap-2">
+        {#each results.missingFromScope as missingItem}
+            <button type="button" class="btn btn-ghost h-auto py-3 px-4 w-full justify-start text-left border border-base-200 shadow-sm hover:border-warning hover:bg-warning/10 rounded-2xl flex-col items-start gap-1" on:click={() => confirmMerge(missingItem)}>
+                <span class="font-bold text-sm text-base-content whitespace-normal">{missingItem.title}</span>
+                {#if missingItem.locationName}
+                    <span class="text-[10px] text-gray-400 font-medium font-mono uppercase"><i class="bi bi-box-seam mr-1"></i> {missingItem.locationName}</span>
+                {/if}
+            </button>
+        {/each}
+    </div>
+    <div slot="actions">
+        <button type="button" class="btn btn-neutral w-full rounded-xl" on:click={() => mergeModal.close()}>Cancel</button>
+    </div>
+</BottomSheet>
 
 <!-- Human Input Modal -->
 <dialog bind:this={attributeSheetModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => { pendingItemForAdd = null; pendingTarget = null; }}>
@@ -482,90 +476,67 @@
 </dialog>
 
 <!-- Target Scope Bottom Sheet -->
-<dialog bind:this={filterModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-   <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 flex flex-col max-h-[85vh] sm:rounded-[2.5rem]">
-       <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
-           <div>
-               <h3 class="font-bold text-lg leading-tight">Narrow down the comparison</h3>
-               <p class="text-xs text-gray-500 mt-1">Select a specific category, tag, or box to see what's missing from it.</p>
-           </div>
-           <button class="btn btn-sm btn-circle btn-ghost" on:click={() => filterModal.close()}><i class="bi bi-x-lg"></i></button>
-       </div>
-       
-       <div class="overflow-y-auto p-4 flex flex-col gap-6">
-           <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl {scopeType === 'all' ? 'border-primary bg-primary/5' : 'border-base-300'}" on:click={() => updateScope('all', '')}>
-               <i class="bi bi-infinity text-2xl mr-3 {scopeType === 'all' ? 'text-primary' : 'text-gray-400'}"></i>
-               <div class="text-left"><div class="font-bold">Entire Library</div><div class="text-xs text-gray-500 font-normal">Check for any new, unowned items</div></div>
-           </button>
+<BottomSheet bind:this={filterModal} title="Narrow down the comparison" subtitle="Select a specific category, tag, or box to see what's missing from it.">
+    <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-start items-center rounded-2xl {scopeType === 'all' ? 'border-primary bg-primary/5' : 'border-base-300'}" on:click={() => updateScope('all', '')}>
+        <i class="bi bi-infinity text-2xl mr-3 {scopeType === 'all' ? 'text-primary' : 'text-gray-400'}"></i>
+        <div class="text-left"><div class="font-bold">Entire Library</div><div class="text-xs text-gray-500 font-normal">Check for any new, unowned items</div></div>
+    </button>
 
-           {#if categories.length > 0}
-               <div>
-                   <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-tags-fill mr-1"></i> By Category</div>
-                   <div class="flex flex-wrap gap-2">
-                       {#each categories as c}
-                           <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all capitalize {scopeType === 'category' && scopeValue === c.name ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('category', c.name)}>{c.name}</button>
-                       {/each}
-                   </div>
-               </div>
-           {/if}
+    {#if categories.length > 0}
+        <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-tags-fill mr-1"></i> By Category</div>
+            <div class="flex flex-wrap gap-2">
+                {#each categories as c}
+                    <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all capitalize {scopeType === 'category' && scopeValue === c.name ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('category', c.name)}>{c.name}</button>
+                {/each}
+            </div>
+        </div>
+    {/if}
 
-           {#if containers.length > 0}
-               <div>
-                   <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-box-seam-fill mr-1"></i> By Location</div>
-                   <div class="flex flex-wrap gap-2">
-                       {#each containers as c}
-                           <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all {scopeType === 'container' && scopeValue === c.name ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('container', c.name)}>{c.name}</button>
-                       {/each}
-                   </div>
-               </div>
-           {/if}
+    {#if containers.length > 0}
+        <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-box-seam-fill mr-1"></i> By Location</div>
+            <div class="flex flex-wrap gap-2">
+                {#each containers as c}
+                    <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all {scopeType === 'container' && scopeValue === c.name ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('container', c.name)}>{c.name}</button>
+                {/each}
+            </div>
+        </div>
+    {/if}
 
-           {#if tags.length > 0}
-               <div>
-                   <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-hash mr-1"></i> By Tag</div>
-                   <div class="flex flex-wrap gap-2">
-                       {#each tags as t}
-                           <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all {scopeType === 'tag' && scopeValue === t.slug ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('tag', t.slug)}>{t.name}</button>
-                       {/each}
-                   </div>
-               </div>
-           {/if}
-       </div>
-   </div>
-   <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+    {#if tags.length > 0}
+        <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1"><i class="bi bi-hash mr-1"></i> By Tag</div>
+            <div class="flex flex-wrap gap-2">
+                {#each tags as t}
+                    <button class="badge badge-lg py-4 px-4 hover:border-primary transition-all {scopeType === 'tag' && scopeValue === t.slug ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}" on:click={() => updateScope('tag', t.slug)}>{t.name}</button>
+                {/each}
+            </div>
+        </div>
+    {/if}
+</BottomSheet>
 
 <!-- Action Picker Bottom Sheet -->
-<dialog bind:this={actionModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => actionItem = null}>
-    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 flex flex-col max-h-[85vh] sm:rounded-[2.5rem]">
-        <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
-            <div>
-                <h3 class="font-bold text-lg leading-tight">Add to...</h3>
-                <p class="text-xs text-gray-500 mt-1 truncate">Where should "{actionItem?.title}" go?</p>
-            </div>
-            <button class="btn btn-sm btn-circle btn-ghost shrink-0" on:click={() => actionModal.close()}><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div class="p-4 flex flex-col gap-3 bg-base-100">
-            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
-                <i class="bi bi-box-seam text-2xl mr-4 text-primary"></i>
-                <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to inventory</div></div>
+<BottomSheet bind:this={actionModal} title="Add to..." subtitle={`Where should "${actionItem?.title}" go?`} on:close={() => actionItem = null}>
+    <div class="flex flex-col gap-3">
+        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
+            <i class="bi bi-box-seam text-2xl mr-4 text-primary"></i>
+            <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to inventory</div></div>
+        </button>
+        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
+            <i class="bi bi-cart text-2xl mr-4 text-warning"></i>
+            <div><div class="font-bold text-base-content">Shopping List</div><div class="text-xs text-gray-500 font-normal">Add to your buy list</div></div>
+        </button>
+        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-success hover:bg-success/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }}>
+            <i class="bi bi-list-check text-2xl mr-4 text-success"></i>
+            <div><div class="font-bold text-base-content">To-Do List</div><div class="text-xs text-gray-500 font-normal">Add as a task</div></div>
+        </button>
+        {#if missing.length > 0}
+            <div class="divider my-2 text-xs text-gray-400">OR</div>
+            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-info hover:bg-info/5 active:scale-95 transition-all p-4 text-left text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }}>
+                <i class="bi bi-link-45deg text-2xl mr-4 text-info"></i>
+                <div><div class="font-bold text-base-content">Link to Existing...</div><div class="text-xs text-gray-500 font-normal">Match it to an expected item</div></div>
             </button>
-            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 active:scale-95 transition-all p-4 text-left mt-3" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
-                <i class="bi bi-cart text-2xl mr-4 text-warning"></i>
-                <div><div class="font-bold text-base-content">Shopping List</div><div class="text-xs text-gray-500 font-normal">Add to your buy list</div></div>
-            </button>
-            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-success hover:bg-success/5 active:scale-95 transition-all p-4 text-left mt-3" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }}>
-                <i class="bi bi-list-check text-2xl mr-4 text-success"></i>
-                <div><div class="font-bold text-base-content">To-Do List</div><div class="text-xs text-gray-500 font-normal">Add as a task</div></div>
-            </button>
-            {#if missing.length > 0}
-                <div class="divider my-2 text-xs text-gray-400">OR</div>
-                <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-info hover:bg-info/5 active:scale-95 transition-all p-4 text-left text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }}>
-                    <i class="bi bi-link-45deg text-2xl mr-4 text-info"></i>
-                    <div><div class="font-bold text-base-content">Link to Existing...</div><div class="text-xs text-gray-500 font-normal">Match it to an expected item</div></div>
-                </button>
-            {/if}
-        </div>
+        {/if}
     </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</BottomSheet>

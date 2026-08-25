@@ -8,6 +8,7 @@
     import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
+    import BottomSheet from "$lib/components/BottomSheet.svelte";
 
     export let isDirty = false;
     export let containers = [];
@@ -44,7 +45,7 @@
 	let showHintInput = false;
 
     // Edit Modal State
-    let editModal: HTMLDialogElement;
+    let editModal: BottomSheet;
     let editingIndex = -1;
     let editTitle = "";
     let editSubtitle = "";
@@ -437,23 +438,19 @@
 </div>
 
 <!-- Native Bottom Sheet Editor -->
-<dialog bind:this={editModal} class="modal modal-bottom sm:modal-middle" on:close={() => editingIndex = -1}>
-    <div class="modal-box p-6 sm:rounded-3xl bg-base-100/95 backdrop-blur-xl">
-        <h3 class="font-bold text-xl mb-4">Edit Item</h3>
-        <div class="form-control w-full mb-3">
-            <label class="label"><span class="label-text font-semibold">Title</span></label>
-            <input type="text" bind:value={editTitle} class="input input-bordered w-full rounded-xl" />
-        </div>
-        <div class="form-control w-full mb-6">
-            <label class="label"><span class="label-text font-semibold">Subtitle</span></label>
-            <input type="text" bind:value={editSubtitle} class="input input-bordered w-full rounded-xl" />
-        </div>
-        <div class="modal-action mt-0 flex gap-2">
-            <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => editModal.close()}>Cancel</button>
-            <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={saveEdit}>Save Changes</button>
-        </div>
+<BottomSheet bind:this={editModal} title="Edit Item" on:close={() => editingIndex = -1}>
+    <div class="form-control w-full mb-1">
+        <label class="label"><span class="label-text font-semibold">Title</span></label>
+        <input type="text" bind:value={editTitle} class="input input-bordered w-full rounded-xl" />
     </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+    <div class="form-control w-full mb-2">
+        <label class="label"><span class="label-text font-semibold">Subtitle</span></label>
+        <input type="text" bind:value={editSubtitle} class="input input-bordered w-full rounded-xl" />
+    </div>
+    <div slot="actions" class="flex gap-2">
+        <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => editModal.close()}>Cancel</button>
+        <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={saveEdit}>Save Changes</button>
+    </div>
+</BottomSheet>
 
 <ImageLightbox bind:this={lightbox} itemTitle="Collection Scan" />

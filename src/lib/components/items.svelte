@@ -137,7 +137,7 @@
             <div class="dropdown dropdown-bottom">
                 <button tabindex="0" class="btn btn-sm bg-base-200/60 border-base-300/50 shadow-sm font-medium text-base-content hover:bg-base-300 gap-1.5 sm:gap-2 rounded-lg h-8 min-h-0">
                     <i class="bi bi-sort-down text-gray-500 text-lg"></i>
-                    <span class="hidden sm:inline">Sort:</span> {activeSortLabel}
+                    <span class="hidden sm:inline"></span> {activeSortLabel}
                     <i class="bi bi-chevron-down text-[10px] opacity-50 ml-0.5"></i>
                 </button>
                 <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-xl w-56 border border-base-200 mt-2 gap-1">

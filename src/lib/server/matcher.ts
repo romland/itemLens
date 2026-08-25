@@ -166,12 +166,12 @@ export function computeIdfMap(dbItems: any[]): Map<string, number> {
     return idfMap;
 }
 
-function calculateWeightedJaccard(tokensA: string[], tokensB: string[], idfMap: Map<string, number>): number {
+function calculateWeightedJaccard(tokensA: string[], tokensB: string[], idfMap?: Map<string, number>): number {
     if (tokensA.length === 0 && tokensB.length === 0) return 1.0;
     let intersection = 0, union = 0;
     const unique = new Set([...tokensA, ...tokensB]);
     for (const t of unique) {
-        const w = idfMap.get(t) || 1.0;
+        const w = idfMap?.get(t) || 1.0;
         union += w;
         if (tokensA.includes(t) && tokensB.includes(t)) intersection += w;
     }
@@ -203,7 +203,11 @@ export function computeMatch(
     const dbCat = dbItem.photos?.[0]?.category?.name?.toLowerCase();
     const sCat = scan.category?.toLowerCase();
     if (dbCat && sCat && dbCat !== sCat) {
-        return { isMatch: false, confidence: 0, debugTrace: [`[CATEGORY MISMATCH] DB='${dbCat}' != Scan='${sCat}'`] } as any;
+        if (!dbCat.includes(sCat) && !sCat.includes(dbCat)) {
+            return { isMatch: false, confidence: 0, debugTrace: [`[CATEGORY MISMATCH] DB='${dbCat}' != Scan='${sCat}'`] } as any;
+        } else {
+            debugTrace.push(`[CATEGORY ALIAS] DB='${dbCat}' loosely matches Scan='${sCat}'`);
+        }
     }
     
     if (!dbCat || !sCat) {
@@ -242,44 +246,48 @@ export function computeMatch(
     }
 
     // Discriminator Veto (Graphic & Wear)
-    const dbGraphic = dbItem.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value;
-    const dbWear = dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value;
+    // Sanitize LLM hallucinations like "null", "none", "unknown" before checking truthiness
+    const scanGraphicVal = isUseless(scan.prominentTextOrGraphic) ? null : scan.prominentTextOrGraphic;
+    const dbGraphicVal = isUseless(dbItem.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value) ? null : dbItem.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value;
+    const scanWearVal = isUseless(scan.distinctiveWear) ? null : scan.distinctiveWear;
+    const dbWearVal = isUseless(dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value) ? null : dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value;
 
-    if (scan.prominentTextOrGraphic && dbGraphic) {
-        const scanGraphTokens = tokenizeAndStem([scan.prominentTextOrGraphic]);
-        const dbGraphTokens = tokenizeAndStem([dbGraphic]);
-        const sim = calculateWeightedJaccard(scanGraphTokens, dbGraphTokens, idfMap);
-        if (sim < 0.35 && new Set([...scanGraphTokens, ...dbGraphTokens]).size > 0) {
-            strictFailures += 2;
-            debugTrace.push(`[VETO: GRAPHIC] Distinct graphics (Jaccard=${sim.toFixed(2)}): '${scan.prominentTextOrGraphic}' vs '${dbGraphic}'`);
-        } else if (sim > 0.75) {
+    // For short discriminator strings, TF-IDF penalizes brand names we own a lot of.
+    // Using flat Jaccard (no idfMap) or substring matching is much safer.
+    if (scanGraphicVal && dbGraphicVal) {
+        const normScanG = normalizeStr(scanGraphicVal);
+        const normDbG = normalizeStr(dbGraphicVal);
+        const sim = calculateWeightedJaccard(tokenizeAndStem([scanGraphicVal]), tokenizeAndStem([dbGraphicVal])); // No IDF!
+        
+        if (normScanG.includes(normDbG) || normDbG.includes(normScanG) || sim > 0.40) {
             fuzzyMatches += 2;
-            debugTrace.push(`[GRAPHIC MATCH] Strong graphic similarity: ${sim.toFixed(2)}`);
-        } else {
+            debugTrace.push(`[GRAPHIC MATCH] Strong graphic similarity (Substring or Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
+        } else if (sim > 0.15) {
             fuzzyMatches += 0.5;
-            debugTrace.push(`[GRAPHIC MATCH] Graphic similarity: ${sim.toFixed(2)}`);
+            debugTrace.push(`[GRAPHIC MATCH] Partial graphic similarity (Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
+        } else {
+            strictFailures += 1;
+            debugTrace.push(`[VETO: GRAPHIC] Distinct graphics (Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
         }
-    } else if ((scan.prominentTextOrGraphic && !dbGraphic) || (!scan.prominentTextOrGraphic && dbGraphic)) {
-        strictFailures += 1;
+    } else if ((scanGraphicVal && !dbGraphicVal) || (!scanGraphicVal && dbGraphicVal)) {
+        fuzzyMismatches += 0.5;
         debugTrace.push(`[VETO: GRAPHIC] Graphic presence mismatch`);
     }
 
-    if (scan.distinctiveWear && dbWear) {
-        const scanWearTokens = tokenizeAndStem([scan.distinctiveWear]);
-        const dbWearTokens = tokenizeAndStem([dbWear]);
-        const sim = calculateWeightedJaccard(scanWearTokens, dbWearTokens, idfMap);
-        if (sim < 0.35 && new Set([...scanWearTokens, ...dbWearTokens]).size > 0) {
-            strictFailures += 2;
-            debugTrace.push(`[VETO: WEAR] Distinct condition/wear (Jaccard=${sim.toFixed(2)}): '${scan.distinctiveWear}' vs '${dbWear}'`);
-        } else if (sim > 0.75) {
+    if (scanWearVal && dbWearVal) {
+        const sim = calculateWeightedJaccard(tokenizeAndStem([scanWearVal]), tokenizeAndStem([dbWearVal])); // No IDF
+        if (sim > 0.40) {
             fuzzyMatches += 1;
-            debugTrace.push(`[WEAR MATCH] Strong wear pattern match`);
-        } else {
+            debugTrace.push(`[WEAR MATCH] Strong wear pattern match (Jaccard=${sim.toFixed(2)})`);
+        } else if (sim > 0.15) {
             fuzzyMatches += 0.5;
             debugTrace.push(`[WEAR MATCH] Partial wear pattern match`);
+        } else {
+            strictFailures += 1;
+            debugTrace.push(`[VETO: WEAR] Distinct condition/wear (Jaccard=${sim.toFixed(2)}): '${scanWearVal}' vs '${dbWearVal}'`);
         }
-    } else if ((scan.distinctiveWear && !dbWear) || (!scan.distinctiveWear && dbWear)) {
-        strictFailures += 1;
+    } else if ((scanWearVal && !dbWearVal) || (!scanWearVal && dbWearVal)) {
+        fuzzyMismatches += 0.5;
         debugTrace.push(`[VETO: WEAR] Condition mismatch (One is worn, one is pristine)`);
     }
 
@@ -290,10 +298,10 @@ export function computeMatch(
     const safeScanTokens = Array.isArray(scan.tokens) ? scan.tokens : []; // Failsafe
     const jaccard = calculateWeightedJaccard(dbTokens, safeScanTokens, idfMap);
     
-    if (jaccard >= 0.50) {
+    if (jaccard >= 0.45) { // Lowered slightly from 0.50 to catch 49.4% near-misses
         fuzzyMatches += 3.0;
         debugTrace.push(`[NLP MATCH] Strong semantic physical overlap (${(jaccard * 100).toFixed(1)}%)`);
-    } else if (jaccard >= 0.35) {
+    } else if (jaccard >= 0.25) {
         fuzzyMatches += 1.0;
         debugTrace.push(`[NLP PARTIAL] Weak semantic physical overlap (${(jaccard * 100).toFixed(1)}%)`);
     } else if (safeScanTokens.length > 0 && dbTokens.length > 0) {
@@ -328,15 +336,20 @@ export function computeMatch(
 
     let isMatch = false;
 
-    if (fuzzyMismatches >= 2) {
-        isMatch = false;
-        debugTrace.push(`[RESULT] Failed: Active physical trait clashes (mismatches=${fuzzyMismatches})`);
+    if (isStrongTextMatch && !isGenericTitle) {
+        if (strictFailures === 0 && fuzzyMismatches <= 2.5) {
+            isMatch = true;
+            debugTrace.push(`[RESULT] Pass: Strong Text Match overrides minor trait clashes (mismatches=${fuzzyMismatches})`);
+        } else {
+            isMatch = false;
+            debugTrace.push(`[RESULT] Failed: Strong Text Match, but overwhelming clashes or strict failure (mismatches=${fuzzyMismatches}, strict=${strictFailures})`);
+        }
     } else if (strictFailures >= 1) {
         isMatch = false;
         debugTrace.push(`[RESULT] Failed: Missing required strict traits (strictFailures=${strictFailures})`);
-    } else if (isStrongTextMatch && !isGenericTitle && fuzzyMatches >= 1) {
-        isMatch = true;
-        debugTrace.push(`[RESULT] Pass: Strong Text Match + Validated Traits overrides omissions`);
+    } else if (fuzzyMismatches >= 2) {
+        isMatch = false;
+        debugTrace.push(`[RESULT] Failed: Active physical trait clashes (mismatches=${fuzzyMismatches})`);
     } else if (fuzzyMatches >= 3 && fuzzyMismatches === 0) {
         isMatch = true;
         debugTrace.push(`[RESULT] Pass: Strong fuzzy match (${fuzzyMatches} matches)`);
@@ -422,4 +435,117 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
         }
     }
     return items;
+}
+
+export function findBestMatchesForBatch(
+    scannedItems: any[],
+    dbItems: any[],
+    idfMap?: Map<string, number>
+) {
+    console.log(`\n[MATCH-DEBUG] 🚀 ========================================================`);
+    console.log(`[MATCH-DEBUG] 🚀 findBestMatchesForBatch STARTED`);
+    console.log(`[MATCH-DEBUG] 🚀 SCANNED ITEMS: ${scannedItems.length} | DB ITEMS: ${dbItems.length}`);
+
+    const actualIdfMap = idfMap || computeIdfMap(dbItems);
+    const idUsage = new Map<number, number>();
+    const inCollection: any[] = [];
+    const newToYou: any[] = [];
+    const annotatedScannedItems: any[] = [];
+
+    for (const item of scannedItems) {
+        console.log(`[MATCH-DEBUG] ------------------------------------------------`);
+        console.log(`[MATCH-DEBUG] 🔎 SCANNING: "${item.title}"`);
+
+        let parsedTokens: string[] = [];
+        if (Array.isArray(item.tokens)) {
+            parsedTokens = item.tokens;
+        } else {
+            parsedTokens = tokenizeAndStem([
+                item.title,
+                item.subtitle,
+                item.description,
+                item.rawText,
+                ...(item.physical_traits || [])
+            ]);
+        }
+
+        const scanCtx: ScanContext = {
+            tokens: parsedTokens,
+            colorMix: item.color_mix || item.extractedAttributes?.color_mix,
+            title: item.title || '',
+            description: item.description || item.subtitle || '',
+            rawText: item.rawText || '',
+            category: item.category,
+            prominentTextOrGraphic: item.prominent_text_or_graphic || item.extractedAttributes?.prominent_text_or_graphic,
+            distinctiveWear: item.distinctive_blemishes_or_wear || item.extractedAttributes?.distinctive_blemishes_or_wear
+        };
+        
+        console.log(`[MATCH-DEBUG] 🧩 CONTEXT BUILT:`, JSON.stringify(scanCtx, null, 2));
+
+        let bestMatch = null;
+        let highestScore = -999;
+        item._debugComparisons = [];
+
+        for (const dbItem of dbItems) {
+            const used = idUsage.get(dbItem.id) || 0;
+            const available = dbItem.amount || 1;
+            
+            console.log(`[MATCH-DEBUG]   🆚 Checking DB Item ID ${dbItem.id} ("${dbItem.title}") | Used: ${used} | Available: ${available}`);
+
+            if (used >= available) {
+                console.log(`[MATCH-DEBUG]   ⏩ SKIPPING ID ${dbItem.id}: Stock fully consumed.`);
+                continue; // Respect stock quantities!
+            }
+
+            const match = computeMatch(scanCtx, dbItem, actualIdfMap);
+
+            // Debug trace preservation for UI
+            const dbCat = dbItem.photos?.[0]?.category?.name?.toLowerCase();
+            const sCat = scanCtx.category?.toLowerCase();
+            if (match.isMatch || (dbCat && sCat && (dbCat === sCat || dbCat.includes(sCat) || sCat.includes(dbCat))) || (scanCtx.title && dbItem.title && (dbItem.title.toLowerCase().includes(scanCtx.title.toLowerCase()) || scanCtx.title.toLowerCase().includes(dbItem.title.toLowerCase())))) {
+                item._debugComparisons.push({ dbTitle: dbItem.title, score: match.score, trace: match.debugTrace });
+            }
+
+            console.log(`[MATCH-DEBUG]   🧮 Score: ${match.score} | isMatch: ${match.isMatch}`);
+            if (!match.isMatch) {
+                 console.log(`[MATCH-DEBUG]   ❌ Trace:\n      ${match.debugTrace?.join('\n      ')}`);
+            }
+
+            if (match.isMatch && match.score > highestScore) {
+                highestScore = match.score;
+                bestMatch = { dbItem, match };
+            }
+        }
+
+        if (bestMatch) {
+            const { dbItem, match } = bestMatch;
+            idUsage.set(dbItem.id, (idUsage.get(dbItem.id) || 0) + 1);
+
+            const matchNorm = normalizeStr(dbItem.title);
+            const dbTotalAmount = dbItems.filter(i => normalizeStr(i.title) === matchNorm).reduce((sum, i) => sum + (i.amount || 1), 0);
+
+            item.isDuplicate = true;
+            item.duplicateItemDetails = buildDuplicateDetails(dbItem, match);
+            
+            console.log(`[MATCH-DEBUG] ✅ WINNER: Linked "${item.title}" to DB Item ID ${dbItem.id} ("${dbItem.title}") with Score ${match.score}`);
+
+            inCollection.push({
+                ...item,
+                matchedItem: { id: dbItem.id, title: dbItem.title, slug: dbItem.slug, amount: dbItem.amount, dbTotalAmount, locationName: dbItem.locations?.[0]?.container?.name || null, thumbPath: dbItem.photos?.[0]?.thumbPath || dbItem.photos?.[0]?.orgPath || null, categoryName: dbItem.photos?.[0]?.category?.name || 'Uncategorized' }
+            });
+        } else {
+            item.isDuplicate = false;
+            item.duplicateItemDetails = null;
+            console.log(`[MATCH-DEBUG] ⚠️ NO MATCH. "${item.title}" is New to You.`);
+            newToYou.push(item);
+        }
+        
+        annotatedScannedItems.push(item);
+    }
+    
+    console.log(`[MATCH-DEBUG] 🏁 findBestMatchesForBatch COMPLETED`);
+    console.log(`[MATCH-DEBUG] 🏁 In Collection: ${inCollection.length} | New: ${newToYou.length}`);
+    console.log(`[MATCH-DEBUG] 🚀 ========================================================\n`);
+
+    return { inCollection, newToYou, annotatedScannedItems, idUsage };
 }
