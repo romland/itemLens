@@ -23,6 +23,7 @@ model User {
   name     String?
   avatar   String?
   isAdmin  Boolean @default(false) // Determines if user can create other local accounts
+  preferences String? // JSON object storing keymaps and UI prefs
 
   // Auditing: Who created what
   items         Item[]
@@ -67,6 +68,7 @@ model Inventory {
   bgRemovalPreCrop Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
  enablePaddleOCR Boolean @default(true) // Whether to extract text from images using local PaddleOCR container
   duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
+  containerMode String @default("scan") // "scan" or "select" - defaults selector to camera or list
   templateFields TemplateField[]
 
   users       UserInventoryAccess[]

@@ -82,6 +82,18 @@ export const actions = {
 		return { success: true, message: 'Password changed successfully.' };
 	},
 
+    updatePreferences: async ({ locals, request }) => {
+        if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
+        const data = await request.formData();
+        const preferences = data.get('preferences') as string;
+        
+        await db.user.update({
+            where: { id: locals.user.id },
+            data: { preferences }
+        });
+        return { success: true, message: 'Preferences updated.' };
+    },
+
 	createInventory: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
         
@@ -311,6 +323,15 @@ export const actions = {
             await db.inventory.update({ where: { id }, data: { duplicateStrategy: strategy } });
         }
         return { success: true, message: "Default duplicate strategy updated." };
+    },
+
+    updateContainerMode: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const containerMode = data.get('containerMode') as string;
+        await db.inventory.update({ where: { id }, data: { containerMode } });
+        return { success: true, message: "Container mode updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {

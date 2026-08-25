@@ -5,6 +5,7 @@
 
     export let values = [];
     export let containers = [];
+    export let defaultTab = 'scan';
     export let mini = false;
     // To satisfy Svelte -- mini is unused
     void mini;
@@ -16,7 +17,7 @@
 	let explicitNewName = "";
 
     // View state for tabs
-    let activeTab = 'scan'; // 'scan' | 'select'
+    let activeTab = defaultTab; // 'scan' | 'select'
     let searchQuery = '';
 
     // Flatten parent/child hierarchy for easier searching and displaying

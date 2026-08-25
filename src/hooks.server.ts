@@ -18,7 +18,7 @@ export const handle = (async ({ event, resolve }) => {
 	if (session) {
         const user = await db.user.findUnique({
             where: { token: session },
-            select: { id: true, username: true, name: true, email: true, avatar: true, isAdmin: true, inventoryAccess: true }
+            select: { id: true, username: true, name: true, email: true, avatar: true, isAdmin: true, preferences: true, inventoryAccess: true }
         });
 
         if (user) {
@@ -28,7 +28,8 @@ export const handle = (async ({ event, resolve }) => {
                 name: user.name || user.username,
                 email: user.email,
                 avatar: user.avatar,
-                isAdmin: user.isAdmin
+                isAdmin: user.isAdmin,
+                preferences: user.preferences
             };
 
             // Inventory Routing Logic

@@ -12,6 +12,7 @@
     import { marked } from 'marked';
     import { createEventDispatcher, onMount } from 'svelte';
     import { ambientLocation } from '$lib/client/ambientContext';
+    import { page } from '$app/stores';
 
     const dispatch = createEventDispatcher();
 
@@ -22,11 +23,15 @@
     export let pastedDocCount = 0;
 
     onMount(() => {
+        const handleTabShortcut = (e: any) => { activeView = e.detail; };
+        window.addEventListener('shortcut:tab', handleTabShortcut);
+
         console.log("🛠️ [DEBUG AMBIENT] ItemHub Mounted. ambientLocation store is:", $ambientLocation);
         if (!item && selectedLocations.length > 0) {
             console.log("🛠️ [DEBUG AMBIENT] Hydrated selectedLocations from store:", selectedLocations);
             dispatch('success', `Location auto-set to ${selectedLocations.join(', ')}`);
         }
+        return () => window.removeEventListener('shortcut:tab', handleTabShortcut);
     });
 
     // Expose a hard-reset function for continuous scanning workflows
@@ -55,6 +60,7 @@
 
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
     let activeView = 'hub';
+    $: defaultContainerMode = $page.data.inventories?.find((i: any) => i.id === $page.data.activeInventoryId)?.containerMode || 'scan';
 
     // State for the Hub Badges
     let photoCount = item?.photos?.length || 0;
@@ -526,6 +532,7 @@
             <div class="max-w-lg mx-auto w-full">
                 <ContainerSelector 
                     containers={containers} 
+                    defaultTab={defaultContainerMode}
                     values={item ? (item.locations || []) : selectedLocations.map(name => ({ container: { name } }))}
                     on:change={(ev) => { 
                         console.log("🛠️ [DEBUG AMBIENT] ContainerSelector on:change fired with:", ev.detail.containers);

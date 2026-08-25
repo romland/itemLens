@@ -88,6 +88,13 @@
     let deleteConfirmText: string = "";
     let editUserId: number | null = null;
 
+    let currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
+    let shortcuts = currentPrefs.shortcuts || {
+        newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p', 
+        editItem: 'e', setDefaultContainer: 'l', 
+        tab1: '1', tab2: '2', tab3: '3', tab4: '4'
+    };
+
 </script>
 
 <div class="max-w-2xl mx-auto">
@@ -129,6 +136,35 @@
                 </form>
             {/each}
         </div>
+    </div>
+
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+        <h3 class="font-bold text-lg mb-1">Keyboard Shortcuts</h3>
+        <p class="text-sm text-gray-500 mb-6">Press single keys to navigate faster. These apply globally when not typing.</p>
+        
+        <form method="POST" action="?/updatePreferences" use:enhance={createEnhancer}>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-6">
+                {#each [
+                    { id: 'newSingle', label: 'New Single Item' },
+                    { id: 'newCollection', label: 'New Collection' },
+                    { id: 'profile', label: 'Profile Menu' },
+                    { id: 'settings', label: 'Settings' },
+                    { id: 'setDefaultContainer', label: 'Set Default Box' },
+                    { id: 'editItem', label: 'Edit Current Item' },
+                    { id: 'tab1', label: 'Edit Hub: Photos' },
+                    { id: 'tab2', label: 'Edit Hub: Location' },
+                    { id: 'tab3', label: 'Edit Hub: Details' },
+                    { id: 'tab4', label: 'Edit Hub: Links' }
+                ] as sc}
+                    <div class="flex justify-between items-center bg-base-200/50 p-2 px-3 rounded-lg border border-base-200">
+                        <span class="text-sm font-semibold">{sc.label}</span>
+                        <input type="text" class="input input-xs input-bordered w-12 text-center uppercase font-mono bg-base-100" maxlength="1" bind:value={shortcuts[sc.id]} />
+                    </div>
+                {/each}
+            </div>
+            <input type="hidden" name="preferences" value={JSON.stringify({ ...currentPrefs, shortcuts })} />
+            <button type="submit" class="btn btn-neutral">Save Shortcuts</button>
+        </form>
     </div>
 
 	<!-- PROFILE -->
@@ -363,6 +399,15 @@
                                             <option value="AUTO_IGNORE">Auto-Ignore</option>
                                         </select>
                                         <span class="text-xs text-gray-500 font-medium">is the default duplicate resolution</span>
+                                    </form>
+
+                                    <form method="POST" action="?/updateContainerMode" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <select name="containerMode" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.containerMode || 'scan'}>
+                                            <option value="scan">Scan QR</option>
+                                            <option value="select">Manual List</option>
+                                        </select>
+                                        <span class="text-xs text-gray-500 font-medium">is default container selector mode</span>
                                     </form>
 
                             <!-- Manual Schema Retry Action -->

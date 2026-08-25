@@ -24,6 +24,10 @@
 	import Notifications from "$lib/components/Notifications.svelte";
 	import { notifications } from "$lib/client/notifications";
 
+    import KeyboardManager from '$lib/components/KeyboardManager.svelte';
+    import ContainerSelector from "$lib/components/ContainerSelector.svelte";
+    import { ambientLocation } from '$lib/client/ambientContext';
+
     let mounted = false;    
 
     onMount(async () => {
@@ -148,45 +152,59 @@
         }
     }
 
+    let ambientContainerModal: HTMLDialogElement;
+    let loadingContainers = false;
+    let globalContainers: any[] = [];
+    async function openAmbientModal() {
+        ambientContainerModal.showModal();
+        if (globalContainers.length === 0) {
+            loadingContainers = true;
+            try {
+                const res = await fetch('/api/containers');
+                if (res.ok) globalContainers = await res.json();
+            } finally { loadingContainers = false; }
+        }
+    }
+
     let mobileMenuModal: HTMLDialogElement;
 
-   let quickNoteModal: HTMLDialogElement;
-   let quickNoteTimer: any;
-   let quickNoteFired = false;
-   let quickNoteReady = false;
+    let quickNoteModal: HTMLDialogElement;
+    let quickNoteTimer: any;
+    let quickNoteFired = false;
+    let quickNoteReady = false;
 
-   function quickNoteTouchStart(e: Event) {
-       quickNoteFired = false;
-       quickNoteReady = false;
-       quickNoteTimer = setTimeout(() => {
-            quickNoteFired = true;
-           quickNoteReady = true;
-            // Optional haptic feedback to let you know the long-press registered
-            if (typeof navigator !== 'undefined') {
-                if (navigator.vibrate) navigator.vibrate(50);
-                else {
-                    try {
-                        const cb = document.createElement('input');
-                        cb.type = 'checkbox'; cb.setAttribute('switch', '');
-                        cb.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
-                        document.body.appendChild(cb); cb.click(); cb.remove();
-                    } catch (e) {}
+    function quickNoteTouchStart(e: Event) {
+        quickNoteFired = false;
+        quickNoteReady = false;
+        quickNoteTimer = setTimeout(() => {
+                quickNoteFired = true;
+            quickNoteReady = true;
+                // Optional haptic feedback to let you know the long-press registered
+                if (typeof navigator !== 'undefined') {
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    else {
+                        try {
+                            const cb = document.createElement('input');
+                            cb.type = 'checkbox'; cb.setAttribute('switch', '');
+                            cb.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
+                            document.body.appendChild(cb); cb.click(); cb.remove();
+                        } catch (e) {}
+                    }
                 }
-            }
-       }, 500); // 500ms long press
-   }
-   function quickNoteTouchEnd(e: Event) {
-       clearTimeout(quickNoteTimer);
-       quickNoteReady = false;
-       if (quickNoteFired) {
-            e.preventDefault(); // stops the href from firing if long press was triggered
-            quickNoteModal.showModal();
-            const ta = quickNoteModal.querySelector('textarea');
-            if (ta) setTimeout(() => ta.focus(), 50);
-            // Keep the flag true for a split second to swallow the subsequent click event
-            setTimeout(() => { quickNoteFired = false; }, 300);
-       }
-   }
+        }, 500); // 500ms long press
+    }
+    function quickNoteTouchEnd(e: Event) {
+        clearTimeout(quickNoteTimer);
+        quickNoteReady = false;
+        if (quickNoteFired) {
+                e.preventDefault(); // stops the href from firing if long press was triggered
+                quickNoteModal.showModal();
+                const ta = quickNoteModal.querySelector('textarea');
+                if (ta) setTimeout(() => ta.focus(), 50);
+                // Keep the flag true for a split second to swallow the subsequent click event
+                setTimeout(() => { quickNoteFired = false; }, 300);
+        }
+    }
 
 	beforeNavigate(({ type, to, from }) => {
 		console.log(`[DEBUG-LAYOUT] beforeNavigate: from ${from?.url?.pathname} to ${to?.url?.pathname}, type: ${type}`);
@@ -296,6 +314,10 @@ $:  isDemoMode =
   <meta name="theme-color" content={themeColor || "#1d232a"} />
 </svelte:head>
 
+{#if $page.data.user}
+    <KeyboardManager preferences={$page.data.user.preferences} />
+{/if}
+
 <TouchIndicator enabled={isDemoMode} />
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
@@ -367,7 +389,7 @@ $:  isDemoMode =
       </div>
     {/if}
 
-    <button type="button" class="btn btn-ghost btn-circle active:scale-95 transition-transform" on:click={() => mobileMenuModal.showModal()} aria-label="Open Menu">
+    <button type="button" id="profile-menu-btn" class="btn btn-ghost btn-circle active:scale-95 transition-transform" on:click={() => mobileMenuModal.showModal()} aria-label="Open Menu">
         {#if $page.data.user}
             <div class="avatar {$page.data.user.avatar ? '' : 'placeholder'}">
                 <div class="bg-base-200 text-base-content rounded-full w-9 shadow-sm border border-base-300 overflow-hidden">
@@ -442,6 +464,20 @@ $:  isDemoMode =
 
 <Notifications bind:notifications={$notifications} />
 
+<!-- Global Ambient Container Selector -->
+<dialog bind:this={ambientContainerModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box p-4 bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
+        <h3 class="font-bold text-xl mb-1">Set Default Location</h3>
+        <p class="text-xs text-gray-500 mb-4">This location will be automatically assigned to items you scan in this session.</p>
+        {#if loadingContainers}
+            <div class="flex justify-center p-8"><span class="loading loading-spinner text-primary"></span></div>
+        {:else}
+            <ContainerSelector containers={globalContainers} values={$ambientLocation.map(name => ({ container: { name } }))} defaultTab="select" on:change={(e) => { ambientLocation.setContext(e.detail.containers); ambientContainerModal.close(); }} />
+        {/if}
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <!-- Bottom Sheet Menu -->
 <dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
     <div class="modal-box sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
@@ -494,13 +530,22 @@ $:  isDemoMode =
 
             <!-- Group 2: Sign out -->
             <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
-                    <a href="/settings" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
-                            <i class="bi bi-gear-fill text-xl"></i>
-                        </div>
-						<div class="flex-1 font-semibold text-lg">Settings & Profile</div>
-                        <i class="bi bi-chevron-right text-gray-400"></i>
-                    </a>
+                <a href="/settings" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
+                    <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                        <i class="bi bi-gear-fill text-xl"></i>
+                    </div>
+                    <div class="flex-1 font-semibold text-lg">Settings & Profile</div>
+                    <i class="bi bi-chevron-right text-gray-400"></i>
+                </a>
+
+                <!-- This button is currently hidden, it feels a bit excessive; press the (by default) "L" keybind to get to it -->
+                <button style="display: none;" type="button" id="ambient-container-btn" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300 w-full text-left" on:click={() => { mobileMenuModal.close(); openAmbientModal(); }}>
+                    <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <i class="bi bi-pin-angle-fill text-xl"></i>
+                    </div>
+                    <div class="flex-1 font-semibold text-lg flex flex-col leading-tight"><span>Set Default Location</span> <span class="text-xs text-gray-500 font-normal">{$ambientLocation.length ? $ambientLocation.join(', ') : 'None'}</span></div>
+                    <i class="bi bi-chevron-right text-gray-400"></i>
+                </button>
 
 				{#if $page.data.user?.isAdmin}
 					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={() => { mobileMenuModal.close(); nukeAllCaches(); }}>
