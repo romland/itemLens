@@ -70,7 +70,7 @@ export const load = (async ({ locals, params }) => {
 	
 	let duplicateItemDetails = null;
     if (item.duplicateStatus !== 'DISMISSED') {
-        const scanCtx = buildScanContextFromDbItem(item);
+        const scanCtx = buildScanContextFromDbItem(item, item.inventory.archetype);
         const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
 		if (bestMatch) {
 			duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);

@@ -3,12 +3,20 @@ import { computeIdfMap, buildScanContextFromDbItem, computeMatch } from '../src/
 
 async function main() {
     console.log("[Retroactive Flagging] Starting...");
-    const inventories = await db.inventory.findMany();
 
+    // 1. Reset all currently FLAGGED items back to NONE. 
+    // We DO NOT touch 'DISMISSED' items, as you explicitly marked those as "not duplicates".
+    const resetInfo = await db.item.updateMany({
+        where: { duplicateStatus: 'FLAGGED' },
+        data: { duplicateStatus: 'NONE' }
+    });
+    console.log(`[Retroactive Flagging] Cleared ${resetInfo.count} previously flagged items.`);
+
+    const inventories = await db.inventory.findMany();
     let flaggedCount = 0;
 
     for (const inv of inventories) {
-        console.log(`[Retroactive Flagging] Processing inventory: ${inv.name}`);
+        console.log(`[Retroactive Flagging] Processing inventory: ${inv.name} (Archetype: ${inv.archetype})`);
         
         const allItems = await db.item.findMany({
             where: { inventoryId: inv.id },
@@ -18,10 +26,11 @@ async function main() {
         const idfMap = computeIdfMap(allItems);
 
         for (const item of allItems) {
-            // Respect items you have manually dismissed or already flagged
-            if (item.duplicateStatus !== 'NONE') continue;
+            // Respect items you have manually dismissed
+            if (item.duplicateStatus === 'DISMISSED') continue;
 
-            const scanCtx = buildScanContextFromDbItem(item);
+            // Pass the archetype down so the engine knows to use Strict Media logic vs Fuzzy Apparel logic
+            const scanCtx = buildScanContextFromDbItem(item, inv.archetype);
             let hasDuplicate = false;
 
             for (const dbItem of allItems) {
@@ -40,12 +49,11 @@ async function main() {
                     data: { duplicateStatus: 'FLAGGED' }
                 });
                 flaggedCount++;
-                console.log(`[Retroactive Flagging] Flagged item ID ${item.id} ("${item.title}") as duplicate.`);
             }
         }
     }
 
-    console.log(`[Retroactive Flagging] Done! Successfully flagged ${flaggedCount} items.`);
+    console.log(`[Retroactive Flagging] Done! Identified ${flaggedCount} true duplicates under the new engine.`);
 }
 
 main().catch(e => {

@@ -31,8 +31,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         let duplicateItemDetails = null;
         let activeSchema: any[] = [];
         try {
-            const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { allowNewCategories: true } });
+            const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { allowNewCategories: true, archetype: true } });
             const allowNew = vault?.allowNewCategories ?? true;
+            const archetype = vault?.archetype || 'generic';
             const existingCategories = await getExistingCategoryNames(locals.activeInventoryId);
             activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
 
@@ -63,7 +64,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     rawText: '',
                     category: classificationData.subCategory,
                     prominentTextOrGraphic: classificationData.prominent_text_or_graphic,
-                    distinctiveWear: classificationData.distinctive_blemishes_or_wear
+                    distinctiveWear: classificationData.distinctive_blemishes_or_wear,
+                    extractedAttributes: classificationData.extractedAttributes,
+                    archetype
                 };
                 const bestMatch = findBestMatch(scanCtx, existingItems, undefined);
                 

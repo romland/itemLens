@@ -187,6 +187,44 @@ export interface ScanContext {
     category?: string;
     prominentTextOrGraphic?: string | null;
     distinctiveWear?: string | null;
+    extractedAttributes?: any;
+    archetype?: string;
+}
+
+/**
+ * Safely evaluates text identity, factoring in generic placeholders.
+ * Detects strong composites (Title + Subtitle) which are critical for media items.
+ */
+export function evaluateTextIdentity(scanTitle: string, scanDesc: string, dbTitle: string, dbDesc: string) {
+    const normScanTitle = normalizeStr(scanTitle || '');
+    const normDbTitle = normalizeStr(dbTitle || '');
+    const normScanDesc = normalizeStr(scanDesc || '');
+    const normDbDesc = normalizeStr(dbDesc || '');
+
+    const genericTerms = ["new item", "default product", "unknown", "unknown item", "tshirt", "t-shirt", "shirt", "jeans", "pants", "shoes", "book", "dvd", "cd", "item", "product", "graphic tshirt", "graphic t-shirt", "hoodie", "sweater", "jacket"];
+    const isGenericTitle = genericTerms.includes(normScanTitle) || genericTerms.includes(normDbTitle) || normScanTitle.includes("new item") || normScanTitle.includes("default product") || normScanTitle.includes("unknown");
+
+    let isStrongTextMatch = false;
+    let isCompositeVeto = false;
+    let titleSim = 0;
+
+    if (!isGenericTitle && normDbTitle && normScanTitle) {
+        titleSim = getSimilarity(normDbTitle, normScanTitle);
+        if (normDbTitle === normScanTitle || titleSim > 0.85 || (normScanTitle.length > 5 && normDbTitle.includes(normScanTitle)) || (normDbTitle.length > 5 && normScanTitle.includes(normDbTitle))) {
+            isStrongTextMatch = true;
+
+            // Composite Subtitle/Author Check
+            if (normScanDesc && normDbDesc) {
+                const descSim = getSimilarity(normDbDesc, normScanDesc);
+                // If descriptions clash completely, veto it (e.g., Queen vs Journey)
+                if (descSim < 0.4 && !normDbDesc.includes(normScanDesc) && !normScanDesc.includes(normDbDesc)) {
+                    isCompositeVeto = true;
+                }
+            }
+        }
+    }
+
+    return { isStrongTextMatch, isCompositeVeto, isGenericTitle, titleSim, normDbTitle, normScanDesc, normDbDesc };
 }
 
 export function computeMatch(
@@ -200,6 +238,33 @@ export function computeMatch(
     const debugTrace: string[] = [];
     const sharedAttributes: { key: string, value: string }[] = [];
 
+    // --- 1. CONTEXT AWARENESS (Archetype & Density) ---
+    const archetype = scan.archetype || 'generic';
+    const isMedia = archetype === 'media';
+    const isLegacyItem = !dbItem.attributes || dbItem.attributes.length === 0;
+
+    if (isMedia) debugTrace.push(`[ARCHETYPE] Media Mode Active (Strict Lexical Routing)`);
+    if (isLegacyItem) debugTrace.push(`[DENSITY] Legacy/Sparse DB Item Detected (Relaxed Fuzzy Penalties)`);
+
+    // --- 2. TEXT IDENTITY & COMPOSITE VETO ---
+    const textEval = evaluateTextIdentity(scan.title, scan.description, dbItem.title, dbItem.description);
+    
+    if (textEval.isCompositeVeto) {
+        return { isMatch: false, confidence: 0, score: -999, debugTrace: [`[COMPOSITE VETO] Titles match but subtitles/authors clash ('${textEval.normScanDesc}' vs '${textEval.normDbDesc}')`], sharedAttributes: [] } as any;
+    }
+
+    if (isMedia) {
+        if (textEval.isStrongTextMatch) {
+            return { isMatch: true, confidence: 0.99, score: 999, debugTrace: [`[COMPOSITE PASS] Media Mode: Strong Title+Subtitle match.`], sharedAttributes: [] } as any;
+        } else {
+            return { isMatch: false, confidence: 0, score: -100, debugTrace: [`[MEDIA VETO] Media Mode requires strong text composite match. Titles differ.`], sharedAttributes: [] } as any;
+        }
+    }
+
+    if (textEval.isStrongTextMatch) {
+        debugTrace.push(`[TEXT MATCH] Strong title match (Sim=${textEval.titleSim.toFixed(2)})`);
+    }
+
     const dbCat = dbItem.photos?.[0]?.category?.name?.toLowerCase();
     const sCat = scan.category?.toLowerCase();
     if (dbCat && sCat && dbCat !== sCat) {
@@ -210,20 +275,6 @@ export function computeMatch(
         }
     }
     
-    if (!dbCat || !sCat) {
-        const normScanTitle = normalizeStr(scan.title || '');
-        const normDbTitle = normalizeStr(dbItem.title || '');
-        
-        // If we lack category consensus AND the textual titles are vastly different, veto the match immediately.
-        // This prevents wildly different objects from matching just because they share a color or brand.
-        if (normDbTitle.length > 3 && normScanTitle.length > 3) {
-            const titleSim = getSimilarity(normDbTitle, normScanTitle);
-            if (titleSim < 0.35) {
-                return { isMatch: false, confidence: 0, debugTrace: [`[SEMANTIC VETO] Categories missing/null and titles are entirely different ('${normDbTitle}' vs '${normScanTitle}', sim=${titleSim.toFixed(2)})`] } as any;
-            }
-        }
-    }
-
     // Color Mix Gate
     const dbColorAttr = dbItem.attributes?.find((a: any) => a.key === 'color_mix')?.value;
     if (dbColorAttr && scan.colorMix) {
@@ -305,38 +356,17 @@ export function computeMatch(
         fuzzyMatches += 1.0;
         debugTrace.push(`[NLP PARTIAL] Weak semantic physical overlap (${(jaccard * 100).toFixed(1)}%)`);
     } else if (safeScanTokens.length > 0 && dbTokens.length > 0) {
-        fuzzyMismatches += 1.5;
-        debugTrace.push(`[NLP CLASH] Physical traits diverge significantly (${(jaccard * 100).toFixed(1)}%)`);
-    }
-
-    const normScanTitle = normalizeStr(scan.title || '');
-    const normDbTitle = normalizeStr(dbItem.title);
-    const genericTerms = ["new item", "default product", "unknown", "unknown item", "tshirt", "t-shirt", "shirt", "jeans", "pants", "shoes", "book", "dvd", "cd", "item", "product", "graphic tshirt", "graphic t-shirt", "hoodie", "sweater", "jacket"];
-    const isGenericTitle = genericTerms.includes(normScanTitle) || genericTerms.includes(normDbTitle) || normScanTitle.includes("new item") || normScanTitle.includes("default product") || normScanTitle.includes("unknown");
-
-    let isStrongTextMatch = false;
-    if (!isGenericTitle && normDbTitle && normScanTitle) {
-        if (normDbTitle === normScanTitle) {
-            isStrongTextMatch = true;
-            debugTrace.push(`[TEXT MATCH] Exact Title: '${normDbTitle}'`);
+        if (isLegacyItem) {
+            debugTrace.push(`[NLP IGNORED] Legacy item bypassed strict NLP penalty (${(jaccard * 100).toFixed(1)}%)`);
         } else {
-            const textSim = getSimilarity(normDbTitle, normScanTitle);
-            if (textSim > 0.85) {
-                isStrongTextMatch = true;
-                debugTrace.push(`[TEXT MATCH] Sim=${textSim.toFixed(2)}`);
-            } else if (normScanTitle.length > 5 && normDbTitle.includes(normScanTitle)) {
-                isStrongTextMatch = true;
-                debugTrace.push(`[TEXT MATCH] Scan title inside DB title`);
-            } else if (normDbTitle.length > 5 && normScanTitle.includes(normDbTitle)) {
-                isStrongTextMatch = true;
-                debugTrace.push(`[TEXT MATCH] DB title inside Scan title`);
-            }
+            fuzzyMismatches += 1.5;
+            debugTrace.push(`[NLP CLASH] Physical traits diverge significantly (${(jaccard * 100).toFixed(1)}%)`);
         }
     }
 
     let isMatch = false;
 
-    if (isStrongTextMatch && !isGenericTitle) {
+    if (textEval.isStrongTextMatch && !textEval.isGenericTitle) {
         if (strictFailures === 0 && fuzzyMismatches <= 2.5) {
             isMatch = true;
             debugTrace.push(`[RESULT] Pass: Strong Text Match overrides minor trait clashes (mismatches=${fuzzyMismatches})`);
@@ -358,13 +388,13 @@ export function computeMatch(
         debugTrace.push(`[RESULT] Pass: Overwhelming fuzzy match (${fuzzyMatches} matches)`);
     }
 
-    const score = fuzzyMatches - strictFailures - (fuzzyMismatches * 1.5) + (isStrongTextMatch ? 2 : 0);
+    const score = fuzzyMatches - strictFailures - (fuzzyMismatches * 1.5) + (textEval.isStrongTextMatch ? 2 : 0);
 
     // Cast as any because previous files using it expect exactly { isMatch, confidence }. Adding debugTrace is safe as long as we type-cast locally where used.
     return { isMatch, confidence: isMatch ? 0.95 : 0, score, debugTrace, sharedAttributes } as any;
 }
 
-export function buildScanContextFromDbItem(item: any): ScanContext {
+export function buildScanContextFromDbItem(item: any, archetype: string = 'generic'): ScanContext {
     let parsedTokens: string[] = [];
     try { parsedTokens = item.semanticTokens ? JSON.parse(item.semanticTokens) : tokenizeAndStem([item.title, item.description]); } catch(e) {}
     return {
@@ -375,7 +405,9 @@ export function buildScanContextFromDbItem(item: any): ScanContext {
         rawText: '',
         category: item.photos?.[0]?.category?.name,
         prominentTextOrGraphic: item.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value,
-        distinctiveWear: item.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value
+        distinctiveWear: item.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value,
+        extractedAttributes: item.attributes?.reduce((acc: any, a: any) => ({ ...acc, [a.key]: a.value }), {}),
+        archetype
     };
 }
 
@@ -423,10 +455,12 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
         include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
     });
     const idfMap = computeIdfMap(allItems);
+    const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { archetype: true } });
+    const archetype = vault?.archetype || 'generic';
 
     for (const item of items) {
         if (item.duplicateStatus === 'DISMISSED') continue;
-        const scanCtx = buildScanContextFromDbItem(item);
+        const scanCtx = buildScanContextFromDbItem(item, archetype);
 
         for (const dbItem of allItems) {
             if (dbItem.id === item.id) continue;
@@ -443,7 +477,8 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
 export function findBestMatchesForBatch(
     scannedItems: any[],
     dbItems: any[],
-    idfMap?: Map<string, number>
+    idfMap?: Map<string, number>,
+    archetype: string = 'generic'
 ) {
     console.log(`\n[MATCH-DEBUG] 🚀 ========================================================`);
     console.log(`[MATCH-DEBUG] 🚀 findBestMatchesForBatch STARTED`);
@@ -480,7 +515,9 @@ export function findBestMatchesForBatch(
             rawText: item.rawText || '',
             category: item.category,
             prominentTextOrGraphic: item.prominent_text_or_graphic || item.extractedAttributes?.prominent_text_or_graphic,
-            distinctiveWear: item.distinctive_blemishes_or_wear || item.extractedAttributes?.distinctive_blemishes_or_wear
+            distinctiveWear: item.distinctive_blemishes_or_wear || item.extractedAttributes?.distinctive_blemishes_or_wear,
+            extractedAttributes: item.extractedAttributes,
+            archetype
         };
         
         console.log(`[MATCH-DEBUG] 🧩 CONTEXT BUILT:`, JSON.stringify(scanCtx, null, 2));

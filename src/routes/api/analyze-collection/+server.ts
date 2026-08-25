@@ -51,8 +51,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const categories = await db.category.findMany({ where: { inventoryId: locals.activeInventoryId } });
         const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId } });
         const defaultStrategy = vault?.duplicateStrategy || 'PROMPT';
+        const archetype = vault?.archetype || 'generic';
 
-        const { annotatedScannedItems } = findBestMatchesForBatch(aiResponse.items, dbItems);
+        const { annotatedScannedItems } = findBestMatchesForBatch(aiResponse.items, dbItems, undefined, archetype);
         
         console.log(`[MATCH-DEBUG] analyze-collection API: annotatedScannedItems length: ${annotatedScannedItems.length}`);
 

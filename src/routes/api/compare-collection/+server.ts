@@ -45,7 +45,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             include: { locations: { include: { container: true } }, tags: true, attributes: true, photos: { include: { category: true } } }
         });
 
-        const { inCollection, newToYou, idUsage } = findBestMatchesForBatch(detected, dbItems);
+        const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { archetype: true } });
+        const archetype = vault?.archetype || 'generic';
+
+        const { inCollection, newToYou, idUsage } = findBestMatchesForBatch(detected, dbItems, undefined, archetype);
 
         const missingFromScope = (scopeType !== 'all' ? dbItems.filter(i => {
             const used = idUsage.get(i.id) || 0;
