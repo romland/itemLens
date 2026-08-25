@@ -126,6 +126,8 @@ export async function cleanAndSnapAttributes(rawAttrs: Record<string, any>, acti
     console.log("\n[SNAPPER DEBUG] --- SEMANTIC ENGINE STARTED ---");
     console.log("[SNAPPER DEBUG] Input Payload:", rawAttrs);
 
+    const getSortedTokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean).sort().join(' ');
+
     // Pre-process to filter out pure garbage
     const validPairs: { k: string, v: string, normV: string, isHighEnt: boolean }[] = [];
 
@@ -179,6 +181,7 @@ export async function cleanAndSnapAttributes(rawAttrs: Record<string, any>, acti
     for (const [rawKey, rawVal] of stutterResolved.entries()) {
         const isHighEnt = isHighEntropyValue(rawVal);
         const normV = normalizeStr(rawVal);
+        const rawTokens = getSortedTokens(rawVal);
         
         let snappedKey = rawKey;
         let bestKeySim = 0;
@@ -196,7 +199,8 @@ export async function cleanAndSnapAttributes(rawAttrs: Record<string, any>, acti
             for (const field of activeSchema) {
                 if (field.type === 'enum' && field.options && shareRootToken(rawKey, field.name)) {
                     for (const opt of field.options) {
-                        if (getSimilarity(normV, normalizeStr(opt)) > 0.85) {
+                    const optTokens = getSortedTokens(opt);
+                    if (getSimilarity(rawTokens, optTokens) > 0.85) {
                             bestKeySim = 0.95; // Force the snap!
                             snappedKey = field.name;
                             console.log(`[SNAPPER DEBUG] PHASE 3: Orphan Triangulation SNAPPED '${rawKey}' -> '${field.name}' based on value '${opt}'`);
@@ -227,7 +231,8 @@ export async function cleanAndSnapAttributes(rawAttrs: Record<string, any>, acti
             let bestValSim = 0;
             let snappedVal = rawVal;
             for (const opt of targetSchemaField.options) {
-                const sim = getSimilarity(normV, normalizeStr(opt));
+                const optTokens = getSortedTokens(opt);
+                const sim = getSimilarity(rawTokens, optTokens);
                 if (sim > bestValSim) { bestValSim = sim; snappedVal = opt; }
             }
             // Restore the strict 80% threshold required to format values
@@ -341,15 +346,19 @@ export async function createItemEntity(params: {
         if (field && field.id && field.type === 'enum' && field.options) {
             const normalize = (str: string) => {
                 return str.toLowerCase()
-                    .replace(/_/g, ' ') // Convert underscores to spaces
-                    .replace(/[\u2013\u2014]/g, ' ') // Convert en-dashes and em-dashes to spaces
-                    .replace(/(?<=[a-z])-(?=[a-z])/g, ' ') // Convert hyphens between letters ONLY
-                    .replace(/\s+/g, ' ') // Collapse multiple spaces into one
-                    .trim();
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .sort()
+                    .join(' ');
             };
             const valStr = attr.value.trim();
             const normalizedVal = normalize(valStr);
-            const existingMatch = field.options.find((o: string) => normalize(o) === normalizedVal);
+            const existingMatch = field.options.find((o: string) => {
+                const normO = normalize(o);
+                return normO === normalizedVal || getSimilarity(normO, normalizedVal) > 0.85;
+            });
 
             if (existingMatch) {
                 attr.value = existingMatch; // Snap to the existing enum to prevent duplicates

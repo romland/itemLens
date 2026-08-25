@@ -31,6 +31,64 @@
     function save() {
         dispatch('save', { item, attributes: localAttributes });
     }
+
+    function formatEnumLabel(str: string) {
+        return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    function getProcessedOptions(options: string[] | null) {
+        if (!options) return [];
+        
+        const getSortedTokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean).sort().join(' ');
+        const unique = [];
+        const seenTokens = new Set();
+        for (const opt of options) {
+            const tokens = getSortedTokens(opt);
+            if (!seenTokens.has(tokens)) {
+                seenTokens.add(tokens);
+                unique.push(opt);
+            }
+        }
+        return unique.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    }
+
+    function isFreetextLike(options: string[] | null) {
+        if (!options || options.length === 0) return false;
+        
+        // Absolute sanity limit for UI real estate
+        if (options.length > 40) return true;
+
+        let totalWords = 0;
+        let totalLength = 0;
+        let phraseCount = 0; // Tracks items with 3+ words
+
+        for (const opt of options) {
+            totalLength += opt.length;
+            // Split by space, underscore, or dash to count actual words
+            const wordCount = opt.split(/[\s_-]+/).filter(w => w.trim().length > 0).length;
+            totalWords += wordCount;
+            if (wordCount >= 3) phraseCount++;
+        }
+
+        const avgLength = totalLength / options.length;
+        const avgWords = totalWords / options.length;
+
+        // Triggers for free-text masquerading as enums
+        if (options.length > 3 && (phraseCount / options.length) > 0.3) return true;
+        if (avgWords >= 2.5) return true;
+        if (avgLength > 18) return true;
+
+        return false;
+    }
+
+    function getPlaceholder(fieldName: string) {
+        switch(fieldName) {
+            case 'distinctive_blemishes_or_wear': return 'Leave empty if pristine...';
+            case 'brand_or_creator': return 'Leave empty if unknown...';
+            case 'prominent_text_or_graphic': return 'Leave empty if no print...';
+            default: return 'Enter value...';
+        }
+    }
 </script>
 
 <div class="p-6 bg-base-100 flex flex-col gap-5">
@@ -45,18 +103,29 @@
                 <label class="label pb-1"><span class="label-text font-semibold">{field.uiLabel}</span></label>
                 
                 {#if field.type === 'enum' && field.options}
+                {@const processedOptions = getProcessedOptions(field.options)}
+                {@const isFreetext = isFreetextLike(processedOptions)}
+                
+                {#if isFreetext}
+                    <input list="datalist-{field.name}" bind:value={localAttributes[field.name]} placeholder={getPlaceholder(field.name)} class="input input-bordered w-full rounded-xl bg-base-50" />
+                    <datalist id="datalist-{field.name}">
+                        {#each processedOptions as opt}
+                            <option value={opt}>{formatEnumLabel(opt)}</option>
+                        {/each}
+                    </datalist>
+                {:else}
                     <div class="flex flex-wrap gap-2 mt-1">
-                        {#each field.options as opt}
+                        {#each processedOptions as opt}
                             <button 
                                 type="button" 
                                 class="badge badge-lg py-4 px-4 hover:border-primary transition-all capitalize {localAttributes[field.name] === opt ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}"
                                 on:click={() => setEnum(field.name, opt)}>
-                                {opt}
+                                {formatEnumLabel(opt)}
                             </button>
                         {/each}
-                        {#if localAttributes[field.name] && !field.options.includes(localAttributes[field.name])}
+                        {#if localAttributes[field.name] && !processedOptions.includes(localAttributes[field.name])}
                             <button type="button" class="badge badge-lg badge-primary py-4 px-4 shadow-md transition-all capitalize" on:click={() => setEnum(field.name, '')}>
-                                {localAttributes[field.name]} <i class="bi bi-x ml-1"></i>
+                                {formatEnumLabel(localAttributes[field.name])} <i class="bi bi-x ml-1"></i>
                             </button>
                         {/if}
 
@@ -68,12 +137,13 @@
                             <button type="button" class="badge badge-lg badge-outline border-dashed hover:border-primary py-4 px-4 transition-all text-gray-500" on:click={() => customInputs[field.name] = true}>+ Custom</button>
                         {/if}
                     </div>
+                {/if}
                 {:else if field.type === 'number'}
                     <input type="number" bind:value={localAttributes[field.name]} placeholder="0" class="input input-bordered w-full rounded-xl bg-base-50" />
                 {:else if field.name === 'color_mix'}
                     <InteractiveColorMix initialMixStr={item?.extractedAttributes?.color_mix || item?.color_mix || '[]'} bind:valueStr={localAttributes[field.name]} />
                 {:else}
-                    <input type="text" bind:value={localAttributes[field.name]} placeholder="..." class="input input-bordered w-full rounded-xl bg-base-50" />
+                <input type="text" bind:value={localAttributes[field.name]} placeholder={getPlaceholder(field.name)} class="input input-bordered w-full rounded-xl bg-base-50" />
                 {/if}
             </div>
         {/each}
