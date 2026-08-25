@@ -44,6 +44,15 @@ export const handle = (async ({ event, resolve }) => {
                 event.locals.activeInventoryId = 0;
             }
 
+            // Sort Routing Logic (Remembered per inventory)
+            const urlSort = event.url.searchParams.get('sort');
+            if (urlSort) {
+                event.cookies.set('itemlens_sort_' + event.locals.activeInventoryId, urlSort, { path: '/', maxAge: 60 * 60 * 24 * 365, httpOnly: false });
+                (event.locals as any).activeSort = urlSort;
+            } else {
+                (event.locals as any).activeSort = event.cookies.get('itemlens_sort_' + event.locals.activeInventoryId) || 'newest';
+            }
+
         } else {
             // Destroy the invalid cookie so we don't keep querying a dead token
             event.cookies.delete('session', { path: '/' }); 

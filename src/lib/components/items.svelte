@@ -31,7 +31,7 @@
         { id: 'amount_desc', label: 'Quantity (High-Low)', icon: 'bi-sort-numeric-down-alt' },
         { id: 'attention', label: 'Needs Attention', icon: 'bi-exclamation-circle' }
     ];
-    $: activeSort = $page.url.searchParams.get('sort') || 'newest';
+    $: activeSort = $page.url.searchParams.get('sort') || $page.data.activeSort || 'newest';
     $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest Added';
 
     function applySort(sortId: string) {

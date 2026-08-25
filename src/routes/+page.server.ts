@@ -5,7 +5,7 @@ import { flagDuplicatesInList } from '$lib/server/matcher';
 
 export const load = (async ({ locals, url }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
-    const sort = url.searchParams.get('sort') || 'newest';
+    const sort = (locals as any).activeSort || 'newest';
 
     let orderBy: any = [{ id: 'desc' }];
     let isAttention = false;
