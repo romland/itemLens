@@ -318,7 +318,7 @@
                 {#if previewImagePath}
                     <img src={previewImagePath} alt="Preview" class="w-full h-full object-cover" />
                 {:else}
-                    <!-- Apple-style glass sheen sweep -->
+                    <!-- glass sheen sweep -->
                     <div class="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] animate-shimmer pointer-events-none"></div>
                     <i class="bi bi-camera text-5xl relative z-10 drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>
                 {/if}
