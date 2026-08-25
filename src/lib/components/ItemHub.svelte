@@ -486,6 +486,7 @@
 
         <!-- STICKY FOOTER -->
         <input type="hidden" name="duplicateDismissed" value={duplicateDismissed.toString()} />
+        <input type="hidden" name="isDuplicateWarning" value={isDuplicateWarning.toString()} />
         
         {#each selectedLocations as loc}
             <input type="hidden" name="containers" value={loc} />

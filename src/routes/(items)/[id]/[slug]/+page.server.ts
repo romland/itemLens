@@ -69,7 +69,7 @@ export const load = (async ({ locals, params }) => {
 	});
 	
 	let duplicateItemDetails = null;
-	if (!item.duplicateDismissed) {
+    if (item.duplicateStatus !== 'DISMISSED') {
         const scanCtx = buildScanContextFromDbItem(item);
         const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
 		if (bestMatch) {
@@ -218,7 +218,7 @@ export const actions = {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
 		await db.item.update({
 			where: { id: Number(params.id) },
-			data: { duplicateDismissed: true }
+            data: { duplicateStatus: 'DISMISSED' }
 		});
 		return { success: true };
 	}

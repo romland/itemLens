@@ -4,6 +4,7 @@
     import Items from "$lib/components/items.svelte";
     import Search from "$lib/components/search.svelte";
     import { enhance } from "$app/forms";
+    import InteractiveColorMix from "$lib/components/InteractiveColorMix.svelte";
 
     export let data: PageServerData;
 
@@ -70,7 +71,7 @@
 	$: searchParamsStr = new URLSearchParams(
 		Object.entries({
 			q: data.q, category: data.cat, tag: data.tag, container: data.container,
-			title: data.titleStr, desc: data.descStr, doc: data.docStr, reason: data.reasonStr,
+            title: data.titleStr, desc: data.descStr, doc: data.docStr, reason: data.reasonStr, duplicateStatus: data.duplicateStatus, color: data.color,
 			minAmount: data.minAmount, maxAmount: data.maxAmount,
 			unassigned: data.unassigned ? 'true' : ''
 		}).filter(([_, v]) => v) 
@@ -115,6 +116,7 @@
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Category</span>
 					<select name="category" class="select select-sm select-bordered rounded-lg font-normal capitalize">
 						<option value="">Any Category</option>
+                        <option value="_uncategorized" selected={data.cat === '_uncategorized'}>Uncategorized</option>
 						{#each data.categories as c}
 							<option value={c.name} selected={data.cat === c.name} class="capitalize">{c.name}</option>
 						{/each}
@@ -146,11 +148,23 @@
 						<input type="number" name="maxAmount" value={data.maxAmount || ''} class="input input-sm input-bordered rounded-lg w-full" placeholder="10" />
 					</div>
 				</div>
+
+                <div class="form-control w-full sm:col-span-2 overflow-x-auto pb-2">
+                    <span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Color Mix</span>
+                    <InteractiveColorMix initialMixStr={data.color} bind:valueStr={data.color} />
+                    <input type="hidden" name="color" value={data.color} />
+                </div>
 			</div>
-			<label class="flex items-center gap-2 cursor-pointer mt-1">
-				<input type="checkbox" name="unassigned" value="true" class="checkbox checkbox-sm checkbox-primary" checked={data.unassigned} />
-				<span class="text-sm font-medium">Unassigned items only (No location)</span>
-			</label>
+            <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer mt-1">
+                    <input type="checkbox" name="unassigned" value="true" class="checkbox checkbox-sm checkbox-primary" checked={data.unassigned} />
+                    <span class="text-sm font-medium">Unassigned only</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer mt-1">
+                    <input type="checkbox" name="duplicateStatus" value="FLAGGED" class="checkbox checkbox-sm checkbox-warning" checked={data.duplicateStatus === 'FLAGGED'} />
+                    <span class="text-sm font-medium">Flagged Duplicates only</span>
+                </label>
+            </div>
 			<button type="submit" class="btn btn-sm btn-primary mt-2 w-max shadow-sm rounded-lg">Apply Filters</button>
 		</form>
 	</div>
@@ -224,6 +238,9 @@
 						<option value="addContainer">Add to Container</option>
 						<option value="removeContainer">Remove Container</option>
 						<option value="setCategory">Set Category</option>
+                        <option value="flagDuplicate">Flag as Duplicate</option>
+                        <option value="dismissDuplicate">Dismiss Duplicate</option>
+                        <option value="clearDuplicate">Clear Duplicate Status</option>
 					</select>
                     {#if bulkAction === 'setCategory' && data.categories}
                         <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200 capitalize">
@@ -240,10 +257,13 @@
                             <option value="" disabled selected>Select tag...</option>
                             {#each data.tags as t} <option value={t.name}>{t.name}</option> {/each}
                         </select>
-                    {:else}
+                    {:else if bulkAction === 'addTag'}
                         <input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" />
+                    {:else}
+                        <input type="hidden" name="bulkValue" value="action_only" />
+                        <!--input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" /-->
                     {/if}
-					<button type="submit" class="btn btn-primary w-full sm:w-auto shadow-md shrink-0" disabled={isSubmitting || !bulkValue.trim()}>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto shadow-md shrink-0" disabled={isSubmitting || (!bulkValue.trim() && bulkAction !== 'flagDuplicate' && bulkAction !== 'dismissDuplicate' && bulkAction !== 'clearDuplicate')}>
 						{#if isSubmitting}<span class="loading loading-spinner"></span>{:else}Apply to {selectedIds.length}{/if}
 					</button>
 				</div>

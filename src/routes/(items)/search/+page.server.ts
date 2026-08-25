@@ -33,6 +33,8 @@ export const load = (async ({ locals, url, fetch }) => {
         tag: url.searchParams.get('tag') || '', 
         container: url.searchParams.get('container') || '', 
         unassigned: url.searchParams.get('unassigned') === 'true', 
+        duplicateStatus: url.searchParams.get('duplicateStatus') || '', 
+        color: url.searchParams.get('color') || '[]', 
         titleStr: url.searchParams.get('title') || '', 
         descStr: url.searchParams.get('desc') || '', 
         docStr: url.searchParams.get('doc') || '', 
@@ -97,6 +99,12 @@ export const actions = {
 				where: { itemId: { in: itemIds } },
 				data: { categoryId: cat.id }
 			});
+        } else if (action === 'flagDuplicate') {
+            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'FLAGGED' } });
+        } else if (action === 'dismissDuplicate') {
+            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'DISMISSED' } });
+        } else if (action === 'clearDuplicate') {
+            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'NONE' } });
 		}
 
 		return { success: true };

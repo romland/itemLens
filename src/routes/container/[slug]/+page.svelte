@@ -1,7 +1,9 @@
 <script lang="ts">
     import type { PageServerData } from "./$types";
+    import { goto } from "$app/navigation";
     import Delete from "$lib/components/delete.svelte";
     import Items from "$lib/components/items.svelte";
+    import Navigation from "$lib/components/navigation.svelte";
 
     export let data: PageServerData;
 
@@ -77,10 +79,21 @@
     <div>
         <div class="flex justify-between items-end mb-4 ml-2">
             <h2 class="text-xl font-bold tracking-tight">Items in Location</h2>
+            {#if data.item?.children?.length > 0}
+                <label class="cursor-pointer flex items-center gap-2 text-sm text-gray-500 font-medium hover:text-primary">
+                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked={data.includeTrays} on:change={(e) => {
+                        const url = new URL(window.location.href);
+                        if (e.currentTarget.checked) url.searchParams.set('includeTrays', 'true'); else url.searchParams.delete('includeTrays');
+                        goto(url.search, { invalidateAll: true, keepFocus: true });
+                    }} />
+                    Include nested trays
+                </label>
+            {/if}
         </div>
         <div class="bg-base-100 rounded-[1.5rem] border border-base-200 shadow-sm overflow-hidden p-2">
             <Items items={data.items} />
         </div>
+        <Navigation href={data.apiPath} prevPage={data.prevPage} nextPage={data.nextPage} />
     </div>
 
 </article>

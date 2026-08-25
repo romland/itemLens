@@ -99,7 +99,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
                 // model: "llama3-70b-8192",
                 // model: "llama-3.3-70b-versatile",
                 model: "openai/gpt-oss-20b",
-                temperature: 0.2,
+                temperature: 0.0,
                 top_p: 0.8,
                 // top K 40
             }), 3, 2000, 'Invoice Extraction (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
@@ -143,7 +143,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
                 ],
                 // REMOVED: response_format: {"type": "json_object"}
                 model: "openai/gpt-oss-20b",
-                temperature: 0.2,
+                temperature: 0.0,
                 top_p: 0.8,
             }), 3, 5000, 'Web Summary (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
@@ -199,7 +199,7 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
                 // model: "llama3-70b-8192",
                 // model: "llama-3.3-70b-versatile",
                 model: "openai/gpt-oss-20b",
-                temperature: 0.2,
+                temperature: 0.0,
                 top_p: 0.8,
                 // top K 40
                 // @ts-ignore – Together.ai supports schema while OpenAI does not

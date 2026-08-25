@@ -68,6 +68,7 @@ model Inventory {
   bgRemovalPreCrop Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
  enablePaddleOCR Boolean @default(true) // Whether to extract text from images using local PaddleOCR container
   duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
+  archiveSingleScans Boolean @default(false) // Whether to automatically archive single scans to the Notebook
   containerMode String @default("scan") // "scan" or "select" - defaults selector to camera or list
   templateFields TemplateField[]
 
@@ -157,7 +158,7 @@ model Item {
   title       String?
   description String?
   reason      String?
-  duplicateDismissed Boolean @default(false)
+  duplicateStatus String @default("NONE") // "NONE", "FLAGGED", "DISMISSED"
   semanticTokens String?
 
   inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)

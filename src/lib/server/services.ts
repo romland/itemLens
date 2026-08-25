@@ -264,7 +264,7 @@ export async function createItemEntity(params: {
     color_mix?: any;
     clientId?: string;
     timelineNoteId?: number | null;
-    duplicateDismissed?: boolean;
+    duplicateStatus?: string;
 }) {
     const { getActiveSchema } = await import('$lib/server/ontology');
     const { getSimilarity, normalizeStr } = await import('$lib/server/matcher');
@@ -376,7 +376,7 @@ export async function createItemEntity(params: {
             slug: slugify(safeTitle.toLowerCase()) || "new-item",
             inventoryId: params.inventoryId,
             authorId: params.userId,
-            duplicateDismissed: params.duplicateDismissed || false,
+            duplicateStatus: params.duplicateStatus || "NONE",
             reason: params.reason || "",
             amount: params.amount !== undefined ? params.amount : null,
             semanticTokens,

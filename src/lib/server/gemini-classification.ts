@@ -124,7 +124,7 @@ TASKS:
       }
     ],
     config: {
-      temperature: 0.1,
+      temperature: 0.0,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object', properties, required
@@ -177,7 +177,7 @@ export async function guessProductDetails(localFilePath: string, hint: string = 
       }
     ],
     config: {
-      temperature: 0.1,
+      temperature: 0.0,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object',
@@ -212,7 +212,7 @@ ${text}`;
       }
     ],
     config: {
-      temperature: 0.1,
+      temperature: 0.0,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'object',

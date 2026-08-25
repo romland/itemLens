@@ -28,6 +28,8 @@ export const load = async ({ locals }) => {
                 bgRemovalPreCrop: true,
                 enablePaddleOCR: true,
                 duplicateStrategy: true,
+                containerMode: true,
+                archiveSingleScans: true,
                 templateFields: {
                     select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
                 },
@@ -332,6 +334,15 @@ export const actions = {
         const containerMode = data.get('containerMode') as string;
         await db.inventory.update({ where: { id }, data: { containerMode } });
         return { success: true, message: "Container mode updated." };
+    },
+
+    toggleArchiveSingle: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        const allow = data.get('archiveSingleScans') === 'true';
+        await db.inventory.update({ where: { id }, data: { archiveSingleScans: allow } });
+        return { success: true, message: "Archive setting updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {

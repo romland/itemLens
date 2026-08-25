@@ -392,6 +392,13 @@
 										<span class="text-xs text-gray-500 font-medium">Enable local PaddleOCR text extraction</span>
 									</form>
 
+                                    <form method="POST" action="?/toggleArchiveSingle" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <input type="hidden" name="archiveSingleScans" value={(!v.archiveSingleScans).toString()}>
+                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.archiveSingleScans} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+                                        <span class="text-xs text-gray-500 font-medium">Save backup pictures of single item scans to Notebook</span>
+                                    </form>
+
                                     <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
                                         <select name="strategy" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.duplicateStrategy || 'PROMPT'}>

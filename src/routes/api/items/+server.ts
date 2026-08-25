@@ -33,6 +33,8 @@ export async function GET({ url, setHeaders, locals }) {
     const reasonStr = String(url.searchParams.get('reason') || "").trim();
     const minAmount = url.searchParams.get('minAmount');
     const maxAmount = url.searchParams.get('maxAmount');
+    const duplicateStatus = url.searchParams.get('duplicateStatus');
+    const colorMix = url.searchParams.get('color');
 
     let orderBy: any = [{ id: 'desc' }];
     let isAttention = false;
@@ -81,7 +83,12 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
 	if (cat && cat.length > 0) {
-        query.where = { ...query.where, photos: { some: { category: { name: cat } } } };
+        if (cat === '_uncategorized') {
+            // Finds items that DO NOT have ANY photo with a valid category
+            query.where = { ...query.where, photos: { none: { categoryId: { not: null } } } };
+        } else {
+            query.where = { ...query.where, photos: { some: { category: { name: cat } } } };
+        }
 	}
 
     if (tag && tag.length > 0) {
@@ -89,7 +96,8 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
     if (container && container.length > 0) {
-        query.where = { ...query.where, locations: { some: { container: { name: container } } } };
+        const cList = container.split(',');
+        query.where = { ...query.where, locations: { some: { container: { name: { in: cList } } } } };
     }
 
     if (unassigned) {
@@ -102,6 +110,19 @@ export async function GET({ url, setHeaders, locals }) {
     
     if (docStr) {
         query.where = { ...query.where, documents: { some: { OR: [ { title: { contains: docStr } }, { extracts: { contains: docStr } }, { summary: { contains: docStr } } ] } } };
+    }
+
+    if (duplicateStatus) {
+        query.where = { ...query.where, duplicateStatus };
+    }
+
+    if (colorMix && colorMix !== '[]') {
+        try {
+            const colors = JSON.parse(colorMix).map((c: any) => c.name || c.color);
+            if (colors.length > 0) {
+                query.where = { ...query.where, attributes: { some: { key: 'color_mix', AND: colors.map((c: string) => ({ value: { contains: `"${c}"` } })) } } };
+            }
+        } catch (e) {}
     }
 
     if (minAmount || maxAmount) {

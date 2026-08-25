@@ -27,17 +27,27 @@ export const load = (async ({ locals, params, url, fetch }) => {
         error(404, 'Container not found.');
     }
 
+    const includeTrays = url.searchParams.get('includeTrays') === 'true';
     const apiUrl = new URL('/api/items', url.origin);
     url.searchParams.forEach((val, key) => apiUrl.searchParams.append(key, val));
-    apiUrl.searchParams.set('container', item.name); // Force the API to filter by this container
+    
+    if (includeTrays && item.children.length > 0) {
+        apiUrl.searchParams.set('container', [item.name, ...item.children.map((c: any) => c.name)].join(','));
+    } else {
+        apiUrl.searchParams.set('container', item.name);
+    }
 
     const res = await fetch(apiUrl.toString());
     const data = await res.json();
 
+    const apiPath = `/api/items${apiUrl.search}`;
+
     return {
         item: item,
         items: data.items,
+        includeTrays,
         prevPage: data.prevPage,
-        nextPage: data.nextPage
+        nextPage: data.nextPage,
+        apiPath: apiPath + (apiPath.includes('?') ? '&' : '?')
     };
 }) satisfies PageServerLoad;

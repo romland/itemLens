@@ -35,13 +35,14 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
 
         // Prioritize images
         for (const item of items) {
-            if (item.type.startsWith("image/")) {
+            if (item.type.startsWith("image/") || item.type === "application/pdf") {
                 if (isInputFocused) event.preventDefault();
                 const file = item.getAsFile();
                 if (file) {
                     pastedFile = file;
-                    pastedImageUrl = URL.createObjectURL(file);
+                    pastedImageUrl = file.type === "application/pdf" ? null : URL.createObjectURL(file);
                     pastedType = 'image';
+                    if (file.type === "application/pdf") selectedPhotoType = 'information';
                     modalOpen = true;
                 }
                 return;
@@ -88,10 +89,11 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
 		// Mock a clipboard event object so we can pipe drops straight into the paste logic
 		if (e.dataTransfer?.files?.length) {
 			const file = e.dataTransfer.files[0];
-			if (file.type.startsWith("image/")) {
+            if (file.type.startsWith("image/") || file.type === "application/pdf") {
 				pastedFile = file;
-				pastedImageUrl = URL.createObjectURL(file);
+                pastedImageUrl = file.type === "application/pdf" ? null : URL.createObjectURL(file);
 				pastedType = 'image';
+                if (file.type === "application/pdf") selectedPhotoType = 'information';
 				modalOpen = true;
 			} else if (file.type === "text/plain") {
 				file.text().then(text => { pastedText = text; pastedType = 'text'; modalOpen = true; });
@@ -256,7 +258,14 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
         
         {#if pastedType === 'image'}
             <div class="mb-4">
-                <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
+                {#if pastedFile?.type === 'application/pdf'}
+                    <div class="flex items-center justify-center p-8 bg-base-200 rounded-xl border border-base-300 shadow-inner">
+                        <i class="bi bi-file-earmark-pdf text-6xl text-error"></i>
+                        <span class="ml-4 font-bold text-lg break-all">{pastedFile.name}</span>
+                    </div>
+                {:else}
+                    <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
+                {/if}
             </div>
             {#if !forcePhotoType}
                 <div class="form-control w-full">

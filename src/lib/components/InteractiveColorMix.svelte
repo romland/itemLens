@@ -177,7 +177,7 @@
         <!-- Dedicated reset row to prevent layout shift and overlapping -->
         <div class="flex justify-end h-6 mt-1">
             {#if isDirty}
-                <button type="button" class="btn btn-ghost btn-xs text-gray-500 hover:text-primary animate-fade-in font-normal" on:click={reset}><i class="bi bi-arrow-counterclockwise"></i> Reset to original</button>
+                <button type="button" class="btn btn-ghost btn-xs text-gray-500 hover:text-primary animate-fade-in font-normal" on:click={reset}><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
             {/if}
         </div>
     </div>

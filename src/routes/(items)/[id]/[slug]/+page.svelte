@@ -573,12 +573,21 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 
             <div class="mb-3 flex flex-wrap gap-3">
                 {#each otherPhotos as photo}
-                    <button type="button" class="p-0 border-none bg-transparent" on:click={() => lightbox.open(photo)}>
-                        <img 
-                            src="{photo.thumbPath || photo.orgPath}"
-                            alt="Additional detail view"
-                            class="w-32 h-32 object-cover rounded-lg shadow-sm cursor-zoom-in">
-                    </button>
+                    {#if photo.orgPath.match(/\.(pdf)$/i)}
+                        <a href="{photo.orgPath}" target="_blank" rel="noopener noreferrer" class="w-32 h-32 bg-base-200 rounded-lg flex items-center justify-center hover:bg-base-300 transition-colors shadow-sm border border-base-300">
+                            <div class="flex flex-col items-center gap-2">
+                                <i class="bi bi-file-earmark-pdf-fill text-4xl text-error"></i>
+                                <span class="text-[10px] font-bold text-gray-500 uppercase">View PDF</span>
+                            </div>
+                        </a>
+                    {:else}
+                        <button type="button" class="p-0 border-none bg-transparent" on:click={() => lightbox.open(photo)}>
+                            <img 
+                                src="{photo.thumbPath || photo.orgPath}"
+                                alt="Additional detail view"
+                                class="w-32 h-32 object-cover rounded-lg shadow-sm cursor-zoom-in">
+                        </button>
+                    {/if}
                 {/each}
             </div>
         {/if}

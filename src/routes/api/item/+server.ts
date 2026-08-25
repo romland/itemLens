@@ -102,6 +102,14 @@ export async function POST({ request, locals }) {
         noteId = note.id;
     }
 
+    const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }});
+    if (vault?.archiveSingleScans && !noteId && draftPath) {
+        const note = await db.timelineNote.create({
+            data: { content: `Quick Scan Capture`, category: 'archive', inventoryId: locals.activeInventoryId, authorId: locals.user.id, photos: { create: [{ type: 'product', orgPath: draftPath }] } }
+        });
+        noteId = note.id;
+    }
+
     const { createItemEntity, getTagIds } = await import('$lib/server/services');
     const tagIds = tagcsv ? await getTagIds(tagcsv, locals.activeInventoryId) : undefined;
     

@@ -29,6 +29,9 @@ If feeling particularly ambitious on a day, you can also:
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
+**Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run itemLens. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.
+
+
 ### Here's a text about taxonomy that will be incorporated naturally in this README one day:
 We’re building a self-organizing inventory app. The basic idea is that you take a photo of any object—from a book to a winter coat to a spark plug—and the app automatically figures out what it is, what details matter, and how to file it away.
 

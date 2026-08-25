@@ -102,7 +102,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     distinctive_blemishes_or_wear: item.distinctive_blemishes_or_wear,
                     color_mix: item.color_mix,
                     timelineNoteId: noteId,
-                    duplicateDismissed: item.resolution === 'new'
+                    duplicateStatus: item.resolution === 'new' ? 'DISMISSED' : (item.isDuplicate ? 'FLAGGED' : 'NONE')
                 });
             }
         } catch (e) {

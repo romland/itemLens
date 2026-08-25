@@ -58,15 +58,24 @@ export const actions = {
             if (prodPhoto) prodPhoto.categoryId = cat.id;
         }
 
-/*
-console.log("formData:", orgData);
-console.log("photos:", photos);
-console.log("NOT SAVING ANYTHING");
-return fail(400, {
-  error: true,
-  message: '<strong>Debugging</strong>'
-});
-*/
+        let timelineNoteId = null;
+        const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { archiveSingleScans: true } });
+        if (vault?.archiveSingleScans && photos.length > 0) {
+            const prodPhoto = photos.find((p: any) => p.type === 'product') || photos[0];
+            if (prodPhoto && prodPhoto.orgPath) {
+                const note = await db.timelineNote.create({
+                    data: {
+                        content: `Item captured: ${safeTitle}`,
+                        category: 'archive',
+                        inventoryId: locals.activeInventoryId,
+                        authorId: locals.user.id,
+                        photos: { create: [{ type: 'product', orgPath: prodPhoto.orgPath, showOriginal: true }] }
+                    }
+                });
+                timelineNoteId = note.id;
+            }
+        }
+
 
     		const parsedAmount = parseInt(data.amount as string, 10);
         const item = await createItemEntity({
@@ -79,14 +88,15 @@ return fail(400, {
             userId: locals.user.id,
             containers,
             tagIds: ids,
-            duplicateDismissed: data.duplicateDismissed === 'true',
+            duplicateStatus: data.duplicateDismissed === 'true' ? 'DISMISSED' : (data.isDuplicateWarning === 'true' ? 'FLAGGED' : 'NONE'),
             photos,
             attributes: kvps,
             extractedAttributes,
             physical_traits,
             prominent_text_or_graphic,
             distinctive_blemishes_or_wear,
-            color_mix
+            color_mix,
+            timelineNoteId
         });
 
         data.urls = data.urls || "";

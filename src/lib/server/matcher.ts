@@ -425,7 +425,7 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
     const idfMap = computeIdfMap(allItems);
 
     for (const item of items) {
-        if (item.duplicateDismissed) continue;
+        if (item.duplicateStatus === 'DISMISSED') continue;
         const scanCtx = buildScanContextFromDbItem(item);
 
         for (const dbItem of allItems) {
