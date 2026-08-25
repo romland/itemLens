@@ -322,3 +322,20 @@ model ActivityLog {
   
   createdAt DateTime @default(now())
 }
+
+// ==========================================
+// 7. SYSTEM TELEMETRY & METRICS
+// ==========================================
+model SystemMetric {
+  id          Int      @id @unique @default(autoincrement())
+  category    String   // e.g., 'MODEL_USAGE', 'SYSTEM_IO'
+  provider    String   // e.g., 'gemini', 'groq', 'openai'
+  operation   String?  // e.g., 'analyzePhoto', 'guessProductDetails'
+  count1      Int      @default(0) // Generic counter 1 (e.g., Tokens In)
+  count2      Int      @default(0) // Generic counter 2 (e.g., Tokens Out)
+  durationMs  Int      @default(0) // Execution time
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([category, provider])
+}

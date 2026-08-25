@@ -1,3 +1,5 @@
+import { db } from './database';
+
 export interface LLMLogEntry {
     timestamp: number;
     taskName: string;
@@ -29,6 +31,18 @@ export function recordLLMLog(taskName: string, service: string, input: any, outp
     llmUsageStats[service].requests++;
     llmUsageStats[service].tokensIn += tokensIn;
     llmUsageStats[service].tokensOut += tokensOut;
+
+    // 1. Write telemetry to our new metrics table (Fire and forget)
+    db.systemMetric.create({
+        data: {
+            category: 'MODEL_USAGE',
+            provider: service,
+            operation: taskName,
+            count1: tokensIn || 0,
+            count2: tokensOut || 0,
+            durationMs: durationMs || 0
+        }
+    }).catch(e => console.error("[Telemetry] Failed to record metric:", e));
 
     // FUTURE EXTENSIBILITY: Write to disk or db or whatever
     // import fs from 'fs';

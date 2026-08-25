@@ -3,6 +3,8 @@
     import { flip } from 'svelte/animate';
     import { fade, slide } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
+    import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
     import pageTitle from '$lib/stores';
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
 
@@ -17,6 +19,27 @@
         const duration = (end || Date.now()) - start;
         return (duration / 1000).toFixed(1) + 's';
     }
+
+    const timeframes = [
+        { id: '1h', label: 'Last Hour' },
+        { id: '6h', label: 'Last 6 Hours' },
+        { id: '12h', label: 'Last 12 Hours' },
+        { id: '24h', label: 'Last 24 Hours' },
+        { id: '7d', label: 'Last 7 Days' },
+        { id: '30d', label: 'Last 30 Days' },
+        { id: '1y', label: 'Last Year' },
+        { id: 'all', label: 'All Time' }
+    ];
+
+    function changeTimeframe(e: Event) {
+        const val = (e.target as HTMLSelectElement).value;
+        const url = new URL($page.url);
+        url.searchParams.set('t', val);
+        goto(url.toString(), { keepFocus: true });
+    }
+
+    const fmt = (num: number) => num > 999 ? (num / 1000).toFixed(1) + 'k' : num;
+
 </script>
 
 <div class="max-w-4xl mx-auto flex flex-col gap-6 animate-fade-in pb-12">
@@ -136,22 +159,45 @@
         <!-- LLM Network Logs -->
         <div>
             <!-- Token Usage Dashboard -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {#each ['gemini', 'groq', 'openai', 'replicate'] as srv}
-                    {@const stat = data.usageStats[srv] || { requests: 0, tokensIn: 0, tokensOut: 0 }}
-                    <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm flex flex-col">
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex justify-between">
-                            {srv}
-                            <span class="text-info">{data.rpm[srv]} / min</span>
-                        </div>
-                        <div class="text-xl font-bold tracking-tight mb-1">{stat.requests} <span class="text-xs font-normal text-gray-500">reqs</span></div>
-                        <div class="flex flex-col gap-0.5 text-[10px] font-mono text-gray-500 mt-auto">
-                            <div class="flex justify-between"><span>In:</span> <span>{stat.tokensIn.toLocaleString()}</span></div>
-                            <div class="flex justify-between"><span>Out:</span> <span class="text-success">{stat.tokensOut.toLocaleString()}</span></div>
-                        </div>
-                    </div>
-                {/each}
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <i class="bi bi-cpu text-info"></i> API Usage
+                </h2>
+                <select class="select select-sm select-bordered bg-base-100 rounded-lg font-semibold" value={data.timeframe} on:change={changeTimeframe}>
+                    {#each timeframes as tf}
+                        <option value={tf.id}>{tf.label}</option>
+                    {/each}
+                </select>
             </div>
+
+            {#if data.metrics.length === 0}
+                <div class="p-6 text-center text-gray-500 text-sm bg-base-200/30 rounded-3xl border border-base-200 border-dashed mb-6">No API activity recorded in this timeframe.</div>
+            {:else}
+                <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-3xl shadow-sm mb-6">
+                    <table class="table table-sm w-full">
+                        <thead class="bg-base-50/50">
+                            <tr>
+                                <th class="pl-5">Provider</th>
+                                <th class="text-right">Requests</th>
+                                <th class="text-right">Tokens In</th>
+                                <th class="text-right">Tokens Out</th>
+                                <th class="text-right pr-5">Compute Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each data.metrics as m}
+                                <tr class="hover:bg-base-50/50 transition-colors">
+                                    <td class="pl-5 font-bold capitalize">{m.provider}</td>
+                                    <td class="text-right font-mono text-xs">{m._count.id}</td>
+                                    <td class="text-right font-mono text-xs text-info">{fmt(m._sum.count1 || 0)}</td>
+                                    <td class="text-right font-mono text-xs text-success">{fmt(m._sum.count2 || 0)}</td>
+                                    <td class="text-right font-mono text-xs pr-5">{((m._sum.durationMs || 0) / 1000).toFixed(1)}s</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            {/if}
 
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-bold flex items-center gap-2">
