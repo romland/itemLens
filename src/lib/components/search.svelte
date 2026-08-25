@@ -38,9 +38,10 @@
     }
 </script>
 
-<form method="GET" action="/search">
-    <div class="flex" style="flex-direction: column; align-items:left;">
-        <div class="form-control items-end">
+<form method="GET" action="/search" class="w-full sm:w-auto relative">
+    <div bind:this={resultsAsYouType} id="resultsAsYouType" class="dropdown dropdown-end w-full md:w-auto">
+        
+        <div class="form-control relative w-full">
             <input 
                 bind:value={q}
                 on:focus={focus} 
@@ -50,35 +51,23 @@
                 type="text" 
                 name="q" 
                 placeholder="Search" 
-                class="input input-bordered md:w-auto w-full join-item"
+                class="input input-bordered md:w-64 w-full pr-10 bg-base-200/50 focus:bg-base-100 focus:shadow-inner transition-all duration-200 rounded-xl"
             />
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-8 pr-2 absolute pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        <!-- search as you type -->
-        <!--
-            TODO: I want the dropdown to take up all space on cellphones, 
-                  added hack to align to end, and absolut pos to right.
-                  Looks a bit awkward on non-mobile, but I actually do not
-                  mind that it licks the right edge (and does not obscure 
-                  other content)
-        -->
-        <div bind:this={resultsAsYouType} id="resultsAsYouType"
-			class="dropdown border-solid dropdown-end z-[100]"
-            style="position: absolute; right: 0; bottom: 0;"
-        >
-            <div class="dropdown-content z-[1] border border-base-200 menu p-2 shadow-xl bg-base-100 rounded-box grow w-96">
-                {#if items?.length > 0}
+        <div class="dropdown-content mt-2 z-[100] w-[calc(100vw-2rem)] sm:w-[28rem] shadow-2xl shadow-black/10 bg-base-100/95 backdrop-blur-xl border border-base-200/60 rounded-2xl p-2 flex flex-col gap-1">
+            {#if items?.length > 0}
+                <div class="max-h-[60vh] overflow-y-auto rounded-xl">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
-                {/if}
-				<div class="p-1 {items?.length > 0 ? 'mt-2 border-t border-base-200 pt-2' : ''}">
-					<a href="/search" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-lg" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
-						<i class="bi bi-sliders"></i> Advanced Search & Bulk Edit
-					</a>
-				</div>
+                </div>
+            {/if}
+            <div class="{items?.length > 0 ? 'mt-1 pt-1 border-t border-base-200/60' : ''}">
+                <a href="/search" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
+                    <i class="bi bi-sliders"></i> Advanced Search & Bulk Edit
+                </a>
             </div>
         </div>
-
     </div>
 </form>
 
