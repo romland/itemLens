@@ -9,7 +9,7 @@
             const prefs = JSON.parse(preferences || '{}');
             return prefs.shortcuts || {
                 newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p', 
-                editItem: 'e', setDefaultContainer: 'l', 
+                editItem: 'e', setDefaultContainer: 'l', goHome: 'h',
                 tab1: '1', tab2: '2', tab3: '3', tab4: '4'
             };
         } catch { return {}; }
@@ -28,13 +28,31 @@
         switch (key) {
             case keymap.newSingle:
                 e.preventDefault();
+                console.log('[Keybind] Shortcut pressed: New Single');
                 document.cookie = `itemlens_add_mode=single; path=/; max-age=31536000`;
-                goto('/add');
+                if ($page.url.pathname === '/add') {
+                    window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'single' }));
+                } else {
+                    goto('/add').then(() => {
+                        window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'single' }));
+                    });
+                }
                 break;
             case keymap.newCollection:
                 e.preventDefault();
+                console.log('[Keybind] Shortcut pressed: New Collection');
                 document.cookie = `itemlens_add_mode=collection; path=/; max-age=31536000`;
-                goto('/add');
+                if ($page.url.pathname === '/add') {
+                    window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'collection' }));
+                } else {
+                    goto('/add').then(() => {
+                        window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'collection' }));
+                    });
+                }
+                break;
+            case keymap.goHome:
+                e.preventDefault();
+                goto('/');
                 break;
             case keymap.settings:
                 e.preventDefault();

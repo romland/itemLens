@@ -91,7 +91,7 @@
     let currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
     let shortcuts = currentPrefs.shortcuts || {
         newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p', 
-        editItem: 'e', setDefaultContainer: 'l', 
+        editItem: 'e', setDefaultContainer: 'l', goHome: 'h',
         tab1: '1', tab2: '2', tab3: '3', tab4: '4'
     };
 
@@ -145,6 +145,7 @@
         <form method="POST" action="?/updatePreferences" use:enhance={createEnhancer}>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-6">
                 {#each [
+                    { id: 'goHome', label: 'Home Page' },
                     { id: 'newSingle', label: 'New Single Item' },
                     { id: 'newCollection', label: 'New Collection' },
                     { id: 'profile', label: 'Profile Menu' },

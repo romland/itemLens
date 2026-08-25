@@ -55,6 +55,27 @@
         document.cookie = `itemlens_add_mode=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
     }
 
+    onMount(() => {
+        // FIX: Bypass SvelteKit layout caching staleness by reading the real browser cookie.
+        const match = document.cookie.match(/(?:^|;\s*)itemlens_add_mode=([^;]*)/);
+        if (match && match[1] && ['single', 'collection', 'compare'].includes(match[1])) {
+            console.log('[Add Hub] Cookie sync on mount:', match[1]);
+            if (mode !== match[1]) mode = match[1] as any;
+        }
+
+        const handleShortcutMode = (e: CustomEvent) => {
+            const newMode = e.detail;
+            console.log('[Add Hub] Received shortcut event:', newMode);
+            if (mode !== newMode) {
+                if (isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
+                isDirty = false;
+                setMode(newMode);
+            }
+        };
+        window.addEventListener('shortcut:addMode', handleShortcutMode as EventListener);
+        return () => window.removeEventListener('shortcut:addMode', handleShortcutMode as EventListener);
+    });
+
     const onSubmit: SubmitFunction = async ({ cancel, formData }) => {
         // Stop SvelteKit from natively submitting the form! 
         // If missing, SvelteKit AND our Outbox will both upload it, causing duplicates.
