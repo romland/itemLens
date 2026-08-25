@@ -1,7 +1,7 @@
 <script lang="ts">
     import { flip } from 'svelte/animate';
     import { goto } from '$app/navigation';
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
     import pageTitle from '$lib/stores';
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
@@ -9,6 +9,7 @@
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import BottomSheet from "$lib/components/BottomSheet.svelte";
+    import { ambientLocation } from '$lib/client/ambientContext';
 
     export let isDirty = false;
     export let containers = [];
@@ -37,7 +38,7 @@
     let items: any[] = [];
     let totalVisibleCount = 0;
 
-    let selectedContainers: string[] = [];
+    let selectedContainers: string[] = [...$ambientLocation];
     let globalCategory = "";
     let globalTags = "";
     let settingsExpanded = true;
@@ -405,7 +406,14 @@
             </div>
             <div class="collapse-content flex flex-col gap-4">
                 <div class="bg-base-100 rounded-xl p-1 border border-base-200">
-                    <ContainerSelector {containers} on:change={(e) => selectedContainers = e.detail.containers} />
+                    <ContainerSelector 
+                        containers={containers} 
+                        values={selectedContainers.map(name => ({ container: { name } }))} 
+                        on:change={(e) => { 
+                            selectedContainers = e.detail.containers; 
+                            ambientLocation.setContext(selectedContainers); 
+                        }} 
+                    />
                 </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Apply a category for all</span></label>

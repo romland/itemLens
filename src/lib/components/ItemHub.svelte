@@ -10,7 +10,8 @@
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import { photoTypes } from "$lib/shared/constants";
     import { marked } from 'marked';
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
+    import { ambientLocation } from '$lib/client/ambientContext';
 
     const dispatch = createEventDispatcher();
 
@@ -19,6 +20,14 @@
     export let saving = false;
     export let isDirty = false;
     export let pastedDocCount = 0;
+
+    onMount(() => {
+        console.log("🛠️ [DEBUG AMBIENT] ItemHub Mounted. ambientLocation store is:", $ambientLocation);
+        if (!item && selectedLocations.length > 0) {
+            console.log("🛠️ [DEBUG AMBIENT] Hydrated selectedLocations from store:", selectedLocations);
+            dispatch('success', `Location auto-set to ${selectedLocations.join(', ')}`);
+        }
+    });
 
     // Expose a hard-reset function for continuous scanning workflows
     export function reset() {
@@ -31,13 +40,17 @@
         pendingPhotos = [];
         qrScannerCount = 0;
         pastedDocCount = 0;
-        selectedLocations = [];
+        selectedLocations = [...$ambientLocation]; // Works here because reset() is always client-side
         currentDraftPath = "";
         isDuplicateWarning = false;
         duplicateDetails = null;
         duplicateDismissed = false;
         activeView = 'hub';
         isDirty = false;
+
+        if (selectedLocations.length > 0) {
+            dispatch('success', `Location auto-set to ${selectedLocations.join(', ')}`);
+        }
     }
 
     // View state machine: 'hub', 'photos', 'location', 'links', 'details'
@@ -45,7 +58,9 @@
 
     // State for the Hub Badges
     let photoCount = item?.photos?.length || 0;
-    let selectedLocations = item?.locations?.map(l => l.container?.name) || [];
+    // Eagerly grab the ambient store value so the child component receives the correct initial prop
+    let selectedLocations = item?.locations?.map(l => l.container?.name) || (item ? [] : [...$ambientLocation]);
+
     let qrScannerCount = 0;
     $: linkCount = (item?.documents?.length || 0) + qrScannerCount + pastedDocCount;
 
@@ -408,7 +423,15 @@
                 <div class="flex items-center gap-1 flex-wrap justify-end">
                     {#if selectedLocations.length > 0}
                         {#each selectedLocations.slice(0,2) as loc}
-                            <span class="badge badge-primary badge-sm font-mono">{loc}</span>
+                            <span class="badge badge-primary badge-sm font-mono pl-1.5 pr-1 gap-1">
+                                {#if !item && $ambientLocation.includes(loc)}
+                                    <i class="bi bi-pin-angle-fill text-[8px] opacity-70" title="Sticky Session Context"></i>
+                                {/if}
+                                {loc}
+                                <button type="button" class="btn btn-ghost btn-xs min-h-0 h-auto w-auto p-0 ml-0.5 hover:text-error" aria-label="Remove" on:click|stopPropagation={() => { selectedLocations = selectedLocations.filter(l => l !== loc); ambientLocation.setContext(selectedLocations); }}>
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </span>
                         {/each}
                         {#if selectedLocations.length > 2}
                             <span class="badge badge-primary badge-sm">+{selectedLocations.length - 2}</span>
@@ -452,6 +475,11 @@
 
         <!-- STICKY FOOTER -->
         <input type="hidden" name="duplicateDismissed" value={duplicateDismissed.toString()} />
+        
+        {#each selectedLocations as loc}
+            <input type="hidden" name="containers" value={loc} />
+        {/each}
+
         <div class="sticky bottom-16 left-0 w-full p-4 bg-base-100/90 backdrop-blur-md border-t border-base-200 rounded-b-xl md:rounded-b-[2rem] mt-6">
             <button disabled={saving || !isDirty} type="submit" class="btn btn-primary btn-lg w-full max-w-lg mx-auto block rounded-xl shadow-md transition-all active:scale-95">
                 {#if saving}
@@ -498,9 +526,12 @@
             <div class="max-w-lg mx-auto w-full">
                 <ContainerSelector 
                     containers={containers} 
-                    values={item?.locations || []}
-                    on:success={(ev) => dispatch('success', ev.detail)}
-                    on:change={(ev) => selectedLocations = ev.detail.containers}
+                    values={item ? (item.locations || []) : selectedLocations.map(name => ({ container: { name } }))}
+                    on:change={(ev) => { 
+                        console.log("🛠️ [DEBUG AMBIENT] ContainerSelector on:change fired with:", ev.detail.containers);
+                        selectedLocations = ev.detail.containers; 
+                        ambientLocation.setContext(selectedLocations); 
+                    }}
                 />
             </div>
         </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
     import QRreader from "$lib/components/QRreader.svelte";
-    import { createEventDispatcher, onMount } from 'svelte'
+    import { createEventDispatcher, tick } from 'svelte'
     const dispatch = createEventDispatcher();
 
     export let values = [];
@@ -36,16 +36,27 @@
     // Prevent Svelte string-spread bug by forcing array
     $: safeManualSelected = Array.isArray(manualSelected) ? manualSelected : (manualSelected ? [manualSelected] : []);
     $: allContainers = Array.from(new Set([...addedContainers, ...safeManualSelected]));
-    $: dispatch('change', { containers: allContainers });
 
-    onMount(async () => {
-        if(typeof window !== 'undefined' && values.length) {
-            for(let i = 0; i < values.length; i++) {
-				const cName = values[i].container?.name || values[i].containerName;
-				if (cName) scannedContainer({detail: cName}, "containers", false);
-            }
+    // Reactively sync when parent modifies the array (e.g. clicking 'X' on a location pill)
+    $: syncFromParent(values);
+
+    function syncFromParent(newValues) {
+        const incoming = newValues.map(v => v.container?.name || v.containerName || (typeof v === 'string' ? v : '')).filter(Boolean);
+        const currentSafe = Array.isArray(manualSelected) ? manualSelected : (manualSelected ? [manualSelected] : []);
+        const current = [...addedContainers, ...currentSafe];
+        const isDifferent = incoming.length !== current.length || incoming.some(v => !current.includes(v));
+
+        if (isDifferent) {
+            manualSelected = incoming.filter(name => flatContainers.some(c => c.name === name));
+            addedContainers = incoming.filter(name => !flatContainers.some(c => c.name === name));
         }
-    });
+    }
+
+    // Sync OUTWARDS only on explicit user actions
+    async function dispatchUserChange() {
+        await tick();
+        dispatch('change', { containers: allContainers });
+    }
 
     function isValidContainer(txt)
     {
@@ -88,6 +99,7 @@
 
         if(!addedContainers.includes(ev.detail) && !manualSelected.includes(ev.detail)) {
             addedContainers = [...addedContainers, ev.detail];
+            dispatchUserChange();
         }
 
         // option.selected = true;
@@ -100,6 +112,7 @@
     function removeScannedContainer(containerToRemove) {
         if (confirm(`Remove container "${containerToRemove}"?`)) {
             addedContainers = addedContainers.filter(c => c !== containerToRemove);
+            dispatchUserChange();
             dispatch("success", `Removed container: ${containerToRemove}`);
         }
     }    
@@ -118,6 +131,7 @@
 				newC.isChild = false;
 				containers = [...containers, newC];
 				manualSelected = [...manualSelected, newC.name];
+                dispatchUserChange();
 				dispatch('success', `Created location: ${newC.name}`);
 				if (searchQuery === nameToCreate) searchQuery = '';
 				explicitNewName = '';
@@ -132,11 +146,6 @@
 </script>
 
 <div class="flex flex-col w-full">
-    <!-- Hidden inputs to ensure scanned containers are submitted with the form -->
-	{#each allContainers as container}
-        <input type="hidden" name="containers" value="{container}" />
-    {/each}
-
     <!-- Tab Navigation -->
 	<div role="tablist" class="flex bg-base-200/70 p-1 mb-4 w-full rounded-xl">
         <button 
@@ -222,7 +231,7 @@
             <div class="bg-base-100 border border-base-200 rounded-xl overflow-y-auto max-h-64 p-2 flex flex-col gap-1 shadow-inner">
                 {#each filteredContainers as container}
                     <label class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-base-300">
-						<input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" />
+                        <input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" on:change={dispatchUserChange} />
                         <div class="flex flex-col {container.isChild ? 'ml-6' : ''}">
                             <span class="font-semibold text-sm leading-none flex items-center gap-2">
                                 {#if container.isChild}<i class="bi bi-arrow-return-right text-gray-400 text-xs"></i>{/if}

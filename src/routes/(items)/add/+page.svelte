@@ -62,6 +62,8 @@
         if (saving) {
             return;
         }
+        console.log("🛠️ [DEBUG AMBIENT] Form submitting! Extracted containers from DOM:", formData.getAll('containers'));
+
         saving = true;
         hasSubmitted = true;
         formData.append('clientId', clientId);

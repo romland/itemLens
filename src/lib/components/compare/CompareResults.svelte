@@ -8,6 +8,7 @@
     import CompareItemCard from './CompareItemCard.svelte';
     import CompareAttributeSheet from './CompareAttributeSheet.svelte';
     import BottomSheet from "$lib/components/BottomSheet.svelte";
+    import { ambientLocation } from '$lib/client/ambientContext';
 
     export let results: {
         draftPath: string;
@@ -188,6 +189,8 @@
                 if (results.draftPath) fd.append('draftPath', results.draftPath);
                 if (item.box) fd.append('box', JSON.stringify(item.box));
                 if (scopeType === 'container' && scopeValue) fd.append('container', scopeValue);
+                else if ($ambientLocation.length > 0) fd.append('container', $ambientLocation[0]);
+
                 if (scopeType === 'category' && scopeValue) fd.append('categoryName', scopeValue);
                 if (scopeType === 'tag' && scopeValue) fd.append('tagcsv', scopeValue);
                 if (item.extractedAttributes) fd.append('extractedAttributes', JSON.stringify(item.extractedAttributes));
