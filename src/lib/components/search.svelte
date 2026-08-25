@@ -17,7 +17,7 @@
             return;
         }
 
-        const res = await fetch(`/api/items?q=${encodeURIComponent(q)}&c=7`);
+        const res = await fetch(`/api/items?q=${encodeURIComponent(q)}&c=8&sort=newest`);
         const data = await res.json();
         items = data.items;
 
@@ -69,7 +69,7 @@
         >
             <div class="dropdown-content z-[1] border border-base-200 menu p-2 shadow-xl bg-base-100 rounded-box grow w-96">
                 {#if items?.length > 0}
-                    <Items items={items} brief={true}/>
+                    <Items items={items} brief={true} showControls={false} forceListView={true} />
                 {/if}
 				<div class="p-1 {items?.length > 0 ? 'mt-2 border-t border-base-200 pt-2' : ''}">
 					<a href="/search" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-lg" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>

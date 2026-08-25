@@ -20,6 +20,7 @@
     export let items: any[] = [];
     export let brief: boolean = false;
     export let showControls: boolean = true;
+    export let forceListView: boolean = false;
 
     const sortOptions = [
         { id: 'newest', label: 'Newest Added', icon: 'bi-sort-numeric-down-alt' },
@@ -157,7 +158,7 @@
             </div>
         </div>
     {/if}
-    {#if $sharedViewMode === 'list'}
+    {#if $sharedViewMode === 'list' || forceListView}
         <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
             <tbody>
@@ -177,7 +178,7 @@
                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
-                                   <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center relative">
+                                   <div class="w-14 h-14 bg-base-100 rounded-2xl shadow-sm border border-base-200/60 overflow-hidden flex items-center justify-center relative z-0">
                                        {#if cols.length > 0}
                                            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
                                        {/if}
@@ -308,7 +309,7 @@
                 
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <div animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}" on:click={(e) => { if (item.isGhost || e.target.closest('a') || e.target.closest('button')) return; goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
-                    <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
+                    <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative z-0" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
                         {#if cols.length > 0}
                             <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
                         {/if}
