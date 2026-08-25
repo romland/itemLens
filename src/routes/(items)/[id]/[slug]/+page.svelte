@@ -12,6 +12,9 @@
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import ColorMixBar from "$lib/components/ColorMixBar.svelte";
+    import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
+    import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
+    import { dev } from '$app/environment';
 
     export let data: PageServerData;
     
@@ -29,6 +32,27 @@
         payloadModalTitle = log.action;
         payloadModalContent = log.payload;
         payloadModal.showModal();
+    }
+
+    let devDebugModal: HTMLDialogElement;
+    let devTargetId = '';
+    let devDebugResult: any = null;
+    let isDevDebugging = false;
+    let selectorModal: ItemSelectorModal;
+    let selectedTargetItem: any = null;
+    
+    async function runDevDebug() {
+        if (!selectedTargetItem) return;
+        isDevDebugging = true;
+        try {
+            const res = await fetch('/api/debug-match', {
+                method: 'POST',
+                body: JSON.stringify({ sourceId: data.item?.id, targetId: Number(selectedTargetItem.id) })
+            });
+            devDebugResult = await res.json();
+        } finally {
+            isDevDebugging = false;
+        }
     }
 
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
@@ -191,6 +215,13 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                             <i class="bi bi-google text-lg opacity-70"></i> Search
                         </a>
                     </li>
+                    {#if dev}
+                    <li>
+                        <button type="button" class="font-medium text-warning hover:text-warning" on:click={() => devDebugModal.showModal()}>
+                            <i class="bi bi-bug-fill text-lg opacity-70"></i> Debug Match
+                        </button>
+                    </li>
+                    {/if}
                     <li class="divider my-0 h-[1px] bg-base-200"></li>
                     <li>
                         <div class="p-0 hover:bg-transparent block">
@@ -674,6 +705,41 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 </dialog>
 
 <ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} categories={data.categories} allowCategoryEdit={true} />
+
+{#if dev}
+<dialog bind:this={devDebugModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box bg-base-100 shadow-2xl border border-warning/50">
+        <h3 class="font-bold text-lg mb-4 text-warning"><i class="bi bi-bug-fill"></i> Force Match Debugger</h3>
+        <div class="form-control mb-4">
+            <button type="button" class="btn btn-outline border-base-300 justify-start h-auto py-3 px-4 rounded-xl font-normal text-left" on:click={() => selectorModal.showModal()}>
+                {#if selectedTargetItem}
+                    <span class="font-bold">{selectedTargetItem.title}</span>
+                {:else}
+                    <span class="text-gray-400">Choose item to compare against...</span>
+                {/if}
+            </button>
+        </div>
+        <button class="btn btn-warning w-full" on:click={runDevDebug} disabled={isDevDebugging || !selectedTargetItem}>
+            {#if isDevDebugging}<span class="loading loading-spinner"></span>{/if} Compare
+        </button>
+        
+        {#if devDebugResult?.match}
+            <div class="mt-4 p-4 bg-base-200 rounded-xl text-xs font-mono overflow-auto max-h-64 border border-base-300">
+                <div class="font-bold mb-2 pb-2 border-b border-base-300">Score: <span class={devDebugResult.match.isMatch ? 'text-success' : 'text-error'}>{devDebugResult.match.score}</span> | isMatch: <span class={devDebugResult.match.isMatch ? 'text-success' : 'text-error'}>{devDebugResult.match.isMatch}</span></div>
+                {#each devDebugResult.match.debugTrace as trace}
+                    <div class="mb-1 py-0.5 border-b border-base-300/30 last:border-0">{trace}</div>
+                {/each}
+            </div>
+        {/if}
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<ItemSelectorModal bind:this={selectorModal} title="Compare Debugger" subtitle="Browse or search all items (newest first)" on:select={(e) => {
+    selectedTargetItem = e.detail;
+    runDevDebug();
+}} />
+{/if}
 
 <style>
     :global(.menu-delete-btn::after) {

@@ -10,7 +10,8 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { taskManager } from '$lib/server/taskManager';
 import { getActiveSchema } from '$lib/server/ontology';
-import { computeMatch, normalizeStr, isUseless, findBestMatch, buildDuplicateDetails, computeIdfMap } from '$lib/server/matcher';
+import { findBestMatch, buildDuplicateDetails, computeIdfMap, buildScanContextFromDbItem } from '$lib/server/matcher';
+import { dev } from '$app/environment';
 
 export const load = (async ({ locals, params }) => {
 	const parsedId = Number(params.id);
@@ -67,23 +68,9 @@ export const load = (async ({ locals, params }) => {
         include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
 	});
 	
-	const { tokenizeAndStem } = await import('$lib/server/nlp');
-	let scanTokens: string[] = [];
-	try { scanTokens = item.semanticTokens ? JSON.parse(item.semanticTokens) : tokenizeAndStem([item.title, item.description]); } catch(e) {}
-	const scanColorMix = item.attributes?.find((a: any) => a.key === 'color_mix')?.value;
-	
 	let duplicateItemDetails = null;
 	if (!item.duplicateDismissed) {
-        const scanCtx = {
-            tokens: scanTokens,
-            colorMix: scanColorMix,
-            title: item.title || '',
-            description: item.description || '',
-            rawText: '',
-            category: item.photos?.[0]?.category?.name,
-            prominentTextOrGraphic: item.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value,
-            distinctiveWear: item.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value
-        };
+        const scanCtx = buildScanContextFromDbItem(item);
         const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
 		if (bestMatch) {
 			duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);
@@ -99,7 +86,7 @@ export const load = (async ({ locals, params }) => {
 		activeTasks: taskManager.getTasks('item', item.id),
 		categories,
 		duplicateItemDetails,
-		activeSchema
+        activeSchema
 	};
 }) satisfies PageServerLoad;
 

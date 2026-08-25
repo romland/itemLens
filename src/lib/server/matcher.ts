@@ -364,6 +364,21 @@ export function computeMatch(
     return { isMatch, confidence: isMatch ? 0.95 : 0, score, debugTrace, sharedAttributes } as any;
 }
 
+export function buildScanContextFromDbItem(item: any): ScanContext {
+    let parsedTokens: string[] = [];
+    try { parsedTokens = item.semanticTokens ? JSON.parse(item.semanticTokens) : tokenizeAndStem([item.title, item.description]); } catch(e) {}
+    return {
+        tokens: parsedTokens,
+        colorMix: item.attributes?.find((a: any) => a.key === 'color_mix')?.value,
+        title: item.title || '',
+        description: item.description || '',
+        rawText: '',
+        category: item.photos?.[0]?.category?.name,
+        prominentTextOrGraphic: item.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value,
+        distinctiveWear: item.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value
+    };
+}
+
 export function buildDuplicateDetails(dbItem: any, match: any) {
     return {
         id: dbItem.id, slug: dbItem.slug, title: dbItem.title, createdAt: dbItem.createdAt,
@@ -411,19 +426,7 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
 
     for (const item of items) {
         if (item.duplicateDismissed) continue;
-        let parsedTokens: string[] = [];
-        try { parsedTokens = item.semanticTokens ? JSON.parse(item.semanticTokens) : tokenizeAndStem([item.title, item.description]); } catch(e) {}
-        
-        const scanCtx: ScanContext = {
-            tokens: parsedTokens,
-            colorMix: item.attributes?.find((a: any) => a.key === 'color_mix')?.value,
-            title: item.title || '',
-            description: item.description || '',
-            rawText: '',
-            category: item.photos?.[0]?.category?.name,
-            prominentTextOrGraphic: item.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value,
-            distinctiveWear: item.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value
-        };
+        const scanCtx = buildScanContextFromDbItem(item);
 
         for (const dbItem of allItems) {
             if (dbItem.id === item.id) continue;
