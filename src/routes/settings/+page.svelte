@@ -6,13 +6,12 @@
     import Alert from "$lib/components/alert.svelte";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
-	import Notifications from "$lib/components/Notifications.svelte";
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
 	import { nukeAllCaches } from "$lib/client/utils";
+	import { notify } from "$lib/client/notifications";
 
     export let form: ActionData;
 
-	let notifications: any[] = [];
 	let avatarPreview: string | null = null;
     let createInventoryModal: CreateInventoryModal;
 
@@ -50,13 +49,6 @@
         { id: 'manhattan', name: 'Manhattan', icon: 'bi-building' }
     ];
 
-
-	function notify(status: string, message: string, id: string | null = null) {
-		const newId = id || Math.random().toString(36);
-		notifications = [...notifications, { id: newId, status, message }];
-		if (status !== 'loading') setTimeout(() => { notifications = notifications.filter(n => n.id !== newId); }, 3000);
-		return newId;
-	}
 
 	function createEnhancer() {
 		return async ({ result, update }: any) => {
@@ -97,8 +89,6 @@
     let editUserId: number | null = null;
 
 </script>
-
-<Notifications bind:notifications />
 
 <div class="max-w-2xl mx-auto">
 

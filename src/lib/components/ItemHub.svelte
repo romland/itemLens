@@ -161,7 +161,7 @@
             }
 
             if (autofilled) {
-                dispatch('success', 'AI auto-filled details!');
+                dispatch('success', 'Details are auto-filled!');
             }
         }
     }   

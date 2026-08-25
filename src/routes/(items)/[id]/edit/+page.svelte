@@ -4,11 +4,11 @@
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from '@sveltejs/kit';
-    import Notifications from "$lib/components/Notifications.svelte";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import pageTitle from '$lib/stores';
     import { saveToQueue } from '$lib/client/offlineQueue';
+	import { notify } from "$lib/client/notifications";
 
     export let data: PageServerData;
     export let form: ActionData;
@@ -17,7 +17,6 @@
     let isDirty = false;
     let hasSubmitted = false;
     let pastedDocCount = 0;
-    let notifications: any[] = [];
 
     beforeNavigate(({ cancel }) => {
         if (isDirty && !hasSubmitted) {
@@ -52,26 +51,6 @@
         }       
     }
     
-    function notify(status: string, message: string, id: string | null = null) {
-        if (id) {
-            const existingIndex = notifications.findIndex(n => n.id === id);
-            if (existingIndex !== -1) {
-                notifications[existingIndex] = { ...notifications[existingIndex], status, message };
-                notifications = [...notifications];
-                if (status !== 'loading') setTimeout(() => removeNotification(id), 3000);
-                return id;
-            }
-        }
-        const newId = id || Math.random().toString(36);
-        notifications = [...notifications, { id: newId, status, message }];
-        if (status !== 'loading') setTimeout(() => removeNotification(newId), 3000);
-        return newId;
-    }
-
-    function removeNotification(id: string) {
-        notifications = notifications.filter(n => n.id !== id);
-    }
-
     pageTitle.set("Edit " + data.item?.title);
 </script>
 
@@ -107,5 +86,3 @@
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
     />
 </form>
-
-<Notifications bind:notifications />

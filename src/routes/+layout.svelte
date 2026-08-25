@@ -21,6 +21,9 @@
     import { outboxStore, completedOutboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
 	import { nukeAllCaches } from '$lib/client/utils';
     
+	import Notifications from "$lib/components/Notifications.svelte";
+	import { notifications } from "$lib/client/notifications";
+
     let mounted = false;    
 
     onMount(async () => {
@@ -436,6 +439,8 @@ $:  isDemoMode =
    </div>
    <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
+
+<Notifications bind:notifications={$notifications} />
 
 <!-- Bottom Sheet Menu -->
 <dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">

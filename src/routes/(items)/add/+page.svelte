@@ -6,7 +6,6 @@
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from '@sveltejs/kit';
     import { beforeNavigate } from '$app/navigation';
-    import Notifications from "$lib/components/Notifications.svelte";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import ItemHub from "$lib/components/ItemHub.svelte";
     import BulkTriage from "$lib/components/add/BulkTriage.svelte";
@@ -15,12 +14,12 @@
     import { saveToQueue } from '$lib/client/offlineQueue';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-    
+	import { notify } from "$lib/client/notifications";
+
     let saving = false;
     let isDirty = false;
     let hasSubmitted = false;
     let pastedDocCount = 0;
-    let notifications: any[] = [];
     
     // Generate an idempotency key (Browser-safe fallback for SSR)
     let clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
@@ -93,25 +92,6 @@
 
     }
     
-    function notify(status: string, message: string, id: string | null = null) {
-        if (id) {
-            const existingIndex = notifications.findIndex(n => n.id === id);
-            if (existingIndex !== -1) {
-                notifications[existingIndex] = { ...notifications[existingIndex], status, message };
-                notifications = [...notifications];
-                if (status !== 'loading') setTimeout(() => removeNotification(id), 3000);
-                return id;
-            }
-        }
-        const newId = id || Math.random().toString(36);
-        notifications = [...notifications, { id: newId, status, message }];
-        if (status !== 'loading') setTimeout(() => removeNotification(newId), 3000);
-        return newId;
-    }
-    
-    function removeNotification(id: string) {
-        notifications = notifications.filter(n => n.id !== id);
-    }
     
     pageTitle.set("Add new product");
     $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : "Compare Collection");
@@ -197,5 +177,3 @@ on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.de
 on:success={(ev) => notify("success", ev.detail)}
 />
 {/if}
-
-<Notifications bind:notifications />

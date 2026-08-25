@@ -1,17 +1,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guessProductDetails, analyzePhoto } from '$lib/server/gemini-classification';
-import { getSafeFilename, processDraftPhotoBackground, activeDrafts } from '$lib/server/photouploads';
-import fs from 'fs';
-import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
+import { processDraftPhotoBackground, activeDrafts } from '$lib/server/photouploads';
 import { apiQueue } from '$lib/server/queue/index';
-import sharp from 'sharp';
 import { getActiveSchema } from '$lib/server/ontology';
 import { getExistingCategoryNames } from '$lib/server/categories';
 import { db } from '$lib/server/database';
-import crypto from 'crypto';
 import { findBestMatch, buildDuplicateDetails } from '$lib/server/matcher';
 import { tokenizeAndStem } from '$lib/server/nlp';
+import { MediaIngest } from '$lib/server/services/MediaIngest';
+import fs from 'fs';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
@@ -24,15 +22,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         }
         
         // Save to the staging area immediately
-        const rawBuffer = Buffer.from(await file.arrayBuffer());
-        const hash = crypto.createHash('sha1').update(rawBuffer).digest('hex');
-        const buffer = await sharp(rawBuffer).rotate().withMetadata().webp({ quality: 85 }).toBuffer();
-        const filename = getSafeFilename(file.name, 'draft') + '.webp';
-        const localPath = `${uploadsDiskFolder}/${filename}`;
-        const webPath = `${uploadsWebFolder}/${filename}`;
-        
-        fs.writeFileSync(localPath, buffer);
-        
+		const { localPath, webPath, hash } = await MediaIngest.saveUploadedImage(file, 'draft');
+
         // Run the fast Gemini analysis for the UI
         let aiData = null;
         let classificationData = null;

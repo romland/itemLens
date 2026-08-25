@@ -3,10 +3,8 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/database';
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
-import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
-import { getSafeFilename } from '$lib/server/photouploads';
+import { MediaIngest } from '$lib/server/services/MediaIngest';
 import fs from 'fs';
-import sharp from 'sharp';
 import { taskManager } from '$lib/server/taskManager';
 import { apiQueue } from '$lib/server/queue/index';
 import { getActiveSchema } from '$lib/server/ontology';
@@ -28,18 +26,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const scopeValue = (formData.get('scopeValue') as string) || '';
         const hint = (formData.get('hint') as string) || '';
 
-        if (!file || file.size === 0) return json({ error: 'No image provided' }, { status: 400 });
-
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = getSafeFilename('compare-scan') + '.webp';
-        const localDiskPath = `${uploadsDiskFolder}/${filename}`;
-        const webPath = `${uploadsWebFolder}/${filename}`;
-
-        // Fetch ALL fields in inventory so Gemini can extract category-specific fields dynamically across a broad scan
-        const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
-
-        await sharp(buffer).rotate().withMetadata().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 85 }).toFile(localDiskPath);
-        const base64Data = fs.readFileSync(localDiskPath).toString('base64');
+		const { localPath: localDiskPath, webPath } = await MediaIngest.saveUploadedImage(file, 'compare-scan', { maxWidth: 1600 });
+		
+		const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
+		const base64Data = fs.readFileSync(localDiskPath).toString('base64');
 
         let prompt = `Analyze this image containing a collection of physical items (such as books, CDs, DVDs, grocery cans, or tools). 
 CRITICAL: You must extract EVERY SINGLE INDIVIDUAL physical item as its own separate entry. DO NOT group multiple adjacent items together into one bounding box. Even if two items are identical, they must each get their own distinct, tight bounding box.

@@ -2,17 +2,16 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI, Type } from '@google/genai';
 import { GEMINI_API_KEY } from '$env/static/private';
-import { getSafeFilename, processDraftPhotoBackground } from '$lib/server/photouploads';
-import fs from 'fs';
-import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
+import { processDraftPhotoBackground } from '$lib/server/photouploads';
 import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
-import sharp from 'sharp';
 import { withRetry } from '$lib/server/retry';
 import { getActiveSchema } from '$lib/server/ontology';
 import { computeMatch, normalizeStr, isUseless, buildDuplicateDetails, computeIdfMap } from '$lib/server/matcher';
 import { BASE_COLORS } from '$lib/server/colors';
 import { tokenizeAndStem } from '$lib/server/nlp';
+import { MediaIngest } from '$lib/server/services/MediaIngest';
+import fs from 'fs';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -23,20 +22,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const data = await request.formData();
         const file = data.get('file') as File;
 
-        if (!file || !file.size) {
-            return json({ error: 'No file provided' }, { status: 400 });
-        }
-
-		// Ensure EXIF orientation is permanently baked into the pixel data 
-		// so Gemini's bounding boxes match the UI rendering exactly.
-		let rawBuffer = Buffer.from(await file.arrayBuffer());
-        const buffer = await sharp(rawBuffer).rotate().withMetadata().webp({ quality: 85 }).toBuffer();
-		
-        const filename = getSafeFilename(file.name, 'collection') + '.webp';
-        const localPath = `${uploadsDiskFolder}/${filename}`;
-        const webPath = `${uploadsWebFolder}/${filename}`;
-
-        fs.writeFileSync(localPath, buffer);
+		const { localPath, webPath, mimeType } = await MediaIngest.saveUploadedImage(file, 'collection');
         processDraftPhotoBackground(webPath, 'information', locals.activeInventoryId).catch(e => console.error(e));
 
         const note = await db.timelineNote.create({
@@ -92,11 +78,7 @@ For each item:
 			promptText += `\n\nUSER HINT: The user noted this collection is: "${hint.trim()}". Prioritize identifying the items within this context.`;
 		}
 
-        const base64Data = buffer.toString('base64');
-        const ext = file.name.split('.').pop()?.toLowerCase();
-        let mimeType = 'image/jpeg';
-        if (ext === 'png') mimeType = 'image/png';
-        else if (ext === 'webp') mimeType = 'image/webp';
+		const base64Data = fs.readFileSync(localPath).toString('base64');
 
         const aiResponse = await apiQueue.add(
             async () => {
