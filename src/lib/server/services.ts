@@ -339,8 +339,21 @@ export async function createItemEntity(params: {
     for (const attr of finalAttributes) {
         const field = activeSchema.find((f: any) => f.name === attr.key) as any;
         if (field && field.id && field.type === 'enum' && field.options) {
+            const normalize = (str: string) => {
+                return str.toLowerCase()
+                    .replace(/_/g, ' ') // Convert underscores to spaces
+                    .replace(/[\u2013\u2014]/g, ' ') // Convert en-dashes and em-dashes to spaces
+                    .replace(/(?<=[a-z])-(?=[a-z])/g, ' ') // Convert hyphens between letters ONLY
+                    .replace(/\s+/g, ' ') // Collapse multiple spaces into one
+                    .trim();
+            };
             const valStr = attr.value.trim();
-            if (!field.options.map((o: string) => o.toLowerCase()).includes(valStr.toLowerCase())) {
+            const normalizedVal = normalize(valStr);
+            const existingMatch = field.options.find((o: string) => normalize(o) === normalizedVal);
+
+            if (existingMatch) {
+                attr.value = existingMatch; // Snap to the existing enum to prevent duplicates
+            } else {
                 const newOptions = [...field.options, valStr];
                 await db.templateField.update({ where: { id: field.id }, data: { options: JSON.stringify(newOptions) } });
                 field.options = newOptions; // Update in-memory for subsequent matches in loop

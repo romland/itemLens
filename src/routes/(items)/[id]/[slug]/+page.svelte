@@ -507,9 +507,14 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                         {@const schemaField = activeSchema.find(f => f.name === attrib.key)}
                         {@const displayKey = attrib.key === 'color_mix' ? 'Colors' : (schemaField?.uiLabel || attrib.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                         {@const displayVal = (() => {
+                            const normalizedAttr = attrib.value.replace(/_/g, ' ').toLowerCase();
                             if (schemaField?.options) {
-                                const optMatch = schemaField.options.find(o => o.toLowerCase() === attrib.value.toLowerCase());
+                                const optMatch = schemaField.options.find(o => o.toLowerCase().replace(/_/g, ' ') === normalizedAttr);
                                 if (optMatch) return optMatch;
+                            }
+                            // Fallback: If it's a legacy snake_case value, format it cleanly anyway
+                            if (attrib.value.includes('_')) {
+                                return attrib.value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                             }
                             return attrib.value;
                         })()}
