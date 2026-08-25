@@ -37,3 +37,19 @@ export async function getOrCreateCategory(rawName: string, inventoryId: number) 
 
   return category;
 }
+
+/**
+ * Automatically deletes categories (and their cascading taxonomy rules) 
+ * if they no longer have any photos assigned to them.
+ */
+export async function scrubEmptyCategories(inventoryId: number) {
+    const emptyCats = await db.category.findMany({
+        where: { inventoryId, photos: { none: {} } },
+        select: { id: true, name: true }
+    });
+
+    if (emptyCats.length > 0) {
+        await db.category.deleteMany({ where: { id: { in: emptyCats.map(c => c.id) } } });
+        console.log(`[Auto-Scrubber] Vaporized empty categories and their taxonomy rules:`, emptyCats.map(c => c.name));
+    }
+}

@@ -97,12 +97,13 @@ export const actions = {
 		const categoryName = (data.get('categoryName') as string)?.trim().toLowerCase();
 		
 		if (photoId && categoryName) {
-			const { getOrCreateCategory } = await import('$lib/server/categories');
+			const { getOrCreateCategory, scrubEmptyCategories } = await import('$lib/server/categories');
 			const cat = await getOrCreateCategory(categoryName, locals.activeInventoryId);
 			await db.photo.update({
 				where: { id: photoId },
 				data: { categoryId: cat.id }
 			});
+			scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
 		}
 		return { success: true };
 	},
@@ -204,6 +205,10 @@ export const actions = {
 			}
 			
 			await db.item.delete({ where: { id: sourceId } });
+			
+			const { scrubEmptyCategories } = await import('$lib/server/categories');
+			scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
+			
 			redirect(302, `/${targetId}/${targetItem?.slug || 'view'}`);
 		}
 	},
@@ -211,6 +216,10 @@ export const actions = {
 	deleteDuplicate: async ({ locals, params }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
 		await db.item.delete({ where: { id: Number(params.id) } });
+		
+		const { scrubEmptyCategories } = await import('$lib/server/categories');
+		scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
+		
 		redirect(302, '/');
 	},
 	

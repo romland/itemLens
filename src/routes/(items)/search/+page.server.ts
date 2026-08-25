@@ -99,6 +99,9 @@ export const actions = {
 				where: { itemId: { in: itemIds } },
 				data: { categoryId: cat.id }
 			});
+
+            const { scrubEmptyCategories } = await import('$lib/server/categories');
+            scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
         } else if (action === 'flagDuplicate') {
             await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'FLAGGED' } });
         } else if (action === 'dismissDuplicate') {

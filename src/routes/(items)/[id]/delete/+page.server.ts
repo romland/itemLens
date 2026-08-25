@@ -11,6 +11,9 @@ export const actions = {
             }
         });
 
+        const { scrubEmptyCategories } = await import('$lib/server/categories');
+        scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
+
         return { deleted: true };
     }
 } satisfies Actions;
