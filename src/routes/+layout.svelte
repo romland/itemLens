@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SubmitFunction } from "./$types";
     import { enhance } from "$app/forms";
-    import { page } from "$app/stores";
+    import { page, navigating } from "$app/stores";
   	import { onNavigate, beforeNavigate, invalidateAll } from '$app/navigation';
     import { browser } from '$app/environment';
     import Search from "$lib/components/search.svelte";
@@ -302,6 +302,24 @@ $:  isDemoMode =
         $page.url.hostname === 'localhost' || 
         $page.url.hostname.startsWith('192.168.178.');
 
+    // Global Navigation Feedback (for slow/dropped connections)
+    let showNavProgress = false;
+    let navTimer: ReturnType<typeof setTimeout>;
+    let slowNavTimer: ReturnType<typeof setTimeout>;
+
+    $: if ($navigating) {
+        clearTimeout(navTimer);
+        clearTimeout(slowNavTimer);
+        navTimer = setTimeout(() => showNavProgress = true, 400); // Prevent flashing on fast links
+        slowNavTimer = setTimeout(() => {
+            if ($navigating) notify('warning', 'Connection is struggling. Still trying to load...');
+        }, 8000);
+    } else {
+        clearTimeout(navTimer);
+        clearTimeout(slowNavTimer);
+        showNavProgress = false;
+    }
+
 </script>
 
 <svelte:head> 
@@ -315,6 +333,10 @@ $:  isDemoMode =
 {/if}
 
 <TouchIndicator enabled={isDemoMode} />
+
+{#if showNavProgress}
+    <progress class="progress progress-primary bg-transparent w-full fixed top-0 left-0 z-[10000] rounded-none h-1"></progress>
+{/if}
 
 <div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
   <!-- Mobile menu -->
