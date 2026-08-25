@@ -102,7 +102,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
                 temperature: 0.0,
                 top_p: 0.8,
                 // top K 40
-            }), 3, 2000, 'Invoice Extraction (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
+            }), 3, 2000, 'Invoice Extraction (Groq)', { taskId: (tracking as any)?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq invoice result:", chatCompletion);
             return chatCompletion.choices[0]?.message?.content || "";
@@ -145,7 +145,7 @@ and other irrelevant (to the product or guide) stuff that you might find on a we
                 model: "openai/gpt-oss-20b",
                 temperature: 0.0,
                 top_p: 0.8,
-            }), 3, 5000, 'Web Summary (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
+            }), 3, 5000, 'Web Summary (Groq)', { taskId: (tracking as any)?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq summary prompt:", prompt + "\n\n" + extract);
             console.log("===========================");
@@ -204,7 +204,7 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
                 // top K 40
                 // @ts-ignore – Together.ai supports schema while OpenAI does not
                 // response_format: { type: 'json_object', schema: jsonSchema },
-            }), 3, 2000, 'Reverse Search LLM Parsing (Groq)', { taskId: tracking?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
+            }), 3, 2000, 'Reverse Search LLM Parsing (Groq)', { taskId: (tracking as any)?.id || tracking?.taskId, itemId: (tracking as any)?.itemId || tracking?.targetId, prompt });
 
             console.log("Groq product name result:", chatCompletion);
             return chatCompletion.choices[0]?.message?.content || "";

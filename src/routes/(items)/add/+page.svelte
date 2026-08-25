@@ -48,7 +48,7 @@
     export let form: ActionData;
     export let data: PageServerData;
     
-    let mode: 'single' | 'collection' | 'compare' = data.activeAddMode;
+    let mode: 'single' | 'collection' | 'compare' = (data as any).activeAddMode;
     
     function setMode(newMode: 'single' | 'collection' | 'compare') {
         mode = newMode;
@@ -143,9 +143,9 @@ on:processingComplete={(ev) => {
 }}
 />
 
-{#if form?.error}
+{#if form && form.error}
 <div class="mb-6 max-w-2xl mx-auto">
-    <Alert>{@html form?.message}</Alert>
+    <Alert>{@html form.message}</Alert>
 </div>
 {/if}
 

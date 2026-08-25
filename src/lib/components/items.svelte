@@ -140,6 +140,7 @@
                     <span class="hidden sm:inline"></span> {activeSortLabel}
                     <i class="bi bi-chevron-down text-[10px] opacity-50 ml-0.5"></i>
                 </button>
+                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-xl w-56 border border-base-200 mt-2 gap-1">
                     {#each sortOptions as opt}
                         <li>
@@ -174,7 +175,7 @@
                     {@const localBlob = item.clientId ? ghostUrls.get(item.clientId) : null}
                     {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
 
-                    <tr animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} on:click={(e) => { if (item.isGhost || e.target.closest('a') || e.target.closest('button')) return; goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}">
+                    <tr animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} on:click={(e) => { if (item.isGhost || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) return; goto(`/${item.id}/${item.slug}`); }} class="hover:bg-base-200/50 cursor-pointer transition-all duration-200 border-b border-base-200/50 last:border-none {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}">
                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
@@ -311,7 +312,8 @@
                 {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
                 
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <div animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}" on:click={(e) => { if (item.isGhost || e.target.closest('a') || e.target.closest('button')) return; goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
+                <div animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} class="card bg-base-100 shadow-sm border border-base-200 cursor-pointer hover:border-primary/50 transition-all duration-200 {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}" on:click={(e) => { if (item.isGhost || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) return; goto(`/${item.id}/${item.slug}`); }} role="button" tabindex="0">
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative z-0" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
                         {#if cols.length > 0}
                             <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>

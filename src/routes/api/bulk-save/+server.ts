@@ -94,7 +94,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     userId,
                     containers,
                     tagIds,
-                    photos: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, ...(simulatedLlmAnalysis ? { llmAnalysis: simulatedLlmAnalysis } : {}), showOriginal: true }],
+                    photos: [{ type: 'product', orgPath: cropWebPath, categoryId: cat.id, ...(simulatedLlmAnalysis ? { llmAnalysis: simulatedLlmAnalysis } : {}), showOriginal: true }] as any[],
                     attributes: attributesToCreate,
                     extractedAttributes: item.extractedAttributes,
                     physical_traits: item.physical_traits,

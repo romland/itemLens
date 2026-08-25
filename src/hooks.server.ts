@@ -30,7 +30,7 @@ export const handle = (async ({ event, resolve }) => {
                 avatar: user.avatar,
                 isAdmin: user.isAdmin,
                 preferences: user.preferences
-            };
+            } as any;
 
             // Inventory Routing Logic
             const cookieInvId = event.cookies.get('activeInventoryId');

@@ -107,7 +107,7 @@
                 <div class="flex flex-wrap gap-1 mt-1.5">
                     {#each Object.entries(item.extractedAttributes).filter(([_, v]) => v !== null) as [key, val]}
                         {#if key === 'color_mix'}
-                            <div class="w-full mb-1"><ColorMixBar colorMixStr={val} /></div>
+                            <div class="w-full mb-1"><ColorMixBar colorMixStr={val as string} /></div>
                         {:else}
                             <span class="badge badge-ghost badge-xs text-[9px] uppercase tracking-wider font-mono opacity-80 border-base-300">{val}</span>
                         {/if}

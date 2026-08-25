@@ -14,8 +14,9 @@
     import { pluralize } from '$lib/client/utils';
 
     export let isDirty = false;
-    export let containers = [];
-    export let categories = [];
+    export let containers: any[] = [];
+    export let categories: any[] = [];
+    export let tags: any[] = [];
     const dispatch = createEventDispatcher();
     
    export async function processPastedFile(file: File) {
@@ -423,6 +424,7 @@
                         }} 
                     />
                 </div>
+                <!-- svelte-ignore a11y_label_has_associated_control -->
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Apply a category for all</span></label>
                     <input type="text" bind:value={globalCategory} placeholder="e.g. book, dvd, cd" class="input input-bordered w-full bg-base-100 rounded-xl" />
@@ -433,6 +435,7 @@
                         <div class="label pt-1 pb-0"><span class="label-text-alt text-error font-semibold"><i class="bi bi-exclamation-octagon"></i> Warning: This overwrites assigned categories (like "{items.find(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())?.category}") for all items!</span></div>
                     {/if}
                 </div>
+                <!-- svelte-ignore a11y_label_has_associated_control -->                
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Apply tags for all</span></label>
                     <input type="text" bind:value={globalTags} placeholder="e.g. donate, trash, read, living-room" class="input input-bordered w-full bg-base-100 rounded-xl" />
@@ -455,10 +458,12 @@
 
 <!-- Native Bottom Sheet Editor -->
 <BottomSheet bind:this={editModal} title="Edit Item" on:close={() => editingIndex = -1}>
+    <!-- svelte-ignore a11y_label_has_associated_control -->
     <div class="form-control w-full mb-1">
         <label class="label"><span class="label-text font-semibold">Title</span></label>
         <input type="text" bind:value={editTitle} class="input input-bordered w-full rounded-xl" />
     </div>
+    <!-- svelte-ignore a11y_label_has_associated_control -->
     <div class="form-control w-full mb-2">
         <label class="label"><span class="label-text font-semibold">Subtitle</span></label>
         <input type="text" bind:value={editSubtitle} class="input input-bordered w-full rounded-xl" />

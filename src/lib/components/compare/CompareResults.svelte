@@ -63,9 +63,9 @@
     $: elsewhere = (results.inCollection || []).filter(i => scopeType === 'container' && i.matchedItem?.locationName !== scopeValue);
 
     // Compute human-intent categories (Grouped for Stacking)
-    $: groupedUnregistered = groupDetected(results.newToYou || []);
-    $: groupedCorrect = groupDetected(correct);
-    $: groupedElsewhere = groupDetected(elsewhere);
+    $: groupedUnregistered = groupDetected(results.newToYou || []) as any[];
+    $: groupedCorrect = groupDetected(correct) as any[];
+    $: groupedElsewhere = groupDetected(elsewhere) as any[];
 
     // Consolidate completely missing items
     $: completelyMissing = (() => {
@@ -386,8 +386,8 @@
                     <div id="card-{item.title.replace(/\s+/g, '-')}" class="scroll-mt-24">
                         <CompareItemCard {item} type="elsewhere" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })} on:zoomMatch={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}>
                             <div slot="actions" class="flex flex-col sm:flex-row items-center gap-1">
-                                <button type="button" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
-                                <a href="/{item.matchedItem.id}/{item.matchedItem.slug || 'view'}" class="btn btn-ghost btn-xs text-warning">View</a>
+                                <button type="button" aria-label="Add" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
+                                <a href="/{item.matchedItem?.id}/{item.matchedItem?.slug || 'view'}" class="btn btn-ghost btn-xs text-warning">View</a>
                             </div>
                         </CompareItemCard>
                     </div>
@@ -401,8 +401,8 @@
                     <div id="card-{item.title.replace(/\s+/g, '-')}" class="scroll-mt-24">
                         <CompareItemCard {item} type="correct" draftPath={results.draftPath} on:zoom={() => lightbox.open({ orgPath: results.draftPath, thumbPath: results.draftPath, showOriginal: true, box: item.box })} on:zoomMatch={(e) => lightbox.open({ orgPath: e.detail.thumbPath || e.detail.orgPath, showOriginal: true })}>
                             <div slot="actions" class="flex flex-col sm:flex-row items-center gap-1">
-                                <button type="button" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
-                                <a href="/{item.matchedItem.id}/{item.matchedItem.slug || 'view'}" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary"><i class="bi bi-arrow-right-short text-2xl"></i></a>
+                                <button type="button" aria-label="Add" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary" title="Force add as new" on:click={() => { actionItem = item; actionModal.showModal(); }}><i class="bi bi-plus-lg text-lg"></i></button>
+                                <a href="/{item.matchedItem?.id}/{item.matchedItem?.slug || 'view'}" aria-label="View Match" class="btn btn-circle btn-ghost btn-sm text-gray-400 hover:text-primary"><i class="bi bi-arrow-right-short text-2xl"></i></a>
                             </div>
                         </CompareItemCard>
                     </div>

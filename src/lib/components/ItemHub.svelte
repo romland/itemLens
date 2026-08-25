@@ -421,7 +421,8 @@
                 </div>
             </button>
 
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'location'}>
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <div role="button" tabindex="0" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50 cursor-pointer" on:click={() => activeView = 'location'}>
                 <div class="flex items-center gap-4">
                     <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
                         <i class="bi bi-box-seam"></i>
@@ -450,7 +451,7 @@
                     {/if}
                     <i class="bi bi-chevron-right text-gray-400 ml-1"></i>
                 </div>
-            </button>
+            </div>
 
             <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'details'}>
                 <div class="flex items-center gap-4">

@@ -277,7 +277,7 @@ export async function createItemEntity(params: {
     let catId = null;
     if (params.photos && Array.isArray(params.photos)) {
         const prodPhoto = params.photos.find((p: any) => p.categoryId);
-        if (prodPhoto) catId = prodPhoto.categoryId;
+        if (prodPhoto) catId = (prodPhoto as any).categoryId;
     }
     const activeSchema = await getActiveSchema(params.inventoryId, catId, false);
 

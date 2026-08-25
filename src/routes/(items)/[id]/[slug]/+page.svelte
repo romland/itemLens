@@ -239,7 +239,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             <DuplicateResolution 
                 scannedTitle={data.item.title} 
                 matchDetails={data.duplicateItemDetails} 
-                scannedCreatedAt={data.item.createdAt}
+                scannedCreatedAt={String(data.item.createdAt)}
                 isAfterTheFact={true}
                     scannedItem={data.item}
                 on:resolve={(e) => {
@@ -722,7 +722,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 
 <dialog bind:this={attrModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
     <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
-        <CompareAttributeSheet item={{...data.item, extractedAttributes: itemAttributes}} {activeSchema} showAll={true} on:cancel={() => attrModal.close()} on:save={(e) => { document.getElementById('attrsInput').value = JSON.stringify(e.detail.attributes); document.getElementById('saveAttrsForm').requestSubmit(); }} />
+        <CompareAttributeSheet item={{...data.item, extractedAttributes: itemAttributes}} {activeSchema} showAll={true} on:cancel={() => attrModal.close()} on:save={(e) => { (document.getElementById('attrsInput') as HTMLInputElement).value = JSON.stringify(e.detail.attributes); (document.getElementById('saveAttrsForm') as HTMLFormElement).requestSubmit(); }} />
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>

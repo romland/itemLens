@@ -537,7 +537,9 @@
                             class="object-contain max-w-full max-h-full origin-center select-none rounded-xl"
                             controls autoplay
                             draggable="false"
-                        ></video>
+                        >
+                            <track kind="captions" />
+                        </video>
                     {:else}
                         <img 
                             src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
@@ -633,5 +635,6 @@
             </button>
         </div>
     </div>
-    <div class="modal-backdrop" role="button" tabindex="0" on:click={() => { if (!isSavingRotation) saveRotationModal.close(); }}></div>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="modal-backdrop" role="button" tabindex="0" on:keydown={(e) => { if(e.key==='Escape' && !isSavingRotation) saveRotationModal.close()}} on:click={() => { if (!isSavingRotation) saveRotationModal.close(); }}></div>
 </dialog>

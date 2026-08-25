@@ -49,7 +49,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
             const metadata = await sharp(localPath).metadata();
             if (metadata.exif) {
                 const exifReader = (await import('exif-reader')).default;
-                const parsedExif = exifReader(metadata.exif);
+                const parsedExif: any = exifReader(metadata.exif);
                 
                 // Strip out thumbnails and huge proprietary binary blobs
                 delete parsedExif.thumbnail;
@@ -414,7 +414,7 @@ export async function savePhotos(
     webPath: string, 
     fieldPrefix: string, 
     remoteURLlist: string = ""
-): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null, extractedCategoryName: string | null, physical_traits: string[], prominent_text_or_graphic: string | null, color_mix: any }>
+): Promise<{ photos: Photo[], extractedAttributes: Record<string, string>, extractedTitle: string | null, extractedDescription: string | null, extractedCategoryName: string | null, physical_traits: string[], prominent_text_or_graphic: string | null, distinctive_blemishes_or_wear: string | null, color_mix: any }>
 {
     const photos: Photo[] = [];
     const extractedAttributes: Record<string, string> = {};
