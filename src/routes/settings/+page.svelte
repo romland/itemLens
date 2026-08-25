@@ -418,12 +418,20 @@
                                         <span class="text-xs text-gray-500 font-medium">is default container selector mode</span>
                                     </form>
 
-                            <!-- Manual Schema Retry Action -->
-                            <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} class="mt-2" on:submit={(e) => { if(!confirm('Are you sure you want to regenerate AI Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.')) e.preventDefault(); }}>
-                                <input type="hidden" name="inventoryId" value={v.id}>
-                                <input type="hidden" name="name" value={v.name}>
-                                <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Taxonomy Rules</button>
-                            </form>
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        <!-- Beautify Action -->
+                                        <form method="POST" action="?/beautifyTaxonomy" use:enhance={createEnhancer}>
+                                            <input type="hidden" name="inventoryId" value={v.id}>
+                                            <button type="submit" class="btn btn-xs btn-outline btn-primary gap-1 text-[10px]"><i class="bi bi-magic"></i> Beautify Taxonomy Labels</button>
+                                        </form>
+
+                                        <!-- Manual Schema Retry Action -->
+                                        <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} on:submit={(e) => { if(!confirm('Are you sure you want to regenerate AI Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.')) e.preventDefault(); }}>
+                                            <input type="hidden" name="inventoryId" value={v.id}>
+                                            <input type="hidden" name="name" value={v.name}>
+                                            <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Rules</button>
+                                        </form>
+                                    </div>
                                     
                                     <details class="collapse bg-base-300 mt-2 rounded-xl border border-base-200">
                                         <summary class="collapse-title text-[10px] font-bold px-3 py-2 min-h-0">Raw Taxonomy (JSON)</summary>

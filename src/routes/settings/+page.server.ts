@@ -356,6 +356,16 @@ export const actions = {
         return { success: true, message: `Taxonomy rules regenerated for '${name}'!` };
     },
 
+    beautifyTaxonomy: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const inventoryId = Number(data.get('inventoryId'));
+
+        const { beautifyTaxonomyRules } = await import('$lib/server/ontology');
+        await beautifyTaxonomyRules(inventoryId);
+        return { success: true, message: "Taxonomy labels successfully translated to human-readable terms." };
+    },
+
     updateTaxonomy: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();

@@ -69,7 +69,7 @@ export async function analyzePhoto(
     foregroundBox: { type: 'array', items: { type: 'number' }, description: 'Bounding box [ymin, xmin, ymax, xmax] normalized 0-1000 for the primary foreground object. Ignore background clutter.' },
     extractedAttributes: { 
         type: 'array', 
-        description: 'Extract visual values for ALL keys in the \'global\' list. Then, extract values for ALL keys in your chosen \'subCategory\' list. IF your subCategory is NOT in the dictionary, you MUST still extract the \'global\' keys, and then invent 3-5 new descriptive keys for the item. IF a dictionary key is logically impossible for the specific object, output "N/A".',
+        description: 'Extract visual values for ALL keys in the \'global\' list. Then, extract values for ALL keys in your chosen \'subCategory\' list. VALUES MUST BE NATURAL HUMAN LANGUAGE (e.g., "Athletic Fit" instead of "athletic", "Scoop Neck" instead of "scoop"). IF your subCategory is NOT in the dictionary, you MUST still extract the \'global\' keys, and then invent 3-5 new descriptive keys for the item (use snake_case for keys, but natural language for values). IF a dictionary key is logically impossible for the specific object, output "N/A".',
         items: {
             type: 'object',
             properties: {

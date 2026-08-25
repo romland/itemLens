@@ -504,8 +504,17 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
                     {#each data.item.attributes as attrib}
+                        {@const schemaField = activeSchema.find(f => f.name === attrib.key)}
+                        {@const displayKey = attrib.key === 'color_mix' ? 'Colors' : (schemaField?.uiLabel || attrib.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
+                        {@const displayVal = (() => {
+                            if (schemaField?.options) {
+                                const optMatch = schemaField.options.find(o => o.toLowerCase() === attrib.value.toLowerCase());
+                                if (optMatch) return optMatch;
+                            }
+                            return attrib.value;
+                        })()}
                         <div class="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-base-200/50 last:border-0">
-                            <span class="text-sm text-gray-500 font-medium">{attrib.key === 'color_mix' ? 'Colors' : attrib.key}</span>
+                            <span class="text-sm text-gray-500 font-medium">{displayKey}</span>
                             {#if attrib.key === 'color_mix'}
                                 <div class="sm:w-1/2 mt-1 sm:mt-0"><ColorMixBar colorMixStr={attrib.value} /></div>
                             {:else if attrib.value.startsWith('/images/')}
@@ -513,7 +522,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                     {attrib.value}
                                 </button>
                             {:else}
-                                <span class="text-sm font-bold text-base-content break-words text-left sm:text-right">{attrib.value}</span>
+                                <span class="text-sm font-bold text-base-content break-words text-left sm:text-right">{displayVal}</span>
                             {/if}
                         </div>
                     {/each}

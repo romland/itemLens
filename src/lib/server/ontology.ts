@@ -15,7 +15,7 @@ const eavResponseSchema = {
         type: 'object',
         properties: {
             name: { type: 'string', description: 'Machine name, e.g., form_factor' },
-            uiLabel: { type: 'string', description: 'Premium human label, e.g., Form Factor' },
+            uiLabel: { type: 'string', description: 'Layman/everyday human label. E.g., use "Fabric" instead of "textile_construction", or "Worn On" instead of "body_zone"' },
             type: { type: 'string', enum: ['string', 'enum', 'boolean', 'number'] },
             options: { type: 'array', items: { type: 'string' }, description: 'Array of enums if type is enum' },
                 matchWeight: { type: 'string', enum: ['STRICT_DEDUPE', 'FUZZY_SECONDARY', 'METADATA_ONLY', 'SUBJECTIVE_TEXT'] },
@@ -103,10 +103,10 @@ STRUCTURAL REQUIREMENTS (Output EXACTLY 5-6 attributes):
 
 2. ONE "Macro Functional Group" (extractionMethod: "VISION_STRICT").
    - The abstract grouping of WHERE it goes or WHAT it does, to group interchangeable items together.
-   - E.g., Body Zone (Upper, Lower, Feet), Primary Action (Cutting, Fastening, Measuring).
+   - E.g., Worn On (Torso, Legs, Feet), Primary Action (Cutting, Fastening, Measuring).
 
 3. TWO "Universal Material or Finish Traits" (extractionMethod: "VISION_STRICT" or "HYBRID").
-   - E.g., Primary Material, Textile Pattern, Surface Finish.
+   - E.g., Fabric, Pattern, Surface Finish, Primary Material.
 
 4. ONE or TWO "Human Context" fields (extractionMethod: "HUMAN_REQUIRED").
    - Context the camera cannot accurately know without reading a physical tag.
@@ -116,7 +116,7 @@ CRITICAL BANS:
 - NO "Color", "Brand", "Manufacturer", "Creator", or "Publisher" fields (these are tracked globally). DO NOT output any field containing these words.
 - UNIVERSAL APPLICABILITY: These fields will be applied to EVERY item in the inventory. Do NOT generate part-specific geometry (like sleeves, ports, lenses, or pages) because not every item in the domain has those parts. Keep them abstract.
 - 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", "SUBJECTIVE_TEXT", or "METADATA_ONLY".
-- For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
+- For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. Format the options nicely (e.g. 'Athletic Fit' instead of 'athletic'). For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
 ADAPT TO USER INTENT: Adjust your specificity based on the user's description and archetype. If it's a generic collection, keep fields broad. If the description implies a highly specific sub-niche (e.g., "Vintage Belts"), generate hyper-specific fields (e.g., "Buckle Type", "Notch Count").`;
             const res = await withRetry(() => ai.models.generateContent({
@@ -222,6 +222,48 @@ export async function bootstrapCategorySchema(categoryId: number, categoryName: 
         });
     } catch (e) {
         console.error(`[Taxonomy Engine] 🔴 Category schema bootstrap failed for ${categoryName}:`, e);
+    } finally {
+        taskManager.end(taskId);
+    }
+}
+
+export async function beautifyTaxonomyRules(inventoryId: number) {
+    const fields = await db.templateField.findMany({ where: { inventoryId } });
+    if (fields.length === 0) return false;
+
+    const taskId = taskManager.start('global', inventoryId, `Beautifying taxonomy labels`);
+    try {
+        return await apiQueue.add(async () => {
+            const payload = fields.map(f => ({
+                id: f.id, name: f.name, uiLabel: f.uiLabel, options: f.options ? JSON.parse(f.options) : null
+            }));
+
+            const prompt = `You are a UX writer improving an inventory app. 
+Translate the following system taxonomy fields into everyday, layman's terms (suitable for a teenager or general adult, not overly technical).
+- "uiLabel": Rewrite the machine "name" into a simple, natural label (e.g., "textile_construction" -> "Fabric", "body_zone" -> "Worn On", "garment_style" -> "Style").
+- "options": If present, format the enum values to look nice and readable (e.g., "synthetic" -> "Synthetic", "button-down" -> "Button-Down").
+Output exactly the same JSON array structure, preserving the "id" integer, but updating "uiLabel" and "options".`;
+
+            const res = await withRetry(() => ai.models.generateContent({
+                model: 'gemini-3.1-flash-lite',
+                contents: [{ role: 'user', parts: [{ text: prompt + '\n\n' + JSON.stringify(payload) }] }],
+                config: { responseMimeType: 'application/json', responseSchema: {
+                    type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, uiLabel: { type: 'string' }, options: { type: 'array', items: { type: 'string' }, nullable: true } }, required: ['id', 'uiLabel'] }
+                } }
+            }), 3, 2000, `Beautify Taxonomy`, { prompt });
+
+            const improved = JSON.parse(res.text!);
+            
+            for (const field of improved) {
+                await db.templateField.update({
+                    where: { id: field.id },
+                    data: { uiLabel: field.uiLabel, ...(field.options ? { options: JSON.stringify(field.options) } : {}) }
+                });
+            }
+            return true;
+        });
+    } catch (e) {
+        console.error("Beautify failed:", e);
     } finally {
         taskManager.end(taskId);
     }
