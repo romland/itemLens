@@ -51,13 +51,13 @@
             {/if}
             {#if matchDetails?.dbAttributes?.length > 0}
             <div class="flex flex-col gap-1 mt-2">
-                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Existing Attributes:</span>
+                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Traits:</span>
                 <div class="flex flex-wrap gap-1">
                     {#each matchDetails.dbAttributes as attr}
                         {#if attr.key === 'color_mix'}
                             <div class="w-full my-0.5"><ColorMixBar colorMixStr={attr.value} /></div>
-                        {:else}
-                            <span class="badge badge-warning badge-outline text-[9px] font-mono h-auto py-0.5">{attr.key}: {attr.value}</span>
+                        {:else if !attr.value.startsWith('{') && !attr.value.startsWith('[')}
+                            <span class="badge badge-warning badge-outline text-[9px] font-mono h-auto py-0.5 max-w-[120px] truncate" title="{attr.value}">{attr.value}</span>
                         {/if}
                     {/each}
                 </div>
