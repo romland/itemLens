@@ -353,7 +353,8 @@ $:  isDemoMode =
 
   <div class="navbar-end">
     {#if $outboxStore.length > 0}
-      <div class="tooltip tooltip-bottom mr-2" data-tip="Syncing {$outboxStore.length} items to server">
+      <!--div class="tooltip tooltip-bottom mr-2" data-tip="Syncing {$outboxStore.length} items to server"-->
+      <div class="tooltip tooltip-left mr-2" data-tip="Syncing {$outboxStore.length} items to server">
         <span class="btn btn-ghost btn-circle text-primary pointer-events-none">
           <span class="indicator">
             <i class="bi bi-cloud-arrow-up text-xl {$outboxStore.some(i => i.status === 'syncing') ? 'animate-pulse' : ''}"></i>
