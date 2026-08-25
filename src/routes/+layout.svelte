@@ -552,7 +552,7 @@ $:  isDemoMode =
 						<div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
 							<i class="bi bi-trash3 text-xl"></i>
 						</div>
-						<div class="flex-1 font-semibold text-lg">Clear Offline Cache</div>
+						<div class="flex-1 font-semibold text-lg">Clear Cache</div>
 					</button>
 				{/if}
 
