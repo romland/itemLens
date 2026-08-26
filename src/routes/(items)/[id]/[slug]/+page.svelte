@@ -11,6 +11,7 @@
     import DuplicateResolution from "$lib/components/DuplicateResolution.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
+    import DocumentLightbox from "$lib/components/DocumentLightbox.svelte";
     import ColorMixBar from "$lib/components/ColorMixBar.svelte";
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
@@ -22,6 +23,7 @@
     let photoAttributes = [];
     let isSavingPasted = false;
     let lightbox: ImageLightbox;
+    let docLightbox: DocumentLightbox;
     let isProcessingItem = false;
     let attrModal: HTMLDialogElement;
     let duplicateDeleteModal: Delete;
@@ -631,12 +633,20 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     <div class="collapse-content prose prose-sm max-w-none"> 
                         {@html alterSummary(doc.summary)}
     
-                        <div class="flex justify-starts mt-2">
+                        <div class="flex justify-start items-center gap-3 mt-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                             </svg>
-
-                            <a href="{doc.path}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block" title="{doc.source}">{doc.source}</a>
+                            
+                            {#if doc.path.toLowerCase().endsWith('.epub')}
+                                <button type="button" class="btn btn-sm btn-primary rounded-xl" on:click={() => docLightbox.open(doc)}>
+                                    <i class="bi bi-book"></i> Read Book
+                                </button>
+                            {:else}
+                                <a href="{doc.path}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium" title="{doc.source}">
+                                    {doc.source}
+                                </a>
+                            {/if}
                         </div>
     
                     </div>
@@ -753,6 +763,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 </dialog>
 
 <ImageLightbox bind:this={lightbox} itemTitle={data.item?.title} categories={data.categories} allowCategoryEdit={true} />
+<DocumentLightbox bind:this={docLightbox} />
 
 {#if dev}
 <dialog bind:this={devDebugModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
