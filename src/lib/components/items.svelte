@@ -186,6 +186,7 @@
                     {@const mainPhoto = getFirstProductPhoto(item)}
                     {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
                     {@const serverSrc = mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : (mainPhoto.thumbPath || mainPhoto.orgPath)}
+                    {@const cb = mainPhoto.updatedAt ? '?v=' + new Date(mainPhoto.updatedAt).getTime() : ''}
                     {@const localBlob = item.clientId ? ghostUrls.get(item.clientId) : null}
                     {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
 
@@ -204,7 +205,7 @@
                                                {/if}
                                                {#if serverSrc}
                                                    <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
-                                                        src={serverSrc} 
+                                                        src="{serverSrc}{cb}"
                                                         on:load={() => markLoaded(serverSrc)}
                                                         on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                                         alt="{item.title || 'Item image'}"/>
@@ -322,6 +323,7 @@
                 {@const mainPhoto = getFirstProductPhoto(item)}
                 {@const cols = mainPhoto.colors?.length > 2 ? Object.keys(JSON.parse(mainPhoto.colors)) : []}
                 {@const serverSrc = mainPhoto.showOriginal ? mainPhoto.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : (mainPhoto.thumbPath || mainPhoto.orgPath)}
+                {@const cb = mainPhoto.updatedAt ? '?v=' + new Date(mainPhoto.updatedAt).getTime() : ''}
                 {@const localBlob = item.clientId ? ghostUrls.get(item.clientId) : null}
                 {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
                 
@@ -341,7 +343,7 @@
                             {/if}
                             {#if serverSrc}
                                 <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
-                                     src={serverSrc} 
+                                     src="{serverSrc}{cb}"
                                      on:load={() => markLoaded(serverSrc)}
                                      on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                      alt="{item.title || 'Item image'}"/>

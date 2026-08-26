@@ -325,7 +325,8 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                             <i class="bi bi-play-circle-fill text-5xl text-white drop-shadow-md"></i>
                                         </div>
                                     {:else}
-                                        <img src="{productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}" class="object-scale-down max-h-full max-w-full relative z-10 drop-shadow-2xl">
+                                        {@const cb = productPhotos[i].updatedAt ? '?v=' + new Date(productPhotos[i].updatedAt).getTime() : ''}
+                                        <img src="{(productPhotos[i].showOriginal ? productPhotos[i].orgPath : productPhotos[i].cropPath) + cb}" alt="{productPhotos[i].llmAnalysis ? JSON.parse(productPhotos[i].llmAnalysis).description : data.item.title}" class="object-scale-down max-h-full max-w-full relative z-10 drop-shadow-2xl">
                                     {/if}
                                 </button>
 
@@ -360,15 +361,15 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                 </div>
                 <div class="flex justify-start w-full py-2 gap-2 overflow-x-auto hide-scrollbar">
                     {#each productPhotos as photo, i}
-                                {@const cols = photo.colors?.length > 2 ? Object.keys(JSON.parse(photo.colors)) : []}
+                        {@const cols = photo.colors?.length > 2 ? Object.keys(JSON.parse(photo.colors)) : []}
                         <button aria-label="View photo {i + 1}" on:click={()=> { document.getElementById("carousel-item" + i).scrollIntoView({ block: 'nearest', inline: 'center' }) }} class="btn shrink-0 p-0 overflow-hidden relative border border-base-300 bg-base-100 hover:border-primary transition-colors">
-                                    {#if cols.length > 0}
-                                        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
-                                    {/if}
+                            {#if cols.length > 0}
+                                <div class="absolute inset-0 opacity-20 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+                            {/if}
                             {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                                 <video class="object-cover w-12 h-12 bg-black rounded relative z-10" src="{photo.orgPath}#t=0.1" muted playsinline></video>
                             {:else}
-                                <img class="object-scale-down w-12 h-12 bg-transparent relative z-10" src="{photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : photo.thumbPath}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
+                                <img class="object-scale-down w-12 h-12 bg-transparent relative z-10" src="{(photo.showOriginal ? photo.orgPath?.replace(/\.[^/.]+(?=\?|$)/, '_org_thumb.webp') : photo.thumbPath)}{photo.updatedAt ? '?v=' + new Date(photo.updatedAt).getTime() : ''}" on:error={(e) => { if (!(e.currentTarget as HTMLImageElement).dataset.fb) { (e.currentTarget as HTMLImageElement).dataset.fb = '1'; (e.currentTarget as HTMLImageElement).src = photo.thumbPath || photo.orgPath || ''; } }} alt="Thumbnail {i + 1}"/>
                             {/if}
                         </button>
                     {/each}

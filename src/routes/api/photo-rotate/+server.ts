@@ -51,16 +51,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         }
 
-        // Append cache-busting timestamp
-        const v = Date.now();
-        const appendV = (p: string | null) => p ? `${p.split('?')[0]}?v=${v}` : null;
-
         await db.photo.update({
             where: { id: photo.id },
             data: { 
-                orgPath: appendV(photo.orgPath),
-                thumbPath: appendV(photo.thumbPath),
-                cropPath: appendV(photo.cropPath)
+                orgPath: cleanOrg,
+                thumbPath: cleanThumb,
+                cropPath: cleanCrop
             }
         });
 

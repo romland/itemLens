@@ -7,6 +7,8 @@
     $: mainPhoto = item?.photos?.[0] || {};
     $: colorSource = item?.colors || mainPhoto?.colors;
     $: cols = colorSource && colorSource.length > 2 ? Object.keys(JSON.parse(colorSource)) : [];
+    $: cb = mainPhoto?.updatedAt ? '?v=' + new Date(mainPhoto.updatedAt).getTime() : (item?.updatedAt ? '?v=' + new Date(item.updatedAt).getTime() : '');
+    $: srcUrl = item.thumbPath || mainPhoto.thumbPath || mainPhoto.orgPath;
 </script>
 
 <div class="flex items-center gap-3 bg-base-100 border border-base-200 p-2 rounded-xl shadow-sm w-full text-left group">
@@ -16,8 +18,8 @@
             {#if cols.length > 0}
                 <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
             {/if}
-        {#if item.thumbPath || mainPhoto.thumbPath || mainPhoto.orgPath}
-            <img src={item.thumbPath || mainPhoto.thumbPath || mainPhoto.orgPath} alt={item.title} class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md" />
+        {#if srcUrl}
+            <img src="{srcUrl}{cb}" alt={item.title} class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md" />
             <i class="bi bi-box text-xl text-gray-400 hidden"></i>
         {:else}
                 <i class="bi bi-box text-xl text-gray-400 relative z-10"></i>

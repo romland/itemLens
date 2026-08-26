@@ -543,8 +543,9 @@
                             <track kind="captions" />
                         </video>
                     {:else}
+                        {@const cb = photo?.updatedAt ? '?v=' + new Date(photo.updatedAt).getTime() : ''}
                         <img 
-                            src="{showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)}" 
+                            src="{(showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)) + cb}"
                             alt="Product preview" 
                             class="object-contain max-w-full max-h-full origin-center select-none"
                             draggable="false"
