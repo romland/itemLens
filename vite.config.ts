@@ -88,6 +88,8 @@ export default defineConfig({
 						// CRITICAL: Exclude /api/events! Caching an SSE stream crashes Workbox.
 						urlPattern: ({ request, url }) => {
 							if (url.pathname.includes('/api/events')) return false;
+                            // CRITICAL: Never cache Vite's dev server modules or HMR payloads!
+                            if (url.pathname.match(/\.(svelte|ts|js|css)$/) || url.pathname.includes('/src/') || url.pathname.includes('/@fs/')) return false;
 							return url.pathname.startsWith('/api/') ||
 							       url.pathname.endsWith('__data.json') ||
 							       url.search.includes('__data.json');
