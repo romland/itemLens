@@ -1,6 +1,6 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
-    import { beforeNavigate } from "$app/navigation";
+    import { beforeNavigate, goto } from "$app/navigation";
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData, PageServerData } from "./$types";
     import type { SubmitFunction } from '@sveltejs/kit';
@@ -41,8 +41,8 @@
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
             
             // Detach execution to ensure router cleanly navigates away
-            setTimeout(() => {
-                history.back();
+            setTimeout(async () => {
+                await goto(`/${data.item?.id}/${data.item?.slug}`);
             }, 10);
         } catch (err) {
             saving = false;

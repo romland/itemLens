@@ -58,18 +58,15 @@ export const load = (async ({ locals, params }) => {
 	// This strictly prevents "belt buckle" fields from bleeding into "t-shirt" items.
 	const activeSchema = await getActiveSchema(locals.activeInventoryId, item.photos[0]?.categoryId, false);
     
-    const allItems = await db.item.findMany({
-        where: { inventoryId: locals.activeInventoryId },
-        include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
-    });
-    const idfMap = computeIdfMap(allItems);
-	const existingItems = await db.item.findMany({
-		where: { inventoryId: locals.activeInventoryId, id: { not: parsedId } },
-        include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
-	});
-	
 	let duplicateItemDetails = null;
-    if (item.duplicateStatus !== 'DISMISSED') {
+    if (item.duplicateStatus === 'FLAGGED') {
+        const allItems = await db.item.findMany({
+            where: { inventoryId: locals.activeInventoryId },
+            include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
+        });
+        const idfMap = computeIdfMap(allItems);
+        const existingItems = allItems.filter(i => i.id !== parsedId);
+
         const scanCtx = buildScanContextFromDbItem(item, item.inventory.archetype);
         const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
 		if (bestMatch) {
