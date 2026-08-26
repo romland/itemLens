@@ -669,36 +669,38 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     </div>
 
     <!-- Background Activity Log -->
-    <div class="border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold mb-3 flex items-center justify-between">
-            <span>Activity Log</span>
+    {#if dev}
+        <div class="border-b border-base-300 pb-3 mb-3 animate-fade-in">
+            <div class="title font-bold mb-3 flex items-center justify-between">
+                <span>Activity Log</span>
+            </div>
+            <div class="bg-base-200/50 rounded-xl max-h-64 overflow-y-auto p-4 font-mono text-xs border border-base-200 shadow-inner">
+                {#if data.item?.logs?.length > 0}
+                    <ul class="space-y-2">
+                        {#each data.item.logs as log}
+                            <li class="flex items-start gap-3 border-b border-base-300/50 pb-2 last:border-0 last:pb-0">
+                                <span class="text-gray-400 shrink-0 w-16">
+                                    {new Date(log.createdAt).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </span>
+                                <span class="font-bold shrink-0 w-24 truncate 
+                                    {log.level === 'success' ? 'text-success' : log.level === 'warning' ? 'text-warning' : log.level === 'error' ? 'text-error' : 'text-info'}">
+                                    [{log.action}]
+                                </span>
+                                <span class="text-gray-600 break-words flex-1">
+                                    {log.message}
+                                    {#if log.payload}
+                                        <button type="button" class="btn btn-xs btn-outline btn-ghost ml-2 py-0 h-5 min-h-0 text-[10px]" on:click={() => openPayloadModal(log)}>View Details</button>
+                                    {/if}
+                                </span>
+                            </li>
+                        {/each}
+                    </ul>
+                {:else}
+                    <div class="text-gray-400 italic">No background activity recorded.</div>
+                {/if}
+            </div>
         </div>
-        <div class="bg-base-200/50 rounded-xl max-h-64 overflow-y-auto p-4 font-mono text-xs border border-base-200 shadow-inner">
-            {#if data.item?.logs?.length > 0}
-                <ul class="space-y-2">
-                    {#each data.item.logs as log}
-                        <li class="flex items-start gap-3 border-b border-base-300/50 pb-2 last:border-0 last:pb-0">
-                            <span class="text-gray-400 shrink-0 w-16">
-                                {new Date(log.createdAt).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </span>
-                            <span class="font-bold shrink-0 w-24 truncate 
-                                {log.level === 'success' ? 'text-success' : log.level === 'warning' ? 'text-warning' : log.level === 'error' ? 'text-error' : 'text-info'}">
-                                [{log.action}]
-                            </span>
-                            <span class="text-gray-600 break-words flex-1">
-                                {log.message}
-                                {#if log.payload}
-                                    <button type="button" class="btn btn-xs btn-outline btn-ghost ml-2 py-0 h-5 min-h-0 text-[10px]" on:click={() => openPayloadModal(log)}>View Details</button>
-                                {/if}
-                            </span>
-                        </li>
-                    {/each}
-                </ul>
-            {:else}
-                <div class="text-gray-400 italic">No background activity recorded.</div>
-            {/if}
-        </div>
-    </div>
+    {/if}
 </article>
 
 <form method="POST" action="?/saveAttributes" id="saveAttrsForm" use:enhance={() => {
