@@ -6,12 +6,13 @@
     export let item: any = null;
     export let activeSchema: any[] = [];
     export let showAll: boolean = false;
-    
-    let localAttributes: Record<string, string> = {};
+    export let mode: 'edit' | 'filter' = 'edit';
+
+    export let localAttributes: Record<string, string> = {};
     let customInputs: Record<string, boolean> = {};
 
     // Reactively determine which fields require human intervention
-    $: if (item) {
+    $: if (item && mode === 'edit') {
         const raw = { ...(item.extractedAttributes || {}) };
         for (const k in raw) {
             if (typeof raw[k] === 'object' && raw[k] !== null) raw[k] = JSON.stringify(raw[k]);
@@ -19,13 +20,19 @@
         localAttributes = raw;
     }
 
-    $: requiredFields = showAll ? activeSchema : activeSchema.filter(f => 
+    $: requiredFields = mode === 'filter' ? activeSchema.filter(f => f.name !== 'color_mix') : (showAll ? activeSchema : activeSchema.filter(f => 
         f.extractionMethod === 'HUMAN_REQUIRED' || 
         (f.extractionMethod === 'HYBRID' && !localAttributes[f.name])
-    );
+    ));
 
     function setEnum(name: string, value: string) {
-        localAttributes[name] = value;
+        if (mode === 'filter' && (value === '' || localAttributes[name] === value)) {
+            delete localAttributes[name];
+            localAttributes = localAttributes;
+        } else {
+            localAttributes[name] = value;
+        }
+        dispatch('change', localAttributes);
     }
 
     function save() {
@@ -83,21 +90,23 @@
 
     function getPlaceholder(fieldName: string) {
         switch(fieldName) {
-            case 'distinctive_blemishes_or_wear': return 'Leave empty if pristine...';
-            case 'brand_or_creator': return 'Leave empty if unknown...';
-            case 'prominent_text_or_graphic': return 'Leave empty if no print...';
+            case 'distinctive_blemishes_or_wear': return '';
+            case 'brand_or_creator': return '';
+            case 'prominent_text_or_graphic': return '';
             default: return 'Enter value...';
         }
     }
 </script>
 
 <div class="p-6 bg-base-100 flex flex-col gap-5">
-    <div>
-        <h3 class="font-bold text-xl leading-tight">Attributes</h3>
-        <p class="text-xs text-gray-500 mt-1">Details for "{item?.title}"</p>
-    </div>
+    {#if mode === 'edit'}
+        <div>
+            <h3 class="font-bold text-xl leading-tight">Attributes</h3>
+            <p class="text-xs text-gray-500 mt-1">Details for "{item?.title}"</p>
+        </div>
+    {/if}
 
-    <div class="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">
+    <div class="flex flex-col gap-4 {mode === 'edit' ? 'overflow-y-auto max-h-[50vh] pr-2' : ''}">
         {#each requiredFields as field}
             <div class="form-control w-full">
                 <label class="label pb-1"><span class="label-text font-semibold">{field.uiLabel}</span></label>
@@ -106,7 +115,16 @@
                 {@const processedOptions = getProcessedOptions(field.options)}
                 {@const isFreetext = isFreetextLike(processedOptions)}
                 
-                {#if isFreetext}
+                {#if mode === 'filter'}
+                    <select class="select select-bordered w-full rounded-xl bg-base-50 capitalize" 
+                            value={localAttributes[field.name] || ''} 
+                            on:change={(e) => setEnum(field.name, e.currentTarget.value)}>
+                        <option value="">Any</option>
+                        {#each processedOptions as opt}
+                            <option value={opt}>{formatEnumLabel(opt)}</option>
+                        {/each}
+                    </select>
+                {:else if isFreetext}
                     <input list="datalist-{field.name}" bind:value={localAttributes[field.name]} placeholder={getPlaceholder(field.name)} class="input input-bordered w-full rounded-xl bg-base-50" />
                     <datalist id="datalist-{field.name}">
                         {#each processedOptions as opt}
@@ -123,7 +141,7 @@
                                 {formatEnumLabel(opt)}
                             </button>
                         {/each}
-                        {#if localAttributes[field.name] && !processedOptions.includes(localAttributes[field.name])}
+                        {#if localAttributes[field.name] && !processedOptions.includes(localAttributes[field.name]) && mode === 'edit'}
                             <button type="button" class="badge badge-lg badge-primary py-4 px-4 shadow-md transition-all capitalize" on:click={() => setEnum(field.name, '')}>
                                 {formatEnumLabel(localAttributes[field.name])} <i class="bi bi-x ml-1"></i>
                             </button>
@@ -149,8 +167,10 @@
         {/each}
     </div>
 
-    <div class="pt-2 border-t border-base-200 flex gap-2">
-        <button class="btn btn-ghost flex-1 rounded-xl" on:click={() => dispatch('cancel')}>Skip</button>
-        <button class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={save}>Save Item</button>
-    </div>
+    {#if mode === 'edit'}
+        <div class="pt-2 border-t border-base-200 flex gap-2">
+            <button class="btn btn-ghost flex-1 rounded-xl" on:click={() => dispatch('cancel')}>Skip</button>
+            <button class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={save}>Save Item</button>
+        </div>
+    {/if}
 </div>

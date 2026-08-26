@@ -1,10 +1,13 @@
 <script lang="ts">
+    import { page } from '$app/stores';
     import type { PageServerData } from "./$types";
     import Navigation from "$lib/components/navigation.svelte";
     import Items from "$lib/components/items.svelte";
     import Search from "$lib/components/search.svelte";
     import { enhance } from "$app/forms";
     import InteractiveColorMix from "$lib/components/InteractiveColorMix.svelte";
+    import BottomSheet from "$lib/components/BottomSheet.svelte";
+    import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
 
     export let data: PageServerData;
 
@@ -15,6 +18,11 @@
 	let bulkValue = '';
 	let isSubmitting = false;
 	let navLoadedPages: any[] = [];
+    let filterModal: BottomSheet;
+    let filterAttrs: Record<string, string> = {};
+    let selectedCategory = data.cat || '';
+    let filterForm: HTMLFormElement;
+
 	$: allLoadedItems = [...data.items, ...(navLoadedPages || []).flat()];
 
    let isAllSelectedGlobally = false;
@@ -73,9 +81,64 @@
 			q: data.q, category: data.cat, tag: data.tag, container: data.container,
             title: data.titleStr, desc: data.descStr, doc: data.docStr, reason: data.reasonStr, duplicateStatus: data.duplicateStatus, color: data.color,
 			minAmount: data.minAmount, maxAmount: data.maxAmount,
-			unassigned: data.unassigned ? 'true' : ''
+            unassigned: data.unassigned ? 'true' : '',
+            attrs: $page.url.searchParams.get('attrs') || ''
 		}).filter(([_, v]) => v) 
 	).toString();
+
+    // Sync filterAttrs from URL reactively (handles back button and Clear All)
+    let lastUrlAttrs = '__init__';
+    $: {
+        try {
+            const currentUrlAttrs = $page.url.searchParams.get('attrs') || '';
+            if (currentUrlAttrs !== lastUrlAttrs) {
+                lastUrlAttrs = currentUrlAttrs;
+                filterAttrs = currentUrlAttrs ? JSON.parse(currentUrlAttrs) : {};
+            }
+        } catch(e) { filterAttrs = {}; }
+    }
+
+    function removeFilter(type: string, key?: string) {
+        if (type === 'attrs' && key) {
+            delete filterAttrs[key];
+            filterAttrs = filterAttrs; // trigger reactivity
+        } else if (type === 'tag') {
+            const el = filterForm.elements.namedItem('tag') as HTMLSelectElement;
+            if (el) el.value = '';
+        } else if (type === 'container') {
+            const el = filterForm.elements.namedItem('container') as HTMLSelectElement;
+            if (el) el.value = '';
+        } else if (type === 'category') {
+            selectedCategory = '';
+        } else if (type === 'unassigned') {
+            const el = filterForm.elements.namedItem('unassigned') as HTMLInputElement;
+            if (el) el.checked = false;
+        }
+        setTimeout(() => filterForm.requestSubmit(), 0);
+    }
+
+    // Dynamically filter and deduplicate attributes based on the selected category
+    $: dynamicSchema = (() => {
+        let fields = data.activeSchema || [];
+        if (selectedCategory && selectedCategory !== '_uncategorized') {
+            const lowerCat = selectedCategory.toLowerCase();
+            fields = fields.filter(f => f.categoryId === null || (f.categoryName || '').toLowerCase() === lowerCat);
+        }
+        
+        // Deduplicate keys (e.g. if 'fabric' exists in 5 categories, merge into one dropdown with all unique options)
+        const merged = new Map();
+        for (const f of fields) {
+            if (!merged.has(f.name)) {
+                merged.set(f.name, { ...f, options: f.options ? [...f.options] : null });
+            } else {
+                const existing = merged.get(f.name);
+                if (f.options && existing.options) {
+                    existing.options = [...new Set([...existing.options, ...f.options])];
+                }
+            }
+        }
+        return Array.from(merged.values());
+    })();
 
     import pageTitle from '$lib/stores';
 	$: pageTitle.set(data.cat ? "Category: " + data.cat : (data.q ? "Search for " + data.q : "Search"));
@@ -85,46 +148,68 @@
 	<h1 class="text-2xl font-bold tracking-tight flex items-center gap-3">
 		Results <span class="text-sm text-gray-500 font-medium bg-base-200 px-3 py-1 rounded-full">{data.totalCount} found</span>
 	</h1>
-	<button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; }}>
-		{#if bulkMode}
-			Cancel Bulk
-		{:else}
-			<i class="bi bi-ui-checks-grid"></i> Bulk Edit
-		{/if}
-	</button>
+    <div class="flex gap-2">
+        <button class="btn btn-ghost btn-sm bg-base-200/50 hover:bg-base-300 shadow-sm rounded-xl border border-base-300" on:click={() => filterModal.showModal()}>
+            <i class="bi bi-funnel"></i> Filters
+        </button>
+        <button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; }}>
+            {#if bulkMode}Cancel Bulk{:else}<i class="bi bi-ui-checks-grid"></i> Bulk{/if}
+        </button>
+    </div>
 </div>
 
-<!-- Filters -->
-<details class="collapse collapse-arrow bg-base-100 mb-6 border border-base-200 shadow-sm rounded-xl">
-	<summary class="collapse-title text-sm font-semibold text-gray-600 px-4 min-h-0 h-auto py-3">Filters</summary>
-	<div class="collapse-content px-4 pb-4 flex flex-col gap-3 border-t border-base-100 pt-3 bg-base-50/50">
-		<form method="GET" action="/search" class="flex flex-col gap-3">
-			<input type="hidden" name="q" value={data.q}>
+<!-- Active Filter Chips -->
+{#if data.tag || data.container || data.cat || data.unassigned || Object.keys(filterAttrs).length > 0}
+<div class="flex flex-wrap gap-2 px-2 mb-6">
+    {#if data.tag}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('tag')}><i class="bi bi-hash"></i> {data.tag} <i class="bi bi-x ml-1"></i></button>{/if}
+    {#if data.container}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('container')}><i class="bi bi-box-seam"></i> {data.container} <i class="bi bi-x ml-1"></i></button>{/if}
+    {#if data.cat}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('category')}><i class="bi bi-tags"></i> {data.cat} <i class="bi bi-x ml-1"></i></button>{/if}
+    {#if data.unassigned}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('unassigned')}><i class="bi bi-pin-map"></i> Unassigned <i class="bi bi-x ml-1"></i></button>{/if}
+    {#each Object.entries(filterAttrs) as [k,v]}
+        <button class="badge badge-secondary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('attrs', k)}>{k.replace(/_/g, ' ')}: {v} <i class="bi bi-x ml-1"></i></button>
+    {/each}
+    <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { window.location.href = '/search'; }}>Clear All</button>
+</div>
+{/if}
+
+	<BottomSheet bind:this={filterModal} title="Search Filters">
+        <form bind:this={filterForm} method="GET" action="/search" class="flex flex-col gap-3" on:submit={() => filterModal.close()}>
+            <input type="hidden" name="attrs" value={JSON.stringify(filterAttrs)}>
 			
 			<div class="flex gap-4 flex-col sm:flex-row">
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Has Tag</span>
-					<input type="text" name="tag" value={data.tag || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. electronics" />
+                    <select name="tag" class="select select-sm select-bordered rounded-lg font-normal">
+                        <option value="">Any Tag</option>
+                        {#each (data.tags || []) as t}
+                            <option value={t.slug} selected={data.tag === t.slug}>{t.name}</option>
+                        {/each}
+                    </select>
 				</div>
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">In Container</span>
-					<input type="text" name="container" value={data.container || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. A 001" />
+                    <select name="container" class="select select-sm select-bordered rounded-lg font-normal">
+                        <option value="">Any Container</option>
+                        {#each (data.containers || []) as c}
+                            <option value={c.name} selected={data.container === c.name}>{c.name}</option>
+                        {/each}
+                    </select>
 				</div>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Category</span>
-					<select name="category" class="select select-sm select-bordered rounded-lg font-normal capitalize">
+                    <select name="category" bind:value={selectedCategory} class="select select-sm select-bordered rounded-lg font-normal capitalize">
 						<option value="">Any Category</option>
-                        <option value="_uncategorized" selected={data.cat === '_uncategorized'}>Uncategorized</option>
+                        <option value="_uncategorized">Uncategorized</option>
 						{#each data.categories as c}
-							<option value={c.name} selected={data.cat === c.name} class="capitalize">{c.name}</option>
+                            <option value={c.name} class="capitalize">{c.name}</option>
 						{/each}
 					</select>
 				</div>
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Title</span>
-					<input type="text" name="title" value={data.titleStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Exact name match..." />
+                    <input type="text" name="title" value={data.titleStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. raspberry or Aerosmith..." />
 				</div>
 				<div class="form-control w-full">
 					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Description</span>
@@ -155,20 +240,24 @@
                     <input type="hidden" name="color" value={data.color} />
                 </div>
 			</div>
+
+            <div class="divider my-1">Attributes</div>
+            <CompareAttributeSheet mode="filter" bind:localAttributes={filterAttrs} activeSchema={dynamicSchema} on:change={(e) => filterAttrs = e.detail} />
             <div class="flex flex-col sm:flex-row gap-4 mt-2">
                 <label class="flex items-center gap-2 cursor-pointer mt-1">
                     <input type="checkbox" name="unassigned" value="true" class="checkbox checkbox-sm checkbox-primary" checked={data.unassigned} />
-                    <span class="text-sm font-medium">Unassigned only</span>
+                    <span class="text-sm font-medium">No location assigned</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer mt-1">
                     <input type="checkbox" name="duplicateStatus" value="FLAGGED" class="checkbox checkbox-sm checkbox-warning" checked={data.duplicateStatus === 'FLAGGED'} />
                     <span class="text-sm font-medium">Flagged Duplicates only</span>
                 </label>
             </div>
-			<button type="submit" class="btn btn-sm btn-primary mt-2 w-max shadow-sm rounded-lg">Apply Filters</button>
+            <div class="sticky bottom-0 bg-base-100 p-2 mt-4 border-t border-base-200">
+                <button type="submit" class="btn btn-primary w-full shadow-sm rounded-xl">Apply Filters</button>
+            </div>
 		</form>
-	</div>
-</details>
+	</BottomSheet>
 
 {#if bulkMode}
 	<form method="POST" action="?/bulkEdit" class="pb-32" use:enhance={() => {

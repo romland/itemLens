@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from "./$types";
 import { db } from '$lib/server/database';
 import { fail } from '@sveltejs/kit';
 import { flagDuplicatesInList } from '$lib/server/matcher';
+import { getActiveSchema } from '$lib/server/ontology';
 
 export const load = (async ({ locals, url, fetch }) => {
     // Forward all URL parameters directly to our master API
@@ -16,6 +17,15 @@ export const load = (async ({ locals, url, fetch }) => {
 		where: { inventoryId: locals.activeInventoryId },
 		orderBy: { name: 'asc' }
 	});
+
+    // const catParam = url.searchParams.get('category') || '';
+    // let selectedCatId = null;
+    // if (catParam && catParam !== '_uncategorized') {
+    //     const c = categories.find(c => c.name === catParam);
+    //     if (c) selectedCatId = c.id;
+    // }
+    // const activeSchema = await getActiveSchema(locals.activeInventoryId, selectedCatId, !catParam);
+    const activeSchema = await getActiveSchema(locals.activeInventoryId, null, true);
 
     const containers = await db.container.findMany({
         where: { inventoryId: locals.activeInventoryId },
@@ -47,7 +57,8 @@ export const load = (async ({ locals, url, fetch }) => {
         nextPage: data.nextPage, 
         categories,
         containers,
-        tags
+        tags,
+        activeSchema
     };
 }) satisfies PageServerLoad;
 

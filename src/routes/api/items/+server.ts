@@ -35,6 +35,7 @@ export async function GET({ url, setHeaders, locals }) {
     const maxAmount = url.searchParams.get('maxAmount');
     const duplicateStatus = url.searchParams.get('duplicateStatus');
     const colorMix = url.searchParams.get('color');
+    const attrsJson = url.searchParams.get('attrs');
 
     let orderBy: any = [{ id: 'desc' }];
     let isAttention = false;
@@ -133,6 +134,20 @@ export async function GET({ url, setHeaders, locals }) {
 
     if (attrKey && attrVal) {
         query.where = { ...query.where, attributes: { some: { key: attrKey, value: attrVal } } };
+    }
+
+    if (attrsJson) {
+        try {
+            const attrs = JSON.parse(attrsJson);
+            const andClauses = Object.entries(attrs)
+                .filter(([_, v]) => v !== '' && v !== null)
+                .map(([k, v]) => ({
+                    attributes: { some: { key: k, value: String(v) } }
+            }));
+            if (andClauses.length > 0) {
+                query.where = { ...query.where, AND: [...(query.where.AND as any || []), ...andClauses] };
+            }
+        } catch(e) { console.error('Failed to parse attrs filter', e); }
     }
 
     if (isAttention) {
