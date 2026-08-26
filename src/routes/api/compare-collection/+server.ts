@@ -33,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const parsed = await apiQueue.add(
             () => analyzeBulkCollection(localDiskPath, mimeType, activeSchema, hint, { targetType: 'global', targetId: 0 }),
-            { targetType: 'global', targetId: 0, description: 'Matching physical items against inventory database' }
+            { targetType: 'global', targetId: 0, description: 'Matching physical items against Collection database' }
         );
 
         const detected = parsed.items || [];

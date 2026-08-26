@@ -286,7 +286,7 @@ export const actions = {
         const id = Number(data.get('id'));
         const allow = data.get('deepScan') === 'true';
         await db.inventory.update({ where: { id }, data: { deepScanCollections: allow } });
-        return { success: true, message: "Collection scanning settings updated." };
+        return { success: true, message: "MultiScan scanning settings updated." };
     },
 
     toggleBgRemoval: async ({ request, locals }) => {

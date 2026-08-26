@@ -168,7 +168,7 @@ on:processingComplete={(ev) => {
 
 <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
-        if (mode !== 'single' && isDirty && !confirm('You have unsaved Collection Items. Switch modes and lose them?')) return;
+        if (mode !== 'single' && isDirty && !confirm('You have unsaved scanned items. Switch modes and lose them?')) return;
         isDirty = false;
         setMode('single');
     }}>Single Item</button>
@@ -176,7 +176,7 @@ on:processingComplete={(ev) => {
         if (mode !== 'collection' && isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
         isDirty = false;
         setMode('collection');
-    }}>Collection</button>
+    }}>Multi-Scan</button>
     
     <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
         isDirty = false;

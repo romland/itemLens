@@ -98,7 +98,7 @@ It performs set math between what your camera sees (**Set A**) and what your dat
 - **Subset Scoping:** Instead of checking against your entire database every time, you can scope comparisons to specific subsets:
   - By Tag (e.g., `#canned-veggie`, `#ps2-games`)
   - By Location/Container (e.g., `Box A 001`)
-- **Triage Actions:** When you spot something missing that you want to track, the **Add** menu lets you route it straight to **Inventory**, your **Shopping List**, or **To-Do List** in the Notebook (for current inventory).
+- **Triage Actions:** When you spot something missing that you want to track, the **Add** menu lets you route it straight to **Collection**, your **Shopping List**, or **To-Do List** in the Notebook (for current Collection).
 
 
 ### Info how I use itemLens
@@ -110,7 +110,7 @@ It performs set math between what your camera sees (**Set A**) and what your dat
     - I use it for electronics/components
     - Which fields I actually fill in
     - How I search for related links
-
+    - **Note on Terminology:** While itemLens is an *inventory management* system, the UI refers to the top-level databases as "Collections". The bulk camera feature is named "Multi-Scan", and the underlying database schema retains the name "Inventories" for structural stability. I mention this because there is bound to be confusion before all variables are renamed. Especially since there was a "collection" before (which is now multi-scan).
 # Third parties
 I really dislike it when I have to register for some 3rd party services to try out some software,
 therefore, that is all voluntary. Set the flag `NO_THIRD_PARTY_SERVICES` to `true` in `.env` 
@@ -223,20 +223,7 @@ sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O TH
 sudo chmod a+rx THAT_PATH/yt-dlp
 ```
 
-# Prototype-y
-- Right now the code very JavaScripty while it should be TypeScripty. A lot of it is still very much a prototype.
-
 # TODO / notes
-- make a multi-"screen" wizard for adding new items on smaller devices (from desktop single screen is good)
-- consider: Is it faster to do a quick pre-check on the Jetson to see if there is a QR code in image?
-- Investigate how fast classification inference can run on a recent RasPi (using OpenCL)
-- TODO fields when adding items:
-    inventory   Inventory? @relation(fields: [inventoryId], references: [id])
-    inventoryId Int?
-    usage      InUse[] 
-- Need some thinking about logic to take _valuable_ data from photos and apply it to items for searching,
-  right now we search all.
-- autostart containers if they are not running (if Windows, need to start in WSL)
 - fetching interesting links (especially documentation/specs) for newly items should also be automatic
 
 # TODO README:

@@ -66,7 +66,7 @@
         if (!txt || txt.trim() === '') return "Empty QR code";
 
         // const exists = flatContainers.some(c => c.name === txt);
-        // if (!exists) return `Container "${txt}" not found in this inventory.`;
+        // if (!exists) return `Container "${txt}" not found in this Collection.`;
         return true;
     }
 
@@ -92,7 +92,7 @@
         const exists = flatContainers.some(c => c.name === ev.detail);
         if (!exists) {
             scanningContainers = false;
-            if (confirm(`Container "${ev.detail}" not found in this inventory. Create it now?`)) {
+            if (confirm(`Container "${ev.detail}" not found in this Collection. Create it now?`)) {
                 createContainer(ev.detail);
             }
             return;

@@ -93,9 +93,9 @@
                     {#if item.matchedItem?.dbTotalAmount === item.count}
                         All accounted for.
                     {:else if item.matchedItem?.dbTotalAmount > item.count}
-                        Inventory expects {item.matchedItem.dbTotalAmount} total.
+                        Collection expects {item.matchedItem.dbTotalAmount} total.
                     {:else if item.matchedItem?.dbTotalAmount < item.count}
-                        Scanned extra (Inventory expects {item.matchedItem.dbTotalAmount}).
+                        Scanned extra (Collection expects {item.matchedItem.dbTotalAmount}).
                     {/if}
                 </span>
             {:else if item.subtitle}
@@ -117,7 +117,7 @@
             
             <div class="flex items-center gap-2 mt-2">
                 {#if type === 'unregistered'}
-                    <span class="badge badge-ghost badge-xs text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Inventory</span>
+                    <span class="badge badge-ghost badge-xs text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Collection</span>
                 {:else if type === 'missing'}
                     <span class="badge badge-error badge-outline badge-sm text-[10px] uppercase font-bold">Missing</span>
                     {#if item.locationName}

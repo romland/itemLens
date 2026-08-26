@@ -139,7 +139,7 @@
             if (data.aiData.isDuplicate && !item) {
                 isDuplicateWarning = true;
                 duplicateDetails = data.aiData.duplicateItemDetails;
-                dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in inventory!' });
+                dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in collection!' });
                 if (duplicateDetails.debugTrace) {
                     console.group(`🔍 Match Trace for: ${data.aiData.title}`);
                     duplicateDetails.debugTrace.forEach((line: string) => console.log(line));
@@ -168,7 +168,7 @@
                         }
                     }
                     if (foundNew) { autofilled = true; isDirty = true; }
-                } catch (e) { console.error("Failed to parse AI attributes", e); }
+                } catch (e) { console.error("Failed to parse attributes", e); }
             }
 
             if (data.aiData.prominent_text_or_graphic && !currentAttributes.some(a => a.key === 'prominent_text_or_graphic')) {

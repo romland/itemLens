@@ -16,7 +16,7 @@ async function main() {
     let flaggedCount = 0;
 
     for (const inv of inventories) {
-        console.log(`[Retroactive Flagging] Processing inventory: ${inv.name} (Archetype: ${inv.archetype})`);
+        console.log(`[Retroactive Flagging] Processing Collection: ${inv.name} (Archetype: ${inv.archetype})`);
         
         const allItems = await db.item.findMany({
             where: { inventoryId: inv.id },

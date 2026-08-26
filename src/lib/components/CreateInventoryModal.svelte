@@ -64,13 +64,13 @@
     function handleEnhance() {
         return async ({ result, update }: any) => {
             if (result.type === 'success' || result.type === 'redirect') {
-                dispatch('success', result.data?.message || 'Inventory created successfully!');
+                dispatch('success', result.data?.message || 'Collection created successfully!');
                 modal.close();
                 name = '';
                 contentsHint = '';
                 selectedArchetype = 'hardware';
             } else {
-                dispatch('error', result.data?.message || 'An error occurred while creating inventory.');
+                dispatch('error', result.data?.message || 'An error occurred while creating collection.');
             }
             await update({ reset: false });
         };
@@ -81,7 +81,7 @@
     <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem] max-w-4xl flex flex-col max-h-[90vh]">
         <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
             <div>
-                <h3 class="font-bold text-xl leading-tight">Create New Inventory</h3>
+                <h3 class="font-bold text-xl leading-tight">Create New Collection</h3>
                 <p class="text-xs text-gray-500 mt-1">Select an archetype to automatically configure optimal system defaults.</p>
             </div>
             <button type="button" class="btn btn-sm btn-circle btn-ghost" on:click={() => modal.close()}><i class="bi bi-x-lg"></i></button>
@@ -90,7 +90,7 @@
         <form method="POST" action="?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
             <div class="p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 bg-base-50">
                 <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-semibold text-lg">Name your inventory</span></label>
+                    <label class="label"><span class="label-text font-semibold text-lg">Name your Collection</span></label>
                     <input type="text" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar..." class="input input-bordered input-lg w-full rounded-2xl shadow-inner focus:border-primary" required autocomplete="off">
                 </div>
 
@@ -130,7 +130,7 @@
                 </div>
             </div>
             <div class="p-4 bg-base-100 border-t border-base-200 sticky bottom-0 z-10">
-                <button type="submit" class="btn btn-primary btn-lg w-full rounded-2xl shadow-lg" disabled={!name.trim()}>Create "{name.trim() || 'Inventory'}"</button>
+                <button type="submit" class="btn btn-primary btn-lg w-full rounded-2xl shadow-lg" disabled={!name.trim()}>Create "{name.trim() || 'Collection'}"</button>
             </div>
         </form>
     </div>

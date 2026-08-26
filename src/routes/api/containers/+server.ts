@@ -31,6 +31,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         });
         return json(container);
     } catch (e) {
-        return json({ error: 'Failed to create container (it might already exist in this inventory)' }, { status: 400 });
+        return json({ error: 'Failed to create container (it might already exist in this Collection)' }, { status: 400 });
     }
 };

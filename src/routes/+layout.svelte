@@ -365,13 +365,13 @@ $:  isDemoMode =
                         <option value={inv.id}>{inv.name}</option>
                     {/each}
                     <!--
-                    <option value="_new">+ Create Vault...</option>
+                    <option value="_new">+ Create Collection...</option>
                     -->
                 </select>
             </form>
         {:else if $page.data.user}
             <button class="btn btn-sm btn-primary ml-4 rounded-xl shadow-sm" on:click={() => createInventoryModal.showModal()}>
-                <i class="bi bi-plus-lg"></i> Create Vault
+                <i class="bi bi-plus-lg"></i> Create Collection
             </button>
         {/if}
 
@@ -536,14 +536,14 @@ $:  isDemoMode =
                             <i class="bi bi-safe2-fill text-xl"></i>
                         </div>
                         <div class="flex-1">
-							<div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Inventory</div>
+							<div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Collection</div>
                             <form action="/?/switchVault" method="POST" data-sveltekit-reload>
                                 <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => { if (e.currentTarget.value === '_new') { mobileMenuModal.close(); e.currentTarget.value = $page.data.activeInventoryId; createInventoryModal.showModal(); } else e.currentTarget.form?.requestSubmit(); }} value={$page.data.activeInventoryId}>
                                     {#each $page.data.inventories as inv}
                                         <option value={inv.id}>{inv.name}</option>
                                     {/each}
                                     <!--
-                                    <option value="_new">+ Create Vault...</option>
+                                    <option value="_new">+ Create Collection...</option>
                                     -->
                                 </select>
                             </form>

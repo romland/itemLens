@@ -202,7 +202,7 @@
             }
 
             if (res.ok) {
-                dispatch('notify', { status: 'success', message: `Added "${item.title}" to ${target === 'inventory' ? 'Inventory' : 'Notebook'}` });
+                dispatch('notify', { status: 'success', message: `Added "${item.title}" to ${target === 'inventory' ? 'Collection' : 'Notebook'}` });
                 results.newToYou = results.newToYou.filter(i => i.title !== item.title);
                 if (target === 'inventory') results.inCollection = [{ ...item, matchedItem: { title: item.title, amount: 1 } }, ...results.inCollection];
             }
@@ -429,9 +429,9 @@
             <button class="btn btn-primary shadow-lg flex-1 max-w-sm rounded-2xl" on:click={async () => {
                 for(let u of unregistered) await quickAdd(u, 'inventory');
                 results.newToYou = [];
-                dispatch('notify', { status: 'success', message: `Added ${unregistered.length} items to Inventory!` });
+                dispatch('notify', { status: 'success', message: `Added ${unregistered.length} items to Collection!` });
             }}>
-                <i class="bi bi-box-seam"></i> Add {unregistered.length} to Inventory
+                <i class="bi bi-box-seam"></i> Add {unregistered.length} to Collection
             </button>
         </div>
     {/if}
@@ -454,7 +454,7 @@
 <ImageLightbox bind:this={lightbox} itemTitle="Comparison Match" />
 
 <!-- Manual Link Assistant Modal -->
-<BottomSheet bind:this={mergeModal} title="Link to Existing Item" subtitle={`Select the inventory item that matches "${mergeSourceItem?.title}"`} on:close={() => mergeSourceItem = null}>
+<BottomSheet bind:this={mergeModal} title="Link to Existing Item" subtitle={`Select the item that matches "${mergeSourceItem?.title}"`} on:close={() => mergeSourceItem = null}>
     <div class="flex flex-col gap-2">
         {#each results.missingFromScope as missingItem}
             <button type="button" class="btn btn-ghost h-auto py-3 px-4 w-full justify-start text-left border border-base-200 shadow-sm hover:border-warning hover:bg-warning/10 rounded-2xl flex-col items-start gap-1" on:click={() => confirmMerge(missingItem)}>
@@ -524,7 +524,7 @@
     <div class="flex flex-col gap-3">
         <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
             <i class="bi bi-box-seam text-2xl mr-4 text-primary"></i>
-            <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to inventory</div></div>
+            <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to collection</div></div>
         </button>
         <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
             <i class="bi bi-cart text-2xl mr-4 text-warning"></i>

@@ -52,7 +52,7 @@
         if (!file) return;
 
         isScanning = true;
-        dispatch('processingStart', { message: 'Comparing with your Inventory...', taskId: 'compare' });
+        dispatch('processingStart', { message: 'Comparing with your Collection...', taskId: 'compare' });
 
         const fd = new FormData();
         fd.append('file', file);

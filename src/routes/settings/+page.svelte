@@ -147,7 +147,7 @@
                 {#each [
                     { id: 'goHome', label: 'Home Page' },
                     { id: 'newSingle', label: 'New Single Item' },
-                    { id: 'newCollection', label: 'New Collection' },
+                    { id: 'newCollection', label: 'New MultiScan' },
                     { id: 'profile', label: 'Profile Menu' },
                     { id: 'settings', label: 'Settings' },
                     { id: 'setDefaultContainer', label: 'Set Default Box' },
@@ -287,7 +287,7 @@
                 </table>
             </div>
 
-			<div class="divider my-6">Inventory Access</div>
+            <div class="divider my-6">Collection Access</div>
 
 			<form method="POST" action="?/assignAccess" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2 mb-6">
                 <select name="userId" class="select select-bordered w-full" required>
@@ -297,7 +297,7 @@
                     {/each}
                 </select>
                 <select name="inventoryId" class="select select-bordered w-full" required>
-					<option value="" disabled selected>Select Inventory</option>
+                    <option value="" disabled selected>Select Collection</option>
 					{#each $page.data.allInventories || [] as v}
                         <option value={v.id}>{v.name}</option>
                     {/each}
@@ -312,7 +312,7 @@
 
             <div class="overflow-x-auto bg-base-200 rounded-lg">
                 <table class="table table-sm">
-					<thead><tr><th>User</th><th>Inventory</th><th>Role</th><th></th></tr></thead>
+                    <thead><tr><th>User</th><th>Collection</th><th>Role</th><th></th></tr></thead>
                     <tbody>
                         {#each $page.data.accessMap || [] as access}
                             <tr>
@@ -332,11 +332,11 @@
                 </table>
             </div>
 
-			<div class="divider my-6">Manage Inventories</div>
+            <div class="divider my-6">Manage Collections</div>
 
             <div class="overflow-x-auto bg-base-200 rounded-lg">
                 <table class="table table-sm">
-					<thead><tr><th>Inventory Name</th><th></th></tr></thead>
+                    <thead><tr><th>Collection Name</th><th></th></tr></thead>
                     <tbody>
 						{#each $page.data.allInventories || [] as v}
                             <tr>
@@ -449,7 +449,7 @@
                                 </td>
                                 <td class="text-right">
                                     {#if deleteConfirmId === v.id}
-										<form method="POST" action="?/deleteInventory" use:enhance={() => { return async ({ result, update }) => { if(result.type === 'success') notify('success', 'Inventory deleted'); deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
+                                        <form method="POST" action="?/deleteInventory" use:enhance={() => { return async ({ result, update }) => { if(result.type === 'success') notify('success', 'Collection deleted'); deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
                                             <input type="hidden" name="id" value={v.id}>
                                             <input type="text" name="confirmName" bind:value={deleteConfirmText} class="input input-xs input-bordered border-error focus:border-error w-32 bg-base-100" placeholder="Type name..." autocomplete="off">
                                             <button type="submit" class="btn btn-error btn-xs" disabled={deleteConfirmText !== v.name}>Delete</button>
@@ -491,11 +491,11 @@
 
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
-            <h3 class="font-bold text-lg mb-1">Create New Inventory</h3>
-            <p class="text-sm text-gray-500">Set up a new isolated vault for a specific collection of items.</p>
+            <h3 class="font-bold text-lg mb-1">Create New Collection</h3>
+            <p class="text-sm text-gray-500">Set up a new isolated space for a specific group of items.</p>
         </div>
         <button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
-            <i class="bi bi-plus-lg"></i> Create Inventory
+            <i class="bi bi-plus-lg"></i> Create Collection
         </button>
     </div>
 </div>

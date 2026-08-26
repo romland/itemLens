@@ -140,7 +140,7 @@ console.log("formData:", orgData);
         });
 
         if (!item) return fail(404, { error: true, message: "Item not found." });
-        if (item.inventoryId !== locals.activeInventoryId) return fail(403, { error: true, message: "Item belongs to a different inventory." });
+        if (item.inventoryId !== locals.activeInventoryId) return fail(403, { error: true, message: "Item belongs to a different Collection." });
 
         // Holds all image IDs that existed before this item (new photos to be created are not here)
         const preExistingPhotoIds = item.photos.map(p=>p.id);

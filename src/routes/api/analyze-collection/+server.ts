@@ -28,7 +28,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const note = await db.timelineNote.create({
             data: {
-                content: "Collection capture (Pending triage)",
+                content: "Multi-Scan capture (Pending triage)",
                 authorId: locals.user.id,
                 inventoryId: locals.activeInventoryId,
                 category: 'archive',
@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const aiResponse = await apiQueue.add(
             () => analyzeBulkCollection(localPath, mimeType, activeSchema, hint, { targetType: 'global', targetId: 0 }),
-            { targetType: 'global', targetId: 0, description: 'Analyzing collection items with Vision Model' }
+            { targetType: 'global', targetId: 0, description: 'Analyzing Multi-Scan items with Vision Model' }
         );
 
         const dbItems = await db.item.findMany({
@@ -55,7 +55,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         const { annotatedScannedItems } = findBestMatchesForBatch(aiResponse.items, dbItems, undefined, archetype);
         
-        console.log(`[MATCH-DEBUG] analyze-collection API: annotatedScannedItems length: ${annotatedScannedItems.length}`);
+        console.log(`[MATCH-DEBUG] analyze-multi-scan API: annotatedScannedItems length: ${annotatedScannedItems.length}`);
 
         for (const item of annotatedScannedItems) {
             item.duplicateStrategy = defaultStrategy;
@@ -68,7 +68,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         return json({ success: true, draftPath: webPath, noteId: note.id, totalVisibleCount: aiResponse.totalVisibleCount, collectionType: aiResponse.collectionType, items: annotatedScannedItems });
     } catch (e) {
-        console.error("Collection analysis error:", e);
+        console.error("Multi-Scan analysis error:", e);
         const err = e as any;
         const is503 = err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('demand');
         const errorMessage = is503 

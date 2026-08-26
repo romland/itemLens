@@ -55,7 +55,7 @@
     let editSubtitle = "";
     let lightbox: ImageLightbox;
 
-    pageTitle.set("Add Collection");
+    pageTitle.set("Multi-Scan");
 
     async function handleFileSelect(e: Event) {
         const file = (e.target as HTMLInputElement).files?.[0];
@@ -63,7 +63,7 @@
 
         uploadError = "";
         isUploading = true;
-        isUploadingMessage = "Analyzing collection...";
+        isUploadingMessage = "Analyzing items...";
         dispatch('processingStart', { message: isUploadingMessage, taskId: 'bulk' });
         
         const fd = new FormData();
@@ -86,7 +86,7 @@
                     let resolution = null;
                     
                 if (item._debugComparisons && item._debugComparisons.length > 0) {
-                    console.groupCollapsed(`🔍 Collection Match Trace for: ${item.title}`);
+                    console.groupCollapsed(`🔍 Multi-Scan Match Trace for: ${item.title}`);
                     item._debugComparisons.forEach((comp: any) => {
                         console.groupCollapsed(`Against DB Item: ${comp.dbTitle}`);
                         comp.trace.forEach((line: string) => console.log(line));
@@ -242,10 +242,10 @@
                 {#if $page.data.inventories}
                     Add to {$page.data.inventories.find(i => i.id ===$page.data.activeInventoryId)?.name || 'Collection'}
                 {:else}
-                    New Collection
+                    Multiple Items
                 {/if}
             </h2>
-            <p class="text-gray-500 mb-8 max-w-sm">Capture an entire collection of books, games, whiskys, stamps, coins or CDs/DVDs. Sky's the limit. We'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
+            <p class="text-gray-500 mb-8 max-w-sm">Capture multiple books, games, whiskys, stamps, coins or CDs/DVDs in a single photo. Sky's the limit. We'll extract them all instantly.<br><br><strong>Tip:</strong> Keep the phone steady and ensure text is legible.</p>
 
 			{#if !showHintInput}
 				<button type="button" class="btn btn-ghost btn-sm text-gray-400 hover:text-primary mb-6 rounded-xl" on:click={() => showHintInput = true}>
@@ -474,4 +474,4 @@
     </div>
 </BottomSheet>
 
-<ImageLightbox bind:this={lightbox} itemTitle="Collection Scan" />
+<ImageLightbox bind:this={lightbox} itemTitle="Multi-Scan" />
