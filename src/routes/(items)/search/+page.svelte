@@ -23,6 +23,9 @@
     let selectedCategory = data.cat || '';
     let filterForm: HTMLFormElement;
 
+    // Toggle: Set to true to drop the attribute key and show only the friendly value in pills
+    const COMPACT_PILLS = true;
+
 	$: allLoadedItems = [...data.items, ...(navLoadedPages || []).flat()];
 
    let isAllSelectedGlobally = false;
@@ -153,7 +156,7 @@
             <i class="bi bi-funnel"></i> Filters
         </button>
         <button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; }}>
-            {#if bulkMode}Cancel Bulk{:else}<i class="bi bi-ui-checks-grid"></i> Bulk{/if}
+            {#if bulkMode}Cancel Bulk Edit{:else}<i class="bi bi-ui-checks-grid"></i> Bulk Edit{/if}
         </button>
     </div>
 </div>
@@ -166,7 +169,9 @@
     {#if data.cat}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('category')}><i class="bi bi-tags"></i> {data.cat} <i class="bi bi-x ml-1"></i></button>{/if}
     {#if data.unassigned}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('unassigned')}><i class="bi bi-pin-map"></i> Unassigned <i class="bi bi-x ml-1"></i></button>{/if}
     {#each Object.entries(filterAttrs) as [k,v]}
-        <button class="badge badge-secondary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('attrs', k)}>{k.replace(/_/g, ' ')}: {v} <i class="bi bi-x ml-1"></i></button>
+        {@const schemaField = (data.activeSchema || []).find(f => f.name === k)}
+        {@const friendlyKey = schemaField?.uiLabel || k.replace(/_/g, ' ')}
+        <button class="badge badge-secondary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('attrs', k)}>{COMPACT_PILLS ? v : `${friendlyKey}: ${v}`} <i class="bi bi-x ml-1"></i></button>
     {/each}
     <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { window.location.href = '/search'; }}>Clear All</button>
 </div>
