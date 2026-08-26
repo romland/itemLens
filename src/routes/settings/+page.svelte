@@ -417,7 +417,7 @@
 
                                     <div class="flex flex-wrap gap-2 mt-2">
                                         <!-- Beautify Action -->
-                                        <form method="POST" action="?/beautifyTaxonomy" use:enhance={createEnhancer}>
+                                        <form method="POST" action="?/beautifyTaxonomy" use:enhance={createEnhancer} on:submit={() => notify('info', 'Beautifying labels... This may take a few seconds.')}>
                                             <input type="hidden" name="inventoryId" value={v.id}>
                                             <button type="submit" class="btn btn-xs btn-outline btn-primary gap-1 text-[10px]"><i class="bi bi-magic"></i> Beautify Taxonomy Labels</button>
                                         </form>

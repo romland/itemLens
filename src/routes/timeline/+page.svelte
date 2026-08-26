@@ -4,6 +4,7 @@
     import pageTitle from '$lib/stores';
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import Notifications from "$lib/components/Notifications.svelte";
+    import { onMount, onDestroy } from 'svelte';
 
     export let data;
 
@@ -28,6 +29,28 @@
         if (status !== 'loading') setTimeout(() => notifications = notifications.filter(n => n.id !== newId), 3000);
         return newId;
     }    
+
+    let displayLimit = 10;
+    let observer: IntersectionObserver;
+
+    onMount(() => {
+        observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                displayLimit += 10;
+            }
+        }, { rootMargin: '500px' });
+        
+        setTimeout(() => {
+            const el = document.getElementById('timeline-load-more');
+            if (el) observer.observe(el);
+        }, 100);
+    });
+
+    onDestroy(() => {
+        if (observer) observer.disconnect();
+    });
+
+    $: displayedNotes = data.notes ? data.notes.slice(0, displayLimit) : [];
 </script>
 
 <PasteHandler 
@@ -58,7 +81,7 @@
     </div>
 
     <div class="flex-1 overflow-y-auto flex flex-col gap-4 py-4 px-2 w-full box-border">
-        {#each data.notes as note (note.id)}
+        {#each displayedNotes as note (note.id)}
             <TimelineCard {note} />
         {:else}
             <div class="text-center text-gray-400 mt-10">
@@ -69,6 +92,9 @@
                 </p>
             </div>
         {/each}
+        {#if data.notes && displayLimit < data.notes.length}
+            <div id="timeline-load-more" class="h-10 w-full flex justify-center items-center text-gray-400"><span class="loading loading-spinner loading-sm"></span></div>
+        {/if}
     </div>
 </div>
 
