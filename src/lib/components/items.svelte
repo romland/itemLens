@@ -16,6 +16,7 @@
     import { flip } from 'svelte/animate';
     import { fade } from 'svelte/transition';
     import { browser } from '$app/environment';
+    import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -125,11 +126,24 @@
     // Only prepend ghost items to the primary container to prevent duplicates on infinite scroll pages
     $: displayItems = showControls ? [...ghostItems, ...items] : [...items];
 
+    // Detect if the user is actively filtering to show context-aware empty states
+    $: hasActiveFilters = browser && Array.from($page.url.searchParams.keys()).some(k => !['sort', 'theme', 'c', 'page'].includes(k));
+
 </script>
 
 {#if (!displayItems || displayItems.length === 0)}
     {#if showControls}
-        <Alert>Empty.</Alert>
+        <div class="py-12 border border-base-200/50 bg-base-100/50 rounded-3xl mt-4">
+            <ContentUnavailable 
+                type="default"
+                icon={hasActiveFilters ? 'bi-search' : 'bi-box-seam'} 
+                title={hasActiveFilters ? 'No Results Found' : 'Vault is Empty'} 
+                message={hasActiveFilters ? "Try adjusting your filters or search terms to find what you're looking for." : "Start digitizing your collection by adding your first item."}
+                actionLabel={hasActiveFilters ? 'Clear Filters' : ''}
+                actionIcon="bi-funnel"
+                on:click={() => { if(hasActiveFilters) window.location.href = window.location.pathname; }}
+            />
+        </div>
     {/if}
 {:else}
     {#if showControls}

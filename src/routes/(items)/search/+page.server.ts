@@ -37,6 +37,18 @@ export const load = (async ({ locals, url, fetch }) => {
         orderBy: { name: 'asc' }
     });
 	
+    // Faceted Search: Get accurate counts for all populated attributes via a single optimized `groupBy`
+    const kvpGroupRaw = await db.kVP.groupBy({
+        by: ['key', 'value'],
+        _count: { itemId: true },
+        where: { item: { inventoryId: locals.activeInventoryId } }
+    });
+    const attributeCounts = kvpGroupRaw.reduce((acc: any, curr) => {
+        if (!acc[curr.key]) acc[curr.key] = {};
+        acc[curr.key][curr.value] = curr._count.itemId;
+        return acc;
+    }, {});
+
     return { 
         q: url.searchParams.get('q') || '', 
         cat: url.searchParams.get('category') || '', 
@@ -58,7 +70,8 @@ export const load = (async ({ locals, url, fetch }) => {
         categories,
         containers,
         tags,
-        activeSchema
+        activeSchema,
+        attributeCounts
     };
 }) satisfies PageServerLoad;
 

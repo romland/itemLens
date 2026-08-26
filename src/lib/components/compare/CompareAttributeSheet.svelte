@@ -7,6 +7,7 @@
     export let activeSchema: any[] = [];
     export let showAll: boolean = false;
     export let mode: 'edit' | 'filter' = 'edit';
+    export let attributeCounts: Record<string, Record<string, number>> = {};
 
     export let localAttributes: Record<string, string> = {};
     let customInputs: Record<string, boolean> = {};
@@ -39,24 +40,35 @@
         dispatch('save', { item, attributes: localAttributes });
     }
 
-    function formatEnumLabel(str: string) {
-        return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    function formatEnumLabel(str: string, fieldName: string) {
+        let label = str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        if (mode === 'filter' && attributeCounts[fieldName]?.[str]) {
+            label += ` (${attributeCounts[fieldName][str]})`;
+        }
+        return label;
     }
 
-    function getProcessedOptions(options: string[] | null) {
-        if (!options) return [];
-        
+    function getProcessedOptions(options: string[] | null, fieldName: string) {
+        if (!options && !(mode === 'filter' && attributeCounts[fieldName])) return [];
+
         const getSortedTokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean).sort().join(' ');
         const unique = [];
         const seenTokens = new Set();
-        for (const opt of options) {
+        for (const opt of (options || [])) {
             const tokens = getSortedTokens(opt);
             if (!seenTokens.has(tokens)) {
                 seenTokens.add(tokens);
                 unique.push(opt);
             }
         }
-        return unique.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+        let finalOptions = unique;
+        if (mode === 'filter' && attributeCounts[fieldName]) {
+            const dbValues = Object.keys(attributeCounts[fieldName]);
+            const combined = Array.from(new Set([...finalOptions, ...dbValues]));
+            finalOptions = combined.filter(opt => attributeCounts[fieldName][opt] > 0);
+        }
+        return finalOptions.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
     }
 
     function isFreetextLike(options: string[] | null) {
@@ -112,7 +124,7 @@
                 <label class="label pb-1"><span class="label-text font-semibold">{field.uiLabel}</span></label>
                 
                 {#if field.type === 'enum' && field.options}
-                {@const processedOptions = getProcessedOptions(field.options)}
+                {@const processedOptions = getProcessedOptions(field.options, field.name)}
                 {@const isFreetext = isFreetextLike(processedOptions)}
                 
                 {#if mode === 'filter'}
@@ -121,14 +133,14 @@
                             on:change={(e) => setEnum(field.name, e.currentTarget.value)}>
                         <option value="">Any</option>
                         {#each processedOptions as opt}
-                            <option value={opt}>{formatEnumLabel(opt)}</option>
+                            <option value={opt}>{formatEnumLabel(opt, field.name)}</option>
                         {/each}
                     </select>
                 {:else if isFreetext}
                     <input list="datalist-{field.name}" bind:value={localAttributes[field.name]} placeholder={getPlaceholder(field.name)} class="input input-bordered w-full rounded-xl bg-base-50" />
                     <datalist id="datalist-{field.name}">
                         {#each processedOptions as opt}
-                            <option value={opt}>{formatEnumLabel(opt)}</option>
+                            <option value={opt}>{formatEnumLabel(opt, field.name)}</option>
                         {/each}
                     </datalist>
                 {:else}
@@ -138,12 +150,12 @@
                                 type="button" 
                                 class="badge badge-lg py-4 px-4 hover:border-primary transition-all capitalize {localAttributes[field.name] === opt ? 'badge-primary shadow-md' : 'badge-ghost border-base-300'}"
                                 on:click={() => setEnum(field.name, opt)}>
-                                {formatEnumLabel(opt)}
+                                {formatEnumLabel(opt, field.name)}
                             </button>
                         {/each}
                         {#if localAttributes[field.name] && !processedOptions.includes(localAttributes[field.name]) && mode === 'edit'}
                             <button type="button" class="badge badge-lg badge-primary py-4 px-4 shadow-md transition-all capitalize" on:click={() => setEnum(field.name, '')}>
-                                {formatEnumLabel(localAttributes[field.name])} <i class="bi bi-x ml-1"></i>
+                                {formatEnumLabel(localAttributes[field.name], field.name)} <i class="bi bi-x ml-1"></i>
                             </button>
                         {/if}
 

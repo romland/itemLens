@@ -247,7 +247,13 @@
 			</div>
 
             <div class="divider my-1">Attributes</div>
-            <CompareAttributeSheet mode="filter" bind:localAttributes={filterAttrs} activeSchema={dynamicSchema} on:change={(e) => filterAttrs = e.detail} />
+            <CompareAttributeSheet 
+                mode="filter" 
+                bind:localAttributes={filterAttrs} 
+                activeSchema={dynamicSchema} 
+                attributeCounts={data.attributeCounts}
+                on:change={(e) => filterAttrs = e.detail} 
+            />
             <div class="flex flex-col sm:flex-row gap-4 mt-2">
                 <label class="flex items-center gap-2 cursor-pointer mt-1">
                     <input type="checkbox" name="unassigned" value="true" class="checkbox checkbox-sm checkbox-primary" checked={data.unassigned} />

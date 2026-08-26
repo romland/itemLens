@@ -4,12 +4,13 @@
     export let icon: string = 'bi-exclamation-triangle';
     export let actionLabel: string = '';
     export let actionIcon: string = 'bi-arrow-clockwise';
-    export let type: 'error' | 'warning' | 'info' = 'error';
+    export let type: 'error' | 'warning' | 'info' | 'default' = 'error';
 
     $: colorClasses = {
         error: 'text-error bg-error/10',
         warning: 'text-warning bg-warning/10',
-        info: 'text-primary bg-primary/10'
+        info: 'text-primary bg-primary/10',
+        default: 'text-gray-400 bg-base-200'
     }[type];
 </script>
 
