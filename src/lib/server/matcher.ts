@@ -84,14 +84,13 @@ function colorDistance(c1: string, c2: string): number {
     return dist / 441.67;
     */
 
-    // Convert to CIELAB space and calculate Delta E (CIE76 visual distance metric)
     const lab1 = rgbToLab(rgb1);
     const lab2 = rgbToLab(rgb2);
-    const deltaE = Math.sqrt(Math.pow(lab1[0]-lab2[0], 2) + Math.pow(lab1[1]-lab2[1], 2) + Math.pow(lab1[2]-lab2[2], 2));
+    // We weight Lightness (L) by 0.5 to be more forgiving of shadows and exposure differences.
+    const deltaE = Math.sqrt(Math.pow((lab1[0]-lab2[0]) * 0.5, 2) + Math.pow(lab1[1]-lab2[1], 2) + Math.pow(lab1[2]-lab2[2], 2));
     
-    // A Delta E of ~50+ represents completely different colors to the human eye.
-    // We use a slight curve to aggressively penalize visual mismatches.
-    return Math.min(1.0, Math.pow(deltaE / 50.0, 1.5));
+    // A Delta E of ~65 represents completely different colors.
+    return Math.min(1.0, Math.pow(deltaE / 65.0, 1.5));
 }
 
 function calculateColorMixSimilarity(mixAStr: string | any, mixBStr: string | any): number {
@@ -123,8 +122,8 @@ function calculateColorMixSimilarity(mixAStr: string | any, mixBStr: string | an
         for (const cB of keysB) {
             if (remA[cA] > 0 && remB[cB] > 0) {
                 const matchSim = 1 - colorDistance(cA, cB);
-                // Only pair if they are reasonably close (e.g. Navy and Blue)
-                if (matchSim > 0.5) { 
+                // Pair if they share at least some hue family relation
+                if (matchSim > 0.3) { 
                     const overlap = Math.min(remA[cA], remB[cB]);
                     similarity += overlap * matchSim;
                     remA[cA] -= overlap;
@@ -201,8 +200,8 @@ export function evaluateTextIdentity(scanTitle: string, scanDesc: string, dbTitl
     const normScanDesc = normalizeStr(scanDesc || '');
     const normDbDesc = normalizeStr(dbDesc || '');
 
-    const genericTerms = ["new item", "default product", "unknown", "unknown item", "tshirt", "t-shirt", "shirt", "jeans", "pants", "shoes", "book", "dvd", "cd", "item", "product", "graphic tshirt", "graphic t-shirt", "hoodie", "sweater", "jacket"];
-    const isGenericTitle = genericTerms.includes(normScanTitle) || genericTerms.includes(normDbTitle) || normScanTitle.includes("new item") || normScanTitle.includes("default product") || normScanTitle.includes("unknown");
+    const genericTerms = ["newitem", "defaultproduct", "unknown", "unknownitem", "tshirt", "shirt", "jeans", "pants", "shoes", "book", "dvd", "cd", "item", "product", "graphictshirt", "hoodie", "sweater", "jacket", "poloshirt", "polo", "stripedpoloshirt"];
+    const isGenericTitle = genericTerms.includes(normScanTitle) || genericTerms.includes(normDbTitle) || normScanTitle.includes("newitem") || normScanTitle.includes("defaultproduct") || normScanTitle.includes("unknown");
 
     let isStrongTextMatch = false;
     let isCompositeVeto = false;
@@ -287,6 +286,9 @@ export function computeMatch(
             fuzzyMatches += 0.5;
             debugTrace.push(`[COLOR MATCH] Partial similarity: ${sim.toFixed(2)}`);
             sharedAttributes.push({ key: 'color_mix', value: typeof scan.colorMix === 'string' ? scan.colorMix : JSON.stringify(scan.colorMix) });
+        } else if (sim < 0.15) {
+            strictFailures += 1;
+            debugTrace.push(`[COLOR CLASH] Colors are completely distinct (Sim=${sim.toFixed(2)})`);
         } else {
             fuzzyMismatches += 2;
             debugTrace.push(`[COLOR MISMATCH] Similarity too low: ${sim.toFixed(2)}`);
@@ -303,17 +305,31 @@ export function computeMatch(
     const scanWearVal = isUseless(scan.distinctiveWear) ? null : scan.distinctiveWear;
     const dbWearVal = isUseless(dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value) ? null : dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value;
 
+    const filterBoilerplate = (tokens: string[], boilerplate: Set<string>) => tokens.filter(t => !boilerplate.has(t));
+
     // For short discriminator strings, TF-IDF penalizes brand names we own a lot of.
     // Using flat Jaccard (no idfMap) or substring matching is much safer.
     if (scanGraphicVal && dbGraphicVal) {
         const normScanG = normalizeStr(scanGraphicVal);
         const normDbG = normalizeStr(dbGraphicVal);
-        const sim = calculateWeightedJaccard(tokenizeAndStem([scanGraphicVal]), tokenizeAndStem([dbGraphicVal])); // No IDF!
+        
+        const graphicBoilerplate = new Set(['graphic', 'text', 'logo', 'chest', 'sleev', 'sleeve', 'left', 'right', 'small', 'larg', 'large', 'front', 'back', 'print', 'read', 'reads', 'featur', 'feature', 'featuring', 'design', 'pattern', 'detail', 'brand', 'label', 'tag', 'neck', 'inner']);
+        const tokensA_full = tokenizeAndStem([scanGraphicVal]);
+        const tokensB_full = tokenizeAndStem([dbGraphicVal]);
+        const tokensA = filterBoilerplate(tokensA_full, graphicBoilerplate);
+        const tokensB = filterBoilerplate(tokensB_full, graphicBoilerplate);
+        
+        let sim = 0;
+        if (tokensA.length === 0 || tokensB.length === 0) {
+            sim = calculateWeightedJaccard(tokensA_full, tokensB_full); // Fallback to full tokens if stripping destroyed the string
+        } else {
+            sim = calculateWeightedJaccard(tokensA, tokensB);
+        }
         
         if (normScanG.includes(normDbG) || normDbG.includes(normScanG) || sim > 0.40) {
             fuzzyMatches += 2;
             debugTrace.push(`[GRAPHIC MATCH] Strong graphic similarity (Substring or Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
-        } else if (sim > 0.15) {
+        } else if (sim > 0.20) {
             fuzzyMatches += 0.5;
             debugTrace.push(`[GRAPHIC MATCH] Partial graphic similarity (Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
         } else {
@@ -326,11 +342,26 @@ export function computeMatch(
     }
 
     if (scanWearVal && dbWearVal) {
-        const sim = calculateWeightedJaccard(tokenizeAndStem([scanWearVal]), tokenizeAndStem([dbWearVal])); // No IDF
-        if (sim > 0.40) {
+        const normScanW = normalizeStr(scanWearVal);
+        const normDbW = normalizeStr(dbWearVal);
+        
+        const wearBoilerplate = new Set(['wear', 'blemish', 'scratch', 'hole', 'mark', 'stain', 'tear', 'small', 'larg', 'left', 'right', 'front', 'back', 'top', 'bottom', 'slight', 'minor', 'major', 'heavi', 'visibl']);
+        const tokensA_full = tokenizeAndStem([scanWearVal]);
+        const tokensB_full = tokenizeAndStem([dbWearVal]);
+        const tokensA = filterBoilerplate(tokensA_full, wearBoilerplate);
+        const tokensB = filterBoilerplate(tokensB_full, wearBoilerplate);
+        
+        let sim = 0;
+        if (tokensA.length === 0 || tokensB.length === 0) {
+            sim = calculateWeightedJaccard(tokensA_full, tokensB_full);
+        } else {
+            sim = calculateWeightedJaccard(tokensA, tokensB);
+        }
+
+        if (normScanW.includes(normDbW) || normDbW.includes(normScanW) || sim > 0.40) {
             fuzzyMatches += 1;
             debugTrace.push(`[WEAR MATCH] Strong wear pattern match (Jaccard=${sim.toFixed(2)})`);
-        } else if (sim > 0.15) {
+        } else if (sim > 0.20) {
             fuzzyMatches += 0.5;
             debugTrace.push(`[WEAR MATCH] Partial wear pattern match`);
         } else {
