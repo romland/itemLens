@@ -413,8 +413,8 @@
 
     <!-- Sticky Contextual Footer for Bulk Actions -->
     {#if activeTab === 'missing' && missing.length > 0}
-        <div class="fixed bottom-0 inset-x-0 p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50 flex justify-center pb-8 animate-fade-in gap-3">
-            <button class="btn btn-error shadow-lg w-full max-w-sm rounded-xl" on:click={async () => {
+        <div class="mt-4 p-4 bg-base-100 border border-base-200 rounded-2xl shadow-sm flex justify-center gap-3 mb-8">
+            <button class="btn btn-error shadow-lg w-full max-w-sm rounded-2xl" on:click={async () => {
                 for(let m of missing) await quickAdd({title: m.title, subtitle: m.locationName ? `Was in ${m.locationName}` : ''}, 'to buy');
                 results.missingFromScope = [];
                 dispatch('notify', { status: 'success', message: 'Added missing items to Shopping List!' });
@@ -425,8 +425,8 @@
     {/if}
 
     {#if activeTab === 'unregistered' && unregistered.length > 0}
-        <div class="fixed bottom-0 inset-x-0 p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50 flex justify-center pb-8 animate-fade-in gap-3">
-            <button class="btn btn-primary shadow-lg flex-1 max-w-sm rounded-xl" on:click={async () => {
+        <div class="mt-4 p-4 bg-base-100 border border-base-200 rounded-2xl shadow-sm flex justify-center gap-3 mb-8">
+            <button class="btn btn-primary shadow-lg flex-1 max-w-sm rounded-2xl" on:click={async () => {
                 for(let u of unregistered) await quickAdd(u, 'inventory');
                 results.newToYou = [];
                 dispatch('notify', { status: 'success', message: `Added ${unregistered.length} items to Inventory!` });
@@ -437,8 +437,8 @@
     {/if}
 
     {#if activeTab === 'elsewhere' && elsewhere.length > 0 && scopeType === 'container'}
-        <div class="fixed bottom-0 inset-x-0 p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50 flex justify-center pb-8 animate-fade-in gap-3">
-            <button class="btn btn-warning shadow-lg flex-1 max-w-sm rounded-xl" on:click={async () => {
+        <div class="mt-4 p-4 bg-base-100 border border-base-200 rounded-2xl shadow-sm flex justify-center gap-3 mb-8">
+            <button class="btn btn-warning shadow-lg flex-1 max-w-sm rounded-2xl" on:click={async () => {
                 for(let e of elsewhere) await quickMove(e.matchedItem.id, scopeValue);
                 // Update local state instantly to reflect the move
                 results.inCollection = results.inCollection.map(i => elsewhere.includes(i) ? {...i, matchedItem: {...i.matchedItem, locationName: scopeValue}} : i);

@@ -48,7 +48,7 @@
     export function open(p: any) {
         photo = p;
         showOriginal = p.showOriginal || false;
-        resetZoom();
+        resetZoom(true);
 		showMenu = false;
         isOpen = true;
 		fetchDetails();
@@ -100,6 +100,7 @@
         setTimeout(() => {
             photo = null;
             rotation = 0;
+            resetZoom(true);
         }, 300); // Matches transition duration
     }
 
@@ -132,10 +133,11 @@
         close(true);
     }
 
-    function resetZoom() {
-		scaleVal.set(1);
-		translateX.set(0);
-		translateY.set(0);
+    function resetZoom(hard: boolean | Event = false) {
+        const isHard = hard === true; // Protect against Svelte passing MouseEvents
+        scaleVal.set(1, { hard: isHard });
+        translateX.set(0, { hard: isHard });
+        translateY.set(0, { hard: isHard });
         rotation = 0;
         isDragging = false;
         initialPinchDistance = null;
@@ -225,7 +227,7 @@
 		}
 
         if ($scaleVal === 1) {
-            if (swipeOffsetY > 100) {
+            if (Math.abs(swipeOffsetY) > 100) {
                 close();
             } else {
                 translateY.set(0);

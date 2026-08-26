@@ -444,7 +444,7 @@
             </div>
         </div>
 
-       <div class="fixed bottom-0 left-0 w-full p-4 bg-base-100/90 backdrop-blur-xl border-t border-base-200 z-50" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+        <div class="p-4 bg-base-100 border border-base-200 mt-4 rounded-2xl shadow-sm mb-8">
             <button class="btn btn-primary btn-lg w-full max-w-md mx-auto block rounded-2xl shadow-lg active:scale-95 transition-transform" on:click={saveCollection} disabled={isSaving || activeItems.length === 0}>
                 {#if isSaving}
                     <span class="loading loading-spinner"></span> Saving...
