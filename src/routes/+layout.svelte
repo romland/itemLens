@@ -338,7 +338,7 @@ $:  isDemoMode =
     <progress class="progress progress-primary bg-transparent w-full fixed top-0 left-0 z-[10000] rounded-none h-1"></progress>
 {/if}
 
-<div class="navbar bg-base-100 sticky top-0" style="z-index: 1;">
+<div class="navbar bg-base-100 sticky top-0 z-50">
   <!-- Mobile menu -->
   <div class="navbar-start pl-3">
     <button on:click={()=>history.back()} class="pt-1" aria-label="Go back">
