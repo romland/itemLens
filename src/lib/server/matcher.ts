@@ -191,17 +191,25 @@ export interface ScanContext {
 }
 
 /**
- * Safely evaluates text identity, factoring in generic placeholders.
+ * Safely evaluates text identity, factoring in generic placeholders dynamically.
  * Detects strong composites (Title + Subtitle) which are critical for media items.
  */
-export function evaluateTextIdentity(scanTitle: string, scanDesc: string, dbTitle: string, dbDesc: string) {
+export function evaluateTextIdentity(scanTitle: string, scanDesc: string, dbTitle: string, dbDesc: string, scanCategory?: string) {
     const normScanTitle = normalizeStr(scanTitle || '');
     const normDbTitle = normalizeStr(dbTitle || '');
     const normScanDesc = normalizeStr(scanDesc || '');
     const normDbDesc = normalizeStr(dbDesc || '');
+    const normCategory = normalizeStr(scanCategory || '');
 
-    const genericTerms = ["newitem", "defaultproduct", "unknown", "unknownitem", "tshirt", "shirt", "jeans", "pants", "shoes", "book", "dvd", "cd", "item", "product", "graphictshirt", "hoodie", "sweater", "jacket", "poloshirt", "polo", "stripedpoloshirt"];
-    const isGenericTitle = genericTerms.includes(normScanTitle) || genericTerms.includes(normDbTitle) || normScanTitle.includes("newitem") || normScanTitle.includes("defaultproduct") || normScanTitle.includes("unknown");
+    // A title is generic if it is a known placeholder, too short, or heavily overlaps with its own category name.
+    // Clothes example: Title "T-Shirt", Category "T-Shirt" -> GENERIC (Rely on visual traits instead)
+    // Electronics example: Title "Capacitor", Category "Capacitor" -> GENERIC (Rely on visual traits instead)
+    const genericFallbacks = ['newitem', 'defaultproduct', 'unknown', 'unknownitem', 'item', 'product'];
+    const isGenericTitle = 
+        normScanTitle.length < 3 || 
+        genericFallbacks.some(t => normScanTitle.includes(t)) || 
+        genericFallbacks.some(t => normDbTitle.includes(t)) ||
+        (normCategory.length > 3 && (normScanTitle.includes(normCategory) || normCategory.includes(normScanTitle) || getSimilarity(normScanTitle, normCategory) > 0.8));
 
     let isStrongTextMatch = false;
     let isCompositeVeto = false;
@@ -223,7 +231,7 @@ export function evaluateTextIdentity(scanTitle: string, scanDesc: string, dbTitl
         }
     }
 
-    return { isStrongTextMatch, isCompositeVeto, isGenericTitle, titleSim, normDbTitle, normScanDesc, normDbDesc };
+    return { isStrongTextMatch, isCompositeVeto, isGenericTitle, titleSim, normScanTitle, normDbTitle, normScanDesc, normDbDesc };
 }
 
 export function computeMatch(
@@ -246,7 +254,7 @@ export function computeMatch(
     if (isLegacyItem) debugTrace.push(`[DENSITY] Legacy/Sparse DB Item Detected (Relaxed Fuzzy Penalties)`);
 
     // --- 2. TEXT IDENTITY & COMPOSITE VETO ---
-    const textEval = evaluateTextIdentity(scan.title, scan.description, dbItem.title, dbItem.description);
+    const textEval = evaluateTextIdentity(scan.title, scan.description, dbItem.title, dbItem.description, scan.category);
     
     if (textEval.isCompositeVeto) {
         return { isMatch: false, confidence: 0, score: -999, debugTrace: [`[COMPOSITE VETO] Titles match but subtitles/authors clash ('${textEval.normScanDesc}' vs '${textEval.normDbDesc}')`], sharedAttributes: [] } as any;
@@ -274,7 +282,7 @@ export function computeMatch(
         }
     }
     
-    // Color Mix Gate
+    // --- 3. COLOR MIX GATE ---
     const dbColorAttr = dbItem.attributes?.find((a: any) => a.key === 'color_mix')?.value;
     if (dbColorAttr && scan.colorMix) {
         const sim = calculateColorMixSimilarity(dbColorAttr, typeof scan.colorMix === 'string' ? scan.colorMix : JSON.stringify(scan.colorMix));
@@ -298,82 +306,109 @@ export function computeMatch(
         debugTrace.push(`[COLOR MISSING] DB has color mix, Scan missed it`);
     }
 
-    // Discriminator Veto (Graphic & Wear)
+    // --- 4. IDENTITY DISCRIMINATORS (Graphics, Wear, and Printed Specs) ---
+    // These are HIGH VALUE. If they clash, it is almost certainly a different item.
     // Sanitize LLM hallucinations like "null", "none", "unknown" before checking truthiness
     const scanGraphicVal = isUseless(scan.prominentTextOrGraphic) ? null : scan.prominentTextOrGraphic;
     const dbGraphicVal = isUseless(dbItem.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value) ? null : dbItem.attributes?.find((a: any) => a.key === 'prominent_text_or_graphic')?.value;
     const scanWearVal = isUseless(scan.distinctiveWear) ? null : scan.distinctiveWear;
     const dbWearVal = isUseless(dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value) ? null : dbItem.attributes?.find((a: any) => a.key === 'distinctive_blemishes_or_wear')?.value;
 
-    const filterBoilerplate = (tokens: string[], boilerplate: Set<string>) => tokens.filter(t => !boilerplate.has(t));
+    const evaluateTrait = (scanVal: string | null, dbVal: string | null, traitName: string, clashIsFatal: boolean) => {
+        if (scanVal && dbVal) {
+            const normScan = normalizeStr(scanVal);
+            const normDb = normalizeStr(dbVal);
+            const normCat = normalizeStr(scan.category || '');
+            
+            const tokensA_full = tokenizeAndStem([scanVal]);
+            const tokensB_full = tokenizeAndStem([dbVal]);
+            
+            // Strip category names so item types don't inflate similarity.
+            // Clothes example: "Adidas T-Shirt" and "Nike T-Shirt" shouldn't match just because they both say "T-Shirt".
+            // Electronics example: "Samsung Capacitor" and "Rubycon Capacitor" shouldn't match just because of the word "Capacitor".
+            const tokensA = normCat ? tokensA_full.filter(t => !normCat.includes(t)) : tokensA_full;
+            const tokensB = normCat ? tokensB_full.filter(t => !normCat.includes(t)) : tokensB_full;
 
-    // For short discriminator strings, TF-IDF penalizes brand names we own a lot of.
-    // Using flat Jaccard (no idfMap) or substring matching is much safer.
-    if (scanGraphicVal && dbGraphicVal) {
-        const normScanG = normalizeStr(scanGraphicVal);
-        const normDbG = normalizeStr(dbGraphicVal);
-        
-        const graphicBoilerplate = new Set(['graphic', 'text', 'logo', 'chest', 'sleev', 'sleeve', 'left', 'right', 'small', 'larg', 'large', 'front', 'back', 'print', 'read', 'reads', 'featur', 'feature', 'featuring', 'design', 'pattern', 'detail', 'brand', 'label', 'tag', 'neck', 'inner']);
-        const tokensA_full = tokenizeAndStem([scanGraphicVal]);
-        const tokensB_full = tokenizeAndStem([dbGraphicVal]);
-        const tokensA = filterBoilerplate(tokensA_full, graphicBoilerplate);
-        const tokensB = filterBoilerplate(tokensB_full, graphicBoilerplate);
-        
-        let sim = 0;
-        if (tokensA.length === 0 || tokensB.length === 0) {
-            sim = calculateWeightedJaccard(tokensA_full, tokensB_full); // Fallback to full tokens if stripping destroyed the string
-        } else {
-            sim = calculateWeightedJaccard(tokensA, tokensB);
+            let sim = 0;
+            if (tokensA.length === 0 || tokensB.length === 0) {
+                sim = calculateWeightedJaccard(tokensA_full, tokensB_full);
+            } else {
+                sim = calculateWeightedJaccard(tokensA, tokensB);
+            }
+
+            if (normScan.includes(normDb) || normDb.includes(normScan) || sim > 0.50) {
+                fuzzyMatches += traitName === 'GRAPHIC' ? 2 : 1;
+                debugTrace.push(`[${traitName} MATCH] Strong similarity (Jaccard=${sim.toFixed(2)}): '${scanVal}' vs '${dbVal}'`);
+                sharedAttributes.push({ key: traitName, value: scanVal });
+            } else if (sim > 0.35) { 
+                // Raised threshold. 
+                // Clothes: "AC Milan" vs "FC Bayern" will drop below this.
+                // Electronics: "Raspberry Pi 4" vs "Raspberry Pi 3" will drop below this, avoiding false merges of similar models.
+                fuzzyMatches += 0.5;
+                debugTrace.push(`[${traitName} MATCH] Partial similarity (Jaccard=${sim.toFixed(2)}): '${scanVal}' vs '${dbVal}'`);
+                sharedAttributes.push({ key: traitName, value: scanVal });
+            } else {
+                if (clashIsFatal) strictFailures += 1;
+                else fuzzyMismatches += 1.5;
+                debugTrace.push(`[${clashIsFatal ? 'VETO' : 'CLASH'}: ${traitName}] Distinct clash (Jaccard=${sim.toFixed(2)}): '${scanVal}' vs '${dbVal}'`);
+            }
+        } else if ((scanVal && !dbVal) || (!scanVal && dbVal)) {
+            fuzzyMismatches += 0.5;
+            debugTrace.push(`[VETO: ${traitName}] Presence mismatch`);
         }
+    };
+
+    // Graphics are highly distinct (Logos, Text, Specific Markings). If they clash, it's a different item.
+    // Clothes: "Nike Swoosh" vs "Adidas Three Stripes" -> FATAL VETO
+    // Electronics: "10k Ohm" vs "4.7k Ohm", or "Sony" vs "Samsung" -> FATAL VETO
+    evaluateTrait(scanGraphicVal, dbGraphicVal, 'GRAPHIC', true);
+    evaluateTrait(scanWearVal, dbWearVal, 'WEAR', false);
+
+    // --- 5. ONTOLOGY & STRUCTURAL ATTRIBUTES ---
+    // Ensures custom dynamic schema fields contribute to deduplication!
+    // Clothes example: 'sleeve_length' or 'neckline_type'.
+    // Electronics example: 'package_type' (e.g., 'SMD', 'Through-hole'), 'voltage_rating', or 'resistance'.
+    let attrMatchCount = 0;
+    if (scan.extractedAttributes && dbItem.attributes) {
+        let scanAttrs: any = {};
+        try {
+            scanAttrs = typeof scan.extractedAttributes === 'string' ? JSON.parse(scan.extractedAttributes) : scan.extractedAttributes;
+        } catch(e) {}
         
-        if (normScanG.includes(normDbG) || normDbG.includes(normScanG) || sim > 0.40) {
-            fuzzyMatches += 2;
-            debugTrace.push(`[GRAPHIC MATCH] Strong graphic similarity (Substring or Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
-        } else if (sim > 0.20) {
-            fuzzyMatches += 0.5;
-            debugTrace.push(`[GRAPHIC MATCH] Partial graphic similarity (Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
-        } else {
-            strictFailures += 1;
-            debugTrace.push(`[VETO: GRAPHIC] Distinct graphics (Jaccard=${sim.toFixed(2)}): '${scanGraphicVal}' vs '${dbGraphicVal}'`);
+        for (const [key, scanVal] of Object.entries(scanAttrs)) {
+            if (['color_mix', 'prominent_text_or_graphic', 'distinctive_blemishes_or_wear'].includes(key)) continue;
+
+            const dbAttr = dbItem.attributes.find((a: any) => a.key === key);
+            if (dbAttr && !isUseless(scanVal) && !isUseless(dbAttr.value)) {
+                const normScanAttr = normalizeStr(String(scanVal));
+                const normDbAttr = normalizeStr(String(dbAttr.value));
+                
+                if (normScanAttr === normDbAttr || normScanAttr.includes(normDbAttr) || normDbAttr.includes(normScanAttr)) {
+                    attrMatchCount += 1;
+                    debugTrace.push(`[ATTR MATCH] ${key}`);
+                    sharedAttributes.push({ key, value: String(scanVal) });
+                } else {
+                    const sim = getSimilarity(normScanAttr, normDbAttr);
+                    if (sim < 0.4) {
+                        fuzzyMismatches += 0.5; // Penalize, but don't instantly veto for one wrong trait
+                        debugTrace.push(`[ATTR CLASH] ${key}: '${scanVal}' vs '${dbAttr.value}'`);
+                    }
+                }
+            }
         }
-    } else if ((scanGraphicVal && !dbGraphicVal) || (!scanGraphicVal && dbGraphicVal)) {
-        fuzzyMismatches += 0.5;
-        debugTrace.push(`[VETO: GRAPHIC] Graphic presence mismatch`);
+    }
+    
+    // THE CAP: Structural attributes max out at 1.5 points. 
+    // Structure dictates WHAT an item is, not WHICH item it is.
+    // Clothes example: You cannot force a match just by sharing "polyester", "short sleeve", and "v-neck".
+    // Electronics example: You cannot force a match just because two components are both "10V", "Through-hole", "Radial" capacitors. They need identity (graphic/text) or specific titles.
+    if (attrMatchCount > 0) {
+        const cappedBonus = Math.min(1.5, attrMatchCount * 0.25);
+        fuzzyMatches += cappedBonus;
+        debugTrace.push(`[ATTR BONUS] ${attrMatchCount} structural attributes matched (+${cappedBonus.toFixed(2)} pts)`);
     }
 
-    if (scanWearVal && dbWearVal) {
-        const normScanW = normalizeStr(scanWearVal);
-        const normDbW = normalizeStr(dbWearVal);
-        
-        const wearBoilerplate = new Set(['wear', 'blemish', 'scratch', 'hole', 'mark', 'stain', 'tear', 'small', 'larg', 'left', 'right', 'front', 'back', 'top', 'bottom', 'slight', 'minor', 'major', 'heavi', 'visibl']);
-        const tokensA_full = tokenizeAndStem([scanWearVal]);
-        const tokensB_full = tokenizeAndStem([dbWearVal]);
-        const tokensA = filterBoilerplate(tokensA_full, wearBoilerplate);
-        const tokensB = filterBoilerplate(tokensB_full, wearBoilerplate);
-        
-        let sim = 0;
-        if (tokensA.length === 0 || tokensB.length === 0) {
-            sim = calculateWeightedJaccard(tokensA_full, tokensB_full);
-        } else {
-            sim = calculateWeightedJaccard(tokensA, tokensB);
-        }
-
-        if (normScanW.includes(normDbW) || normDbW.includes(normScanW) || sim > 0.40) {
-            fuzzyMatches += 1;
-            debugTrace.push(`[WEAR MATCH] Strong wear pattern match (Jaccard=${sim.toFixed(2)})`);
-        } else if (sim > 0.20) {
-            fuzzyMatches += 0.5;
-            debugTrace.push(`[WEAR MATCH] Partial wear pattern match`);
-        } else {
-            strictFailures += 1;
-            debugTrace.push(`[VETO: WEAR] Distinct condition/wear (Jaccard=${sim.toFixed(2)}): '${scanWearVal}' vs '${dbWearVal}'`);
-        }
-    } else if ((scanWearVal && !dbWearVal) || (!scanWearVal && dbWearVal)) {
-        fuzzyMismatches += 0.5;
-        debugTrace.push(`[VETO: WEAR] Condition mismatch (One is worn, one is pristine)`);
-    }
-
-    // NLP TF-IDF Jaccard
+    // --- 6. NLP TF-IDF JACCARD (The Baseline Physical Check) ---
     let dbTokens: string[] = [];
     try { dbTokens = dbItem.semanticTokens ? JSON.parse(dbItem.semanticTokens) : tokenizeAndStem([dbItem.title, dbItem.description]); } catch(e) {}
 
@@ -395,28 +430,38 @@ export function computeMatch(
         }
     }
 
+    // --- 7. SPECIFIC TITLE CLASH VETO ---
+    // If titles are NOT generic placeholders, and they fundamentally differ, kill the match.
+    // Clothes example: "AC Milan Home Kit" vs "FC Bayern Away Kit".
+    // Electronics example: "Arduino Uno" vs "ESP32 NodeMCU".
+    if (!textEval.isGenericTitle && !textEval.isStrongTextMatch) {
+        if (textEval.titleSim < 0.35 && !textEval.normDbTitle.includes(textEval.normScanTitle) && !textEval.normScanTitle.includes(textEval.normDbTitle)) {
+            strictFailures += 1;
+            debugTrace.push(`[VETO: TITLE] Specific identities clash ('${scan.title}' vs '${dbItem.title}')`);
+        }
+    }
+
     let isMatch = false;
 
-    if (textEval.isStrongTextMatch && !textEval.isGenericTitle) {
-        if (strictFailures === 0 && fuzzyMismatches <= 2.5) {
-            isMatch = true;
-            debugTrace.push(`[RESULT] Pass: Strong Text Match overrides minor trait clashes (mismatches=${fuzzyMismatches})`);
-        } else {
-            isMatch = false;
-            debugTrace.push(`[RESULT] Failed: Strong Text Match, but overwhelming clashes or strict failure (mismatches=${fuzzyMismatches}, strict=${strictFailures})`);
-        }
-    } else if (strictFailures >= 1) {
+    // --- FINAL SCORING RESOLUTION ---
+    if (strictFailures >= 1) {
         isMatch = false;
         debugTrace.push(`[RESULT] Failed: Missing required strict traits (strictFailures=${strictFailures})`);
     } else if (fuzzyMismatches >= 2) {
         isMatch = false;
         debugTrace.push(`[RESULT] Failed: Active physical trait clashes (mismatches=${fuzzyMismatches})`);
-    } else if (fuzzyMatches >= 3 && fuzzyMismatches === 0) {
+    } else if (textEval.isStrongTextMatch && !textEval.isGenericTitle) {
         isMatch = true;
-        debugTrace.push(`[RESULT] Pass: Strong fuzzy match (${fuzzyMatches} matches)`);
-    } else if (fuzzyMatches >= 4) {
+        debugTrace.push(`[RESULT] Pass: Strong Text Match overrides minor trait clashes`);
+    } else if (fuzzyMatches >= 3 && fuzzyMismatches <= 0.5) {
         isMatch = true;
-        debugTrace.push(`[RESULT] Pass: Overwhelming fuzzy match (${fuzzyMatches} matches)`);
+        debugTrace.push(`[RESULT] Pass: Strong fuzzy match (${fuzzyMatches.toFixed(1)} pts)`);
+    } else if (fuzzyMatches >= 4.5 && fuzzyMismatches <= 1.0) {
+        isMatch = true;
+        debugTrace.push(`[RESULT] Pass: Overwhelming fuzzy match (${fuzzyMatches.toFixed(1)} pts)`);
+    } else {
+        isMatch = false;
+        debugTrace.push(`[RESULT] Failed: Not enough evidence to match (${fuzzyMatches.toFixed(1)} pts, ${fuzzyMismatches.toFixed(1)} clashes)`);
     }
 
     const score = fuzzyMatches - strictFailures - (fuzzyMismatches * 1.5) + (textEval.isStrongTextMatch ? 2 : 0);
