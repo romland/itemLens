@@ -85,6 +85,7 @@
 		"sharp": "^0.35.3"
 	},
 	"overrides": {
+        "@xmldom/xmldom": "^0.8.13",
 		"cookie": "^0.7.0",
 		"qs": "^6.14.1",
 		"esbuild": "^0.25.0",
