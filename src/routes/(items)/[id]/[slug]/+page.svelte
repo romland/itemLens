@@ -287,7 +287,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     {#each productPhotos as photo, i}
                         <div id="carousel-item{i}" class="carousel-item w-full justify-center cursor-zoom-in relative group rounded-2xl overflow-hidden bg-base-100 shadow-sm border border-base-200/60">
                             {#if productPhotos[i].cropPath}
-                               <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                               <form method="POST" action="?/toggleBackground" use:enhance={() => { return async ({ update }) => { await update({ reset: false }); } }} class="absolute top-2 right-2 z-30 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                     <input type="hidden" name="photoId" value={productPhotos[i].id} />
                                     <input type="hidden" name="showOriginal" value={productPhotos[i].showOriginal ? 'false' : 'true'} />
                                    <button type="submit" class="btn btn-circle btn-sm btn-ghost bg-base-100/80 shadow-md backdrop-blur-sm" title={productPhotos[i].showOriginal ? "Show Cutout" : "Show Original"}>
