@@ -7,9 +7,11 @@
 	export let message: string;
     export let btnClass: string = "text-gray-500 hover:text-error";
     export let iconClass: string = "bi bi-trash";
+
+    export function showModal() { dialog.showModal(); }
 </script>
 
-<button type="button" title="Delete Item" class={btnClass} on:click={() => dialog.show()}><i class={iconClass}></i></button>
+<button type="button" title="Delete Item" class={btnClass} on:click={() => dialog.showModal()}><i class={iconClass}></i></button>
 
 <dialog bind:this={dialog} class="modal">
     <form {action} method="post" class="modal-box" use:enhance={() => {

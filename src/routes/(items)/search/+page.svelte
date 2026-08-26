@@ -17,6 +17,7 @@
 	let bulkAction = 'addTag';
 	let bulkValue = '';
 	let isSubmitting = false;
+    let bulkDeleteModal: HTMLDialogElement;
 	let navLoadedPages: any[] = [];
     let filterModal: BottomSheet;
     let filterAttrs: Record<string, string> = {};
@@ -271,7 +272,7 @@
 	</BottomSheet>
 
 {#if bulkMode}
-	<form method="POST" action="?/bulkEdit" class="pb-32" use:enhance={() => {
+    <form id="bulkEditForm" method="POST" action="?/bulkEdit" class="pb-32" use:enhance={() => {
 		isSubmitting = true;
 		return async ({ update }) => {
 			await update();
@@ -341,6 +342,7 @@
                         <option value="flagDuplicate">Flag as Duplicate</option>
                         <option value="dismissDuplicate">Dismiss Duplicate</option>
                         <option value="clearDuplicate">Clear Duplicate Status</option>
+                        <option value="deleteItems">Delete Items</option>
 					</select>
                     {#if bulkAction === 'setCategory' && data.categories}
                         <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200 capitalize">
@@ -363,13 +365,34 @@
                         <input type="hidden" name="bulkValue" value="action_only" />
                         <!--input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" /-->
                     {/if}
-                    <button type="submit" class="btn btn-primary w-full sm:w-auto shadow-md shrink-0" disabled={isSubmitting || (!bulkValue.trim() && bulkAction !== 'flagDuplicate' && bulkAction !== 'dismissDuplicate' && bulkAction !== 'clearDuplicate')}>
+                    <button type="submit" class="btn {bulkAction === 'deleteItems' ? 'btn-error' : 'btn-primary'} w-full sm:w-auto shadow-md shrink-0" 
+                            disabled={isSubmitting || (!bulkValue.trim() && !['deleteItems', 'flagDuplicate', 'dismissDuplicate', 'clearDuplicate'].includes(bulkAction))}
+                            on:click={(e) => {
+                                if (bulkAction === 'deleteItems') {
+                                    e.preventDefault();
+                                    bulkDeleteModal.showModal();
+                                }
+                            }}>
 						{#if isSubmitting}<span class="loading loading-spinner"></span>{:else}Apply to {selectedIds.length}{/if}
 					</button>
 				</div>
 			</div>
 		{/if}
 	</form>
+
+    <dialog bind:this={bulkDeleteModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+        <div class="modal-box bg-base-100 border border-error/50 shadow-2xl">
+            <h3 class="font-bold text-lg text-error flex items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill"></i> Delete {selectedIds.length} Items?
+            </h3>
+            <p class="py-4 text-sm text-gray-600">You are about to permanently delete <strong>{selectedIds.length}</strong> items. This action cannot be undone and will destroy all associated photos, documents, and data.</p>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" on:click={() => bulkDeleteModal.close()}>Cancel</button>
+                <button type="button" class="btn btn-error" on:click={() => { bulkDeleteModal.close(); document.getElementById('bulkEditForm')?.requestSubmit(); }}>Delete Forever</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
 {:else}
 	<Items items={data.items} />
 	<Navigation href="/search?{searchParamsStr}&" prevPage={data.prevPage} nextPage={data.nextPage} />

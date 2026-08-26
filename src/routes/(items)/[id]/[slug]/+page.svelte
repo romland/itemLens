@@ -24,6 +24,8 @@
     let lightbox: ImageLightbox;
     let isProcessingItem = false;
     let attrModal: HTMLDialogElement;
+    let duplicateDeleteModal: Delete;
+    let diagnosticModal: HTMLDialogElement;
 
     let payloadModal: HTMLDialogElement;
     let payloadModalTitle = "";
@@ -215,6 +217,11 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                             <i class="bi bi-google text-lg opacity-70"></i> Search
                         </a>
                     </li>
+                    <li>
+                        <button type="button" class="font-medium text-info hover:text-info" on:click={() => diagnosticModal.showModal()}>
+                            <i class="bi bi-clipboard-data text-lg opacity-70"></i> Diagnostic Dump
+                        </button>
+                    </li>
                     {#if dev}
                     <li>
                         <button type="button" class="font-medium text-warning hover:text-warning" on:click={() => devDebugModal.showModal()}>
@@ -246,7 +253,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     if (e.detail === 'merge') (document.getElementById('mergeForm') as HTMLFormElement)?.requestSubmit();
                     else if (e.detail === 'new') (document.getElementById('dismissForm') as HTMLFormElement)?.requestSubmit();
                     else if (e.detail === 'ignore') {
-                        if (confirm('Are you sure you want to vaporize this anomaly? This cannot be undone.')) (document.getElementById('deleteDuplicateForm') as HTMLFormElement)?.requestSubmit();
+                        duplicateDeleteModal.showModal();
                     }
                 }}
                     on:zoom={(e) => lightbox.open({ orgPath: e.detail.orgPath || e.detail.thumbPath, showOriginal: true })}
@@ -260,7 +267,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     await update({ reset: false });
                 };
             }}></form>
-            <form id="deleteDuplicateForm" method="POST" action="?/deleteDuplicate" class="hidden" use:enhance></form>
+            <Delete bind:this={duplicateDeleteModal} action="?/deleteDuplicate" message="Are you sure you want to vaporize this anomaly? This cannot be undone." btnClass="hidden" />
         </div>
     {/if}
 
@@ -276,6 +283,17 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     {/each}
                 </ul>
             </div>
+        </div>
+    {/if}
+
+    {#if !isProcessingItem && data.item?.photos?.some(p => !p.thumbPath && p.orgPath)}
+        <div class="alert bg-warning/20 border border-warning shadow-sm mb-6 rounded-xl flex items-start gap-3 animate-fade-in">
+            <i class="bi bi-exclamation-triangle text-warning mt-0.5"></i>
+            <div class="flex-1">
+                <h3 class="font-bold text-sm">Processing Stalled</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Background tasks for this item were interrupted (e.g., server restart).</p>
+            </div>
+            <form method="POST" action="?/retryProcessing" use:enhance><button class="btn btn-warning btn-sm shadow-sm">Retry Now</button></form>
         </div>
     {/if}
 
@@ -725,6 +743,18 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 <dialog bind:this={attrModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
     <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
         <CompareAttributeSheet item={{...data.item, extractedAttributes: itemAttributes}} {activeSchema} showAll={true} on:cancel={() => attrModal.close()} on:save={(e) => { (document.getElementById('attrsInput') as HTMLInputElement).value = JSON.stringify(e.detail.attributes); (document.getElementById('saveAttrsForm') as HTMLFormElement).requestSubmit(); }} />
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog bind:this={diagnosticModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box bg-base-100 shadow-2xl border border-info/50">
+        <h3 class="font-bold text-lg mb-4 text-info"><i class="bi bi-clipboard-data"></i> Item Diagnostics</h3>
+        <p class="text-xs mb-2">Copy this payload for debugging pending states.</p>
+        <textarea class="textarea textarea-bordered w-full h-64 text-[10px] font-mono" readonly>{JSON.stringify({ photos: data.item?.photos, tasks: data.activeTasks }, null, 2)}</textarea>
+        <div class="modal-action">
+            <button class="btn" on:click={() => diagnosticModal.close()}>Close</button>
+        </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>

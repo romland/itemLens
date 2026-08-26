@@ -217,16 +217,6 @@
 	</div>
 
 
-	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-		<div>
-			<h3 class="font-bold text-lg mb-1">Create New Inventory</h3>
-			<p class="text-sm text-gray-500">Set up a new isolated vault for a specific collection of items.</p>
-		</div>
-		<button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
-			<i class="bi bi-plus-lg"></i> Create Inventory
-		</button>
-	</div>
-
     {#if $page.data.user?.isAdmin}
         <div class="bg-base-100 border border-error/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-error text-error-content text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Admin Only</div>
@@ -498,6 +488,16 @@
 
         </div>
     {/if}
+
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+            <h3 class="font-bold text-lg mb-1">Create New Inventory</h3>
+            <p class="text-sm text-gray-500">Set up a new isolated vault for a specific collection of items.</p>
+        </div>
+        <button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
+            <i class="bi bi-plus-lg"></i> Create Inventory
+        </button>
+    </div>
 </div>
 
 <CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => notify('success', e.detail)} on:error={(e) => notify('error', e.detail)} />

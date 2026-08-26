@@ -69,7 +69,10 @@ export async function POST({ request, locals }) {
     const formData = await request.formData();
     const title = (formData.get('title') as string) || 'Untitled Item';
     const description = (formData.get('description') as string) || '';
-    const draftPath = formData.get('draftPath') as string;
+    let draftPath = (formData.get('draftPath') as string)?.split('?')[0].split('#')[0];
+    if (draftPath && !draftPath.startsWith('/images/')) {
+        draftPath = ''; // Security fallback
+    }
     const boxStr = formData.get('box') as string;
     const container = formData.get('container') as string;
     const extractedAttributesStr = formData.get('extractedAttributes') as string;

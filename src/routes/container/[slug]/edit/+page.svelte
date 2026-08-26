@@ -19,11 +19,8 @@
 
     <div class="form-control">
         <label class="label" for="name"><span class="label-text font-semibold">Container Name</span></label>
-        <div class="relative">
-            <input type="text" id="name" name="name" value="{data.item?.name}" class="input input-bordered w-full shadow-sm bg-base-200 text-base-content/60 cursor-not-allowed" readonly>
-            <i class="bi bi-lock-fill absolute right-4 top-1/2 -translate-y-1/2 text-base-content/40"></i>
-        </div>
-        <div class="label"><span class="label-text-alt text-gray-500">Locked to preserve physical QR code routing.</span></div>
+        <input type="text" id="name" name="name" value="{data.item?.name}" class="input input-bordered w-full shadow-sm">
+        <div class="label"><span class="label-text-alt text-warning font-semibold"><i class="bi bi-exclamation-triangle"></i> Changing the name will break existing physical QR codes printed for this container.</span></div>
     </div>
 
     <div class="form-control">

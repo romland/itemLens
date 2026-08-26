@@ -235,6 +235,26 @@ export const actions = {
             data: { duplicateStatus: 'DISMISSED' }
 		});
 		return { success: true };
-	}
-	
+    },
+
+    retryProcessing: async ({ locals, params }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId }, include: { photos: true } });
+        if (item) {
+            // Clean up DB corruption from previously saved cache-busters before retrying
+            for (const photo of item.photos) {
+                if (photo.orgPath && photo.orgPath.includes('?')) {
+                    photo.orgPath = photo.orgPath.split('?')[0];
+                    await db.photo.update({
+                        where: { id: photo.id },
+                        data: { orgPath: photo.orgPath }
+                    });
+                }
+            }
+            const { processItemPhotosBackground } = await import('$lib/server/photouploads');
+            processItemPhotosBackground(item).catch(console.error);
+        }
+        return { success: true };
+    }
+
 } satisfies Actions;

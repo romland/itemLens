@@ -91,6 +91,10 @@ export const actions = {
 			for (const id of itemIds) {
 				await db.item.update({ where: { id }, data: { tags: { connect: tagIds } } });
 			}
+        } else if (action === 'deleteItems') {
+            await db.item.deleteMany({ where: { id: { in: itemIds }, inventoryId: locals.activeInventoryId } });
+            const { scrubEmptyCategories } = await import('$lib/server/categories');
+            scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
 		} else if (action === 'removeTag') {
 			const tag = await db.tag.findFirst({ where: { name: value.trim(), inventoryId: locals.activeInventoryId } });
 			if (tag) {

@@ -84,6 +84,7 @@ export const actions = {
         await db.container.update({
             where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: data.id as string } },
             data: {
+                name: name.trim(),
                 photoPath: filename,
                 description: description.trim(),
                 location : (data.location as string) || null,
@@ -93,6 +94,6 @@ export const actions = {
         // TODO: act on numtrays (removing them is futile... perhaps just allow adding for now, can't be arsed to remove)
         // TODO: We don't touch the number of trays at all for now (since it involves possibly related items). Later. CBA.
 
-        redirect(302, `/container/${post?.name}`);
+        redirect(302, `/container/${encodeURIComponent(name.trim())}`);
     }
 } satisfies Actions;

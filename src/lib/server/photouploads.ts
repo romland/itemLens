@@ -486,7 +486,10 @@ export async function savePhotos(
                 console.log(`[DEBUG FAST-SAVE] Is hash currently processing in activeDrafts? ${activeDrafts.has(hash)}\n`);
 
                 // SvelteKit's FormData stringifies undefined to 'undefined'. We must explicitly sanitize this.
-                let draftPath = (!draftPathRaw || draftPathRaw === 'undefined' || draftPathRaw === 'null') ? null : draftPathRaw;
+                let draftPath = (!draftPathRaw || draftPathRaw === 'undefined' || draftPathRaw === 'null') ? null : draftPathRaw.split('?')[0].split('#')[0];
+                if (draftPath && !draftPath.startsWith(webPath)) {
+                    draftPath = null; // Security: Prevent directory traversal or malicious paths
+                }
                 let ocr = null, colors = null, llmAnalysis = null, cropPath = null, thumbPath = null;
                 let finalOrgPath = draftPath;
 
