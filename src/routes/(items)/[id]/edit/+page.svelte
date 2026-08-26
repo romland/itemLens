@@ -17,6 +17,7 @@
     let isDirty = false;
     let hasSubmitted = false;
     let pastedDocCount = 0;
+    let pasteHandler: PasteHandler;
 
     beforeNavigate(({ cancel }) => {
         if (isDirty && !hasSubmitted) {
@@ -38,6 +39,7 @@
         try {
             await saveToQueue(`/${data.item?.id}/edit`, formData);
             notify("success", "Changes queued! Returning...");
+            pasteHandler?.clearQueue();
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
             
             // Detach execution to ensure router cleanly navigates away
@@ -55,6 +57,7 @@
 </script>
 
 <PasteHandler 
+    bind:this={pasteHandler}
     formId="eltForm" 
     on:success={(ev) => { notify("success", ev.detail); isDirty = true; }}
     on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}

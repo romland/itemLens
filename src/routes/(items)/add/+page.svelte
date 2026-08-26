@@ -21,6 +21,8 @@
     let hasSubmitted = false;
     let pastedDocCount = 0;
     
+    let pasteHandler: PasteHandler;
+
     // Generate an idempotency key (Browser-safe fallback for SSR)
     let clientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
     
@@ -91,6 +93,7 @@
         try {
             await saveToQueue('/add', formData);
             notify("success", "Item saved in background!");
+            pasteHandler?.clearQueue();
             window.dispatchEvent(new CustomEvent('outbox-trigger'));
             
             // Detach router execution from the current microtask to bypass deadlock
@@ -122,6 +125,7 @@
 </script>
 
 <PasteHandler 
+bind:this={pasteHandler}
 formId="eltForm" 
 forcePhotoType={mode === 'collection' || mode === 'compare' ? 'product' : null}
 on:save={(ev) => {

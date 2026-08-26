@@ -7,12 +7,16 @@
 
     export function clearQueue() {
         clipboardQueue = [];
+        const form = document.getElementById(formId);
+        if (form) {
+            form.querySelectorAll('.paste-handler-input').forEach(el => el.remove());
+        }
     }
 
     const dispatch = createEventDispatcher();
     
     let modalOpen = false;
-    let pastedType: 'image' | 'text' | 'url' | null = null;
+    let pastedType: 'image' | 'text' | 'url' | 'document' | null = null;
     let pastedImageUrl: string | null = null;
     let pastedFile: File | null = null;
     let pastedText: string = "";
@@ -26,6 +30,33 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
     let textDocumentTitle = "Pasted Note";
     let clipboardQueue: { type: string, label: string }[] = [];
 
+    function processFile(file: File, isInputFocused: boolean, event: Event): boolean {
+        console.log(`[PasteHandler] Processing file: name="${file.name}", type="${file.type}", size=${file.size} bytes`);
+        
+        if (file.type.startsWith("image/")) {
+            if (isInputFocused) event.preventDefault();
+            pastedFile = file;
+            pastedImageUrl = URL.createObjectURL(file);
+            pastedType = 'image';
+            modalOpen = true;
+            return true;
+        } else if (file.type === "text/plain" || file.name.toLowerCase().endsWith('.txt')) {
+            if (!isInputFocused) {
+                file.text().then(text => { pastedText = text; pastedType = 'text'; textDocumentTitle = file.name || "Pasted Note"; modalOpen = true; });
+                return true;
+            }
+        } else {
+            // Catch-all for any other file type (PDF, EPUB, DOCX, ZIP, Firmware BIN, etc.)
+            if (isInputFocused) event.preventDefault();
+            pastedFile = file;
+            pastedType = 'document';
+            textDocumentTitle = file.name || "Uploaded File";
+            modalOpen = true;
+            return true;
+        }
+        return false;
+    }
+
     function handlePaste(event: ClipboardEvent) {
         const activeEl = document.activeElement;
         const isInputFocused = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
@@ -33,25 +64,19 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
         const items = event.clipboardData?.items;
         if (!items) return;
 
-        // Prioritize images
+        console.log("[PasteHandler] Paste event items:", Array.from(items).map(i => ({kind: i.kind, type: i.type})));
+
+        // Prioritize files
         for (const item of items) {
-            if (item.type.startsWith("image/") || item.type === "application/pdf") {
-                if (isInputFocused) event.preventDefault();
+            if (item.kind === 'file') {
                 const file = item.getAsFile();
-                if (file) {
-                    pastedFile = file;
-                    pastedImageUrl = file.type === "application/pdf" ? null : URL.createObjectURL(file);
-                    pastedType = 'image';
-                    if (file.type === "application/pdf") selectedPhotoType = 'information';
-                    modalOpen = true;
-                }
-                return;
+                if (file && processFile(file, !!isInputFocused, event)) return;
             }
         }
         
-        // Then text documents (only if focus is not in an input, to avoid breaking normal copy/paste)
+        // Then string content
         for (const item of items) {
-            if (item.type === "text/plain") {
+            if (item.kind === "string" && item.type === "text/plain") {
                 if (!isInputFocused) {
                     item.getAsString((text) => {
                         if (isURL(text)) {
@@ -86,18 +111,13 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
 		dragCount = 0;
 		isDraggingOver = false;
 
-		// Mock a clipboard event object so we can pipe drops straight into the paste logic
+        console.log("[PasteHandler] Drop event received", e);
+
 		if (e.dataTransfer?.files?.length) {
 			const file = e.dataTransfer.files[0];
-            if (file.type.startsWith("image/") || file.type === "application/pdf") {
-				pastedFile = file;
-                pastedImageUrl = file.type === "application/pdf" ? null : URL.createObjectURL(file);
-				pastedType = 'image';
-                if (file.type === "application/pdf") selectedPhotoType = 'information';
-				modalOpen = true;
-			} else if (file.type === "text/plain") {
-				file.text().then(text => { pastedText = text; pastedType = 'text'; modalOpen = true; });
-			}
+            processFile(file, false, e);
+		} else {
+            console.log("[PasteHandler] Drop event contained no files.");
 		}
 	}
     
@@ -148,6 +168,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                 fileInput.type = 'file';
                 fileInput.name = `file.${nextIndex}`;
                 fileInput.style.display = 'none';
+                fileInput.classList.add('paste-handler-input');
                 
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(pastedFile);
@@ -157,6 +178,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                 typeInput.type = 'hidden';
                 typeInput.name = `file.type.${nextIndex}`;
                 typeInput.value = selectedPhotoType;
+                typeInput.classList.add('paste-handler-input');
                 
                 form.appendChild(fileInput);
                 form.appendChild(typeInput);
@@ -166,12 +188,38 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             clipboardQueue = [...clipboardQueue, { type: 'image', label: `Image (${selectedPhotoType})` }];
             dispatch('success', `Added pasted image (${selectedPhotoType})`);
         } else if (pastedType === 'text') {
-            const taskId = Math.random().toString(36);
+        } else if (pastedType === 'document' && pastedFile) {
+            const taskId = Math.random().toString(36).substring(2);
+            
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.name = `uploaded_document_file.${taskId}`;
+            fileInput.style.display = 'none';
+            fileInput.classList.add('paste-handler-input');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(pastedFile);
+            fileInput.files = dataTransfer.files;
+            
+            const titleInput = document.createElement('input');
+            titleInput.type = 'hidden';
+            titleInput.name = `uploaded_document_title.${taskId}`;
+            titleInput.value = textDocumentTitle;
+            titleInput.classList.add('paste-handler-input');
+            
+            form.appendChild(fileInput);
+            form.appendChild(titleInput);
+            
+            clipboardQueue = [...clipboardQueue, { type: 'document', label: `Doc: ${textDocumentTitle}` }];
+            dispatch('success', `Added pasted document`);
+            dispatch('processingComplete', { taskId: 'instant', status: 'success', message: '' });
+        } else if (pastedType === 'text') {
+            const taskId = Math.random().toString(36).substring(2);
             const textInput = document.createElement('input');
             textInput.type = 'hidden';
             textInput.name = 'pasted_documents[]';
 			textInput.id = `raw_text_${taskId}`;
             textInput.value = JSON.stringify({ title: textDocumentTitle, content: pastedText });
+            textInput.classList.add('paste-handler-input');
             form.appendChild(textInput);
             clipboardQueue = [...clipboardQueue, { type: 'text', label: `Note: ${textDocumentTitle}` }];
 
@@ -182,6 +230,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             urlInput.type = 'hidden';
             urlInput.name = 'pasted_urls[]';
             urlInput.value = pastedUrl;
+            urlInput.classList.add('paste-handler-input');
             form.appendChild(urlInput);
             
             clipboardQueue = [...clipboardQueue, { type: 'url', label: `URL: ${pastedUrl}` }];
@@ -243,6 +292,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                     <div class="badge badge-outline bg-base-100 gap-1 p-3 truncate max-w-full">
                         {#if item.type === 'image'}<i class="bi bi-image"></i>
                         {:else if item.type === 'text'}<i class="bi bi-file-text"></i>
+                        {:else if item.type === 'document'}<i class="bi bi-file-earmark"></i>
                         {:else}<i class="bi bi-link-45deg"></i>{/if}
                         {item.label}
                     </div>
@@ -258,14 +308,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
         
         {#if pastedType === 'image'}
             <div class="mb-4">
-                {#if pastedFile?.type === 'application/pdf'}
-                    <div class="flex items-center justify-center p-8 bg-base-200 rounded-xl border border-base-300 shadow-inner">
-                        <i class="bi bi-file-earmark-pdf text-6xl text-error"></i>
-                        <span class="ml-4 font-bold text-lg break-all">{pastedFile.name}</span>
-                    </div>
-                {:else}
                     <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
-                {/if}
             </div>
             {#if !forcePhotoType}
                 <div class="form-control w-full">
@@ -277,6 +320,19 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                     </select>
                 </div>
             {/if}
+        {:else if pastedType === 'document'}
+            <div class="mb-4 flex flex-col items-center justify-center p-8 bg-base-200 rounded-xl border border-base-300 shadow-inner">
+                {#if pastedFile?.name.toLowerCase().endsWith('.pdf')}
+                    <i class="bi bi-file-earmark-pdf text-6xl text-error"></i>
+                {:else}
+                    <i class="bi bi-file-earmark-arrow-up text-6xl text-primary"></i>
+                {/if}
+                <span class="mt-4 font-bold text-lg break-all">{pastedFile?.name}</span>
+            </div>
+            <div class="form-control w-full mb-4">
+                <div class="label"><span class="label-text font-semibold">Document Title</span></div>
+                <input type="text" bind:value={textDocumentTitle} class="input input-bordered w-full" />
+            </div>
         {:else if pastedType === 'url'}
             <div class="alert alert-success border-none shadow-sm mb-4">
                 <i class="bi bi-link-45deg text-2xl"></i>

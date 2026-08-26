@@ -75,6 +75,76 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
         });
     }
     
+    // Extract cleanly uploaded raw files (e.g., PDFs from PasteHandler or Drag&Drop)
+    for (const [key, value] of formData.entries()) {
+        if (key.startsWith('uploaded_document_file.')) {
+            const file = value as File;
+            if (!file || file.size === 0) continue;
+            
+            const taskId = key.split('.')[1];
+            const originalTitle = (formData.get(`uploaded_document_title.${taskId}`) as string) || file.name;
+            const prefix = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+            
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+            const filename = `${getSafeFilename(`${prefix}-doc`)}.${ext}`;
+            
+            const buffer = Buffer.from(await file.arrayBuffer());
+            fs.writeFileSync(`${diskFolder}/${filename}`, buffer);
+            
+            const docRecord = await db.document.create({
+                data: {
+                    itemId: target.itemId || null,
+                    timelineNoteId: target.timelineNoteId || null,
+                    type: "document",
+                    title: originalTitle,
+                    source: file.name,
+                    path: `${webFolder}/${filename}`,
+                    extracts: "[]"
+                }
+            });
+            
+            if (target.itemId) await logActivity(target.itemId, 'Document Attached', `Saved uploaded document: ${originalTitle}`, 'success');
+
+            const { ioQueue } = await import('$lib/server/queue/index');
+            ioQueue.add(async () => {
+                let extractedText = "";
+                let finalTitle = originalTitle;
+
+                if (ext === 'pdf') {
+                    let parser;
+                    try {
+                        const { PDFParse } = await import('pdf-parse');
+                        parser = new PDFParse({ data: buffer });
+                        const textResult = await parser.getText();
+                        extractedText = textResult.text;
+                        
+                        const infoResult = await parser.getInfo();
+                        if (infoResult.info?.Title && infoResult.info.Title.trim()) finalTitle = infoResult.info.Title;
+                    } catch (e) { console.error("Failed to parse local PDF:", e); } 
+                    finally { if (parser) await parser.destroy(); }
+                } else if (['txt', 'md', 'csv', 'json'].includes(ext)) {
+                    extractedText = buffer.toString('utf8');
+                }
+
+                if (extractedText.trim()) {
+                    const cappedText = extractedText.substring(0, 10000);
+                    await db.document.update({ where: { id: docRecord.id }, data: { title: finalTitle, extracts: JSON.stringify([cappedText]) }});
+                    if (cappedText.trim().length > 50) {
+                        try {
+                            const { summarizeWebpageExtract } = await import('$lib/server/llm');
+                            const summary = await summarizeWebpageExtract(cappedText);
+                            await db.document.update({ where: { id: docRecord.id }, data: { summary } });
+                            if (target.itemId) await logActivity(target.itemId, 'Analysis', `Generated summary for document: ${finalTitle}`, 'success');
+                        } catch (e) {
+                            console.error("Failed to summarize local document:", e);
+                            if (target.itemId) await logActivity(target.itemId, 'Analysis', `Failed to generate summary for document: ${finalTitle}`, 'error');
+                        }
+                    }
+                }
+            }, { targetType: target.itemId ? 'item' : 'global', targetId: target.itemId || 0, description: `Extracting text from ${originalTitle}` }).catch(console.error);
+        }
+    }
+
     const preDocsRaw = formData.getAll("preprocessed_docs[]");
     const preDocs = preDocsRaw.map(d => JSON.parse(d as string));
     for (const doc of preDocs) {
