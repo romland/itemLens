@@ -540,7 +540,7 @@
                 <ContainerSelector 
                     containers={containers} 
                     defaultTab={defaultContainerMode}
-                    values={item ? (item.locations || []) : selectedLocations.map(name => ({ container: { name } }))}
+                    values={selectedLocations.map(name => ({ container: { name } }))}
                     on:change={(ev) => { 
                         console.log("🛠️ [DEBUG AMBIENT] ContainerSelector on:change fired with:", ev.detail.containers);
                         selectedLocations = ev.detail.containers; 
