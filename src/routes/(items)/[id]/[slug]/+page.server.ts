@@ -209,6 +209,10 @@ export const actions = {
 			const { scrubEmptyCategories } = await import('$lib/server/categories');
 			scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
 			
+            const { ioQueue } = await import('$lib/server/queue/index');
+            const { healDuplicateStatuses } = await import('$lib/server/matcher');
+            ioQueue.add(() => healDuplicateStatuses(locals.activeInventoryId), { targetType: 'global', targetId: 0, description: 'Healing duplicate statuses' }).catch(console.error);
+
 			redirect(302, `/${targetId}/${targetItem?.slug || 'view'}`);
 		}
 	},
@@ -220,6 +224,10 @@ export const actions = {
 		const { scrubEmptyCategories } = await import('$lib/server/categories');
 		scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
 		
+        const { ioQueue } = await import('$lib/server/queue/index');
+        const { healDuplicateStatuses } = await import('$lib/server/matcher');
+        ioQueue.add(() => healDuplicateStatuses(locals.activeInventoryId), { targetType: 'global', targetId: 0, description: 'Healing duplicate statuses' }).catch(console.error);
+
 		redirect(302, '/');
 	},
 	

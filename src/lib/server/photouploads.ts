@@ -5,7 +5,7 @@ import FormData from 'form-data';
 
 import { getOCRdata } from '$lib/server/ocr';
 import { generatePhotoDerivatives } from '$lib/server/imageProcessor';
-import { apiQueue, ioQueue } from '$lib/server/queue/index';
+import { apiQueue, ioQueue, heavyMlQueue, lightMlQueue } from '$lib/server/queue/index';
 import { logActivity } from '$lib/server/logger';
 import { db } from '$lib/server/database';
 import { autoFill } from '$lib/server/autofill';
@@ -17,6 +17,21 @@ import crypto from 'crypto';
 export const activeDrafts = new Map<string, { promise: Promise<any>, draftPath: string }>();
 // Global memory lock for the heavy background pipeline (OCR, RemBG, Crops)
 export const activeHeavyTasks = new Map<string, Promise<void>>();
+
+const ocrCircuitBreaker = {
+    failures: 0,
+    trippedUntil: 0,
+    isTripped() { return Date.now() < this.trippedUntil; },
+    trip() {
+        this.failures++;
+        if (this.failures >= 3) {
+            this.trippedUntil = Date.now() + 5 * 60 * 1000; // Bypass for 5 minutes
+            console.warn("[Circuit Breaker] 🛑 OCR service failed 3 times in a row. Bypassing OCR for 5 minutes to preserve pipeline speed.");
+        }
+    },
+    reset() { this.failures = 0; this.trippedUntil = 0; }
+};
+
 
 import type { Item, Photo } from '@prisma/client';
 import slugify from 'slugify';
@@ -75,7 +90,10 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     if (!isVideo && !localPath.endsWith('.webp')) {
         const newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
         const newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
-        await sharp(localPath).webp({ quality: 85 }).toFile(newLocalPath);
+        await heavyMlQueue.add(
+            () => sharp(localPath).webp({ quality: 85 }).toFile(newLocalPath),
+            tracking ? { ...tracking, description: 'Converting image to WebP' } : undefined
+        );
         fs.unlinkSync(localPath);
         finalOrgPath = newWebPath;
         tempPhoto.orgPath = finalOrgPath;
@@ -122,7 +140,22 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     
     // 2. RUN OCR & DERIVATIVES (Passing the new foregroundBox down to guide RemBG!)
     const [ocrResult, imgUpdates] = await Promise.all([
-        enablePaddleOCR ? getOCRdata(currentLocalPath, tracking).catch(() => null) : Promise.resolve(null),
+        enablePaddleOCR ? lightMlQueue.add(async () => {
+            if (ocrCircuitBreaker.isTripped()) return null;
+
+            try {
+                const res = await Promise.race([
+                    getOCRdata(currentLocalPath, undefined).catch(() => null),
+                    new Promise<null>((_, reject) => setTimeout(() => reject(new Error('OCR Timeout')), 10000)) // Reduced to 10s
+                ]);
+                ocrCircuitBreaker.reset(); // Success! Reset the strike counter
+                return res;
+            } catch (e) {
+                console.error(`[Background Task] OCR timed out or failed for ${currentLocalPath}`);
+                ocrCircuitBreaker.trip();
+                return null; // Gracefully degrade, allowing the queue to unlock and continue
+            }
+        }, tracking ? { ...tracking, description: 'Extracting text (OCR)' } : undefined) : Promise.resolve(null),
         generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled)
     ]);
     
@@ -177,212 +210,214 @@ export async function processDraftPhotoBackground(webPath: string, type: string,
 }
 
 export async function processItemPhotosBackground(item: any) {
-    const taskId = taskManager.start('item', item.id, 'Analyzing photos');
-    try {
-        let itemNeedsTitleUpdate = item.title === "New Item" || item.title === "";
-        for (const photo of item.photos) {
-            if (!photo.orgPath) continue;
-            
-            if (photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)) continue; // Bypass ML processing for videos
-            
-            if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
-                console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
-                continue;
-            }
-            
-            const webPath = photo.orgPath;
-            const localPath = `static${webPath}`;
-            const tracking = { targetType: 'item' as const, targetId: item.id };
-            
-            let skipEnrichPhotoData = false;
-            let enriched: any = {};
-
-            // FAST WORKFLOW FIX: Event-Driven Background Synchronization
-            // If this photo is a draft, processDraftPhotoBackground might still be generating the heavy ML derivatives.
-            if (photo.orgPath.includes('-draft-') && (!photo.thumbPath || !photo.ocr)) {
-                const jsonPath = `static${photo.orgPath}.json`;
-                console.log(`\n[Background Task] ⏳ Photo is a draft but missing ML data. Checking for sidecar...`);
+    // Queue this entire item's processing to prevent DB/Network starvation during bulk imports
+    const taskId = taskManager.start('item', item.id, 'Queued for processing...');
+    return ioQueue.add(async () => {
+        taskManager.update(taskId, 'Analyzing photos');
+        try {
+            let itemNeedsTitleUpdate = item.title === "New Item" || item.title === "";
+            for (const photo of item.photos) {
+                if (!photo.orgPath) continue;
                 
-                let sidecar = readValidSidecar(jsonPath);
+                if (photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)) continue; // Bypass ML processing for videos
                 
-                if (!sidecar) {
-		            if (activeHeavyTasks.has(photo.orgPath)) {
-		                console.log(`[Background Task] ⏳ Photo is a draft. Awaiting active heavy ML task directly for ${photo.orgPath}...`);
-		                await activeHeavyTasks.get(photo.orgPath);
-		                console.log(`[Background Task] 🟢 Heavy ML task resolved! Parsing sidecar...`);
-		                sidecar = readValidSidecar(jsonPath);
-		            } else {
-		                console.warn(`\n[Background Task] ❌ No active task found for ${photo.orgPath}. Proceeding with redundant standard ML pipeline.\n`);
-		            }
-                } else {
-                    console.log(`[Background Task] 🟢 SUCCESS! Found fully populated draft sidecar instantly for ${photo.orgPath}! Parsing...`);
+                if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
+                    console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
+                    continue;
                 }
+                
+                const webPath = photo.orgPath;
+                const localPath = `static${webPath}`;
+                const tracking = { targetType: 'item' as const, targetId: item.id };
+                
+                let skipEnrichPhotoData = false;
+                let enriched: any = {};
 
-                if (sidecar) {
-                    photo.ocr = sidecar.ocr || photo.ocr;
-                    photo.colors = sidecar.colors || photo.colors;
-                    photo.cropPath = sidecar.cropPath || photo.cropPath;
-                    photo.thumbPath = sidecar.thumbPath || photo.thumbPath;
-                    photo.llmAnalysis = sidecar.llmAnalysis || photo.llmAnalysis;
-                    photo.exifData = sidecar.exifData || photo.exifData;
+                // FAST WORKFLOW FIX: Event-Driven Background Synchronization
+                // If this photo is a draft, processDraftPhotoBackground might still be generating the heavy ML derivatives.
+                if (photo.orgPath.includes('-draft-') && (!photo.thumbPath || !photo.ocr)) {
+                    const jsonPath = `static${photo.orgPath}.json`;
+                    console.log(`\n[Background Task] ⏳ Photo is a draft but missing ML data. Checking for sidecar...`);
                     
-                    skipEnrichPhotoData = true;
-                    enriched = {
-                        ocr: photo.ocr,
-                        colors: photo.colors,
-                        cropPath: photo.cropPath,
-                        thumbPath: photo.thumbPath,
-                        llmAnalysis: photo.llmAnalysis,
-                        categoryName: photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null,
-                        orgPath: photo.orgPath,
-                        exifData: photo.exifData,
-                        extractedAttributes: photo.llmAnalysis && JSON.parse(photo.llmAnalysis).extractedAttributes ? JSON.stringify(JSON.parse(photo.llmAnalysis).extractedAttributes) : null
-                    };
-                    await logActivity(item.id, 'Image Processing', `Reused ML results from draft sidecar for photo ID ${photo.id}`, 'success');
-                }
-            }
-            
-            if (!skipEnrichPhotoData) {
-                console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
-                await logActivity(item.id, 'Image Processing', `Started ML pipeline for photo ID ${photo.id}`);
-                const skipLlm = !!photo.llmAnalysis; // Skip LLM if we already analyzed it (e.g. Bulk Import)
-                let box = null;
-                if (skipLlm && photo.llmAnalysis) {
-                    try { 
-                        const parsed = JSON.parse(photo.llmAnalysis);
-                        box = parsed.foregroundBox || parsed.box || null; 
+                    let sidecar = readValidSidecar(jsonPath);
+                    
+                    if (!sidecar) {
+                        if (activeHeavyTasks.has(photo.orgPath)) {
+                            console.log(`[Background Task] ⏳ Photo is a draft. Awaiting active heavy ML task directly for ${photo.orgPath}...`);
+                            await activeHeavyTasks.get(photo.orgPath);
+                            console.log(`[Background Task] 🟢 Heavy ML task resolved! Parsing sidecar...`);
+                            sidecar = readValidSidecar(jsonPath);
+                        } else {
+                            console.warn(`\n[Background Task] ❌ No active task found for ${photo.orgPath}. Proceeding with redundant standard ML pipeline.\n`);
+                        }
+                    } else {
+                        console.log(`[Background Task] 🟢 SUCCESS! Found fully populated draft sidecar instantly for ${photo.orgPath}! Parsing...`);
+                    }
+
+                    if (sidecar) {
+                        photo.ocr = sidecar.ocr || photo.ocr;
+                        photo.colors = sidecar.colors || photo.colors;
+                        photo.cropPath = sidecar.cropPath || photo.cropPath;
+                        photo.thumbPath = sidecar.thumbPath || photo.thumbPath;
+                        photo.llmAnalysis = sidecar.llmAnalysis || photo.llmAnalysis;
+                        photo.exifData = sidecar.exifData || photo.exifData;
                         
+                        skipEnrichPhotoData = true;
+                        enriched = {
+                            ocr: photo.ocr,
+                            colors: photo.colors,
+                            cropPath: photo.cropPath,
+                            thumbPath: photo.thumbPath,
+                            llmAnalysis: photo.llmAnalysis,
+                            categoryName: photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null,
+                            orgPath: photo.orgPath,
+                            exifData: photo.exifData,
+                            extractedAttributes: photo.llmAnalysis && JSON.parse(photo.llmAnalysis).extractedAttributes ? JSON.stringify(JSON.parse(photo.llmAnalysis).extractedAttributes) : null
+                        };
+                        await logActivity(item.id, 'Image Processing', `Reused ML results from draft sidecar for photo ID ${photo.id}`, 'success');
+                    }
+                }
+                
+                if (!skipEnrichPhotoData) {
+                    console.log(`[Background Task] Running post-save ML for Photo ${photo.id}`);
+                    await logActivity(item.id, 'Image Processing', `Started ML pipeline for photo ID ${photo.id}`);
+                    const skipLlm = !!photo.llmAnalysis; // Skip LLM if we already analyzed it (e.g. Bulk Import)
+                    let box = null;
+                    if (skipLlm && photo.llmAnalysis) {
+                        try { 
+                            const parsed = JSON.parse(photo.llmAnalysis);
+                            box = parsed.foregroundBox || parsed.box || null; 
+                            
+                        } catch(e) {}
+                    }
+                    
+                    console.log(`[Background Task] Calling heavy enrichPhotoData for photo ID ${photo.id}...`);
+                    enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking, skipLlm, box);
+                    
+                    if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
+                    if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
+                    if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
+                    
+                    photo.orgPath = enriched.orgPath || photo.orgPath;
+                    photo.ocr = enriched.ocr || photo.ocr;
+                    photo.colors = enriched.colors || photo.colors;
+                    photo.cropPath = enriched.cropPath || photo.cropPath;
+                    photo.thumbPath = enriched.thumbPath || photo.thumbPath;
+                    photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
+                    photo.exifData = enriched.exifData || photo.exifData;
+                }
+                
+                // Secondary auto-fill fallback: if sidecar logic somehow failed and it's still "New Item"
+                // (Though our sidecar pre-computation now catches 99% of fast workflows)
+                if (itemNeedsTitleUpdate && photo.type === 'product' && (enriched.orgPath || photo.orgPath)) {
+                    try {
+                        let aiTitle = null;
+                        let aiDesc = null;
+                        
+                        if (photo.llmAnalysis) {
+                            const parsedAi = JSON.parse(photo.llmAnalysis);
+                            aiTitle = parsedAi.title;
+                            aiDesc = parsedAi.description || parsedAi.subtitle;
+                        }
+                        
+                        if (!aiTitle) {
+                            await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
+                            const currentLocalPath = `static${enriched.orgPath || photo.orgPath}`;
+                            const { guessProductDetails } = await import('$lib/server/gemini-classification');
+                            const details = await apiQueue.add(() => guessProductDetails(currentLocalPath, "", item.id));
+                            aiTitle = details?.title;
+                            aiDesc = details?.description;
+                        }
+                        
+                        if (aiTitle) {
+                            await db.item.update({
+                                where: { id: item.id },
+                                data: { 
+                                    title: aiTitle, 
+                                    slug: slugify(aiTitle.toLowerCase()),
+                                    ...(item.description === "" && aiDesc ? { description: aiDesc } : {})
+                                }
+                            });
+                            await logActivity(item.id, 'Analysis', `Auto-assigned title and description`, 'success');
+                            itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
+                        }
+                    } catch (e) { console.error("Auto-fill failed:", e); }
+                }
+                
+                // Map extracted EAV attributes directly into structured DB KVPs
+                if (enriched.extractedAttributes && photo.type === 'product') {
+                    const fpObj = JSON.parse(enriched.extractedAttributes);
+                    const { getActiveSchema } = await import('$lib/server/ontology');
+                    const { cleanAndSnapAttributes } = await import('$lib/server/services');
+                    const activeSchema = await getActiveSchema(item.inventoryId, photo.categoryId, true);
+                    const cleanAttrs = await cleanAndSnapAttributes(fpObj, activeSchema);
+                    const kvps = Object.entries(cleanAttrs).map(([k, v]) => ({ key: k, value: String(v), isAutoGenerated: true }));
+                    if (kvps.length > 0) {
+                        const itemWithAttrs = await db.item.findUnique({ where: { id: item.id }, include: { attributes: true } });
+                        const existingKeys = new Set(itemWithAttrs?.attributes.map((a: any) => a.key) || []);
+                        const newKvps = kvps.filter(kvp => !existingKeys.has(kvp.key));
+                        
+                        if (newKvps.length > 0) {
+                            await db.item.update({ where: { id: item.id }, data: { attributes: { create: newKvps } }});
+                            await logActivity(item.id, 'Semantic Extraction', `Structured ${newKvps.length} attributes into Key-Value Pairs`, 'success');
+                        }
+                    }
+                }
+                
+                // Fallback: If we skipped the LLM to save quota, pull the category from the cached JSON block
+                const finalCategoryName = enriched.categoryName || (photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null);
+                if (finalCategoryName) {
+                    const { getOrCreateCategory } = await import('$lib/server/categories');
+                    const cat = await getOrCreateCategory(finalCategoryName, item.inventoryId);
+                    photo.categoryId = cat.id;
+                }
+                
+                // Always check for and extract the debug payload for the activity log before saving
+                if (photo.llmAnalysis) {
+                    try {
+                        const parsed = JSON.parse(photo.llmAnalysis);
+                        if (parsed._debugPayload) {
+                            const { logActivity } = await import('$lib/server/logger');
+                            const { dev } = await import('$app/environment');
+                            if (dev) await logActivity(item.id, 'LLM Debug', `Dev Mode: Vision Extraction Payload`, 'info', parsed._debugPayload);
+                            delete parsed._debugPayload;
+                            photo.llmAnalysis = JSON.stringify(parsed);
+                        }
                     } catch(e) {}
                 }
+
+                await updatePhoto(photo.id, photo);
                 
-                console.log(`[Background Task] Calling heavy enrichPhotoData for photo ID ${photo.id}...`);
-                enriched = await enrichPhotoData(localPath, webPath, photo.type, item.inventoryId, tracking, skipLlm, box);
-                
-                if (enriched.ocr) await logActivity(item.id, 'OCR', `Successfully extracted text from photo ID ${photo.id}`, 'success');
-                if (enriched.colors) await logActivity(item.id, 'Colors', `Extracted color palette for photo ID ${photo.id}`, 'success');
-                if (enriched.llmAnalysis) await logActivity(item.id, 'Analysis', `Identified as: ${enriched.categoryName || 'Unknown'}`, 'success');
-                
-                photo.orgPath = enriched.orgPath || photo.orgPath;
-                photo.ocr = enriched.ocr || photo.ocr;
-                photo.colors = enriched.colors || photo.colors;
-                photo.cropPath = enriched.cropPath || photo.cropPath;
-                photo.thumbPath = enriched.thumbPath || photo.thumbPath;
-                photo.llmAnalysis = enriched.llmAnalysis || photo.llmAnalysis;
-                photo.exifData = enriched.exifData || photo.exifData;
-            }
-            
-            // Secondary auto-fill fallback: if sidecar logic somehow failed and it's still "New Item"
-            // (Though our sidecar pre-computation now catches 99% of fast workflows)
-            if (itemNeedsTitleUpdate && photo.type === 'product' && (enriched.orgPath || photo.orgPath)) {
-                try {
-                    let aiTitle = null;
-                    let aiDesc = null;
-                    
-                    if (photo.llmAnalysis) {
-                        const parsedAi = JSON.parse(photo.llmAnalysis);
-                        aiTitle = parsedAi.title;
-                        aiDesc = parsedAi.description || parsedAi.subtitle;
-                    }
-                    
-                    if (!aiTitle) {
-                        await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
-                        const currentLocalPath = `static${enriched.orgPath || photo.orgPath}`;
-                        const { guessProductDetails } = await import('$lib/server/gemini-classification');
-                        const details = await apiQueue.add(() => guessProductDetails(currentLocalPath, "", item.id));
-                        aiTitle = details?.title;
-                        aiDesc = details?.description;
-                    }
-                    
-                    if (aiTitle) {
-                        await db.item.update({
-                            where: { id: item.id },
-                            data: { 
-                                title: aiTitle, 
-                                slug: slugify(aiTitle.toLowerCase()),
-                                ...(item.description === "" && aiDesc ? { description: aiDesc } : {})
-                            }
-                        });
-                        await logActivity(item.id, 'Analysis', `Auto-assigned title and description`, 'success');
-                        itemNeedsTitleUpdate = false; // Prevent running for subsequent photos
-                    }
-                } catch (e) { console.error("Auto-fill failed:", e); }
-            }
-            
-            // Map extracted EAV attributes directly into structured DB KVPs
-            if (enriched.extractedAttributes && photo.type === 'product') {
-                const fpObj = JSON.parse(enriched.extractedAttributes);
-                const { getActiveSchema } = await import('$lib/server/ontology');
-                const { cleanAndSnapAttributes } = await import('$lib/server/services');
-                const activeSchema = await getActiveSchema(item.inventoryId, photo.categoryId, true);
-                const cleanAttrs = await cleanAndSnapAttributes(fpObj, activeSchema);
-                const kvps = Object.entries(cleanAttrs).map(([k, v]) => ({ key: k, value: String(v), isAutoGenerated: true }));
-                if (kvps.length > 0) {
-                    const itemWithAttrs = await db.item.findUnique({ where: { id: item.id }, include: { attributes: true } });
-                    const existingKeys = new Set(itemWithAttrs?.attributes.map((a: any) => a.key) || []);
-                    const newKvps = kvps.filter(kvp => !existingKeys.has(kvp.key));
-                    
-                    if (newKvps.length > 0) {
-                        await db.item.update({ where: { id: item.id }, data: { attributes: { create: newKvps } }});
-                        await logActivity(item.id, 'Semantic Extraction', `Structured ${newKvps.length} attributes into Key-Value Pairs`, 'success');
-                    }
+                if (photo.type !== 'invoice or receipt') {
+                    await processQRcodeThenDownload(photo.orgPath!, photo, item);
                 }
             }
-            
-            // Fallback: If we skipped the LLM to save quota, pull the category from the cached JSON block
-            const finalCategoryName = enriched.categoryName || (photo.llmAnalysis ? JSON.parse(photo.llmAnalysis).subCategory : null);
-            if (finalCategoryName) {
-                const { getOrCreateCategory } = await import('$lib/server/categories');
-                const cat = await getOrCreateCategory(finalCategoryName, item.inventoryId);
-                photo.categoryId = cat.id;
-            }
-            
-            // Always check for and extract the debug payload for the activity log before saving
-            if (photo.llmAnalysis) {
-                try {
-                    const parsed = JSON.parse(photo.llmAnalysis);
-                    if (parsed._debugPayload) {
-                        const { logActivity } = await import('$lib/server/logger');
-                        const { dev } = await import('$app/environment');
-                        if (dev) await logActivity(item.id, 'LLM Debug', `Dev Mode: Vision Extraction Payload`, 'info', parsed._debugPayload);
-                        delete parsed._debugPayload;
-                        photo.llmAnalysis = JSON.stringify(parsed);
-                    }
-                } catch(e) {}
-            }
-
-            await updatePhoto(photo.id, photo);
-            
-            if (photo.type !== 'invoice or receipt') {
-                await processQRcodeThenDownload(photo.orgPath!, photo, item);
-            }
+        } finally {
+            taskManager.end(taskId);
         }
-    } finally {
-        taskManager.end(taskId);
-    }  
+        });
 }
 
 async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item) {
-    return ioQueue.add(async () => {
-        const targetPath = photo.thumbPath ? `static${photo.thumbPath}` : `static${webFilePath.replace(/\.[^/.]+$/, '_thumb.webp')}`;
-        const page = await QRUrlDownloader.fetchQRCodeDocument(targetPath);
-        if (page !== null) {
-            const pageData = JSON.parse(page);
-            await fsPromises.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
-            try {
-                await db.document.create({
-                    data: {
-                        itemId: item.id,
-                        type: "uncategorized",
-                        title: pageData.title,
-                        source: pageData.url,
-                        path: `${webFilePath}_thumb.html`,
-                        extracts: JSON.stringify(pageData.extracts)
-                    }
-                });
-                await logActivity(item.id, 'QR Scanner', `Found and downloaded linked document: ${pageData.title}`, 'success');
-            } catch (ex) { console.error("Error creating document in DB:", ex); }
-        }
-    });
+    const targetPath = photo.thumbPath ? `static${photo.thumbPath}` : `static${webFilePath.replace(/\.[^/.]+$/, '_thumb.webp')}`;
+    const page = await QRUrlDownloader.fetchQRCodeDocument(targetPath);
+    if (page !== null) {
+        const pageData = JSON.parse(page);
+        await fsPromises.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
+        try {
+            await db.document.create({
+                data: {
+                    itemId: item.id,
+                    type: "uncategorized",
+                    title: pageData.title,
+                    source: pageData.url,
+                    path: `${webFilePath}_thumb.html`,
+                    extracts: JSON.stringify(pageData.extracts)
+                }
+            });
+            await logActivity(item.id, 'QR Scanner', `Found and downloaded linked document: ${pageData.title}`, 'success');
+        } catch (ex) { console.error("Error creating document in DB:", ex); }
+    }
 }
 
 async function updatePhoto(id : number, data : Photo)

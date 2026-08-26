@@ -356,6 +356,18 @@ export const actions = {
         return { success: true, message: `Taxonomy rules regenerated for '${name}'!` };
     },
 
+    rebuildDuplicates: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+        const data = await request.formData();
+        const inventoryId = Number(data.get('inventoryId'));
+        if (!inventoryId) return fail(400, { error: true, message: "Invalid ID." });
+
+        const { ioQueue } = await import('$lib/server/queue/index');
+        const { retroactiveDuplicateSweep } = await import('$lib/server/matcher');
+        ioQueue.add(() => retroactiveDuplicateSweep(inventoryId), { targetType: 'global', targetId: inventoryId, description: 'Retroactive duplicate sweep' }).catch(console.error);
+        return { success: true, message: "Duplicate sweep started in the background!" };
+    },
+
     beautifyTaxonomy: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();

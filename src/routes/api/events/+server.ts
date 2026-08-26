@@ -4,6 +4,7 @@ import { taskEvents } from '$lib/server/taskManager';
 export function GET() {
     let listener: () => void;
     let debounceTimeout: NodeJS.Timeout;
+    let lastFireTime = 0;
 
     const stream = new ReadableStream({
         start(controller) {
@@ -14,15 +15,25 @@ export function GET() {
             controller.enqueue(encoder.encode(': connected\n\n'));
 
             listener = () => {
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(() => {
+                const now = Date.now();
+                const fire = () => {
+                    lastFireTime = Date.now();
                     try {
-                        // Push the signal as an encoded byte array
                         controller.enqueue(encoder.encode('data: update\n\n'));
                     } catch (e) {
                         // Client disconnected silently
                     }
-                }, 500); // Wait 500ms for DB mutations to settle before notifying client
+                };
+
+                clearTimeout(debounceTimeout);
+                // Prevent starvation: If mutations are pouring in constantly, 
+                // force an update at least every 1.5 seconds so the UI trickles in data.
+                if (now - lastFireTime >= 1500) {
+                    fire();
+                } else {
+                    // Otherwise, group rapid successive mutations after a 500ms quiet period
+                    debounceTimeout = setTimeout(fire, 500);
+                }
             };
             
             // Listen for the Prisma extension triggers and active Task updates

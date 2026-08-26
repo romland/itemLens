@@ -246,6 +246,13 @@ console.log("formData:", orgData);
 			await logActivity(item.id, 'Attributes', 'Automatically structured messy attribute data using AI', 'success');
 		}
 
+        const { ioQueue } = await import('$lib/server/queue/index');
+        const { runDuplicateSweep, healDuplicateStatuses } = await import('$lib/server/matcher');
+        ioQueue.add(async () => {
+            await runDuplicateSweep(item.id, locals.activeInventoryId);
+            await healDuplicateStatuses(locals.activeInventoryId);
+        }, { targetType: 'item', targetId: item.id, description: 'Re-evaluating duplicates' }).catch(console.error);
+
         console.log("=== Done updating ===");
 
         redirect(302, `/${item?.id}/${item?.slug}`);

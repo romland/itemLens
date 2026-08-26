@@ -438,6 +438,12 @@
                                             <input type="hidden" name="name" value={v.name}>
                                             <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Rules</button>
                                         </form>
+
+                                        <!-- Retroactive Duplicates Sweep -->
+                                        <form method="POST" action="?/rebuildDuplicates" use:enhance={createEnhancer} on:submit={(e) => { if(!confirm('Re-scan the entire vault for duplicates? This runs in the background and may take a few moments.')) e.preventDefault(); }}>
+                                            <input type="hidden" name="inventoryId" value={v.id}>
+                                            <button type="submit" class="btn btn-xs btn-outline btn-warning gap-1 text-[10px]"><i class="bi bi-intersect"></i> Re-scan Duplicates</button>
+                                        </form>
                                     </div>
                                     
                                     <details class="collapse bg-base-300 mt-2 rounded-xl border border-base-200">

@@ -3,7 +3,6 @@ Doc: https://kit.svelte.dev/docs/routing#server
 */
 import { db } from '$lib/server/database';
 import type { Prisma } from '@prisma/client';
-import { flagDuplicatesInList } from '$lib/server/matcher';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -166,7 +165,9 @@ export async function GET({ url, setHeaders, locals }) {
         db.item.count({ where: query.where })
     ]);
 
-    await flagDuplicatesInList(items, locals.activeInventoryId);
+    items.forEach((item: any) => {
+        if (item.duplicateStatus === 'FLAGGED') item.hasDuplicate = true;
+    });
 
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < count ? 0 : page + 1;

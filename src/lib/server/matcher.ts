@@ -443,13 +443,40 @@ export function findBestMatch(
     return bestMatch;
 }
 
-export async function flagDuplicatesInList(items: any[], inventoryId: number) {
-    if (!items || items.length === 0) return items;
-    
-    // Dynamic imports to prevent top-level circular dependencies
+export async function runDuplicateSweep(itemId: number, inventoryId: number) {
     const { db } = await import('$lib/server/database');
-    const { tokenizeAndStem } = await import('$lib/server/nlp');
-    
+    const item = await db.item.findUnique({ where: { id: itemId }, include: { attributes: true, photos: { include: { category: true } } }});
+    if (!item || item.duplicateStatus === 'DISMISSED') return;
+
+    const allItems = await db.item.findMany({
+        where: { inventoryId, id: { not: itemId } },
+        include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
+    });
+
+    const idfMap = computeIdfMap(allItems);
+    const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { archetype: true } });
+    const archetype = vault?.archetype || 'generic';
+
+    const scanCtx = buildScanContextFromDbItem(item, archetype);
+    const bestMatch = findBestMatch(scanCtx, allItems, idfMap);
+
+    if (bestMatch && bestMatch.match.isMatch) {
+        await db.item.update({ where: { id: itemId }, data: { duplicateStatus: 'FLAGGED' } });
+        if (bestMatch.dbItem.duplicateStatus !== 'DISMISSED' && bestMatch.dbItem.duplicateStatus !== 'FLAGGED') {
+            await db.item.update({ where: { id: bestMatch.dbItem.id }, data: { duplicateStatus: 'FLAGGED' } });
+        }
+    }
+}
+
+export async function healDuplicateStatuses(inventoryId: number) {
+    const { db } = await import('$lib/server/database');
+    const flaggedItems = await db.item.findMany({
+        where: { inventoryId, duplicateStatus: 'FLAGGED' },
+        include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
+    });
+
+    if (flaggedItems.length === 0) return;
+
     const allItems = await db.item.findMany({
         where: { inventoryId },
         include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
@@ -458,20 +485,48 @@ export async function flagDuplicatesInList(items: any[], inventoryId: number) {
     const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { archetype: true } });
     const archetype = vault?.archetype || 'generic';
 
-    for (const item of items) {
-        if (item.duplicateStatus === 'DISMISSED') continue;
+    for (const item of flaggedItems) {
         const scanCtx = buildScanContextFromDbItem(item, archetype);
-
-        for (const dbItem of allItems) {
-            if (dbItem.id === item.id) continue;
-            const match = computeMatch(scanCtx, dbItem, idfMap);
-            if (match.isMatch) {
-                item.hasDuplicate = true;
-                break;
-            }
+        const others = allItems.filter(i => i.id !== item.id);
+        const bestMatch = findBestMatch(scanCtx, others, idfMap);
+        if (!bestMatch || !bestMatch.match.isMatch) {
+            await db.item.update({ where: { id: item.id }, data: { duplicateStatus: 'NONE' } });
         }
     }
-    return items;
+}
+
+export async function retroactiveDuplicateSweep(inventoryId: number) {
+    const { db } = await import('$lib/server/database');
+    console.log(`[Sweep] Starting retroactive duplicate sweep for Vault ${inventoryId}`);
+
+    // Reset all currently FLAGGED back to NONE so we start fresh. Leave DISMISSED alone.
+    await db.item.updateMany({
+        where: { inventoryId, duplicateStatus: 'FLAGGED' },
+        data: { duplicateStatus: 'NONE' }
+    });
+
+    const allItems = await db.item.findMany({
+        where: { inventoryId },
+        include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
+    });
+
+    const idfMap = computeIdfMap(allItems);
+    const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { archetype: true } });
+    const archetype = vault?.archetype || 'generic';
+
+    let flaggedCount = 0;
+    for (const item of allItems) {
+        if (item.duplicateStatus === 'DISMISSED') continue;
+        const scanCtx = buildScanContextFromDbItem(item, archetype);
+        const others = allItems.filter(i => i.id !== item.id);
+        const bestMatch = findBestMatch(scanCtx, others, idfMap);
+        
+        if (bestMatch && bestMatch.match.isMatch) {
+            await db.item.update({ where: { id: item.id }, data: { duplicateStatus: 'FLAGGED' } });
+            flaggedCount++;
+        }
+    }
+    console.log(`[Sweep] Retroactive sweep complete. Flagged ${flaggedCount} duplicates.`);
 }
 
 export function findBestMatchesForBatch(

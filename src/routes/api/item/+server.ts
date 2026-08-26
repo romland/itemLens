@@ -146,14 +146,21 @@ export async function PATCH({ request, locals }) {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
     const { itemId, newContainer } = await request.json();
     
-    await db.item.update({
-        where: { id: itemId, inventoryId: locals.activeInventoryId },
-        data: {
-            locations: {
-                deleteMany: {},
-                create: [{ container: { connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } } } }]
+    const exists = await db.container.findUnique({ where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } }});
+    
+    if (exists) {
+        await db.item.update({
+            where: { id: itemId, inventoryId: locals.activeInventoryId },
+            data: {
+                locations: {
+                    deleteMany: {},
+                    create: [{ container: { connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } } } }]
+                }
             }
-        }
-    });
+        });
+    } else {
+        await logActivity(itemId, 'Location', `Failed quick-move: Location '${newContainer}' no longer exists.`, 'error');
+    }
+
     return json({ success: true });
 }

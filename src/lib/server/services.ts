@@ -386,6 +386,24 @@ export async function createItemEntity(params: {
         }
     }
 
+    // FAST WORKFLOW: Graceful Degradation for Locations
+    // We never reject a save just because a container is missing or deleted.
+    const validContainers: string[] = [];
+    const missingContainers: string[] = [];
+    const requestedContainers = [...new Set((params.containers || []).map(String).filter(c => c.trim().length > 0 && c !== 'undefined' && c !== 'null'))];
+    
+    if (requestedContainers.length > 0) {
+        const existing = await db.container.findMany({
+            where: { inventoryId: params.inventoryId, name: { in: requestedContainers } },
+            select: { name: true }
+        });
+        const existingNames = new Set(existing.map(e => e.name));
+        for (const req of requestedContainers) {
+            if (existingNames.has(req)) validContainers.push(req);
+            else missingContainers.push(req);
+        }
+    }
+
     // Idempotency: Protect against outbox retries and rapid double-saves
     if (params.clientId) {
         const existing = await db.item.findUnique({
@@ -420,8 +438,8 @@ export async function createItemEntity(params: {
             semanticTokens,
             photos: params.photos && params.photos.length > 0 ? { create: params.photos } : undefined,
             attributes: finalAttributes.length > 0 ? { create: finalAttributes } : undefined,
-            locations: params.containers && params.containers.length > 0 ? {
-                create: params.containers.map(cont => ({
+            locations: validContainers.length > 0 ? {
+                create: validContainers.map(cont => ({
                     container: { connect: { inventoryId_name: { inventoryId: params.inventoryId, name: cont } } }
                 }))
             } : undefined,
@@ -441,6 +459,14 @@ export async function createItemEntity(params: {
     for (const msg of taxonomyLogs) {
         await logActivity(item.id, 'Taxonomy Engine', msg, 'info');
     }
+
+    for (const missing of missingContainers) {
+        await logActivity(item.id, 'Location', `Could not assign to location '${missing}' because it no longer exists. Saved without location.`, 'warning');
+    }
+
+    const { ioQueue } = await import('$lib/server/queue/index');
+    const { runDuplicateSweep } = await import('$lib/server/matcher');
+    ioQueue.add(() => runDuplicateSweep(item.id, params.inventoryId), { targetType: 'item', targetId: item.id, description: 'Checking for duplicates' }).catch(console.error);
 
     return item;
 }
