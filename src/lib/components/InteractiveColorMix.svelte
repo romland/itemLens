@@ -150,7 +150,7 @@
                         </button>
                     </div>
                 {:else if seg.pct >= 0.095}
-                    <span class="text-white/80 mix-blend-difference font-bold text-[10px] uppercase tracking-wider drop-shadow-md pointer-events-none truncate px-1">
+                    <span class="bg-black/40 backdrop-blur-md text-white px-1.5 py-0.5 rounded shadow-sm font-bold text-[10px] uppercase tracking-wider pointer-events-none truncate">
                         {seg.name} ({Math.round(seg.pct * 100)}%)
                     </span>
                 {/if}
@@ -167,9 +167,9 @@
 
     <div class="w-full flex flex-col">
         <!-- Full-width scrolling pucks -->
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1 w-full">
+        <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2 px-1 w-full after:content-[''] after:w-2 after:shrink-0">
             {#each Object.keys(BASE_COLORS_RGB) as colorName}
-                <button type="button" class="w-10 h-10 shrink-0 rounded-full shadow-sm border-2 transition-transform active:scale-90 {segments.some(s => s.name.toLowerCase() === colorName.toLowerCase()) ? 'border-primary ring-2 ring-primary/30 opacity-50' : 'border-base-200 hover:border-base-300'}" 
+                    <button type="button" class="w-8 h-8 shrink-0 rounded-full shadow-sm border-2 transition-transform active:scale-90 {segments.some(s => s.name.toLowerCase() === colorName.toLowerCase()) ? 'border-primary ring-2 ring-primary/30 opacity-50' : 'border-base-200 hover:border-base-300'}"
                         style="background-color: #{BASE_COLORS_RGB[colorName].map(x => x.toString(16).padStart(2, '0')).join('')}"
                         on:click={() => addColor(colorName)} aria-label="Add {colorName}"></button>
             {/each}
