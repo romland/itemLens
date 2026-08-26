@@ -230,7 +230,7 @@
 		</Navigation>
 
 		{#if selectedIds.length > 0}
-			<div class="fixed bottom-0 left-0 w-full p-4 bg-base-100/95 backdrop-blur-xl border-t border-base-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 animate-fade-in">
+            <div class="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 w-full p-4 bg-base-100/95 backdrop-blur-xl border-t border-base-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 animate-fade-in">
 				<div class="max-w-2xl mx-auto flex flex-col sm:flex-row items-end gap-3">
 					<select name="bulkAction" bind:value={bulkAction} class="select select-bordered w-full sm:w-auto shrink-0 bg-base-200">
 						<option value="addTag">Add Tag</option>
