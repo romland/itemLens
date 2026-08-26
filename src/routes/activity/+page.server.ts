@@ -9,12 +9,32 @@ export const load = (async ({ url }) => {
     const completedTasks = [...taskManager.getCompletedTasks()];
     const llmLogs = [...getLLMLogs()];
     
-    // Compute rolling last minute requests by counting recent logs
+    // Compute rolling last 1, 5, 10, 15, and 30-minute requests by counting recent logs
     const oneMinuteAgo = Date.now() - 60000;
-    const rpm = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
+    const fiveMinutesAgo = Date.now() - 300000;
+    const tenMinutesAgo = Date.now() - 600000;
+    const fifteenMinutesAgo = Date.now() - 900000;
+    const thirtyMinutesAgo = Date.now() - 1800000;
+    const rpm1m: Record<string, number> = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
+    const rpm5m: Record<string, number> = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
+    const rpm10m: Record<string, number> = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
+    const rpm15m: Record<string, number> = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
+    const rpm30m: Record<string, number> = { gemini: 0, groq: 0, openai: 0, replicate: 0 };
     for (const log of llmLogs) {
-        if (log.timestamp > oneMinuteAgo && rpm[log.service as keyof typeof rpm] !== undefined) {
-            rpm[log.service as keyof typeof rpm]++;
+        if (log.timestamp > oneMinuteAgo && rpm1m[log.service] !== undefined) {
+            rpm1m[log.service]++;
+        }
+        if (log.timestamp > fiveMinutesAgo && rpm5m[log.service] !== undefined) {
+            rpm5m[log.service]++;
+        }
+        if (log.timestamp > tenMinutesAgo && rpm10m[log.service] !== undefined) {
+            rpm10m[log.service]++;
+        }
+        if (log.timestamp > fifteenMinutesAgo && rpm15m[log.service] !== undefined) {
+            rpm15m[log.service]++;
+        }
+        if (log.timestamp > thirtyMinutesAgo && rpm30m[log.service] !== undefined) {
+            rpm30m[log.service]++;
         }
     }
     
@@ -51,7 +71,11 @@ export const load = (async ({ url }) => {
         completedTasks,
         llmLogs,
         usageStats: llmUsageStats,
-        rpm,
+        rpm1m,
+        rpm5m,
+        rpm10m,
+        rpm15m,
+        rpm30m,
         metrics,
         timeframe
     };

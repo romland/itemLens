@@ -182,6 +182,12 @@
                                 <th class="text-right">Tokens In</th>
                                 <th class="text-right">Tokens Out</th>
                                 <th class="text-right pr-5">Compute Time</th>
+
+                                <th class="text-right">1m Rate</th>
+                                <th class="text-right">5m Rate</th>
+                                <!--th class="text-right">10m Rate</th-->
+                                <th class="text-right">15m Rate</th>
+                                <!--th class="text-right">30m Rate</th-->
                             </tr>
                         </thead>
                         <tbody>
@@ -192,6 +198,12 @@
                                     <td class="text-right font-mono text-xs text-info">{fmt(m._sum.count1 || 0)}</td>
                                     <td class="text-right font-mono text-xs text-success">{fmt(m._sum.count2 || 0)}</td>
                                     <td class="text-right font-mono text-xs pr-5">{((m._sum.durationMs || 0) / 1000).toFixed(1)}s</td>
+
+                                    <td class="text-right font-mono text-xs text-warning">{data.rpm1m[m.provider] || 0}</td>
+                                    <td class="text-right font-mono text-xs text-warning">{data.rpm5m[m.provider] || 0}</td>
+                                    <!--td class="text-right font-mono text-xs text-warning">{data.rpm10m[m.provider] || 0}</td-->
+                                    <td class="text-right font-mono text-xs text-warning">{data.rpm15m[m.provider] || 0}</td>
+                                    <!--td class="text-right font-mono text-xs text-warning">{data.rpm30m[m.provider] || 0}</td-->
                                 </tr>
                             {/each}
                         </tbody>
