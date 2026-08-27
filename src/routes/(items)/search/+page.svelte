@@ -18,6 +18,10 @@
 	let bulkValue = '';
 	let isSubmitting = false;
     let bulkDeleteModal: HTMLDialogElement;
+    let exportCsvModal: HTMLDialogElement;
+    let exportConfig = { core: true, locs: true, attrs: true, tags: true, images: false };
+    let isExporting = false;
+
 	let navLoadedPages: any[] = [];
     let filterModal: BottomSheet;
     let filterAttrs: Record<string, string> = {};
@@ -119,6 +123,34 @@
             if (el) el.checked = false;
         }
         setTimeout(() => filterForm.requestSubmit(), 0);
+    }
+
+    async function downloadCSV() {
+        isExporting = true;
+        try {
+            const res = await fetch('/api/export-csv', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemIds: selectedIds, config: exportConfig })
+            });
+            if (!res.ok) throw new Error('Export failed');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1] || 'export.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            exportCsvModal.close();
+        } catch (e) {
+            alert('Failed to export CSV.');
+        } finally {
+            isExporting = false;
+        }
     }
 
     // Dynamically filter and deduplicate attributes based on the selected category
@@ -343,6 +375,7 @@
                         <option value="dismissDuplicate">Dismiss Duplicate</option>
                         <option value="clearDuplicate">Clear Duplicate Status</option>
                         <option value="deleteItems">Delete Items</option>
+                        <option value="exportCSV">Export to CSV</option>
 					</select>
                     {#if bulkAction === 'setCategory' && data.categories}
                         <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200 capitalize">
@@ -365,15 +398,18 @@
                         <input type="hidden" name="bulkValue" value="action_only" />
                         <!--input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" /-->
                     {/if}
-                    <button type="submit" class="btn {bulkAction === 'deleteItems' ? 'btn-error' : 'btn-primary'} w-full sm:w-auto shadow-md shrink-0" 
-                            disabled={isSubmitting || (!bulkValue.trim() && !['deleteItems', 'flagDuplicate', 'dismissDuplicate', 'clearDuplicate'].includes(bulkAction))}
+                    <button type="submit" class="btn {bulkAction === 'deleteItems' ? 'btn-error' : (bulkAction === 'exportCSV' ? 'btn-secondary' : 'btn-primary')} w-full sm:w-auto shadow-md shrink-0" 
+                            disabled={isSubmitting || (!bulkValue.trim() && !['deleteItems', 'flagDuplicate', 'dismissDuplicate', 'clearDuplicate', 'exportCSV'].includes(bulkAction))}
                             on:click={(e) => {
                                 if (bulkAction === 'deleteItems') {
                                     e.preventDefault();
                                     bulkDeleteModal.showModal();
+                                } else if (bulkAction === 'exportCSV') {
+                                    e.preventDefault();
+                                    exportCsvModal.showModal();
                                 }
                             }}>
-						{#if isSubmitting}<span class="loading loading-spinner"></span>{:else}Apply to {selectedIds.length}{/if}
+                        {#if isSubmitting}<span class="loading loading-spinner"></span>{:else if bulkAction === 'exportCSV'}<i class="bi bi-download"></i> Export {selectedIds.length}{:else}Apply to {selectedIds.length}{/if}
 					</button>
 				</div>
 			</div>
@@ -389,6 +425,35 @@
             <div class="modal-action">
                 <button type="button" class="btn btn-ghost" on:click={() => bulkDeleteModal.close()}>Cancel</button>
                 <button type="button" class="btn btn-error" on:click={() => { bulkDeleteModal.close(); document.getElementById('bulkEditForm')?.requestSubmit(); }}>Delete Forever</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog bind:this={exportCsvModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+        <div class="modal-box bg-base-100 border border-base-200 shadow-2xl p-6 sm:rounded-3xl">
+            <h3 class="font-bold text-xl flex items-center gap-2 mb-2">
+                <i class="bi bi-filetype-csv text-secondary"></i> Export to CSV
+            </h3>
+            <p class="text-sm text-gray-500 mb-6">Select what data to include in your spreadsheet for the {selectedIds.length} selected items.</p>
+            
+            <div class="flex flex-col gap-3 mb-6 bg-base-200/50 p-4 rounded-xl border border-base-200">
+                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Core Details <span class="font-normal text-xs text-gray-500 block">Title, Qty, Desc</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.core} /></label>
+                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Storage Locations <span class="font-normal text-xs text-gray-500 block">Where it lives</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.locs} /></label>
+                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">AI Attributes & Traits <span class="font-normal text-xs text-gray-500 block">Dynamically creates columns per attribute</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.attrs} /></label>
+                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Tags</span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.tags} /></label>
+                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Primary Image Link <span class="font-normal text-xs text-gray-500 block">Absolute server URL</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.images} /></label>
+            </div>
+
+            <div class="modal-action mt-0 flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => exportCsvModal.close()} disabled={isExporting}>Cancel</button>
+                <button type="button" class="btn btn-secondary flex-1 rounded-xl shadow-md" on:click={downloadCSV} disabled={isExporting}>
+                    {#if isExporting}
+                        <span class="loading loading-spinner loading-sm"></span> Generating...
+                    {:else}
+                        <i class="bi bi-download"></i> Download CSV
+                    {/if}
+                </button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
