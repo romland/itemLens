@@ -15,6 +15,7 @@
     import ColorMixBar from "$lib/components/ColorMixBar.svelte";
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
+    import { notify } from "$lib/client/notifications";
     import { dev } from '$app/environment';
 
     export let data: PageServerData;

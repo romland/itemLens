@@ -93,7 +93,8 @@
 
     $: serverClientIds = new Set(items.map(i => i.clientId).filter(Boolean));
     
-    $: combinedOutbox = [...$outboxStore, ...$completedOutboxStore];
+    // Deduplicate jobs to prevent keyed-each errors during the brief handoff from pending to completed
+    $: combinedOutbox = [...$outboxStore, ...$completedOutboxStore].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
     
     $: ghostItems = combinedOutbox
         .filter(job => job.endpoint === '/add')

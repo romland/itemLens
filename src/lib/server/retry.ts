@@ -2,6 +2,7 @@ import { logActivity } from './logger';
 import { taskManager } from './taskManager';
 import { recordLLMLog } from './llmLogger';
 import { dev } from '$app/environment';
+import { systemHealth } from './systemHealth';
 
 // Define limits per service
 const serviceQuotas: Record<string, { maxRPM: number, requests: number, minuteResetTime: number }> = {
@@ -35,7 +36,9 @@ export async function withRetry<T>(
                 console.log(`[Quota] Holding back ${taskName} (${service}) for ${Math.ceil(waitTime/1000)}s to respect limits.`);
                 if (context?.itemId) await logActivity(context.itemId, 'Quota Wait', `Holding back ${taskName} for ${Math.ceil(waitTime/1000)}s to respect ${service} limits.`, 'warning');
                 if (context?.taskId) taskManager.update(String(context.taskId), `Waiting ${Math.ceil(waitTime/1000)}s for API quota...`);
+                systemHealth.setDegraded(`AI quota limits reached. Pausing queue for ${Math.ceil(waitTime/1000)}s...`, waitTime);
                 await new Promise(r => setTimeout(r, waitTime));
+                systemHealth.clearDegraded();
             }
 
             if (Date.now() > quota.minuteResetTime) {
@@ -45,6 +48,10 @@ export async function withRetry<T>(
 
             quota.requests++;
             // Execute and time the LLM call
+
+            // // TEST: Force a fake 429 Quota rejection on the first attempt
+            // if (attempt === 1) throw { status: 429, message: "Fake 429 Quota Exceeded (retry in 12s)" };
+
             const startTime = Date.now();
             const result = await fn();
             const durationMs = Date.now() - startTime;
@@ -68,7 +75,7 @@ export async function withRetry<T>(
             const status = error?.status || error?.response?.status;
             
             // Parse 429 Quota Exhausted & dynamic retry delays
-            if (status === 429 || errMessage.includes('429') || errMessage.includes('RESOURCE_EXHAUSTED') || errMessage.includes('Quota exceeded')) {
+            if (status === 429 || status === 503 || errMessage.includes('429') || errMessage.includes('503') || errMessage.includes('RESOURCE_EXHAUSTED') || errMessage.includes('Quota exceeded') || errMessage.includes('overloaded')) {
                 let waitTime = 60000;
                 const match = errMessage.match(/retry in ([\d\.]+)s/);
                 if (match && match[1]) {
@@ -81,8 +88,10 @@ export async function withRetry<T>(
 
                 if (context?.itemId) await logActivity(context.itemId, 'LLM Retry', `${service} quota exceeded. Retrying ${taskName} in ${Math.ceil(waitTime/1000)}s.`, 'warning');
                 if (context?.taskId) taskManager.update(String(context.taskId), `API Busy. Waiting ${Math.ceil(waitTime/1000)}s...`);
+                systemHealth.setDegraded(`${service} API is rate-limited. Pausing queue for ${Math.ceil(waitTime/1000)}s...`, waitTime);
                 
                 await new Promise(resolve => setTimeout(resolve, waitTime));
+                systemHealth.clearDegraded();
                 continue; // Do not increment the failure attempt counter on pure quota pauses
             }
 

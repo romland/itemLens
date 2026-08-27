@@ -95,6 +95,19 @@
         tab1: '1', tab2: '2', tab3: '3', tab4: '4'
     };
 
+    let storageMetrics: any = null;
+    let loadingStorage = false;
+
+    async function loadStorageMetrics() {
+        if (storageMetrics || loadingStorage) return;
+        loadingStorage = true;
+        try {
+            const res = await fetch('/api/storage-metrics');
+            if (res.ok) storageMetrics = await res.json();
+        } finally {
+            loadingStorage = false;
+        }
+    }
 </script>
 
 <div class="max-w-2xl mx-auto">
@@ -469,6 +482,39 @@
 
 			<div class="divider my-6">System Management</div>
 			
+            <div class="bg-base-200/50 rounded-xl p-5 mb-6 border border-base-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-bold text-sm uppercase tracking-wider text-gray-500">Storage Usage</h4>
+                    {#if !storageMetrics}
+                        <button type="button" class="btn btn-xs btn-outline rounded-lg" on:click={loadStorageMetrics}>
+                            {#if loadingStorage}<span class="loading loading-spinner loading-xs"></span>{:else}Calculate{/if}
+                        </button>
+                    {/if}
+                </div>
+                {#if storageMetrics}
+                    {@const dbMb = (storageMetrics.dbBytes / (1024 * 1024)).toFixed(1)}
+                    {@const uploadsMb = (storageMetrics.uploadsBytes / (1024 * 1024)).toFixed(1)}
+                    {@const totalMb = ((storageMetrics.dbBytes + storageMetrics.uploadsBytes) / (1024 * 1024)).toFixed(1)}
+                    <div class="flex items-end justify-between mb-2">
+                        <span class="text-2xl font-bold">{totalMb} <span class="text-sm font-medium text-gray-400">MB Used</span></span>
+                    </div>
+                    <!-- Stacked bar -->
+                    <div class="w-full h-3 bg-base-300 rounded-full overflow-hidden flex shadow-inner mb-3">
+                        <div class="bg-primary h-full" style="width: {(storageMetrics.dbBytes / storageMetrics.totalBytes) * 100}%" title="Database ({dbMb} MB)"></div>
+                        <div class="bg-secondary h-full" style="width: {(storageMetrics.uploadsBytes / storageMetrics.totalBytes) * 100}%" title="Media & Uploads ({uploadsMb} MB)"></div>
+                    </div>
+                    <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-primary"></div> Database ({dbMb} MB)</div>
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-secondary"></div> Media ({uploadsMb} MB)</div>
+                    </div>
+                {:else if loadingStorage}
+                    <div class="w-full h-3 bg-base-300 rounded-full overflow-hidden mb-3 animate-pulse"></div>
+                    <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-gray-500 opacity-50">
+                        <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-base-300"></div> Scanning...</div>
+                    </div>
+                {/if}
+            </div>
+
 			<div class="flex flex-col gap-3">
 				<a href="/activity" class="btn btn-outline border-base-300 hover:border-primary flex items-center justify-between h-auto py-4 rounded-xl">
 					<div class="flex items-center gap-3">

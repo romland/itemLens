@@ -1,8 +1,10 @@
 import { dbEvents } from '$lib/server/database';
 import { taskEvents } from '$lib/server/taskManager';
+import { systemHealth } from '$lib/server/systemHealth';
 
 export function GET() {
     let listener: () => void;
+    let healthListener: (data: any) => void;
     let debounceTimeout: NodeJS.Timeout;
     let lastFireTime = 0;
 
@@ -13,6 +15,9 @@ export function GET() {
             
             // Send an immediate empty comment to establish the connection for Firefox
             controller.enqueue(encoder.encode(': connected\n\n'));
+
+            // Dispatch immediate health state on connect
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'health', ...systemHealth.getStatus() })}\n\n`));
 
             listener = () => {
                 const now = Date.now();
@@ -36,15 +41,25 @@ export function GET() {
                 }
             };
             
+            healthListener = (data: any) => {
+                try {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'health', ...data })}\n\n`));
+                } catch (e) {
+                    // Client disconnected silently
+                }
+            };
+
             // Listen for the Prisma extension triggers and active Task updates
             dbEvents.on('mutation', listener);
             taskEvents.on('update', listener);
+            systemHealth.on('update', healthListener);
         },
         cancel() {
             clearTimeout(debounceTimeout);
             // Clean up memory the instant the client disconnects
             dbEvents.off('mutation', listener);
             taskEvents.off('update', listener);
+            systemHealth.off('update', healthListener);
         }
     });
 

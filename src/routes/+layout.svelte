@@ -54,14 +54,19 @@
             if (evtSource) return;
             console.log("[DEBUG-CACHE] 🔌 Attempting to connect SSE...");
             evtSource = new EventSource('/api/events');
-            evtSource.onmessage = () => {
-                console.log("[DEBUG-CACHE] 🔔 SSE Event received! DB mutated. Firing app-sync & invalidateAll().");
-
-                window.dispatchEvent(new CustomEvent('app-sync'));
-
-                // Refresh SvelteKit UI seamlessly
-                // invalidateAll();
-                safeInvalidate();
+            evtSource.onmessage = (event) => {
+                if (event.data === 'update') {
+                    console.log("[DEBUG-CACHE] 🔔 SSE Event received! DB mutated. Firing app-sync & safeInvalidate().");
+                    window.dispatchEvent(new CustomEvent('app-sync'));
+                    safeInvalidate();
+                } else {
+                    try {
+                        const payload = JSON.parse(event.data);
+                        if (payload.type === 'health') {
+                            sysHealth = { status: payload.status, reason: payload.reason };
+                        }
+                    } catch (e) {}
+                }
             };
         };
 
@@ -169,6 +174,8 @@
 
     let mobileMenuModal: HTMLDialogElement;
     let createInventoryModal: CreateInventoryModal;
+
+    let sysHealth = { status: 'healthy', reason: null };
 
     let quickNoteModal: HTMLDialogElement;
     let quickNoteTimer: any;
@@ -402,13 +409,26 @@ $:  isDemoMode =
   </div>
 
   <div class="navbar-end">
+    {#if sysHealth.status === 'degraded'}
+      <div class="tooltip tooltip-bottom sm:tooltip-left mr-2" data-tip={sysHealth.reason || ''}>
+        <div class="flex items-center gap-1.5 px-3 py-1 bg-base-200/50 rounded-full border border-base-300 text-warning shadow-sm animate-fade-in cursor-help">
+          <i class="bi bi-pause-circle-fill"></i>
+          <span class="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Server Degration</span>
+        </div>
+      </div>
+    {/if}
+
     {#if $outboxStore.length > 0}
-      <!--div class="tooltip tooltip-bottom mr-2" data-tip="Syncing {$outboxStore.length} items to server"-->
-      <div class="tooltip tooltip-left mr-2" data-tip="Syncing {$outboxStore.length} items to server">
+      <div class="tooltip tooltip-left mr-2" data-tip={sysHealth.status === 'degraded' ? (sysHealth.reason || '') : `Syncing ${$outboxStore.length} items to server`}>
         <span class="btn btn-ghost btn-circle text-primary pointer-events-none">
           <span class="indicator">
-            <i class="bi bi-cloud-arrow-up text-xl {$outboxStore.some(i => i.status === 'syncing') ? 'animate-pulse' : ''}"></i>
-            <span class="badge badge-xs badge-primary indicator-item">{$outboxStore.length}</span>
+            {#if sysHealth.status === 'degraded'}
+              <i class="bi bi-cloud-pause-fill text-xl text-warning"></i>
+              <span class="badge badge-xs badge-warning indicator-item">{$outboxStore.length}</span>
+            {:else}
+              <i class="bi bi-cloud-arrow-up text-xl {$outboxStore.some(i => i.status === 'syncing') ? 'animate-pulse' : ''}"></i>
+              <span class="badge badge-xs badge-primary indicator-item">{$outboxStore.length}</span>
+            {/if}
           </span>
         </span>
       </div>

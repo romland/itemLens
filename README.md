@@ -25,6 +25,7 @@ If feeling particularly ambitious on a day, you can also:
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
+- Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
 - never run into a dead link again, all pages you link to are downloaded and stored locally on your disk
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
@@ -82,6 +83,11 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 
 ### Bulk Import & The Comparison Lens (Set Operations)
 
+__this is so cringe -- I the human should rewrite this -- now here as reminder__ 
+
+The **Entity-Attribute-Value (EAV) Taxonomy** automatically tailors schemas based on your collection's archetype. It intuitively knows that a t-shirt needs a "Garment Style" and "Fabric", while a drill requires a "Form Factor" and "Power Delivery". It enforces strict vocabulary to eliminate search friction.
+
+When it comes to putting that data to work, you can rely on the **Comparison Lens**.
 If bulk import is how you ingest a mountain of data into itemLens in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
 
 It performs set math between what your camera sees (**Set A**) and what your database holds (**Set B**).
