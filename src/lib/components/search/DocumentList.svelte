@@ -6,7 +6,7 @@
     const dispatch = createEventDispatcher();
 
     function handleDocumentClick(e: MouseEvent, doc: any) {
-        const path = (doc.path || doc.source || '').toLowerCase();
+        const path = (doc.path || doc.source || '').toLowerCase().split('#')[0];
         
         if (path.match(/\.(epub|pdf|html|htm|txt|md|csv)$/i)) {
             e.preventDefault();
@@ -18,7 +18,7 @@
     }
 
     function getFileInfo(doc: any) {
-        const path = (doc.path || '').toLowerCase();
+        const path = (doc.path || '').toLowerCase().split('#')[0];
         const source = (doc.source || '').toLowerCase();
         
         if (path.endsWith('.pdf')) return { icon: 'bi-filetype-pdf', label: 'PDF' };

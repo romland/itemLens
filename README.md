@@ -12,6 +12,7 @@ a pleasant and fast work-flow. It optionally uses machine learning of various ty
 language and vision models, object classification, OCR, background removal, segmentation.
 
 _This readme is very much a work in progress; it's currently not organized or complete at all._
+_Also: Quite a few of the more recent bits are written by an LLM acting as a sales person, which is very cringe. I will deal with it._
 
 ### How to use
 To add a product, grab your phone and take a picture, scan the QR-code on the container
@@ -26,6 +27,7 @@ If feeling particularly ambitious on a day, you can also:
 - paste in a list of attributes (weight/color/size/etc)
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
 - Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
+- **Knowledge Base / Second Brain:** itemLens isn't just for physical objects. Because it downloads, parses, and indexes linked articles, EPUBs, and PDFs, it doubles as a localized knowledge base for your topics and projects.
 - never run into a dead link again, all pages you link to are downloaded and stored locally on your disk
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
@@ -80,6 +82,8 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 
 ### Scanning collections
 `Tip: count the items before scanning. Gives you an idea if you had a good enough picture`
+
+*Side note: It did not take me more than an hour or two to scan 16 cardboard boxes full of books. The unpacking and packing the books back into the box was the time-consuming part.*
 
 ### Bulk Import & The Comparison Lens (Set Operations)
 

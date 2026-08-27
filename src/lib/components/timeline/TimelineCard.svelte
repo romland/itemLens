@@ -128,7 +128,7 @@
                                 <div class="flex items-center gap-3 mt-1.5">
                                     <a href={doc.source} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1"><i class="bi bi-globe"></i> Original</a>
                                     {#if doc.path}
-										{#if doc.path.toLowerCase().endsWith('.epub')}
+                                        {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
 											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>
 												<i class="bi bi-book"></i> Read Book
 											</button>

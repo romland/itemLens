@@ -15,6 +15,7 @@
     import ColorMixBar from "$lib/components/ColorMixBar.svelte";
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
+    import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import { notify } from "$lib/client/notifications";
     import { dev } from '$app/environment';
 
@@ -30,6 +31,10 @@
     let duplicateDeleteModal: Delete;
     let diagnosticModal: HTMLDialogElement;
     let pasteHandler: PasteHandler;
+    let moveModal: HTMLDialogElement;
+    let isMoving = false;
+    let globalContainers: any[] = [];
+    let isLoadingContainers = false;
 
     let payloadModal: HTMLDialogElement;
     let payloadModalTitle = "";
@@ -59,6 +64,35 @@
         } finally {
             isDevDebugging = false;
         }
+    }
+
+    async function openMoveModal() {
+        if (!moveModal) return;
+        moveModal.showModal();
+        if (globalContainers.length === 0) {
+            isLoadingContainers = true;
+            try {
+                const res = await fetch('/api/containers');
+                if (res.ok) globalContainers = await res.json();
+            } finally { isLoadingContainers = false; }
+        }
+    }
+
+    async function quickMove(newContainer: string) {
+        if (!data.item?.id) return;
+        isMoving = true;
+        try {
+            const res = await fetch('/api/item', { 
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ itemId: data.item.id, newContainer }) 
+            });
+            if (res.ok) {
+                notify('success', `Moved to ${newContainer}`);
+                window.location.reload();
+            } else notify('error', 'Failed to move item.');
+        } catch (e) { notify('error', 'Network error.'); } 
+        finally { isMoving = false; moveModal.close(); }
     }
 
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
@@ -186,10 +220,11 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             <h1 class="text-3xl sm:text-4xl font-bold text-base-content break-words leading-tight tracking-tight">
                 {data.item?.title}
             </h1>
-            <div class="text-[11px] text-gray-500 font-medium flex items-center gap-1.5 mt-2">
-                <i class="bi bi-clock-history opacity-70"></i> Added <RelativeDate date={data.item?.createdAt} />
+            <div class="text-[11px] text-gray-500 font-medium flex flex-wrap items-center gap-1.5 mt-2">
+                <span class="flex items-center gap-1.5"><i class="bi bi-clock-history opacity-70"></i> Added <RelativeDate date={data.item?.createdAt} /></span>
                 {#if data.item?.updatedAt && data.item.updatedAt !== data.item.createdAt}
-                    <span class="mx-1 opacity-40">•</span> <i class="bi bi-pencil opacity-70"></i> Updated <RelativeDate date={data.item.updatedAt} />
+                    <span class="mx-1 opacity-40 hidden sm:inline">•</span> 
+                    <span class="hidden sm:flex items-center gap-1.5"><i class="bi bi-pencil opacity-70"></i> Updated <RelativeDate date={data.item.updatedAt} /></span>
                 {/if}
             </div>
         </div>
@@ -470,13 +505,20 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                 {/if}
                             </figure>
                         {/if}
-                        <div class="card-body p-4 gap-1">
-                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
-							<a href="/container/{encodeURIComponent(loc.container.name)}" class="card-title text-lg m-0 hover:text-primary hover:underline w-max">
-								{loc.container.name}
-							</a>
-                            <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
-                        </div>
+                            <div class="card-body p-4 gap-1 relative">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Location {i > 0 ? `#${i+1}` : ''}</div>
+                                        <a href="/container/{encodeURIComponent(loc.container.name)}" class="card-title text-lg m-0 hover:text-primary hover:underline w-max">
+                                            {loc.container.name}
+                                        </a>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline border-base-300 rounded-xl hover:border-primary text-xs" on:click={() => openMoveModal()}>
+                                        <i class="bi bi-arrows-move"></i> It has moved
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
+                            </div>
                     </div>
                 {/each}
 
@@ -639,7 +681,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                             </svg>
                             
-                            {#if doc.path.toLowerCase().endsWith('.epub')}
+                            {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
                                 <button type="button" class="btn btn-sm btn-primary rounded-xl" on:click={() => docLightbox.open(doc)}>
                                     <i class="bi bi-book"></i> Read Book
                                 </button>
@@ -800,6 +842,23 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     runDevDebug();
 }} />
 {/if}
+
+<dialog bind:this={moveModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+    <div class="modal-box p-4 bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
+        <h3 class="font-bold text-xl mb-1 flex items-center gap-2"><i class="bi bi-arrows-move text-primary"></i> Move Item</h3>
+        <p class="text-xs text-gray-500 mb-4">Select the new container for this item.</p>
+        {#if isLoadingContainers}
+            <div class="flex justify-center p-8"><span class="loading loading-spinner text-primary"></span></div>
+        {:else}
+            <ContainerSelector 
+                containers={globalContainers} 
+                defaultTab="select" 
+                on:change={(e) => { if (e.detail.containers.length > 0) quickMove(e.detail.containers[0]); }} 
+            />
+        {/if}
+    </div>
+    <form method="dialog" class="modal-backdrop"><button disabled={isMoving}>close</button></form>
+</dialog>
 
 <style>
     :global(.menu-delete-btn::after) {

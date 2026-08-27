@@ -88,6 +88,7 @@ export async function GET({ url, setHeaders, locals }) {
                 LEFT JOIN TimelineNote tn ON d.timelineNoteId = tn.id
                 WHERE DocumentIndex MATCH ?
                   AND (i.inventoryId = ? OR tn.inventoryId = ?)
+                  AND (tn.category IS NULL OR tn.category != 'trash')
                 ORDER BY (
                     -bm25(DocumentIndex, 10.0, 1.0) 
                     + CASE WHEN d.itemId IS NOT NULL THEN 5.0 ELSE 0.0 END
@@ -105,6 +106,7 @@ export async function GET({ url, setHeaders, locals }) {
                 LEFT JOIN Item i ON d.itemId = i.id
                 LEFT JOIN TimelineNote tn ON d.timelineNoteId = tn.id
                 WHERE (i.inventoryId = ? OR tn.inventoryId = ?)
+                  AND (tn.category IS NULL OR tn.category != 'trash')
                 ORDER BY d.createdAt DESC
                 LIMIT ?;
             `, locals.activeInventoryId, locals.activeInventoryId, docLimit) as any[];

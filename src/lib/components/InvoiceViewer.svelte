@@ -63,16 +63,18 @@
             <!-- STRUCTURED DATA (LLM ENHANCED) -->
             <div class="flex justify-between items-start mb-4">
                 <div class="min-w-0">
-                    <h4 class="text-lg font-bold truncate tracking-tight">{llmData.supplier || 'Unknown Supplier'}</h4>
+                    <h4 class="text-lg font-bold truncate tracking-tight">
+                        {typeof llmData.supplier === 'string' ? llmData.supplier : (llmData.supplier?.name || llmData.supplier?.vendor || 'Unknown Supplier')}
+                    </h4>
                     <div class="text-sm text-gray-500 mt-0.5 flex gap-3 flex-wrap">
                         {#if llmData.date}
                             <span class="flex items-center gap-1">
-                                <i class="bi bi-calendar3"></i> {llmData.date}
+                                <i class="bi bi-calendar3"></i> {typeof llmData.date === 'string' ? llmData.date : JSON.stringify(llmData.date)}
                             </span>
                         {/if}
                         {#if llmData.invoiceNo}
                             <span class="flex items-center gap-1">
-                                <i class="bi bi-receipt"></i> #{llmData.invoiceNo}
+                                <i class="bi bi-receipt"></i> #{typeof llmData.invoiceNo === 'string' ? llmData.invoiceNo : JSON.stringify(llmData.invoiceNo)}
                             </span>
                         {/if}
                     </div>
@@ -80,36 +82,39 @@
                 {#if llmData.total}
                     <div class="text-right shrink-0 ml-4">
                         <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Total</div>
-                        <div class="text-xl font-bold text-base-content">{llmData.total}</div>
+                        <div class="text-xl font-bold text-base-content">{typeof llmData.total === 'string' ? llmData.total : (llmData.total?.amount || JSON.stringify(llmData.total))}</div>
                     </div>
                 {/if}
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
                 {#if llmData.invoiceNo}
-                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(llmData.invoiceNo, 'invoice')}>
+                    {@const invStr = typeof llmData.invoiceNo === 'string' ? llmData.invoiceNo : JSON.stringify(llmData.invoiceNo)}
+                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(invStr, 'invoice')}>
                         <i class="bi {copiedField === 'invoice' ? 'bi-check-lg text-success' : 'bi-clipboard'}"></i>
                         <div class="flex flex-col items-start ml-1 overflow-hidden">
                             <span class="text-[10px] uppercase text-gray-500 leading-none">Invoice No</span>
-                            <span class="text-xs font-semibold truncate w-full text-left">{llmData.invoiceNo}</span>
+                            <span class="text-xs font-semibold truncate w-full text-left">{invStr}</span>
                         </div>
                     </button>
                 {/if}
                 {#if llmData.date}
-                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(llmData.date, 'date')}>
+                    {@const dateStr = typeof llmData.date === 'string' ? llmData.date : JSON.stringify(llmData.date)}
+                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(dateStr, 'date')}>
                         <i class="bi {copiedField === 'date' ? 'bi-check-lg text-success' : 'bi-clipboard'}"></i>
                         <div class="flex flex-col items-start ml-1 overflow-hidden">
                             <span class="text-[10px] uppercase text-gray-500 leading-none">Date</span>
-                            <span class="text-xs font-semibold truncate w-full text-left">{llmData.date}</span>
+                            <span class="text-xs font-semibold truncate w-full text-left">{dateStr}</span>
                         </div>
                     </button>
                 {/if}
                 {#if llmData.total}
-                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(llmData.total, 'total')}>
+                    {@const totStr = typeof llmData.total === 'string' ? llmData.total : (llmData.total?.amount || JSON.stringify(llmData.total))}
+                    <button class="btn btn-sm btn-ghost bg-base-200/50 justify-start h-auto py-2" on:click={() => handleCopy(totStr, 'total')}>
                         <i class="bi {copiedField === 'total' ? 'bi-check-lg text-success' : 'bi-clipboard'}"></i>
                         <div class="flex flex-col items-start ml-1 overflow-hidden">
                             <span class="text-[10px] uppercase text-gray-500 leading-none">Total</span>
-                            <span class="text-xs font-semibold truncate w-full text-left">{llmData.total}</span>
+                            <span class="text-xs font-semibold truncate w-full text-left">{totStr}</span>
                         </div>
                     </button>
                 {/if}

@@ -61,7 +61,7 @@ export async function initFTS() {
         }
 
         initialized = true;
-        console.log("[FTS] Lightning Fast Search Engine Initialized");
+        console.log("[FTS] Full Text Search Engine Initialized");
     } catch (e) {
         console.error("[FTS] Failed to initialize search index", e);
         await logActivity(null, 'System Search', 'Failed to build search index.', 'error', String(e));

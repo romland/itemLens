@@ -64,9 +64,9 @@ async function extractInvoiceDataOpenAI(ocrData)
 async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {   
-        const prompt = `From the document (invoice or receipt) below, extract data and put it in this new structure:\n` +
-            '```json'+`{ supplier: ...,  items: [ { description: ..., quantity: ..., price: ..., vat: ... }, ` +
-            `{ description..., etc }], total: ..., totalIncTaxes, ..., date: ..., invoiceNo: ..., paymentMethod: ... }` + '```\n' +
+        const prompt = `From the document (invoice or receipt) below, extract data and put it in this exact JSON structure:\n` +
+            '```json\n{ "supplier": "string", "items": [ { "description": "string", "quantity": "number", "price": "number", "vat": "number" } ], "total": "string", "totalIncTaxes": "string", "date": "string", "invoiceNo": "string", "paymentMethod": "string" }\n```\n' +
+            `CRITICAL: 'supplier', 'total', 'totalIncTaxes', 'date', 'invoiceNo', and 'paymentMethod' MUST be flat, primitive strings or numbers. DO NOT return nested objects for these fields.\n` +
             `If you see obvious typos, correct them. ` + 
             `Make sure numbers are copied verbatim. ` +
             // `Do not add products which has description as 'subtotal' or similar things that are not products. ` + 

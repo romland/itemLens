@@ -3,6 +3,7 @@
     import { cubicOut } from 'svelte/easing';
     import { tick, onDestroy } from 'svelte';
     import { page } from '$app/stores';
+    import { notify } from '$lib/client/notifications';
 
     export let isOpen = false;
     let doc: any = null;
@@ -34,6 +35,11 @@
     let fontSize = 100;
     let fontFamily = 'system-ui, -apple-system, sans-serif';
 
+    // Highlight state
+    let highlightModal: HTMLDialogElement;
+    let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
+    let isSavingHighlight = false;
+
     // Prevent background scrolling when lightbox is open
     $: if (typeof document !== 'undefined') {
         if (isOpen) document.body.classList.add('overflow-hidden');
@@ -58,7 +64,18 @@
         locationsGenerated = false;
         invertIframe = false;
 
-        const path = (doc.path || doc.source || '').toLowerCase();
+        const rawPath = doc.path || doc.source || '';
+        let path = rawPath.toLowerCase();
+        let cfiToJump = null;
+        
+        // Extract CFI anchor if we jumped here from a Search Result highlight
+        if (rawPath.includes('#epubcfi(')) {
+            const parts = rawPath.split('#');
+            path = parts[0].toLowerCase();
+            cfiToJump = parts.slice(1).join('#');
+            doc.path = parts[0]; // Mutate locally so epub.js loads the book correctly
+        }
+
         if (path.endsWith('.epub')) {
             docType = 'epub';
             resetMenuTimeout();
@@ -144,7 +161,9 @@
             
             // === RESTORE READING POSITION ===
             const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`);
-            if (savedCfi) {
+            if (cfiToJump) {
+                await rendition.display(cfiToJump);
+            } else if (savedCfi) {
                 await rendition.display(savedCfi);
             } else {
                 await rendition.display();
@@ -175,6 +194,18 @@
             rendition.on('touchstart', handleTouchStart);
             rendition.on('touchend', handleTouchEnd);
             rendition.on('click', handleIframeClick);
+
+            // === CONTEXT HIGHLIGHT EXTRACTOR ===
+            rendition.on('selected', async (cfiRange: string, contents: any) => {
+                const text = rendition.getRange(cfiRange).toString().trim();
+                if (!text) return;
+                
+                const chapterText = contents.document.body.innerText;
+                pendingHighlight = { text, cfiRange, chapterText };
+                highlightModal.showModal();
+
+                contents.window.getSelection().removeAllRanges();
+            });
             
             // Pass through keyboard events from inside the iframe
             rendition.on('keyup', (e: KeyboardEvent) => {
@@ -320,6 +351,10 @@
     }
 
     function handleIframeClick(e: any) {
+        // Do not navigate if the user is actively highlighting text
+        const selection = e.view?.getSelection();
+        if (selection && selection.toString().trim().length > 0) return;
+
         const width = window.innerWidth;
         const x = e.clientX;
         if (x < width * 0.25) prevPage();
@@ -343,7 +378,7 @@
             if (diffX > 0) prevPage();
             else nextPage();
         } else if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
-            handleIframeClick({ clientX: touchEndX });
+            handleIframeClick({ clientX: touchEndX, view: e.view || window });
         }
     }
     
@@ -361,6 +396,32 @@
             e.preventDefault();
             prevPage();
         }
+    }
+
+    async function confirmHighlight() {
+        if (!pendingHighlight) return;
+        isSavingHighlight = true;
+        
+        const fd = new FormData();
+        fd.append('content', `**Highlight from ${doc.title}:**\n> "${pendingHighlight.text}"`);
+        fd.append('category', 'idea');
+        fd.append('preprocessed_docs[]', JSON.stringify({
+            title: `Highlight: ${doc.title}`,
+            source: doc.title,
+            path: `${doc.path}#${pendingHighlight.cfiRange}`,
+            extracts: [pendingHighlight.chapterText], // Allows FTS5 to index the entire chapter text around the quote
+            type: 'note'
+        }));
+        if (doc.itemId) fd.append('linkedItemIds[]', doc.itemId.toString());
+        
+        try {
+            await fetch('/timeline?/capture', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true', 'accept': 'application/json' } });
+            notify('success', 'Highlight saved to Notebook!');
+        } catch (e) { console.error("Failed to save highlight", e); notify('error', 'Failed to save highlight.'); }
+        
+        isSavingHighlight = false;
+        highlightModal.close();
+        pendingHighlight = null;
     }
 </script>
 
@@ -418,10 +479,6 @@
                 
                 {#if docType === 'epub'}
                     <div bind:this={viewerRef} class="w-full h-full"></div>
-                    <!-- Invisible Tap Zones over the EPUB -->
-                    <div class="absolute inset-y-0 left-0 w-[30%] z-20 cursor-pointer" on:click={prevPage} aria-label="Previous Page" role="button" tabindex="0"></div>
-                    <div class="absolute inset-y-0 right-0 w-[30%] z-20 cursor-pointer" on:click={nextPage} aria-label="Next Page" role="button" tabindex="0"></div>
-                    <div class="absolute inset-y-0 left-[30%] right-[30%] z-20 cursor-pointer" on:click={toggleMenu} aria-label="Toggle Menu" role="button" tabindex="0"></div>
                 {:else if docType === 'iframe'}
                     <iframe 
                         bind:this={iframeRef}
@@ -506,4 +563,30 @@
         {/if}
 
     </div>
+
+<dialog bind:this={highlightModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => pendingHighlight = null}>
+    <div class="modal-box p-6 sm:rounded-3xl bg-base-100 shadow-2xl border border-base-200">
+        <h3 class="font-bold text-xl mb-4 flex items-center gap-2">
+            <i class="bi bi-quote text-primary"></i> Save Highlight
+        </h3>
+        <blockquote class="border-l-4 border-primary pl-4 text-sm italic text-base-content/80 mb-4 max-h-32 overflow-y-auto">
+            "{pendingHighlight?.text}"
+        </blockquote>
+        <p class="text-xs text-gray-500 mb-6 bg-base-200/50 p-3 rounded-xl border border-base-200">
+            <i class="bi bi-info-circle mr-1"></i> This and the surrounding pages will be saved to your Notebook. 
+            This allows you to search for the context later and jump back exactly to this spot.
+        </p>
+        <div class="modal-action mt-0 flex gap-2">
+            <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => highlightModal.close()} disabled={isSavingHighlight}>Cancel</button>
+            <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={confirmHighlight} disabled={isSavingHighlight}>
+                {#if isSavingHighlight}
+                    <span class="loading loading-spinner loading-sm"></span> Saving...
+                {:else}
+                    Save to Notebook
+                {/if}
+            </button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button disabled={isSavingHighlight}>close</button></form>
+</dialog>
 {/if}
