@@ -1,15 +1,15 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
     import { marked } from 'marked';
-	import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import { notify } from "$lib/client/notifications";
+	import { createEventDispatcher } from 'svelte';
 
     export let note;
+	const dispatch = createEventDispatcher();
     
     let isEditing = false;
     let editContent = "";
-	let lightbox: ImageLightbox;
 
     function getDocSnippet(doc: any) {
         if (doc.summary) return doc.summary;
@@ -69,7 +69,7 @@
     {#if note.photos && note.photos.length > 0}
         <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64" style="-ms-overflow-style: none; scrollbar-width: none;">
             {#each note.photos as photo}
-				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in relative" aria-label="View Attachment" on:click={() => lightbox.open(photo)}>
+				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in relative" aria-label="View Attachment" on:click={() => dispatch('openImage', photo)}>
                     {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                         <video src="{photo.orgPath}#t=0.1" class="w-full h-full object-cover" muted playsinline></video>
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
@@ -128,7 +128,15 @@
                                 <div class="flex items-center gap-3 mt-1.5">
                                     <a href={doc.source} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1"><i class="bi bi-globe"></i> Original</a>
                                     {#if doc.path}
-                                        <a href={doc.path} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1"><i class="bi bi-hdd-network"></i> Local Cache</a>
+										{#if doc.path.toLowerCase().endsWith('.epub')}
+											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>
+												<i class="bi bi-book"></i> Read Book
+											</button>
+										{:else}
+											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>
+												<i class="bi bi-hdd-network"></i> Local Cache
+											</button>
+										{/if}
                                     {/if}
                                 </div>
                             </div>
@@ -165,5 +173,3 @@
         </div>
     </div>
 </div>
-
-<ImageLightbox bind:this={lightbox} itemTitle="Note Attachment" />

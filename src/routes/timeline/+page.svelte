@@ -4,6 +4,8 @@
     import pageTitle from '$lib/stores';
     import PasteHandler from "$lib/components/PasteHandler.svelte";
     import Notifications from "$lib/components/Notifications.svelte";
+	import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+	import DocumentLightbox from "$lib/components/DocumentLightbox.svelte";
     import { onMount, onDestroy } from 'svelte';
 
     export let data;
@@ -32,6 +34,8 @@
 
     let displayLimit = 10;
     let observer: IntersectionObserver;
+	let imgLightbox: ImageLightbox;
+	let docLightbox: DocumentLightbox;
 
     onMount(() => {
         observer = new IntersectionObserver((entries) => {
@@ -82,7 +86,11 @@
 
     <div class="flex-1 overflow-y-auto flex flex-col gap-4 py-4 px-2 w-full box-border">
         {#each displayedNotes as note (note.id)}
-            <TimelineCard {note} />
+			<TimelineCard 
+				{note} 
+				on:openImage={(e) => imgLightbox.open(e.detail)} 
+				on:openDoc={(e) => docLightbox.open(e.detail)} 
+			/>
         {:else}
             <div class="text-center text-gray-400 mt-10">
                 <i class="bi bi-chat-square-text text-4xl"></i>
@@ -102,3 +110,6 @@
 <TimelineInput on:posted={() => { pasteHandler?.clearQueue(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
 
 <Notifications bind:notifications />
+
+<ImageLightbox bind:this={imgLightbox} itemTitle="Note Attachment" />
+<DocumentLightbox bind:this={docLightbox} />

@@ -29,7 +29,7 @@ services:
   singlefile:
     container_name: itemlens-singlefile
     build: ./singlefile
-    command: ./node_modules/nodemon/bin/nodemon.js webserver.js 8001
+    command: node webserver.js 8001
     ports:
       - "8001:8001"
     volumes:

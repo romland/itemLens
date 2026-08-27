@@ -405,13 +405,19 @@ export default class QRUrlDownloader
     {
         return ioQueue.add(async () => {
           try {
+            const controller = new AbortController();
+            // Allow SingleFile its full 240s internal max buffer timeout + 10s grace
+            const timeoutId = setTimeout(() => controller.abort(), 250000); 
+
             const response = await fetch("http://localhost:8001", {
               method: 'POST',
               body: `url=${encodeURIComponent(url)}`,
               headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
               },
+              signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             if (response.ok) {
               const result = await response.text();
