@@ -18,6 +18,7 @@ export async function GET({ url, setHeaders, locals }) {
 	const cat = String(url.searchParams.get('category') || "").trim();
     const page = Number(url.searchParams.get('page') ?? '1');
     const count = Math.min( Number(url.searchParams.get('c') ?? '12'), 24);
+    const docLimit = Math.min( Number(url.searchParams.get('dc') ?? '50'), 100);
     const unassigned = url.searchParams.get('unassigned') === 'true';
     const attrKey = url.searchParams.get('attrKey');
     const attrVal = url.searchParams.get('attrVal');
@@ -68,6 +69,71 @@ export async function GET({ url, setHeaders, locals }) {
             attributes: true,
         }
     };
+
+    let documentResults: any[] = [];
+
+    // Full Text Search for Documents (SQLite FTS5)
+    const ftsQuery = q || docStr;
+    const safeQ = ftsQuery.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    if (safeQ.length > 0) {
+        // Create a prefix search query: "apple" -> '"apple"*'
+        const matchQuery = safeQ.split(/\s+/).map(word => `"${word}"*`).join(' AND ');
+        try {
+            documentResults = await db.$queryRawUnsafe(`
+                SELECT d.id, d.title, d.path, d.source, d.itemId, 
+                snippet(DocumentIndex, 1, '<mark class="bg-primary/15 text-primary font-semibold px-1 rounded-sm">', '</mark>', '...', 12) as excerpt
+                FROM DocumentIndex fts
+                JOIN Document d ON d.id = fts.rowid
+                LEFT JOIN Item i ON d.itemId = i.id
+                LEFT JOIN TimelineNote tn ON d.timelineNoteId = tn.id
+                WHERE DocumentIndex MATCH ?
+                  AND (i.inventoryId = ? OR tn.inventoryId = ?)
+                ORDER BY (
+                    -bm25(DocumentIndex, 10.0, 1.0) 
+                    + CASE WHEN d.itemId IS NOT NULL THEN 5.0 ELSE 0.0 END
+                ) DESC
+                LIMIT ?;
+            `, matchQuery, locals.activeInventoryId, locals.activeInventoryId, docLimit) as any[];
+        } catch (e) { console.error("FTS search failed", e); }
+    } else {
+        // No search query? Just return the most recent documents for this inventory.
+        try {
+            documentResults = await db.$queryRawUnsafe(`
+                SELECT d.id, d.title, d.path, d.source, d.itemId, 
+                '' as excerpt
+                FROM Document d
+                LEFT JOIN Item i ON d.itemId = i.id
+                LEFT JOIN TimelineNote tn ON d.timelineNoteId = tn.id
+                WHERE (i.inventoryId = ? OR tn.inventoryId = ?)
+                ORDER BY d.createdAt DESC
+                LIMIT ?;
+            `, locals.activeInventoryId, locals.activeInventoryId, docLimit) as any[];
+        } catch(e) { console.error("Recent documents fetch failed", e); }
+    }
+
+    // Enrich Document Results with Rich Item Data for the UI
+    if (documentResults.length > 0) {
+        const docItemIds = [...new Set(documentResults.map(d => d.itemId).filter(Boolean))];
+        if (docItemIds.length > 0) {
+            try {
+                const richItems = await db.item.findMany({
+                    where: { id: { in: docItemIds } },
+                    include: {
+                        photos: { include: { category: true } },
+                        locations: { include: { container: true } }
+                    }
+                });
+                const itemMap = new Map(richItems.map(i => [i.id, {
+                    ...i,
+                    locationName: i.locations?.[0]?.container?.name || 'Unassigned',
+                    categoryName: i.photos?.[0]?.category?.name || 'No Category'
+                }]));
+                documentResults.forEach(d => {
+                    if (d.itemId) d.item = itemMap.get(d.itemId);
+                });
+            } catch (e) { console.error("Failed to enrich document items", e); }
+        }
+    }
 
     if(q && q.length > 0) {
         query.where = {
@@ -172,5 +238,5 @@ export async function GET({ url, setHeaders, locals }) {
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < count ? 0 : page + 1;
 
-    return new Response(JSON.stringify({ q, items, totalCount, prevPage, nextPage }));
+    return new Response(JSON.stringify({ q, items, documentResults, totalCount, prevPage, nextPage }));
 }

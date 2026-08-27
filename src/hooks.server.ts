@@ -1,5 +1,9 @@
 import { redirect, type Handle } from "@sveltejs/kit";
 import { db } from "$lib/server/database";
+import { initFTS } from "$lib/server/fts";
+
+// Initialize the SQLite FTS5 engine once on server boot
+initFTS().catch(console.error);
 
 export const handle = (async ({ event, resolve }) => {
 	let theme: string = 'coffee';  // default theme

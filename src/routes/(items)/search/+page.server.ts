@@ -64,6 +64,7 @@ export const load = (async ({ locals, url, fetch }) => {
         minAmount: url.searchParams.get('minAmount') || '', 
         maxAmount: url.searchParams.get('maxAmount') || '', 
         items: data.items, 
+        documentResults: data.documentResults || [],
         totalCount: data.totalCount, 
         prevPage: data.prevPage, 
         nextPage: data.nextPage, 

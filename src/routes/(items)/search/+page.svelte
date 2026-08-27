@@ -8,6 +8,7 @@
     import InteractiveColorMix from "$lib/components/InteractiveColorMix.svelte";
     import BottomSheet from "$lib/components/BottomSheet.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
+    import DocumentList from "$lib/components/search/DocumentList.svelte";
 
     export let data: PageServerData;
 
@@ -27,6 +28,10 @@
     let filterAttrs: Record<string, string> = {};
     let selectedCategory = data.cat || '';
     let filterForm: HTMLFormElement;
+
+    // Hydrate tab state from session memory safely
+    let searchTab: 'items' | 'documents' = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('itemlens_search_tab')) as any || 'items';
+    $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('itemlens_search_tab', searchTab);
 
     // Toggle: Set to true to drop the attribute key and show only the friendly value in pills
     const COMPACT_PILLS = true;
@@ -188,7 +193,7 @@
         <button class="btn btn-ghost btn-sm bg-base-200/50 hover:bg-base-300 shadow-sm rounded-xl border border-base-300" on:click={() => filterModal.showModal()}>
             <i class="bi bi-funnel"></i> Filters
         </button>
-        <button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; }}>
+        <button class="btn btn-outline btn-sm shadow-sm rounded-xl border-base-300" on:click={() => { bulkMode = !bulkMode; selectedIds = []; searchTab = 'items'; }}>
             {#if bulkMode}Cancel Bulk Edit{:else}<i class="bi bi-ui-checks-grid"></i> Bulk Edit{/if}
         </button>
     </div>
@@ -207,6 +212,17 @@
         <button class="badge badge-secondary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('attrs', k)}>{COMPACT_PILLS ? v : `${friendlyKey}: ${v}`} <i class="bi bi-x ml-1"></i></button>
     {/each}
     <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { window.location.href = '/search'; }}>Clear All</button>
+</div>
+{/if}
+
+{#if !bulkMode}
+<div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300 shadow-inner">
+    <button type="button" class="flex-1 btn btn-sm border-none {searchTab === 'items' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => searchTab = 'items'}>
+        Items <span class="badge badge-sm badge-ghost ml-1">{data.totalCount}</span>
+    </button>
+    <button type="button" class="flex-1 btn btn-sm border-none {searchTab === 'documents' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => searchTab = 'documents'}>
+        Documents <span class="badge badge-sm badge-ghost ml-1">{data.documentResults.length}</span>
+    </button>
 </div>
 {/if}
 
@@ -458,6 +474,8 @@
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
+{:else if searchTab === 'documents'}
+    <DocumentList documents={data.documentResults} />
 {:else}
 	<Items items={data.items} />
 	<Navigation href="/search?{searchParamsStr}&" prevPage={data.prevPage} nextPage={data.nextPage} />

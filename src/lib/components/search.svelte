@@ -62,9 +62,9 @@
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
                 </div>
             {/if}
-            <div class="{items?.length > 0 ? 'mt-1 pt-1 border-t border-base-200/60' : ''}">
-                <a href="/search" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
-                    <i class="bi bi-sliders"></i> Advanced Search & Bulk Edit
+            <div class="{(items?.length > 0) ? 'mt-1 pt-1 border-t border-base-200/60' : ''} flex flex-col gap-1">
+                <a href="/search{q ? `?q=${encodeURIComponent(q)}` : ''}" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
+                    <i class="bi bi-search"></i> {q ? `See all results for "${q}"` : 'Advanced Search & Bulk Edit'}
                 </a>
             </div>
         </div>
