@@ -197,6 +197,42 @@
         }
     }
     
+    function handleIframeLoad() {
+        loading = false;
+        if (iframeRef) {
+            iframeRef.focus();
+            iframeRef.contentWindow?.focus();
+            try {
+                const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
+                if (iframeDoc) {
+                    iframeDoc.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') close();
+                    });
+
+                    // === THE "READING MODE" NUKE ===
+                    // Only inject into HTML documents (skip PDFs)
+                    const docPath = (doc?.path || doc?.source || '').toLowerCase();
+                    if (docPath.endsWith('.html') || docPath.endsWith('.htm')) {
+                        const style = iframeDoc.createElement('style');
+                        style.innerHTML = `
+                            /* Annihilate cookie banners, paywalls, and sticky overlays */
+                            [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i],
+                            [class*="gdpr" i], [id*="gdpr" i], [class*="popup" i], [id*="popup" i],
+                            [class*="newsletter" i], [class*="subscribe" i], [class*="overlay" i],
+                            /* Remove sticky headers/footers to give full reading real estate */
+                            header, footer, nav, [style*="position: fixed"], [style*="position: sticky"] { display: none !important; }
+                            /* Ensure the body actually scrolls and isn't locked by a hidden paywall */
+                            body, html { overflow: auto !important; position: static !important; }
+                        `;
+                        iframeDoc.head.appendChild(style);
+                    }
+                }
+            } catch (err) {
+                // Fails silently on secure PDFs or cross-origin URLs
+            }
+        }
+    }
+
     function updateProgress(location: any) {
         if (!location) return;
         atStart = location.atStart;
@@ -392,7 +428,7 @@
                         src={doc.path || doc.source} 
                         class="w-full h-full border-none transition-all duration-300 relative z-10"
                         style="background-color: white; filter: {invertIframe ? 'invert(1) hue-rotate(180deg)' : 'none'};"
-                        on:load={() => { loading = false; if(iframeRef) { iframeRef.focus(); iframeRef.contentWindow?.focus(); } }}
+                        on:load={handleIframeLoad}
                         title="Document Viewer"
                     ></iframe>
                 {/if}
