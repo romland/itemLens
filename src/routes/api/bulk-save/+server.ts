@@ -9,11 +9,17 @@ import { extractBoundingBox } from '$lib/server/imageProcessor';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
 
     const { draftPath, noteId, containers, items, globalCategory, tagcsv } = await request.json();
     const userId = locals.user.id;
     const inventoryId = locals.activeInventoryId;
     
+    // Strict anti-traversal check
+    if (draftPath && (draftPath.includes('..') || !draftPath.startsWith('/images/'))) {
+        return json({ error: 'Invalid path' }, { status: 400 });
+    }
+
     const inv = await db.inventory.findUnique({ where: { id: inventoryId }, select: { deepScanCollections: true } });
     const doDeepScan = inv?.deepScanCollections ?? false;
 

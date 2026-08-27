@@ -46,7 +46,15 @@ export const handle = (async ({ event, resolve }) => {
                 event.locals.activeInventoryId = allowedIds[0];
                 event.cookies.set('activeInventoryId', allowedIds[0].toString(), { path: '/' });
             } else {
-                event.locals.activeInventoryId = 0;
+                    event.locals.activeInventoryId = null;
+                }
+
+                // Hydrate the user's role for this specific inventory
+                if (event.locals.activeInventoryId) {
+                    const access = user.inventoryAccess.find(ia => ia.inventoryId === event.locals.activeInventoryId);
+                    event.locals.role = access?.role || 'VIEWER';
+                } else {
+                    event.locals.role = 'NONE';
             }
 
             // Sort Routing Logic (Remembered per inventory)
@@ -82,6 +90,9 @@ export const handle = (async ({ event, resolve }) => {
         ) {
             redirect(303, '/login');
         }
+    } else if (event.locals.activeInventoryId === null && !path.startsWith('/settings') && !path.startsWith('/logout')) {
+        // Prevent access to standard routes if they belong to no inventory, funnel to settings
+        redirect(303, '/settings');
     }
 
 	return await resolve(event, {

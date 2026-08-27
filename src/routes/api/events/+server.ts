@@ -2,7 +2,9 @@ import { dbEvents } from '$lib/server/database';
 import { taskEvents } from '$lib/server/taskManager';
 import { systemHealth } from '$lib/server/systemHealth';
 
-export function GET() {
+export function GET({ locals }) {
+    if (!locals.user) return new Response('Unauthorized', { status: 401 });
+
     let listener: () => void;
     let healthListener: (data: any) => void;
     let debounceTimeout: NodeJS.Timeout;

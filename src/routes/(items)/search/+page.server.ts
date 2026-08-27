@@ -78,6 +78,9 @@ export const load = (async ({ locals, url, fetch }) => {
 
 export const actions = {
 	bulkEdit: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
+
 		const data = await request.formData();
 		const itemIds = data.getAll('itemIds[]').map(Number);
 		const action = data.get('bulkAction') as string;

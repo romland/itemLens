@@ -7,6 +7,7 @@ import { apiQueue } from '$lib/server/queue/index';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
 
     try {
         const { draftPath, hint } = await request.json();

@@ -11,14 +11,16 @@ export const GET: RequestHandler = async ({ locals }) => {
     // Dynamically pull the path from the environment, defaulting to dev.db
     let dbPath = env.DATABASE_URL?.replace('file:', '') || './dev.db';
     dbPath = dbPath.split('?')[0]; // Strip off Prisma connection arguments like ?connection_limit=1
+    
+    // Strictly prevent path traversal by extracting only the target filename
+    dbPath = path.basename(dbPath);
 
     // Prisma resolves relative paths relative to the prisma/ schema directory.
     // If not found in root, check the prisma folder.
-    if (!fs.existsSync(dbPath) && fs.existsSync(path.join('prisma', dbPath))) {
-        dbPath = path.join('prisma', dbPath);
-    }
+    let finalPath = fs.existsSync(path.join('prisma', dbPath)) ? path.join('prisma', dbPath) : dbPath;
+    if (!fs.existsSync(finalPath)) return new Response('Database file not found', { status: 404 });
 
-    const fileBuffer = fs.readFileSync(dbPath);
+    const fileBuffer = fs.readFileSync(finalPath);
     
     return new Response(fileBuffer, {
         headers: {

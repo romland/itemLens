@@ -65,13 +65,16 @@ export async function GET({ url, setHeaders, locals }) {
 
 export async function POST({ request, locals }) {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
 
     const formData = await request.formData();
     const title = (formData.get('title') as string) || 'Untitled Item';
     const description = (formData.get('description') as string) || '';
     let draftPath = (formData.get('draftPath') as string)?.split('?')[0].split('#')[0];
-    if (draftPath && !draftPath.startsWith('/images/')) {
-        draftPath = ''; // Security fallback
+    
+    // Strict anti-traversal check
+    if (draftPath && (draftPath.includes('..') || !draftPath.startsWith('/images/'))) {
+        draftPath = ''; 
     }
     const boxStr = formData.get('box') as string;
     const container = formData.get('container') as string;
@@ -147,8 +150,13 @@ export async function POST({ request, locals }) {
 
 export async function PATCH({ request, locals }) {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
     const { itemId, newContainer } = await request.json();
     
+    // IDOR Check: Ensure the item actually belongs to the active inventory
+    const itemBelongsToVault = await db.item.findUnique({ where: { id: itemId, inventoryId: locals.activeInventoryId } });
+    if (!itemBelongsToVault) return json({ error: 'Item not found in current collection' }, { status: 404 });
+
     const exists = await db.container.findUnique({ where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } }});
     
     if (exists) {

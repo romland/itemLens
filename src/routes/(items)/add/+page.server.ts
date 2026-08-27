@@ -15,6 +15,9 @@ import { logActivity } from '$lib/server/logger';
 
 export const actions = {
     default: async ({ locals, request }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const orgData = await request.formData();
         const data = Object.fromEntries(orgData);
 

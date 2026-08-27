@@ -24,6 +24,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const applyRotation = async (webPath: string | null) => {
         if (!webPath) return null;
         const cleanWebPath = webPath.split('?')[0]; // Strip existing query params
+        
+        // Strict anti-traversal check to prevent LFI via rotation buffer
+        if (cleanWebPath.includes('..') || !cleanWebPath.startsWith('/images/')) {
+            throw new Error('Invalid image path');
+        }
+        
         const localPath = `static${cleanWebPath}`;
         if (!fs.existsSync(localPath)) return cleanWebPath;
 

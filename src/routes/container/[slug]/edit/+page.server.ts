@@ -39,6 +39,9 @@ export const load = (async ({ locals, params }) => {
 
 export const actions = {
     default: async ({ request, params, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const data = Object.fromEntries(await request.formData());
         const name = data.name as string;
         const description = data.description as string;

@@ -220,14 +220,17 @@ export const actions = {
         return { success: true, message: "User updated successfully." };
     },    
     assignAccess: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
-
         const data = await request.formData();
-        const userId = Number(data.get('userId'));
         const inventoryId = Number(data.get('inventoryId'));
+        const userId = Number(data.get('userId'));
         const role = data.get('role') as string;
 
         if (!userId || !inventoryId || !role) return fail(400, { error: true, message: "Missing fields." });
+
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
 
         await db.userInventoryAccess.upsert({
             where: { inventoryId_userId: { inventoryId, userId } },
@@ -239,11 +242,14 @@ export const actions = {
     },
 
     revokeAccess: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
-
         const data = await request.formData();
-        const userId = Number(data.get('userId'));
         const inventoryId = Number(data.get('inventoryId'));
+        const userId = Number(data.get('userId'));
+
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
 
         await db.userInventoryAccess.deleteMany({
             where: { inventoryId, userId }
@@ -252,74 +258,104 @@ export const actions = {
     },
 
     toggleAutoCategories: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
-
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('allowNewCategories') === 'true';
         await db.inventory.update({ where: { id }, data: { allowNewCategories: allow } });
         return { success: true, message: "Category generation settings updated." };
     },
 
     toggleAutoTaxonomy: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('allowAutoTaxonomy') === 'true';
         await db.inventory.update({ where: { id }, data: { allowAutoTaxonomy: allow } as any });
         return { success: true, message: "AI Taxonomy settings updated." };
     },
 
     toggleExtractExif: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
-
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('extractExif') === 'true';
         await db.inventory.update({ where: { id }, data: { extractExif: allow } });
         return { success: true, message: "EXIF extraction settings updated." };
     },
 
     toggleDeepScan: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('deepScan') === 'true';
         await db.inventory.update({ where: { id }, data: { deepScanCollections: allow } });
         return { success: true, message: "MultiScan scanning settings updated." };
     },
 
     toggleBgRemoval: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('bgRemovalEnabled') === 'true';
         await db.inventory.update({ where: { id }, data: { bgRemovalEnabled: allow } });
         return { success: true, message: "Background removal settings updated." };
     },
 
     toggleBgPreCrop: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('bgRemovalPreCrop') === 'true';
         await db.inventory.update({ where: { id }, data: { bgRemovalPreCrop: allow } });
         return { success: true, message: "Pre-crop settings updated." };
     },
 
     togglePaddleOCR: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('enablePaddleOCR') === 'true';
         await db.inventory.update({ where: { id }, data: { enablePaddleOCR: allow } });
         return { success: true, message: "OCR settings updated." };
     },
 
     updateInventoryStrategy: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const strategy = data.get('strategy')?.toString();
         if (id && strategy) {
             await db.inventory.update({ where: { id }, data: { duplicateStrategy: strategy } });
@@ -328,27 +364,39 @@ export const actions = {
     },
 
     updateContainerMode: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const containerMode = data.get('containerMode') as string;
         await db.inventory.update({ where: { id }, data: { containerMode } });
         return { success: true, message: "Container mode updated." };
     },
 
     toggleArchiveSingle: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const allow = data.get('archiveSingleScans') === 'true';
         await db.inventory.update({ where: { id }, data: { archiveSingleScans: allow } });
         return { success: true, message: "Archive setting updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const inventoryId = Number(data.get('inventoryId'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const name = data.get('name') as string;
 
         if (!inventoryId) return fail(400, { error: true, message: "Invalid ID." });
@@ -357,9 +405,13 @@ export const actions = {
     },
 
     rebuildDuplicates: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const inventoryId = Number(data.get('inventoryId'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         if (!inventoryId) return fail(400, { error: true, message: "Invalid ID." });
 
         const { ioQueue } = await import('$lib/server/queue/index');
@@ -369,9 +421,12 @@ export const actions = {
     },
 
     beautifyTaxonomy: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const inventoryId = Number(data.get('inventoryId'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
 
         const { beautifyTaxonomyRules } = await import('$lib/server/ontology');
         await beautifyTaxonomyRules(inventoryId);
@@ -379,9 +434,13 @@ export const actions = {
     },
 
     updateTaxonomy: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const taxonomyJson = data.get('taxonomyJson') as string;
         
         try {
@@ -409,10 +468,13 @@ export const actions = {
     },
 
 	deleteInventory: async ({ request, locals }) => {
-        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
-
         const data = await request.formData();
         const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
         const confirmName = data.get('confirmName') as string;
 
         if (!id) return fail(400, { error: true, message: "Invalid ID." });

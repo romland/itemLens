@@ -89,6 +89,9 @@ export const load = (async ({ locals, params }) => {
 
 export const actions = {
 	changeCategory: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		const data = await request.formData();
 		const photoId = Number(data.get('photoId'));
 		const categoryName = (data.get('categoryName') as string)?.trim().toLowerCase();
@@ -106,6 +109,9 @@ export const actions = {
 	},
 	
 	toggleBackground: async ({ request }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		const data = await request.formData();
 		const photoId = Number(data.get('photoId'));
 		const showOriginal = data.get('showOriginal') === 'true';
@@ -119,6 +125,9 @@ export const actions = {
 	},
 	
 	addPasted: async ({ request, params }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		const orgData = await request.formData();
 		const itemId = Number(params.id);
 		
@@ -147,6 +156,8 @@ export const actions = {
 	
 	saveAttributes: async ({ request, locals, params }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		const data = await request.formData();
 		const attrs = JSON.parse(data.get('attributes') as string);
 		const kvps = Object.entries(attrs).filter(([k,v]) => v !== null && v !== '').map(([k,v]) => ({ key: k, value: String(v) }));
@@ -173,6 +184,8 @@ export const actions = {
 	
 	mergeDuplicate: async ({ request, locals, params }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		const data = await request.formData();
 		const targetId = Number(data.get('targetId'));
 		const sourceId = Number(params.id);
@@ -181,7 +194,7 @@ export const actions = {
 			const sourceItem = await db.item.findUnique({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { locations: true } });
 			if (!sourceItem) return fail(404, { message: 'Item not found' });
 			
-			const targetItem = await db.item.findUnique({ where: { id: targetId } });
+            const targetItem = await db.item.findUnique({ where: { id: targetId, inventoryId: locals.activeInventoryId } });
 			if (!targetItem) return fail(404, { message: 'Target item not found' });
 			
 			await db.item.update({
@@ -216,6 +229,8 @@ export const actions = {
 	
 	deleteDuplicate: async ({ locals, params }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		await db.item.delete({ where: { id: Number(params.id) } });
 		
 		const { scrubEmptyCategories } = await import('$lib/server/categories');
@@ -230,6 +245,8 @@ export const actions = {
 	
 	dismissDuplicate: async ({ locals, params }) => {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
 		await db.item.update({
 			where: { id: Number(params.id) },
             data: { duplicateStatus: 'DISMISSED' }
@@ -239,6 +256,8 @@ export const actions = {
 
     retryProcessing: async ({ locals, params }) => {
         if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
         const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId }, include: { photos: true } });
         if (item) {
             // Clean up DB corruption from previously saved cache-busters before retrying

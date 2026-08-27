@@ -21,6 +21,9 @@ export const load = (async ({ locals }) => {
 
 export const actions = {
     create: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         const rawName = data.get('name')?.toString();
         
@@ -38,6 +41,9 @@ export const actions = {
         });
     },
     updateStrategy: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         const id = Number(data.get('id'));
         const strategy = data.get('strategy')?.toString();
@@ -50,6 +56,9 @@ export const actions = {
         }
     },
     delete: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         const id = Number(data.get('id'));
         if (id) {

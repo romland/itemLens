@@ -30,6 +30,9 @@ export const load = (async ({ locals, url }) => {
 
 export const actions = {
     capture: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const formData = await request.formData();
         
         // Handle input from either our UI or the native OS PWA Share Target
@@ -115,18 +118,30 @@ export const actions = {
     },
     
     updateCategory: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: data.get('category') as string } });
     },
     delete: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
 		await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: 'trash' } });
     },
     edit: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { content: data.get('content') as string } });
     },
     promote: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const data = await request.formData();
         const noteId = Number(data.get('id'));
         

@@ -4,7 +4,13 @@ import type { RequestHandler } from './$types';
 
 function escapeCSV(val: any): string {
     if (val === null || val === undefined) return '';
-    const str = String(val);
+    let str = String(val);
+    
+    // CSV Injection Protection: Mitigate formula execution in Excel/Google Sheets
+    if (/^[=+\-@]/.test(str)) {
+        str = "'" + str;
+    }
+    
     // If the value contains quotes, commas, or newlines, wrap in quotes and escape internal quotes
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`;

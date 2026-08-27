@@ -90,6 +90,9 @@ x delete all attributes (to be re-inserted)
 */
 export const actions = {
     default: async ({ request, params, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         const orgData = await request.formData();
         const data = Object.fromEntries(orgData);
 		const containers = [...new Set(orgData.getAll("containers").map(String).filter(c => c.trim().length > 0 && c !== 'undefined'))];

@@ -4,6 +4,9 @@ import { db } from '$lib/server/database';
 
 export const actions = {
     default: async ({ params, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         await db.item.deleteMany({
             where: {
                 id: Number(params.id),

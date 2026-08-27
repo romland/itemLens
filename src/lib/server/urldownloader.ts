@@ -46,6 +46,12 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
         }
 
         const line = validUrl.toString();
+        
+        // Enforce strict SSRF protection before any fetch
+        if (!QRUrlDownloader.isURL(line)) {
+            console.log(`[Security] Blocked internal SSRF attempt: ${line}`);
+            continue;
+        }
 
         let document;
         try {
@@ -439,8 +445,27 @@ export default class QRUrlDownloader
 
     static isURL(url : string)
     {
-        const urlRegExp = /^(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:\/[^\s]*)?$/i;
-        return urlRegExp.test(url);
+        try {
+            const parsed = new URL(url);
+            if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+            
+            // Prevent SSRF targeting internal networks
+            const hostname = parsed.hostname.toLowerCase();
+            if (
+                hostname === 'localhost' || 
+                hostname === '127.0.0.1' || 
+                hostname === '::1' || 
+                hostname === '169.254.169.254' || 
+                hostname.match(/^10\./) || 
+                hostname.match(/^192\.168\./) || 
+                hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)
+            ) {
+                return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     private static async getImageData(imagePath : string) : Promise<any>

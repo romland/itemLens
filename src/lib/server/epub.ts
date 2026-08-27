@@ -51,11 +51,22 @@ export async function extractEpubText(filePath: string, maxWords = 100000): Prom
             
             // Resolve relative path to the HTML chapter
             const itemPath = opfDir === '.' ? manifest[idref] : `${opfDir}/${manifest[idref]}`;
-            const file = zip.file(itemPath);
+            
+            // Prevent Zip-Slip attacks (path traversal within the EPUB structure)
+            const normalizedPath = path.posix.normalize(itemPath);
+            if (normalizedPath.startsWith('..') || normalizedPath.startsWith('/')) continue;
+            const file = zip.file(normalizedPath);
             if (!file) continue;
             
             try {
                 const html = await file.async('string');
+                
+                // Zip Bomb Protection: Abort if uncompressed chapter is suspiciously huge (> 5MB)
+                if (html.length > 5 * 1024 * 1024) {
+                    console.warn(`[EPUB] Skipping chapter ${normalizedPath} - exceeds 5MB uncompressed limit`);
+                    continue;
+                }
+                
                 const $html = cheerio.load(html);
                 const cleanText = $html.text().replace(/\s+/g, ' ').trim();
                 
