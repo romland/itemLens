@@ -122,13 +122,20 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                         if (infoResult.info?.Title && infoResult.info.Title.trim()) finalTitle = infoResult.info.Title;
                     } catch (e) { console.error("Failed to parse local PDF:", e); } 
                     finally { if (parser) await parser.destroy(); }
+                } else if (ext === 'epub') {
+                    try {
+                        const { extractEpubText } = await import('$lib/server/epub');
+                        extractedText = await extractEpubText(`${diskFolder}/${filename}`);
+                    } catch (e) {
+                        console.error("Failed to parse local EPUB:", e);
+                    }
                 } else if (['txt', 'md', 'csv', 'json'].includes(ext)) {
                     extractedText = buffer.toString('utf8');
                 }
 
                 if (extractedText.trim()) {
                     const cappedText = extractedText.substring(0, 10000);
-                    await db.document.update({ where: { id: docRecord.id }, data: { title: finalTitle, extracts: JSON.stringify([cappedText]) }});
+                    await db.document.update({ where: { id: docRecord.id }, data: { title: finalTitle, extracts: JSON.stringify([extractedText]) }});
                     if (cappedText.trim().length > 50) {
                         try {
                             const { summarizeWebpageExtract } = await import('$lib/server/llm');

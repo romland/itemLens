@@ -10,6 +10,7 @@ import { ioQueue } from './queue/index';
 import { logActivity } from '$lib/server/logger';
 import { taskManager } from '$lib/server/taskManager';
 import { fetchVideoIfSupported } from './ytdlp';
+import { extractEpubText } from './epub';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
 {
@@ -81,6 +82,18 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
           } catch (e) {
             console.error(`Error downloading PDF ${line}:`, e);
             await logActivity(target.itemId, 'PDF Download', `Failed to download PDF: ${line}`, 'error');
+          }
+          continue; // Skip SingleFile logic
+        }
+
+        // Divert to EPUB handler if needed
+        if (await isEpubUrl(line)) {
+          try {
+            await handleEpubDownload(line, target, document?.id, diskFolder, webFolder);
+            await logActivity(target.itemId, 'EPUB Download', `Successfully parsed EPUB: ${line}`, 'success');
+          } catch (e) {
+            console.error(`Error downloading EPUB ${line}:`, e);
+            await logActivity(target.itemId, 'EPUB Download', `Failed to download EPUB: ${line}`, 'error');
           }
           continue; // Skip SingleFile logic
         }
@@ -236,6 +249,22 @@ async function isPdfUrl(url: string): Promise<boolean> {
   }
 }
 
+async function isEpubUrl(url: string): Promise<boolean> {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.pathname.toLowerCase().endsWith('.epub')) return true;
+  } catch (e) {
+    console.warn(`Invalid URL format: ${url}`);
+  }
+  try {
+    const headRes = await fetch(url, { method: 'HEAD' });
+    const contentType = headRes.headers.get('content-type') || '';
+    return contentType.toLowerCase().includes('application/epub+zip');
+  } catch (e) {
+    return false;
+  }
+}
+
 async function handlePdfDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string) {
   return ioQueue.add(async () => {
     console.log(`Detected PDF, downloading directly: ${url}`);
@@ -280,7 +309,7 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
       data: {
         title: pdfTitle,
         path: `${webFolder}/${docFilename}.pdf`,
-        extracts: JSON.stringify([cappedText])
+        extracts: JSON.stringify([extractedText])
       }
     });
 
@@ -292,6 +321,42 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
       });
       console.log("Have summary of PDF:", summary);
       await logActivity(target.itemId, 'Analysis', `Generated summary for PDF: ${pdfTitle}`, 'success');
+    }
+  });
+}
+
+async function handleEpubDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string) {
+  return ioQueue.add(async () => {
+    console.log(`Detected EPUB, downloading directly: ${url}`);
+    const epubRes = await fetch(url);
+    const epubBuffer = Buffer.from(await epubRes.arrayBuffer());
+    const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+    const docFilename = getSafeFilename(`${idStr}-doc`);
+    
+    const localPath = `${diskFolder}/${docFilename}.epub`;
+    fs.writeFileSync(localPath, epubBuffer);
+    
+    const extractedText = await extractEpubText(localPath);
+    const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
+    
+    const epubTitle = url.split('/').pop() || "EPUB Document";
+    
+    await db.document.update({
+      where: { id: Number(documentId) },
+      data: {
+        title: epubTitle,
+        path: `${webFolder}/${docFilename}.epub`,
+        extracts: JSON.stringify(extractedText ? [extractedText] : [])
+      }
+    });
+
+    if (cappedText.trim().length > 50) {
+      const summary = await summarizeWebpageExtract(cappedText);
+      await db.document.update({
+        where: { id: Number(documentId) },
+        data: { summary: summary }
+      });
+      console.log("Have summary of EPUB:", summary);
     }
   });
 }

@@ -9,6 +9,8 @@
     import BottomSheet from "$lib/components/BottomSheet.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
     import DocumentList from "$lib/components/search/DocumentList.svelte";
+    import DocumentLightbox from "$lib/components/DocumentLightbox.svelte";
+    import ImageLightbox from "$lib/components/ImageLightbox.svelte";
 
     export let data: PageServerData;
 
@@ -28,6 +30,8 @@
     let filterAttrs: Record<string, string> = {};
     let selectedCategory = data.cat || '';
     let filterForm: HTMLFormElement;
+    let docLightbox: DocumentLightbox;
+    let imgLightbox: ImageLightbox;
 
     // Hydrate tab state from session memory safely
     let searchTab: 'items' | 'documents' = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('itemlens_search_tab')) as any || 'items';
@@ -475,9 +479,11 @@
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
 {:else if searchTab === 'documents'}
-    <DocumentList documents={data.documentResults} />
+    <DocumentList documents={data.documentResults} on:openDoc={(e) => docLightbox.open(e.detail)} on:openImage={(e) => imgLightbox.open(e.detail)} />
 {:else}
 	<Items items={data.items} />
 	<Navigation href="/search?{searchParamsStr}&" prevPage={data.prevPage} nextPage={data.nextPage} />
 {/if}
 
+<DocumentLightbox bind:this={docLightbox} />
+<ImageLightbox bind:this={imgLightbox} itemTitle="Search Result" />
