@@ -55,32 +55,32 @@ model UserInventoryAccess {
 // Everything below this point MUST trace back to an Inventory.
 
 model Inventory {
-  id          Int      @id @unique @default(autoincrement())
-  name        String
-  description String
-  classes     String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
-  archetype   String   @default("generic") // "media", "apparel", "hardware", "consumables", "collectibles", "natural", "generic"
-  allowNewCategories Boolean @default(true) // Whether AI is allowed to invent new sub-categories
-  allowAutoTaxonomy Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
-  extractExif Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
-   deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
-  bgRemovalEnabled Boolean @default(true) // Whether to run background removal
-  bgRemovalPreCrop Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
- enablePaddleOCR Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
-  duplicateStrategy String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
-  archiveSingleScans Boolean @default(false) // Whether to automatically archive single scans to the Notebook
-  containerMode String @default("scan") // "scan" or "select" - defaults selector to camera or list
-  templateFields TemplateField[]
+  id                  Int      @id @unique @default(autoincrement())
+  name                String
+  description         String
+  classes             String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
+  archetype           String   @default("generic") // "media", "apparel", "hardware", "consumables", "collectibles", "natural", "generic"
+  allowNewCategories  Boolean @default(true) // Whether AI is allowed to invent new sub-categories
+  allowAutoTaxonomy   Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
+  extractExif         Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
+  deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+  bgRemovalEnabled    Boolean @default(true) // Whether to run background removal
+  bgRemovalPreCrop    Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
+  enablePaddleOCR     Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
+  duplicateStrategy   String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
+  archiveSingleScans  Boolean @default(false) // Whether to automatically archive single scans to the Notebook
+  containerMode       String @default("scan") // "scan" or "select" - defaults selector to camera or list
+  templateFields      TemplateField[]
 
-  users       UserInventoryAccess[]
-  items       Item[]
-  categories  Category[]
-  containers  Container[]
-  tags        Tag[]
-  notes       TimelineNote[]
+  users               UserInventoryAccess[]
+  items               Item[]
+  categories          Category[]
+  containers          Container[]
+  tags                Tag[]
+  notes               TimelineNote[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 // ==========================================
@@ -317,8 +317,8 @@ model ActivityLog {
   message   String
   payload   String?
   
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId    Int
+  item      Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    Int?
   
   createdAt DateTime @default(now())
 }

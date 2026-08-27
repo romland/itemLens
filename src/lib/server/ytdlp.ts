@@ -58,9 +58,12 @@ export async function fetchVideoIfSupported(
             description: meta.description || '',
             path: finalWebPath
         };
-    } catch (e) {
-        console.error("[yt-dlp] FAILED to process video url:", url);
-        console.error(e);
+    } catch (e: any) {
+        // yt-dlp acts as a probe. It's expected to fail on standard webpages.
+        // We only log actual execution errors, ignoring routine "Unsupported URL" rejections.
+        if (e?.stderr && !e.stderr.includes('Unsupported URL')) {
+            console.error("[yt-dlp] Probe execution error for url:", url, "\n", e.stderr);
+        }
         return null;
     }
 }

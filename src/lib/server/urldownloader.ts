@@ -29,13 +29,22 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
       const lines = (data.urls as string).split("\n");
 
       for(let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if(!QRUrlDownloader.isURL(line)) {
-          if(line !== "") {
-            console.log(`not an URL: ${line}`);
-          }
+        let rawLine = lines[i].trim();
+        if (rawLine === "") continue;
+
+        // Input sanitization: strip trailing punctuation from messy copy-pastes
+        rawLine = rawLine.replace(/[,.;:)\]"']+$/, '');
+
+        let validUrl: URL;
+        try {
+          const urlToTest = rawLine.match(/^https?:\/\//i) ? rawLine : `https://${rawLine}`;
+          validUrl = new URL(urlToTest);
+        } catch (e) {
+          console.log(`[URL Sanitizer] Invalid URL skipped: ${rawLine}`);
           continue;
         }
+
+        const line = validUrl.toString();
 
         let document;
         try {
