@@ -130,6 +130,18 @@
     <h2 class="text-2xl font-bold mb-6">Appearance</h2>
     
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+        <h3 class="font-bold text-lg mb-1">Document Quick Look</h3>
+        <p class="text-sm text-gray-500 mb-5">Set your default viewing mode for scraped web documents and PDFs.</p>
+        
+        <form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3">
+            <input type="hidden" name="preferences" value={JSON.stringify({ ...currentPrefs, shortcuts, documentDarkMode: currentPrefs.documentDarkMode })} />
+            <input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.documentDarkMode} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }} />
+            <div class="flex flex-col"><span class="font-semibold text-sm">Force Dark Mode</span>
+            <span class="text-[11px] text-gray-500">Inverts colors mathematically while attempting to preserve image hues.</span></div>
+        </form>
+    </div>
+
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
         <h3 class="font-bold text-lg mb-4">Application Theme</h3>
         <p class="text-sm text-gray-500 mb-6">Select a theme to change the colors and feel of the entire application.</p>
         

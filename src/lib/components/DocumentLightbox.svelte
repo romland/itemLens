@@ -1,12 +1,17 @@
 <script lang="ts">
     import { fade, fly } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
-    import { tick } from 'svelte';
+    import { tick, onDestroy } from 'svelte';
+    import { page } from '$app/stores';
 
     export let isOpen = false;
     let doc: any = null;
     let loading = false;
     let viewerRef: HTMLDivElement;
+    let overlayRef: HTMLDivElement;
+    let iframeRef: HTMLIFrameElement;
+    let docType: 'epub' | 'iframe' | 'none' = 'none';
+    let invertIframe = false;
     
     let book: any = null;
     let rendition: any = null;
@@ -29,6 +34,15 @@
     let fontSize = 100;
     let fontFamily = 'system-ui, -apple-system, sans-serif';
 
+    // Prevent background scrolling when lightbox is open
+    $: if (typeof document !== 'undefined') {
+        if (isOpen) document.body.classList.add('overflow-hidden');
+        else document.body.classList.remove('overflow-hidden');
+    }
+    onDestroy(() => {
+        if (typeof document !== 'undefined') document.body.classList.remove('overflow-hidden');
+    });
+
     export async function open(documentRecord: any) {
         doc = documentRecord;
         isOpen = true;
@@ -42,8 +56,25 @@
         currentChapter = "";
         toc = [];
         locationsGenerated = false;
-        resetMenuTimeout();
+        invertIframe = false;
+
+        const path = (doc.path || doc.source || '').toLowerCase();
+        if (path.endsWith('.epub')) {
+            docType = 'epub';
+            resetMenuTimeout();
+        } else if (path.match(/\.(pdf|html|htm|txt|md|csv)$/i)) {
+            docType = 'iframe';
+            clearTimeout(menuTimeout); // Prevent auto-hide so user is never trapped
+        } else {
+            window.open(doc.path || doc.source, '_blank');
+            close();
+            return;
+        }
         
+        // Hydrate document dark mode preference
+        const userPrefs = JSON.parse($page.data.user?.preferences || '{}');
+        if (docType === 'iframe') invertIframe = userPrefs.documentDarkMode === true;
+
         // Load user's persistent reading preferences
         const savedPrefs = localStorage.getItem('itemlens_epub_prefs');
         if (savedPrefs) {
@@ -55,7 +86,10 @@
         }
 
         await tick(); // Wait for DOM to mount viewerRef
+        if (overlayRef) overlayRef.focus();
         
+        if (docType === 'iframe') return; // Iframe handles its own loading state via on:load
+
         try {
             // Lazy load the heavy epub.js library ONLY when a book is opened
             const ePub = (await import('epubjs')).default;
@@ -184,6 +218,7 @@
         isOpen = false;
         showToc = false;
         showSettings = false;
+        docType = 'none';
         if (book) {
             book.destroy();
             book = null;
@@ -197,6 +232,7 @@
     function nextPage() { if (rendition) rendition.next(); resetMenuTimeout(); }
     
     function toggleMenu() {
+        if (docType === 'iframe') return; // Enforce always visible
         showMenu = !showMenu;
         if (showMenu) resetMenuTimeout();
         if (!showMenu) { showToc = false; showSettings = false; }
@@ -277,6 +313,7 @@
     
     function handleGlobalKeydown(e: KeyboardEvent) {
         if (!isOpen) return;
+        if (docType === 'iframe') resetMenuTimeout();
         if (e.key === 'Escape') {
             e.preventDefault();
             if (showToc || showSettings) { showToc = false; showSettings = false; }
@@ -296,8 +333,10 @@
 {#if isOpen}
     <!-- Main Background (Dimmed to separate the book from the OS layer) -->
     <div 
-        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col overscroll-none touch-none"
+        bind:this={overlayRef}
+        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col overscroll-none touch-none outline-none"
         transition:fade={{ duration: 250, easing: cubicOut }}
+        tabindex="-1"
     >
         <!-- === TOP CHROME === -->
         <div 
@@ -306,21 +345,27 @@
             class:-translate-y-4={!showMenu && !showToc && !showSettings}
             class:pointer-events-none={!showMenu && !showToc && !showSettings}
         >
-            <button class="btn btn-circle btn-sm btn-ghost" on:click={close} aria-label="Close">
-                <i class="bi bi-x-lg"></i>
+        <button class="btn btn-sm btn-ghost rounded-full px-4 font-bold" on:click={close} aria-label="Close">
+            Done
             </button>
             
             <div class="flex-1 min-w-0 px-3 text-center">
-                <h2 class="font-bold text-sm tracking-tight truncate">{doc?.title || 'Book'}</h2>
+            <h2 class="font-bold text-sm tracking-tight truncate">{doc?.title || 'Document'}</h2>
             </div>
             
             <div class="flex items-center gap-1">
+            {#if docType === 'iframe'}
+                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => invertIframe = !invertIframe} title="Toggle Reading Mode">
+                    <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
+                </button>
+            {:else if docType === 'epub'}
                 <button class="btn btn-circle btn-sm btn-ghost {showSettings ? 'bg-primary/20 text-primary' : ''}" on:click={() => {showSettings = !showSettings; showToc = false;}} aria-label="Appearance">
                     <span class="font-serif font-bold text-lg leading-none">Aa</span>
                 </button>
                 <button class="btn btn-circle btn-sm btn-ghost {showToc ? 'bg-primary/20 text-primary' : ''}" on:click={() => {showToc = !showToc; showSettings = false;}} aria-label="Table of Contents">
                     <i class="bi bi-list"></i>
                 </button>
+            {/if}
             </div>
         </div>
 
@@ -335,22 +380,27 @@
                     </div>
                 {/if}
                 
-                <div bind:this={viewerRef} class="w-full h-full"></div>
-                
-                <!-- Invisible Tap Zones over the iframe -->
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_interactive_supports_focus -->
-                <div class="absolute inset-y-0 left-0 w-[30%] z-20 cursor-pointer" on:click={prevPage} aria-label="Previous Page" role="button" tabindex="0"></div>
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_interactive_supports_focus -->
-                <div class="absolute inset-y-0 right-0 w-[30%] z-20 cursor-pointer" on:click={nextPage} aria-label="Next Page" role="button" tabindex="0"></div>
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_interactive_supports_focus -->
-                <div class="absolute inset-y-0 left-[30%] right-[30%] z-20 cursor-pointer" on:click={toggleMenu} aria-label="Toggle Menu" role="button" tabindex="0"></div>
+                {#if docType === 'epub'}
+                    <div bind:this={viewerRef} class="w-full h-full"></div>
+                    <!-- Invisible Tap Zones over the EPUB -->
+                    <div class="absolute inset-y-0 left-0 w-[30%] z-20 cursor-pointer" on:click={prevPage} aria-label="Previous Page" role="button" tabindex="0"></div>
+                    <div class="absolute inset-y-0 right-0 w-[30%] z-20 cursor-pointer" on:click={nextPage} aria-label="Next Page" role="button" tabindex="0"></div>
+                    <div class="absolute inset-y-0 left-[30%] right-[30%] z-20 cursor-pointer" on:click={toggleMenu} aria-label="Toggle Menu" role="button" tabindex="0"></div>
+                {:else if docType === 'iframe'}
+                    <iframe 
+                        bind:this={iframeRef}
+                        src={doc.path || doc.source} 
+                        class="w-full h-full border-none transition-all duration-300 relative z-10"
+                        style="background-color: white; filter: {invertIframe ? 'invert(1) hue-rotate(180deg)' : 'none'};"
+                        on:load={() => { loading = false; if(iframeRef) { iframeRef.focus(); iframeRef.contentWindow?.focus(); } }}
+                        title="Document Viewer"
+                    ></iframe>
+                {/if}
             </div>
         </div>
         
         <!-- === BOTTOM CHROME (Progress) === -->
+        {#if docType === 'epub'}
         <div 
             class="absolute bottom-4 inset-x-4 max-w-2xl mx-auto flex flex-col justify-center items-center bg-base-200/95 backdrop-blur-xl border border-base-300 shadow-xl rounded-2xl p-4 z-50 transition-all duration-300"
             class:opacity-0={!showMenu && !showToc && !showSettings}
@@ -363,6 +413,7 @@
             </div>
             <input type="range" min="0" max="100" value={progress} on:change={handleScrub} class="range range-primary range-xs w-full" disabled={!locationsGenerated} />
         </div>
+        {/if}
         
         <!-- === TABLE OF CONTENTS DRAWER === -->
         {#if showToc}

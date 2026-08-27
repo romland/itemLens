@@ -8,7 +8,7 @@
     function handleDocumentClick(e: MouseEvent, doc: any) {
         const path = (doc.path || doc.source || '').toLowerCase();
         
-        if (path.endsWith('.epub')) {
+        if (path.match(/\.(epub|pdf|html|htm|txt|md|csv)$/i)) {
             e.preventDefault();
             dispatch('openDoc', doc);
         } else if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
