@@ -358,6 +358,17 @@
         resetMenuTimeout();
     }
 
+    function bookmarkCurrentPage() {
+        if (!rendition) return;
+        const loc = rendition.currentLocation();
+        if (!loc || !loc.start) return;
+        pendingHighlight = {
+            text: "", // Empty text signals this is a page bookmark, not a text highlight
+            cfiRange: loc.start.cfi,
+            chapterText: currentChapter || 'Saved Location'
+        };
+        highlightModal.showModal();
+    }
     
     function handleGlobalKeydown(e: KeyboardEvent) {
         if (!isOpen) return;
@@ -379,10 +390,14 @@
         if (!pendingHighlight) return;
         
         const fd = new FormData();
-        fd.append('content', `**Highlight from ${doc.title}:**\n> "${pendingHighlight.text}"`);
+        const content = pendingHighlight.text 
+            ? `**Highlight from ${doc.title}:**\n> "${pendingHighlight.text}"`
+            : `**Bookmark in ${doc.title}:**\n${currentChapter || 'Saved Location'}`;
+            
+        fd.append('content', content);
         fd.append('category', 'idea');
         fd.append('preprocessed_docs[]', JSON.stringify({
-            title: `Highlight: ${doc.title}`,
+            title: pendingHighlight.text ? `Highlight: ${doc.title}` : `Bookmark: ${doc.title}`,
             source: doc.title,
             path: `${doc.path}#${pendingHighlight.cfiRange}`,
             extracts: [pendingHighlight.chapterText], // Allows FTS5 to index the entire chapter text around the quote
@@ -432,6 +447,9 @@
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
                 </button>
             {:else if docType === 'epub'}
+                <button class="btn btn-circle btn-sm btn-ghost" on:click={bookmarkCurrentPage} title="Bookmark Page">
+                    <i class="bi bi-bookmark-plus text-lg"></i>
+                </button>
                 <button class="btn btn-circle btn-sm btn-ghost {showSettings ? 'bg-primary/20 text-primary' : ''}" on:click={() => {showSettings = !showSettings; showToc = false;}} aria-label="Appearance">
                     <span class="font-serif font-bold text-lg leading-none">Aa</span>
                 </button>
@@ -555,11 +573,17 @@
 <dialog bind:this={highlightModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={() => pendingHighlight = null}>
     <div class="modal-box p-6 sm:rounded-3xl bg-base-100 shadow-2xl border border-base-200">
         <h3 class="font-bold text-xl mb-4 flex items-center gap-2">
-            <i class="bi bi-quote text-primary"></i> Save Highlight
+            <i class="bi {pendingHighlight?.text ? 'bi-quote' : 'bi-bookmark'} text-primary"></i> {pendingHighlight?.text ? 'Save Highlight' : 'Save Bookmark'}
         </h3>
-        <blockquote class="border-l-4 border-primary pl-4 text-sm italic text-base-content/80 mb-4 max-h-32 overflow-y-auto">
-            "{pendingHighlight?.text}"
-        </blockquote>
+        {#if pendingHighlight?.text}
+            <blockquote class="border-l-4 border-primary pl-4 text-sm italic text-base-content/80 mb-4 max-h-32 overflow-y-auto">
+                "{pendingHighlight.text}"
+            </blockquote>
+        {:else}
+            <div class="bg-base-200 p-4 rounded-xl mb-4 font-medium text-sm flex items-center gap-3">
+                <i class="bi bi-pin-map text-primary text-xl"></i> {currentChapter || 'Current Page'}
+            </div>
+        {/if}
         <p class="text-xs text-gray-500 mb-6 bg-base-200/50 p-3 rounded-xl border border-base-200">
             <i class="bi bi-info-circle mr-1"></i> This and the surrounding pages will be saved to your Notebook. 
             This allows you to search for the context later and jump back exactly to this spot.
