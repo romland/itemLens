@@ -1,6 +1,5 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
-    import Alert from "$lib/components/alert.svelte";
     import type { ActionData } from "./$types";
     import pageTitle from '$lib/stores';
 
@@ -22,8 +21,10 @@
         <p class="text-sm text-gray-500 text-center mb-8 font-medium">Set up your personal inventory vault.</p>
 
         {#if form?.error}
-            <div class="mb-6 animate-fade-in">
-                <Alert>{@html form?.message}</Alert>
+            <div class="mb-4 text-center animate-fade-in">
+                <span class="text-[13px] font-medium text-error bg-error/10 px-4 py-2 rounded-xl inline-flex items-center gap-2">
+                    <i class="bi bi-exclamation-circle-fill"></i> {@html form?.message}
+                </span>
             </div>
         {/if}
 
