@@ -1,7 +1,7 @@
 import { redirect, type Handle } from "@sveltejs/kit";
 import { db } from "$lib/server/database";
 import { initFTS } from "$lib/server/fts";
-import { hashSessionToken } from "$lib/server/security";
+import { validateAndRefreshSession } from "$lib/server/session";
 
 // Initialize the SQLite FTS5 engine once on server boot
 initFTS().catch(console.error);
@@ -21,13 +21,10 @@ export const handle = (async ({ event, resolve }) => {
 	}
 
 	if (session) {
-        const hashedToken = hashSessionToken(session);
-        const user = await db.user.findUnique({
-            where: { sessionHash: hashedToken },
-            select: { id: true, username: true, name: true, email: true, avatar: true, isAdmin: true, preferences: true, inventoryAccess: true }
-        });
+        const validSession = await validateAndRefreshSession(session, event.cookies);
 
-        if (user) {
+        if (validSession) {
+            const user = validSession.user;
             event.locals.user = {
                 id: user.id,
                 username: user.username,

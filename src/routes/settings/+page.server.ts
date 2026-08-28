@@ -7,12 +7,14 @@ import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import sharp from 'sharp';
 import { bootstrapInventorySchema } from '$lib/server/ontology';
 
-export const load = async ({ locals }) => {
+export const load = async ({ locals, cookies }) => {
     if (!locals.user) throw redirect(303, '/login');
 
     let allUsers = [];
 	let allInventories = [];
     let accessMap = [];
+    let activeSessions = [];
+    let currentSessionHash = '';
 
     if (locals.user.isAdmin) {
         allUsers = await db.user.findMany({ select: { id: true, username: true, name: true, email: true, isAdmin: true } });
@@ -41,7 +43,19 @@ export const load = async ({ locals }) => {
         });
     }
 
-	return { allUsers, allInventories, accessMap };
+    // Load active devices
+    const rawSessionId = cookies.get('session');
+    if (rawSessionId) {
+        const { hashSessionToken } = await import('$lib/server/security');
+        currentSessionHash = hashSessionToken(rawSessionId);
+    }
+    
+    activeSessions = await db.session.findMany({ 
+        where: { userId: locals.user.id },
+        orderBy: { lastActiveAt: 'desc' }
+    });
+
+	return { allUsers, allInventories, accessMap, activeSessions, currentSessionHash };
 };
 
 export const actions = {
@@ -489,6 +503,32 @@ export const actions = {
 		return { success: true, message: `Inventory '${vault.name}' and all its contents completely deleted.` };
     },
 
-    setTheme: async ({ url, cookies }) => {
+    revokeSession: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
+        
+        const data = await request.formData();
+        const sessionId = data.get('sessionId') as string;
+        
+        await db.session.deleteMany({ 
+            where: { id: sessionId, userId: locals.user.id } 
+        });
+        
+        return { success: true, message: "Device signed out successfully." };
+    },
+    
+    revokeOtherSessions: async ({ cookies, locals }) => {
+        if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
+        
+        const rawSessionId = cookies.get('session');
+        if (!rawSessionId) return fail(401);
+        
+        const { hashSessionToken } = await import('$lib/server/security');
+        const currentSessionHash = hashSessionToken(rawSessionId);
+        
+        await db.session.deleteMany({ 
+            where: { userId: locals.user.id, sessionHash: { not: currentSessionHash } }
+        });
+        
+        return { success: true, message: "All other devices signed out." };
     }
 }

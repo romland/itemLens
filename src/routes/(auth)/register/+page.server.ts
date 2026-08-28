@@ -2,8 +2,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { db } from '$lib/server/database';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import { hashSessionToken, checkRateLimit } from '$lib/server/security';
+import { checkRateLimit } from '$lib/server/security';
+import { createSession, setSessionCookie } from '$lib/server/session';
 
 export const actions = {
     default: async ({ request, getClientAddress }) => {
@@ -32,17 +32,18 @@ export const actions = {
             });
         }
 
-		const rawSessionId = crypto.randomUUID();
-		const hashedSessionId = hashSessionToken(rawSessionId);
-
-        await db.user.create({
+        const user = await db.user.create({
             data: {
                 username: username.trim(),
-                password: await bcrypt.hash(password, 10),
-				sessionHash: hashedSessionId
+                password: await bcrypt.hash(password, 10)
             }
-        })
+        });
 
-        redirect(303, '/login');
+        const userAgent = request.headers.get('user-agent');
+        const ip = getClientAddress();
+        const rawSessionId = await createSession(user.id, userAgent, ip);
+        setSessionCookie(cookies, rawSessionId);
+
+        redirect(303, '/');
     }
 } satisfies Actions;

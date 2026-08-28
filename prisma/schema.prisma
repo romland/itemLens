@@ -18,7 +18,6 @@ model User {
   id       Int     @id @unique @default(autoincrement())
   username String  @unique
   password String
-  sessionHash String? @unique
   email    String? @unique
   name     String?
   avatar   String?
@@ -31,9 +30,24 @@ model User {
 
   // Security: Which vaults this user can open
   inventoryAccess UserInventoryAccess[]
+  sessions        Session[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id           String   @id @unique @default(uuid())
+  sessionHash  String   @unique
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent    String?
+  ipAddress    String?
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 model UserInventoryAccess {

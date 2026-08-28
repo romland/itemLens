@@ -9,6 +9,7 @@
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
 	import { nukeAllCaches } from "$lib/client/utils";
 	import { notify } from "$lib/client/notifications";
+    import DeviceSessionList from "$lib/components/DeviceSessionList.svelte";
 
     export let form: ActionData;
 
@@ -125,6 +126,11 @@
 			<i class="bi bi-arrow-clockwise opacity-50"></i>
 		</button>
 	</div>
+    
+    <h2 class="text-2xl font-bold mb-6">Connected Devices</h2>
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+        <DeviceSessionList sessions={$page.data.activeSessions} currentSessionHash={$page.data.currentSessionHash} />
+    </div>
 
 	<!-- APPEARANCE -->
     <h2 class="text-2xl font-bold mb-6">Appearance</h2>

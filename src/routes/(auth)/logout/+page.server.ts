@@ -1,16 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { db } from '$lib/server/database';
-import { hashSessionToken } from '$lib/server/security';
+import { invalidateSession } from '$lib/server/session';
 
 export const actions = {
     default: async ({ cookies }) => {
 		const session = cookies.get('session');
 		if (session) {
-			await db.user.updateMany({
-				where: { sessionHash: hashSessionToken(session) },
-				data: { sessionHash: null }
-			});
+			await invalidateSession(session);
 		}
 
         cookies.delete('session', { path: '/' });
