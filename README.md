@@ -71,7 +71,7 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 - Image classification (Blip, Vision Models like Gemini)
 - LLM Summaries (Llama3, Groq)
 - Invoice/receipt data extraction
-- Download-and-store documents (link-rot no more). **EPUB books are fully supported** and can be read directly inside the browser using the built-in reader!
+- Download-and-store documents (link-rot no more). **EPUB books are supported** and can be read inside the browser using built-in reader. You can bookmark pages or highlight text inside EPUBs, which syncs the surrounding chapter text to Notebook. This makes the exact sections of books fully searchable via Full Text Search (alongside the physical items.
 - **Token & Cost Tracking:** itemLens tracks backend AI operations and token counts so you can monitor exactly how much it interacts with external APIs (visible in System Activity).
 - Image processing (background removal, thumbnail, etc)
 - Color extraction

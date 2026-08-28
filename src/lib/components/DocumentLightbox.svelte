@@ -343,11 +343,35 @@
     }
     
     function goToChapter(href: string) {
-        if (rendition) {
-            rendition.display(href);
-            showToc = false;
-            showMenu = false;
+        if (!rendition || !book) return;
+
+        const parts = href.split('#');
+        const basePath = parts[0];
+        const anchor = parts.length > 1 ? '#' + parts.slice(1).join('#') : '';
+
+        let targetHref = href;
+        const spine = book.spine.spineItems;
+
+        // If the exact base path isn't in the spine, fuzzy match it before asking epub.js to render
+        if (!spine.some((item: any) => item.href === basePath)) {
+            const fuzzyMatch = spine.find((item: any) => 
+                item.href.endsWith('/' + basePath) || 
+                basePath.endsWith('/' + item.href) ||
+                item.href.includes(basePath)
+            );
+
+            if (fuzzyMatch) {
+                targetHref = fuzzyMatch.href + anchor; // Re-attach the sub-section anchor!
+            }
         }
+
+        rendition.display(targetHref).catch((err: any) => {
+            console.error(`[EPUB Nav] Navigation completely failed for: '${targetHref}'`, err);
+            console.table(book.spine.spineItems.map((i: any) => ({ idref: i.idref, href: i.href })));
+        });
+
+        showToc = false;
+        showMenu = false;
     }
 
     function handleScrub(e: any) {

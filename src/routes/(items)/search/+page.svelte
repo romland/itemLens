@@ -37,6 +37,15 @@
     let searchTab: 'items' | 'documents' = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('itemlens_search_tab')) as any || 'items';
     $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('itemlens_search_tab', searchTab);
 
+    // Smart Tab Auto-Selection: If the current tab has no hits, but the other does, flip to the one with hits
+    $: {
+        if (data.items.length === 0 && data.documentResults?.length > 0 && searchTab === 'items') {
+            searchTab = 'documents';
+        } else if (data.documentResults?.length === 0 && data.items.length > 0 && searchTab === 'documents') {
+            searchTab = 'items';
+        }
+    }
+
     // Toggle: Set to true to drop the attribute key and show only the friendly value in pills
     const COMPACT_PILLS = true;
 
