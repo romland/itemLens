@@ -9,17 +9,20 @@
     let resultsAsYouType: HTMLDivElement;
 
     let items = [];
+    let selectedIndex = -1;
     
     async function query(ev: Event, q: string)
     {
         if(!q || q.length === 0) {
             items = [];
+            selectedIndex = -1;
             return;
         }
 
         const res = await fetch(`/api/items?q=${encodeURIComponent(q)}&c=8&sort=newest`);
         const data = await res.json();
         items = data.items;
+        selectedIndex = -1;
 
         resultsAsYouType.classList.add("dropdown-open");
     }
@@ -29,17 +32,38 @@
 		resultsAsYouType.classList.add("dropdown-open");
     }
 
-    function blur()
+    function blur(ev: FocusEvent)
     {
-        // console.log("SHOULD BLUR") return;
+        // If focus moved to one of our dropdown links, DO NOT close the dropdown
+        if (resultsAsYouType.contains(ev.relatedTarget as Node)) return;
+        
         setTimeout(() => {
             resultsAsYouType.classList.remove("dropdown-open");
 		}, 200);
     }
+
+    function handleKeydown(ev: KeyboardEvent) {
+        if (!items?.length || !resultsAsYouType.classList.contains("dropdown-open")) return;
+        
+        // Find all focusable links inside the dropdown
+        // Only target the item title links and the "See all results" button at the bottom
+        const links = Array.from(resultsAsYouType.querySelectorAll('.dropdown-content a.font-semibold, .dropdown-content a.btn')) as HTMLAnchorElement[];
+        if (links.length === 0) return;
+
+        if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            selectedIndex = (selectedIndex + 1) % links.length;
+            links[selectedIndex].focus();
+        } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            selectedIndex = (selectedIndex - 1 + links.length) % links.length;
+            links[selectedIndex].focus();
+        }
+    }
 </script>
 
 <form method="GET" action="/search" class="w-full sm:w-auto relative">
-    <div bind:this={resultsAsYouType} id="resultsAsYouType" class="dropdown dropdown-end w-full md:w-auto">
+    <div bind:this={resultsAsYouType} id="resultsAsYouType" class="dropdown dropdown-end w-full md:w-auto" on:keydown={handleKeydown}>
         
         <div class="form-control relative w-full">
             <input 
@@ -56,7 +80,9 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        <div class="dropdown-content mt-2 z-[999] w-[calc(100vw-2rem)] sm:w-[28rem] shadow-2xl shadow-black/30 bg-base-200/95 backdrop-blur-xl border border-base-300 rounded-2xl p-2 flex flex-col gap-1">
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="dropdown-content mt-2 z-[999] w-[calc(100vw-2rem)] sm:w-[28rem] shadow-2xl shadow-black/30 bg-base-200/95 backdrop-blur-xl border border-base-300 rounded-2xl p-2 flex flex-col gap-1" on:click={(e) => { if ((e.target).closest('a')) resultsAsYouType.classList.remove('dropdown-open'); }}>
             {#if items?.length > 0}
                 <div class="max-h-[60vh] overflow-y-auto rounded-xl">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />

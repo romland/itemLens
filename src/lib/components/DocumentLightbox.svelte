@@ -6,6 +6,7 @@
     import { notify } from '$lib/client/notifications';
     import { bodyScrollLock } from '$lib/client/scrollLock';
     import GestureShield from './GestureShield.svelte';
+    import { marked } from 'marked';
 
     export let isOpen = false;
     let doc: any = null;
@@ -13,8 +14,9 @@
     let viewerRef: HTMLDivElement;
     let overlayRef: HTMLDivElement;
     let iframeRef: HTMLIFrameElement;
-    let docType: 'epub' | 'iframe' | 'none' = 'none';
+    let docType: 'epub' | 'iframe' | 'markdown' | 'none' = 'none';
     let invertIframe = false;
+    let markdownContentHtml = '';
     
     let book: any = null;
     let rendition: any = null;
@@ -74,7 +76,17 @@
         if (path.endsWith('.epub')) {
             docType = 'epub';
             resetMenuTimeout();
-        } else if (path.match(/\.(pdf|html|htm|txt|md|csv)$/i)) {
+        } else if (path.match(/\.(md|txt)$/i) || doc.type === 'note') {
+            docType = 'markdown';
+            resetMenuTimeout();
+            try {
+                const res = await fetch(doc.path || doc.source);
+                const text = await res.text();
+                markdownContentHtml = await marked.parse(text, { breaks: true, gfm: true });
+            } catch (e) {
+                markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
+            }
+        } else if (path.match(/\.(pdf|html|htm|csv)$/i)) {
             docType = 'iframe';
             clearTimeout(menuTimeout); // Prevent auto-hide so user is never trapped
         } else {
@@ -86,6 +98,10 @@
         // Hydrate document dark mode preference
         const userPrefs = JSON.parse($page.data.user?.preferences || '{}');
         if (docType === 'iframe') invertIframe = userPrefs.documentDarkMode === true;
+        
+        // Check for specific document override
+        const override = localStorage.getItem(`itemlens_invert_${doc?.id}`);
+        if (override !== null) invertIframe = override === 'true';
 
         // Load user's persistent reading preferences
         const savedPrefs = localStorage.getItem('itemlens_epub_prefs');
@@ -466,8 +482,8 @@
             </div>
             
             <div class="flex items-center gap-1">
-            {#if docType === 'iframe'}
-                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => invertIframe = !invertIframe} title="Toggle Reading Mode">
+            {#if docType === 'iframe' || docType === 'markdown'}
+                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
                 </button>
             {:else if docType === 'epub'}
@@ -518,6 +534,14 @@
                         on:load={handleIframeLoad}
                         title="Document Viewer"
                     ></iframe>
+                {:else if docType === 'markdown'}
+                    <div class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
+                         style={invertIframe ? "filter: invert(1) hue-rotate(180deg);" : ""}
+                         on:click={(e) => { if(e.target.tagName !== 'A') toggleMenu(); }} role="presentation">
+                        <div class="prose prose-sm sm:prose-base max-w-none prose-p:text-base-content prose-headings:text-base-content prose-strong:text-base-content prose-a:text-primary prose-li:text-base-content">
+                            {@html markdownContentHtml}
+                        </div>
+                    </div>
                 {/if}
             </div>
         </div>

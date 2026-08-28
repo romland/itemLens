@@ -2,7 +2,7 @@
     import type { PageServerData } from "./$types";
     import Delete from "$lib/components/delete.svelte";
     import { toTextDocument, refine, refineForLLM } from "$lib/shared/ocrparser";
-    import { afterNavigate, beforeNavigate } from '$app/navigation'
+    import { afterNavigate, beforeNavigate, invalidateAll } from '$app/navigation'
     import { marked } from "marked";
     import { enhance } from "$app/forms";
     import PasteHandler from "$lib/components/PasteHandler.svelte";
@@ -16,6 +16,7 @@
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
+    import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import { notify } from "$lib/client/notifications";
     import { dev } from '$app/environment';
 
@@ -31,6 +32,7 @@
     let duplicateDeleteModal: Delete;
     let diagnosticModal: HTMLDialogElement;
     let pasteHandler: PasteHandler;
+    let confirmModal: ConfirmModal;
     let moveModal: HTMLDialogElement;
     let isMoving = false;
     let globalContainers: any[] = [];
@@ -52,6 +54,10 @@
     let selectorModal: ItemSelectorModal;
     let selectedTargetItem: any = null;
     
+    // Assistant State
+    let aiQuestion = "";
+    let isAskingAi = false;
+
     async function runDevDebug() {
         if (!selectedTargetItem) return;
         isDevDebugging = true;
@@ -63,6 +69,27 @@
             devDebugResult = await res.json();
         } finally {
             isDevDebugging = false;
+        }
+    }
+
+    async function askAiQuestion() {
+        if (!aiQuestion.trim() || !data.item?.id) return;
+        isAskingAi = true;
+        try {
+            const res = await fetch('/api/ask-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemId: data.item.id, question: aiQuestion })
+            });
+            if (res.ok) {
+                notify('success', 'Answer added to Local Archive!');
+                aiQuestion = "";
+                invalidateAll(); // Smoothly refresh data without a full page reload
+            } else notify('error', 'Failed to generate answer.');
+        } catch (e) {
+            notify('error', 'Network error.');
+        } finally {
+            isAskingAi = false;
         }
     }
 
@@ -514,7 +541,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                         </a>
                                     </div>
                                     <button class="btn btn-sm btn-outline border-base-300 rounded-xl hover:border-primary text-xs" on:click={() => openMoveModal()}>
-                                        <i class="bi bi-arrows-move"></i> It has moved
+                                        <i class="bi bi-arrows-move"></i> Move it
                                     </button>
                                 </div>
                                 <p class="text-sm text-gray-600 m-0">{loc.container?.parent?.description || loc.container?.description || 'No description'}</p>
@@ -662,6 +689,24 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             </div>
         {/if}
 
+        <!-- ASSISTANT -->
+        <div class="title font-bold mb-3 flex items-center gap-2">
+            <i class="bi bi-robot text-primary"></i> Ask itemLens
+        </div>
+        <div class="mb-6 bg-base-200/50 p-4 rounded-2xl border border-base-200">
+            <p class="text-xs text-gray-500 mb-3">Ask questions about this item based on its photos, OCR text, and downloaded manuals.</p>
+            <div class="flex gap-2 relative">
+                <input type="text" bind:value={aiQuestion} placeholder="e.g. What kind of batteries does this take?" class="input input-sm input-bordered w-full rounded-xl pr-20" on:keydown={(e) => e.key === 'Enter' && askAiQuestion()} disabled={isAskingAi} />
+                <button type="button" class="btn btn-sm btn-primary absolute right-0 top-0 rounded-l-none rounded-r-xl" on:click={askAiQuestion} disabled={isAskingAi || !aiQuestion.trim()}>
+                    {#if isAskingAi}
+                        <span class="loading loading-spinner loading-xs"></span>
+                    {:else}
+                        Ask
+                    {/if}
+                </button>
+            </div>
+        </div>
+
         <div class="title font-bold  mb-3">
             Local archive
         </div>
@@ -676,20 +721,37 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                     <div class="collapse-content prose prose-sm max-w-none"> 
                         {@html alterSummary(doc.summary)}
     
-                        <div class="flex justify-start items-center gap-3 mt-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                            </svg>
-                            
-                            {#if doc.path.toLowerCase().endsWith('.epub')}
-                                <button type="button" class="btn btn-sm btn-primary rounded-xl" on:click={() => docLightbox.open(doc)}>
-                                    <i class="bi bi-book"></i> Read Book
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="flex justify-start items-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                </svg>
+                                
+                                {#if doc.path.toLowerCase().endsWith('.epub')}
+                                    <button type="button" class="btn btn-sm btn-primary rounded-xl" on:click={() => docLightbox.open(doc)}>
+                                        <i class="bi bi-book"></i> Read Book
+                                    </button>
+                                {:else if doc.path.toLowerCase().match(/\.(md|txt)$/i) || doc.type === 'note'}
+                                    <button type="button" class="btn btn-sm btn-secondary rounded-xl shadow-sm" on:click={() => docLightbox.open(doc)}>
+                                        <i class="bi bi-file-text"></i> Read Note
+                                    </button>
+                                {:else if doc.path.toLowerCase().match(/\.(pdf|html|htm)$/i)}
+                                    <button type="button" class="btn btn-sm btn-outline border-base-300 rounded-xl bg-base-100 shadow-sm hover:border-primary" on:click={() => docLightbox.open(doc)}>
+                                        <i class="bi bi-file-earmark"></i> View Document
+                                    </button>
+                                {:else}
+                                    <a href="{doc.path}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium" title="{doc.source}">
+                                        {doc.source}
+                                    </a>
+                                {/if}
+                            </div>
+
+                            <form method="POST" action="?/deleteDocument" use:enhance={() => { return async ({ update }) => { await update(); notify('success', 'Document deleted.'); }; }}>
+                                <input type="hidden" name="docId" value={doc.id}>
+                                <button type="button" class="btn btn-sm btn-ghost text-error hover:bg-error/10 rounded-xl" title="Delete Document" on:click={async (e) => { const form = e.currentTarget.closest('form'); const res = await confirmModal.ask('Delete Document?', `Are you sure you want to permanently delete "${doc.title}"?`, 'Delete', 'Cancel', true); if (res) form.requestSubmit(); }}>
+                                    <i class="bi bi-trash3"></i>
                                 </button>
-                            {:else}
-                                <a href="{doc.path}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium" title="{doc.source}">
-                                    {doc.source}
-                                </a>
-                            {/if}
+                            </form>
                         </div>
     
                     </div>
@@ -859,6 +921,8 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     </div>
     <form method="dialog" class="modal-backdrop"><button disabled={isMoving}>close</button></form>
 </dialog>
+
+<ConfirmModal bind:this={confirmModal} />
 
 <style>
     :global(.menu-delete-btn::after) {

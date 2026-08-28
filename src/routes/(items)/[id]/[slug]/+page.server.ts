@@ -109,7 +109,7 @@ export const actions = {
 		return { success: true };
 	},
 	
-	toggleBackground: async ({ request }) => {
+	toggleBackground: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
         
@@ -274,6 +274,17 @@ export const actions = {
             const { processItemPhotosBackground } = await import('$lib/server/photouploads');
             processItemPhotosBackground(item).catch(console.error);
         }
+        return { success: true };
+    },
+
+    deleteDocument: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { error: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
+        
+        const data = await request.formData();
+        const docId = Number(data.get('docId'));
+        
+        if (docId) await db.document.delete({ where: { id: docId } });
         return { success: true };
     }
 

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import QRreader from "$lib/components/QRreader.svelte";
     import { createEventDispatcher } from 'svelte'
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -16,8 +16,8 @@
     let nextUrlId = 2;
     
     // View state for tabs
-    let activeTab = 'scan'; 
-	let confirmModal: ConfirmModal;
+    let activeTab = 'scan';
+    let confirmModal: ConfirmModal;
 
     var qrPhotoFileCounter = 1;
     function qrPhotoUploadChanged(ev)
