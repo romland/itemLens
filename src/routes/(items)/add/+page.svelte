@@ -15,6 +15,7 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
 	import { notify } from "$lib/client/notifications";
+	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     let saving = false;
     let isDirty = false;
@@ -29,6 +30,8 @@
     let bulkTriageComponent: BulkTriage;
     let compareHubComponent: CompareHub;
     let itemHubComponent: ItemHub;
+	let confirmModal: ConfirmModal;
+	let pendingNav: string | null = null;
 
     // =========================================================================================
     // TODO: USER PREFERENCES WIRING
@@ -39,11 +42,15 @@
     // =========================================================================================
     const CONTINUOUS_SCANNING = false;
 
-    beforeNavigate(({ cancel }) => {
-        if (isDirty && !hasSubmitted) {
-            if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-                cancel();
-            }
+	beforeNavigate(async ({ cancel, to }) => {
+		if (isDirty && !hasSubmitted && !pendingNav) {
+			cancel();
+			const res = await confirmModal.ask('Unsaved Changes', 'You have unsaved changes. Are you sure you want to leave?', 'Leave', 'Stay', true);
+			if (res) {
+				isDirty = false;
+				pendingNav = to?.url?.href || '/';
+				goto(pendingNav);
+			}
         }
     });
     
@@ -65,12 +72,15 @@
             if (mode !== match[1]) mode = match[1] as any;
         }
 
-        const handleShortcutMode = (e: CustomEvent) => {
+		const handleShortcutMode = async (e: CustomEvent) => {
             const newMode = e.detail;
             console.log('[Add Hub] Received shortcut event:', newMode);
             if (mode !== newMode) {
-                if (isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
-                isDirty = false;
+				if (isDirty) {
+					const res = await confirmModal.ask('Unsaved Changes', 'You have unsaved changes. Switch modes and lose them?', 'Switch Mode', 'Cancel', true);
+					if (!res) return;
+				}
+				isDirty = false;
                 setMode(newMode);
             }
         };
@@ -165,57 +175,64 @@ on:processingComplete={(ev) => {
         </button>
     </div>
 {:else}
+    <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
+        <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={async () => {
+            if (mode !== 'single' && isDirty) {
+                const res = await confirmModal.ask('Unsaved Items', 'You have unsaved scanned items. Switch modes and lose them?', 'Switch Mode', 'Cancel', true);
+                if (!res) return;
+            }
+            isDirty = false;
+            setMode('single');
+        }}>Single Item</button>
+        <button type="button" class="flex-1 btn btn-sm border-none {mode === 'collection' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={async () => {
+            if (mode !== 'collection' && isDirty) {
+                const res = await confirmModal.ask('Unsaved Changes', 'You have unsaved changes. Switch modes and lose them?', 'Switch Mode', 'Cancel', true);
+                if (!res) return;
+            }
+            isDirty = false;
+            setMode('collection');
+        }}>Multi-Scan</button>
+        
+        <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
+            isDirty = false;
+            setMode('compare');
+        }}>Comparison</button>
+    </div>
 
-<div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300">
-    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'single' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
-        if (mode !== 'single' && isDirty && !confirm('You have unsaved scanned items. Switch modes and lose them?')) return;
-        isDirty = false;
-        setMode('single');
-    }}>Single Item</button>
-    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'collection' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
-        if (mode !== 'collection' && isDirty && !confirm('You have unsaved changes. Switch modes and lose them?')) return;
-        isDirty = false;
-        setMode('collection');
-    }}>Multi-Scan</button>
-    
-    <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
-        isDirty = false;
-        setMode('compare');
-    }}>Comparison</button>
-</div>
+    {#if mode === 'single'}
+        <form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
+            <ItemHub 
+            bind:this={itemHubComponent}
+            containers={data.containers} 
+            saving={saving}
+            bind:isDirty
+            pastedDocCount={pastedDocCount}
+            on:success={(ev) => notify("success", ev.detail)} 
+            on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+            on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+            />
+        </form>
+    {:else if mode === 'collection'}
+        <BulkTriage 
+            bind:this={bulkTriageComponent}
+            containers={data.containers} 
+            categories={data.categories}
+            tags={data.tags}
+            bind:isDirty
+            on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+            on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+        />
+    {:else}
+        <CompareHub 
+            bind:this={compareHubComponent}
+            containers={data.containers}
+            categories={data.categories}
+            tags={data.tags}
+            on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
+            on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
+            on:success={(ev) => notify("success", ev.detail)}
+        />
+    {/if}
+{/if}
 
-{#if mode === 'single'}
-<form id="eltForm" method="post" enctype="multipart/form-data" use:enhance={onSubmit} on:input={() => isDirty = true} on:change={() => isDirty = true}>
-    <ItemHub 
-    bind:this={itemHubComponent}
-    containers={data.containers} 
-    saving={saving}
-    bind:isDirty
-    pastedDocCount={pastedDocCount}
-    on:success={(ev) => notify("success", ev.detail)} 
-    on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-    on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-    />
-</form>
-{:else if mode === 'collection'}
-<BulkTriage 
-bind:this={bulkTriageComponent}
-containers={data.containers} 
-categories={data.categories}
-tags={data.tags}
-bind:isDirty
-on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-/>
-{:else}
-<CompareHub 
-bind:this={compareHubComponent}
-containers={data.containers}
-categories={data.categories}
-tags={data.tags}
-on:processingStart={(ev) => notify("loading", ev.detail.message, ev.detail.taskId)}
-on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
-on:success={(ev) => notify("success", ev.detail)}
-/>
-{/if}
-{/if}
+<ConfirmModal bind:this={confirmModal} />

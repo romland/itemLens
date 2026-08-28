@@ -12,6 +12,7 @@
     import BottomSheet from "$lib/components/BottomSheet.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
     import { pluralize } from '$lib/client/utils';
+	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     export let isDirty = false;
     export let containers: any[] = [];
@@ -54,6 +55,7 @@
     let editTitle = "";
     let editSubtitle = "";
     let lightbox: ImageLightbox;
+	let confirmModal: ConfirmModal;
 
     pageTitle.set("Multi-Scan");
 
@@ -186,7 +188,8 @@
 
     async function saveCollection() {
         if (selectedContainers.length === 0) {
-            if (!confirm("You haven't selected a location. Save these items without a location?")) {
+			const res = await confirmModal.ask('No Location', "You haven't selected a location. Save these items without a location?", 'Save Anyway', 'Cancel');
+			if (!res) {
                 settingsExpanded = true;
                 setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
                 return;
@@ -194,7 +197,7 @@
         }
 
         if (activeItems.length === 0) {
-            alert("No items selected to save.");
+			notify('warning', "No items selected to save.");
             return;
         }
 
@@ -217,7 +220,7 @@
             isDirty = false;
             await goto('/', { invalidateAll: true });
         } else {
-            alert("Failed to save.");
+			notify('error', "Failed to save.");
             isSaving = false;
         }
     }
@@ -473,5 +476,7 @@
         <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={saveEdit}>Save Changes</button>
     </div>
 </BottomSheet>
+
+<ConfirmModal bind:this={confirmModal} />
 
 <ImageLightbox bind:this={lightbox} itemTitle="Multi-Scan" />

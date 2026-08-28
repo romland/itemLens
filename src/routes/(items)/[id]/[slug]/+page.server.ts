@@ -125,7 +125,7 @@ export const actions = {
 		return { success: true };
 	},
 	
-	addPasted: async ({ request, params }) => {
+	addPasted: async ({ request, params, locals }) => {
         if (!locals.user) return fail(401, { error: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
         

@@ -1,11 +1,13 @@
 <script lang="ts">
+	import PromptModal from '$lib/components/PromptModal.svelte';
     export let photoTypes = [];
 
     let addedImagesToDownload: { type: string; url: string }[] = [];
+	let promptModal: PromptModal;
 
-    function addImageToDownload(ev: Event, type: string)
+	async function addImageToDownload(ev: Event, type: string)
     {
-        const downloadImage = window.prompt(`Link to "${type}" image:`);
+		const downloadImage = await promptModal.ask(`Add ${type}`, `Link to "${type}" image:`, 'https://...');
 
         if(downloadImage) {
             addedImagesToDownload.push({
@@ -50,3 +52,5 @@
     {/if}
 </div>
 
+
+<PromptModal bind:this={promptModal} />

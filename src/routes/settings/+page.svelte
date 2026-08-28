@@ -10,11 +10,13 @@
 	import { nukeAllCaches } from "$lib/client/utils";
 	import { notify } from "$lib/client/notifications";
     import DeviceSessionList from "$lib/components/DeviceSessionList.svelte";
+	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     export let form: ActionData;
 
 	let avatarPreview: string | null = null;
     let createInventoryModal: CreateInventoryModal;
+	let confirmModal: ConfirmModal;
 
     const updateTheme: SubmitFunction = ({ action }) => {
         const theme = action.searchParams.get('theme');
@@ -115,7 +117,10 @@
 
 	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
 		<h3 class="font-bold text-lg mb-4">Device Management</h3>
-		<button type="button" class="btn btn-outline border-base-300 hover:border-error hover:bg-error/10 hover:text-error flex items-center justify-between w-full h-auto py-4 rounded-xl" on:click={nukeAllCaches}>
+		<button type="button" class="btn btn-outline border-base-300 hover:border-error hover:bg-error/10 hover:text-error flex items-center justify-between w-full h-auto py-4 rounded-xl" on:click={async () => {
+			const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, caches, and force a hard reload. Continue?', 'Clear', 'Cancel', true);
+			if (res) nukeAllCaches(true);
+		}}>
 			<div class="flex items-center gap-3">
 				<i class="bi bi-trash3-fill text-xl text-error"></i>
 				<div class="text-left flex flex-col">
@@ -454,14 +459,24 @@
                                         </form>
 
                                         <!-- Manual Schema Retry Action -->
-                                        <form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} on:submit={(e) => { if(!confirm('Are you sure you want to regenerate AI Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.')) e.preventDefault(); }}>
+										<form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} on:submit={async (e) => { 
+											e.preventDefault(); 
+											const form = e.currentTarget;
+											const res = await confirmModal.ask('Regenerate Rules?', 'Are you sure you want to regenerate Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.', 'Regenerate', 'Cancel', true);
+											if (res) form.requestSubmit(); 
+										}}>
                                             <input type="hidden" name="inventoryId" value={v.id}>
                                             <input type="hidden" name="name" value={v.name}>
-                                            <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate AI Rules</button>
+                                            <button type="submit" class="btn btn-xs btn-outline btn-ghost gap-1 text-[10px]"><i class="bi bi-arrow-repeat"></i> Regenerate Taxonomy Rules</button>
                                         </form>
 
                                         <!-- Retroactive Duplicates Sweep -->
-                                        <form method="POST" action="?/rebuildDuplicates" use:enhance={createEnhancer} on:submit={(e) => { if(!confirm('Re-scan the entire vault for duplicates? This runs in the background and may take a few moments.')) e.preventDefault(); }}>
+										<form method="POST" action="?/rebuildDuplicates" use:enhance={createEnhancer} on:submit={async (e) => { 
+											e.preventDefault(); 
+											const form = e.currentTarget;
+											const res = await confirmModal.ask('Re-scan Duplicates?', 'Re-scan the entire collection for duplicates? This runs in the background and may take a few moments.', 'Re-scan', 'Cancel');
+											if (res) form.requestSubmit(); 
+										}}>
                                             <input type="hidden" name="inventoryId" value={v.id}>
                                             <button type="submit" class="btn btn-xs btn-outline btn-warning gap-1 text-[10px]"><i class="bi bi-intersect"></i> Re-scan Duplicates</button>
                                         </form>
@@ -563,5 +578,7 @@
         </button>
     </div>
 </div>
+
+<ConfirmModal bind:this={confirmModal} />
 
 <CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => notify('success', e.detail)} on:error={(e) => notify('error', e.detail)} />

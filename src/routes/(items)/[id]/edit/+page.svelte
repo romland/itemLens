@@ -9,6 +9,7 @@
     import pageTitle from '$lib/stores';
     import { saveToQueue } from '$lib/client/offlineQueue';
 	import { notify } from "$lib/client/notifications";
+	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     export let data: PageServerData;
     export let form: ActionData;
@@ -18,12 +19,18 @@
     let hasSubmitted = false;
     let pastedDocCount = 0;
     let pasteHandler: PasteHandler;
+	let confirmModal: ConfirmModal;
+	let pendingNav: string | null = null;
 
-    beforeNavigate(({ cancel }) => {
-        if (isDirty && !hasSubmitted) {
-            if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-                cancel();
-            }
+	beforeNavigate(async ({ cancel, to }) => {
+		if (isDirty && !hasSubmitted && !pendingNav) {
+			cancel();
+			const res = await confirmModal.ask('Unsaved Changes', 'You have unsaved changes. Are you sure you want to leave?', 'Leave', 'Stay', true);
+			if (res) {
+				isDirty = false;
+				pendingNav = to?.url?.href || '/';
+				goto(pendingNav);
+			}
         }
     });
 
@@ -89,3 +96,5 @@
         on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
     />
 </form>
+
+<ConfirmModal bind:this={confirmModal} />

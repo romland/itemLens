@@ -5,6 +5,7 @@
     import { enhance } from '$app/forms';
     import { invalidateAll } from '$app/navigation';
     import { notify } from "$lib/client/notifications";
+	import PromptModal from "$lib/components/PromptModal.svelte";
 
     export let itemTitle = "";
     export let categories: any[] = [];
@@ -44,6 +45,7 @@
     // Rotation Save State
     let saveRotationModal: HTMLDialogElement;
     let isSavingRotation = false;
+	let promptModal: PromptModal;
 
     export function open(p: any) {
         photo = p;
@@ -461,7 +463,7 @@
                                             e.currentTarget.blur();
                                             let newCat = e.currentTarget.value;
                                             if (newCat === '_new') {
-                                                newCat = prompt('Enter new category name:');
+											newCat = await promptModal.ask('New Category', 'Enter new category name:', 'e.g. Tools');
                                                 if (!newCat || !newCat.trim()) {
                                                     e.currentTarget.value = photo.category?.name || '';
                                                     return;
@@ -641,3 +643,5 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div class="modal-backdrop" role="button" tabindex="0" on:keydown={(e) => { if(e.key==='Escape' && !isSavingRotation) saveRotationModal.close()}} on:click={() => { if (!isSavingRotation) saveRotationModal.close(); }}></div>
 </dialog>
+
+<PromptModal bind:this={promptModal} />

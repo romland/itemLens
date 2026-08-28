@@ -1,3 +1,5 @@
+import { notify } from '$lib/client/notifications';
+
 // This is very naive. Just one word: Buses.
 export function pluralize(str: string): string {
     if (!str) return '';
@@ -25,12 +27,12 @@ export function copyDuplicateDebugPayload(title: string, scannedItem: any, dbIte
     const payload = { scannedItem: cleanObj(scannedItem), dbItem: cleanObj(dbItem) };
     
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
-        alert("Debug data dumped to console AND copied to clipboard!");
-    }).catch(() => alert("Debug data dumped to console! (Clipboard copy failed)"));
+		notify('success', "Debug data dumped to console AND copied to clipboard!");
+	}).catch(() => notify('info', "Debug data dumped to console! (Clipboard copy failed)"));
 }
 
-export async function nukeAllCaches() {
-	if (!confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
+export async function nukeAllCaches(skipConfirm: boolean = false) {
+	if (!skipConfirm && !confirm("This will clear all offline data, caches, and force a hard reload. Continue?")) return;
 	if (typeof window !== 'undefined') {
 		try { sessionStorage.clear(); localStorage.clear(); } catch(e) { console.warn("Storage clear blocked:", e); }
 		try {

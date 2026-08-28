@@ -1,6 +1,7 @@
 <script lang="ts">
     import QRreader from "$lib/components/QRreader.svelte";
     import { createEventDispatcher, tick } from 'svelte'
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
     const dispatch = createEventDispatcher();
 
     export let values = [];
@@ -15,6 +16,7 @@
     let manualSelected = [];
 	let isCreatingContainer = false;
 	let explicitNewName = "";
+	let confirmModal: ConfirmModal;
 
     // View state for tabs
     let activeTab = defaultTab; // 'scan' | 'select'
@@ -92,9 +94,11 @@
         const exists = flatContainers.some(c => c.name === ev.detail);
         if (!exists) {
             scanningContainers = false;
-            if (confirm(`Container "${ev.detail}" not found in this Collection. Create it now?`)) {
+			confirmModal.ask('Container Not Found', `Container "${ev.detail}" not found in this Collection. Create it now?`, 'Create', 'Cancel').then(res => {
+			if (res) {
                 createContainer(ev.detail);
             }
+			});
             return;
         }
 
@@ -110,8 +114,9 @@
         }
     }
 
-    function removeScannedContainer(containerToRemove) {
-        if (confirm(`Remove container "${containerToRemove}"?`)) {
+	async function removeScannedContainer(containerToRemove) {
+		const res = await confirmModal.ask('Remove Container', `Remove container "${containerToRemove}"?`, 'Remove', 'Cancel', true);
+		if (res) {
             addedContainers = addedContainers.filter(c => c !== containerToRemove);
             dispatchUserChange();
             dispatch("success", `Removed container: ${containerToRemove}`);
@@ -254,3 +259,5 @@
 
     </div>
 </div>
+
+<ConfirmModal bind:this={confirmModal} />

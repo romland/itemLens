@@ -236,7 +236,7 @@
                 userHint = "";
                 dispatch('success', 'Item details enhanced by model!');
             } else {
-                alert("AI Refinement failed. Check server logs.");
+				notify('error', "AI Refinement failed. Check server logs.");
                 showAiDrawer = false;
             }
         } catch (e) {
@@ -273,7 +273,7 @@
                 <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="font-bold text-sm">Potential Duplicate</h3>
-                            <button type="button" class="btn btn-xs btn-ghost text-warning hover:bg-warning/20 p-1 h-auto min-h-0" on:click={() => { console.group('🐞 DEBUG DUPLICATE'); console.log('SCANNED', {title: currentTitle, attributes: currentAttributes, aiData: duplicateDetails._rawAiData}); console.log('DB ITEM', duplicateDetails); if (duplicateDetails.debugTrace) { console.log('TRACE'); duplicateDetails.debugTrace.forEach((l: string) => console.log(l)); } console.groupEnd(); alert('Debug data dumped to browser console!'); }} title="Dump debug data"><i class="bi bi-bug-fill text-sm"></i></button>
+							<button type="button" class="btn btn-xs btn-ghost text-warning hover:bg-warning/20 p-1 h-auto min-h-0" on:click={() => { console.group('🐞 DEBUG DUPLICATE'); console.log('SCANNED', {title: currentTitle, attributes: currentAttributes, aiData: duplicateDetails._rawAiData}); console.log('DB ITEM', duplicateDetails); if (duplicateDetails.debugTrace) { console.log('TRACE'); duplicateDetails.debugTrace.forEach((l: string) => console.log(l)); } console.groupEnd(); notify('info', 'Debug data dumped to browser console!'); }} title="Dump debug data"><i class="bi bi-bug-fill text-sm"></i></button>
                         </div>
                     
                     <ItemMiniCard item={duplicateDetails} on:zoom={() => lightbox.open({ orgPath: duplicateDetails.orgPath || duplicateDetails.thumbPath, showOriginal: true })} />

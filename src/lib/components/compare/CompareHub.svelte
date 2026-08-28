@@ -71,10 +71,10 @@
                     dispatch('success', `Found ${data.totalDetected} items!`);
                 }
             } else {
-                alert(data.error || 'Comparison failed.');
+				dispatch('notify', { status: 'error', message: data.error || 'Comparison failed.' });
             }
         } catch (err) {
-            alert('Network error while processing comparison.');
+			dispatch('notify', { status: 'error', message: 'Network error while processing comparison.' });
         } finally {
             isScanning = false;
             dispatch('processingComplete', { taskId: 'compare', status: 'success' });

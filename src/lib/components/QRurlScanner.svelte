@@ -1,6 +1,7 @@
 <script>
     import QRreader from "$lib/components/QRreader.svelte";
     import { createEventDispatcher } from 'svelte'
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
     const dispatch = createEventDispatcher();
 
     export const mini = false; 
@@ -10,12 +11,13 @@
     let scanningURLs = false;
     let addedURLs = [];
     
-    // Premium Dynamic URL state
+    // Dynamic URL state
     let manualUrls = [{ id: 1, val: "" }];
     let nextUrlId = 2;
     
     // View state for tabs
     let activeTab = 'scan'; 
+	let confirmModal: ConfirmModal;
 
     var qrPhotoFileCounter = 1;
     function qrPhotoUploadChanged(ev)
@@ -86,8 +88,9 @@
         return urlRegExp.test(url);
     }
 
-    function removeScannedUrl(urlToRemove) {
-        if (confirm(`Remove URL "${urlToRemove}"?`)) {
+	async function removeScannedUrl(urlToRemove) {
+		const res = await confirmModal.ask('Remove URL', `Remove URL "${urlToRemove}"?`, 'Remove', 'Cancel', true);
+		if (res) {
             addedURLs = addedURLs.filter(u => u !== urlToRemove);
         }
     }    
@@ -188,3 +191,5 @@
         <i class="bi bi-info-circle"></i> Linked documents will be downloaded, indexed, and stored forever.
     </div>
 </div>
+
+<ConfirmModal bind:this={confirmModal} />

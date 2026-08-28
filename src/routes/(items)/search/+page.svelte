@@ -165,7 +165,7 @@
             
             exportCsvModal.close();
         } catch (e) {
-            alert('Failed to export CSV.');
+			notify('error', 'Failed to export CSV.');
         } finally {
             isExporting = false;
         }

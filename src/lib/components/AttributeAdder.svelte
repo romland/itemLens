@@ -4,6 +4,7 @@
 
     import { createEventDispatcher } from 'svelte';
     import { parsePlainTextKVPs } from '$lib/client/kvpParser';
+	import { notify } from '$lib/client/notifications';
 
     const dispatch = createEventDispatcher();
 
@@ -182,12 +183,12 @@
                         valColIndex = maxCols > 1 ? 1 : 0;
                         showTableModal = true;
                     } else {
-                        alert("Could not automatically parse pasted data.");
+					notify('error', "Could not automatically parse pasted data.");
                     }
                 })
                 .catch(() => {
                     isParsingLLM = false;
-                    alert("Error reaching LLM.");
+				notify('error', "Error reaching LLM.");
                 });
                 
                 return;

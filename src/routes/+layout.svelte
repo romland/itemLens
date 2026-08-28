@@ -28,8 +28,10 @@
     import ContainerSelector from "$lib/components/ContainerSelector.svelte";
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
+    import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     let mounted = false;    
+    let confirmModal: ConfirmModal;
 
     onMount(async () => {
         mounted = true;
@@ -613,7 +615,11 @@ $:  isDemoMode =
                 </button>
 
 				{#if $page.data.user?.isAdmin}
-					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={() => { mobileMenuModal.close(); nukeAllCaches(); }}>
+					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={async () => { 
+						mobileMenuModal.close(); 
+						const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, caches, and force a hard reload. Continue?', 'Clear', 'Cancel', true);
+						if (res) nukeAllCaches(true);
+					}}>
 						<div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
 							<i class="bi bi-trash3 text-xl"></i>
 						</div>
@@ -645,3 +651,5 @@ $:  isDemoMode =
         <button>close</button>
     </form>
 </dialog>
+
+<ConfirmModal bind:this={confirmModal} />
