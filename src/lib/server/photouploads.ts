@@ -658,5 +658,7 @@ export function getSafeFilename(filename: string, extra: string = ""): string
     .replace(/\..+/, '');
     
     const uuid = crypto.randomUUID();
-    return date + '-' + extra + "-" + uuid + "-" + slugify(filename.toLowerCase());
+    // Truncate the original filename to prevent DB path bloat on insane PDF titles
+    const truncatedName = filename.substring(0, 30);
+    return date + '-' + extra + "-" + uuid + "-" + slugify(truncatedName.toLowerCase());
 }
