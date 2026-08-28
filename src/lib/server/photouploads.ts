@@ -657,6 +657,6 @@ export function getSafeFilename(filename: string, extra: string = ""): string
     .replace(/T/, '')
     .replace(/\..+/, '');
     
-    const hash = crypto.randomBytes(3).toString('hex');
-    return date + '-' + extra + "-" + hash + "-" + slugify(filename.toLowerCase());
+    const uuid = crypto.randomUUID();
+    return date + '-' + extra + "-" + uuid + "-" + slugify(filename.toLowerCase());
 }

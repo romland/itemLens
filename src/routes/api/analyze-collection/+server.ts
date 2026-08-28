@@ -18,6 +18,7 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
 
     try {
         const data = await request.formData();

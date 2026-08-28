@@ -13,6 +13,9 @@ import fs from 'fs';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     try {
+        if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
+
         const data = await request.formData();
         const file = data.get('file') as File;
         const type = data.get('type') as string || 'product';
