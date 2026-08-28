@@ -11,6 +11,7 @@ import slugify from 'slugify';
 import { extractBoundingBox } from '$lib/server/imageProcessor';
 import { logActivity } from '$lib/server/logger';
 import { taskManager } from '$lib/server/taskManager';
+import { assertCanMutate } from '$lib/server/security';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
@@ -64,8 +65,7 @@ export async function GET({ url, setHeaders, locals }) {
 }
 
 export async function POST({ request, locals }) {
-    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
-    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
+    assertCanMutate(locals);
 
     const formData = await request.formData();
     const title = (formData.get('title') as string) || 'Untitled Item';
@@ -149,8 +149,7 @@ export async function POST({ request, locals }) {
 }
 
 export async function PATCH({ request, locals }) {
-    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
-    if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
+    assertCanMutate(locals);
     const { itemId, newContainer } = await request.json();
     
     // IDOR Check: Ensure the item actually belongs to the active inventory

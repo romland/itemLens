@@ -1,16 +1,15 @@
-// FILE: src/lib/server/ytdlp.ts
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { getSafeFilename } from './photouploads';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 let ytDlpAvailable: boolean | null = null;
 
 export async function isYtDlpAvailable() {
     if (ytDlpAvailable !== null) return ytDlpAvailable;
     try {
-        await execAsync('yt-dlp --version');
+        await execFileAsync('yt-dlp', ['--version']);
         ytDlpAvailable = true;
     } catch {
         ytDlpAvailable = false;
@@ -33,8 +32,10 @@ export async function fetchVideoIfSupported(
     try {
         // 1. Ask yt-dlp to dump the JSON metadata. If it succeeds, the site is supported!
         // We use a timeout to prevent hanging on unsupported/slow sites.
-        const { stdout: jsonOut } = await execAsync(`yt-dlp --dump-json --no-playlist --playlist-items 1 --js-runtimes node "${url}"`, { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
-        
+        const { stdout: jsonOut } = await execFileAsync('yt-dlp', [
+            '--dump-json', '--no-playlist', '--playlist-items', '1', '--js-runtimes', 'node', url
+        ], { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
+
         // Extract the first valid JSON object to avoid crashing on Newline Delimited JSON (NDJSON) or warnings
         const jsonLine = jsonOut.split('\n').find(line => line.trim().startsWith('{'));
         if (!jsonLine) return null;
@@ -51,8 +52,11 @@ export async function fetchVideoIfSupported(
         
         // 2. Download the best available MP4 configuration
         // We strictly prefer H.264 (avc) video to ensure 100% cross-browser web playback, avoiding HEVC/H.265 blind spots.
-        await execAsync(`yt-dlp -f "bestvideo+bestaudio/best" -S "vcodec:h264,res,acodec:m4a" --merge-output-format mp4 -o "${finalDiskPath}" --no-playlist --playlist-items 1 --js-runtimes node "${url}"`);
-        
+        await execFileAsync('yt-dlp', [
+            '-f', 'bestvideo+bestaudio/best', '-S', 'vcodec:h264,res,acodec:m4a', '--merge-output-format', 'mp4',
+            '-o', finalDiskPath, '--no-playlist', '--playlist-items', '1', '--js-runtimes', 'node', url
+        ]);
+
         return {
             title: meta.title,
             description: meta.description || '',

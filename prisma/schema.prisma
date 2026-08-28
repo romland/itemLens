@@ -18,7 +18,7 @@ model User {
   id       Int     @id @unique @default(autoincrement())
   username String  @unique
   password String
-  token    String? @unique
+  sessionHash String? @unique
   email    String? @unique
   name     String?
   avatar   String?

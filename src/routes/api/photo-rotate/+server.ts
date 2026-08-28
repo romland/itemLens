@@ -4,9 +4,10 @@ import { db } from '$lib/server/database';
 import sharp from 'sharp';
 import fs from 'fs';
 import { logActivity } from '$lib/server/logger';
+import { assertCanMutate } from '$lib/server/security';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    assertCanMutate(locals);
 
     const { photoId, degrees } = await request.json();
     if (!photoId || typeof degrees !== 'number') return json({ error: 'Invalid payload' }, { status: 400 });

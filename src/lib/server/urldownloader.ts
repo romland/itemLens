@@ -7,6 +7,7 @@ import fs from 'fs';
 import { summarizeWebpageExtract } from './llm';
 import { PDFParse } from 'pdf-parse';
 import { ioQueue } from './queue/index';
+import { assertSafeHostname } from '$lib/server/security';
 import { logActivity } from '$lib/server/logger';
 import { taskManager } from '$lib/server/taskManager';
 import { fetchVideoIfSupported } from './ytdlp';
@@ -450,16 +451,7 @@ export default class QRUrlDownloader
             if (!['http:', 'https:'].includes(parsed.protocol)) return false;
             
             // Prevent SSRF targeting internal networks
-            const hostname = parsed.hostname.toLowerCase();
-            if (
-                hostname === 'localhost' || 
-                hostname === '127.0.0.1' || 
-                hostname === '::1' || 
-                hostname === '169.254.169.254' || 
-                hostname.match(/^10\./) || 
-                hostname.match(/^192\.168\./) || 
-                hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)
-            ) {
+            if (!assertSafeHostname(parsed.hostname)) {
                 return false;
             }
             return true;

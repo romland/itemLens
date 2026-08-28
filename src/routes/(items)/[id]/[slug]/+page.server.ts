@@ -48,6 +48,7 @@ export const load = (async ({ locals, params }) => {
 	
 	const window = new JSDOM('').window;
 	const purify = DOMPurify(window);
+   purify.setConfig({ USE_PROFILES: { html: true } }); // Explicitly disable SVG/MathML to prevent XSS bypasses
 	
 	const categories = await db.category.findMany({
 		where: { inventoryId: locals.activeInventoryId },

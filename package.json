@@ -10,7 +10,7 @@
 		"preview": "vite preview",
 		"createuser": "npx tsx scripts/create-user.ts",
 		"deleteallincontainer": "npx tsx scripts/empty-container.ts",
-		"updatedbschema": "npx prisma db push && npx prisma generate",
+		"updatedbschema": "npx tsx scripts/teardown-fts.ts && npx prisma db push && npx prisma generate",
 		"editdb": "npx prisma studio",
 		"migrate:webp": "npx tsx scripts/convert-to-webp.ts",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

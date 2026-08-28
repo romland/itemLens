@@ -2,9 +2,16 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { db } from '$lib/server/database';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { hashSessionToken, checkRateLimit } from '$lib/server/security';
 
 export const actions = {
-    default: async ({ cookies, request }) => {
+    default: async ({ cookies, request, getClientAddress }) => {
+        // Throttle login attempts to 5 per minute per IP to prevent brute force
+        if (!checkRateLimit(`login:${getClientAddress()}`, 5, 60000)) {
+            return fail(429, { error: true, message: 'Too many attempts. Please wait a minute.' });
+        }
+
         const { username, password } = Object.fromEntries(await request.formData()) as Record<string, string>;
 
         if (!username || !password) {
@@ -21,7 +28,7 @@ export const actions = {
         if (!user) {
             return fail(400, {
                 error: true,
-                message: 'User not exists.'
+                message: 'User does not exist.'
             });
         } else {
             const validPassword = await bcrypt.compare(password, user.password);
@@ -34,14 +41,15 @@ export const actions = {
             }
         }
 
-        if (!user.token) {
-            user = await db.user.update({
-                where: { username: user?.username },
-                data: { token: crypto.randomUUID() }
-            });
-        }
+        const rawSessionId = crypto.randomUUID();
+        const hashedSessionId = hashSessionToken(rawSessionId);
 
-        cookies.set('session', String(user.token), {
+        await db.user.update({
+            where: { id: user.id },
+            data: { sessionHash: hashedSessionId }
+        });
+
+        cookies.set('session', rawSessionId, {
             path: '/',
             httpOnly: true,
             sameSite: 'strict',

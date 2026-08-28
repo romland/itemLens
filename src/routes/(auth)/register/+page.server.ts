@@ -3,9 +3,15 @@ import type { Actions } from './$types';
 import { db } from '$lib/server/database';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { hashSessionToken, checkRateLimit } from '$lib/server/security';
 
 export const actions = {
-    default: async ({ request }) => {
+    default: async ({ request, getClientAddress }) => {
+        // Throttle registration to 3 per minute per IP to prevent bot accounts
+        if (!checkRateLimit(`register:${getClientAddress()}`, 3, 60000)) {
+            return fail(429, { error: true, message: 'Registration rate limited. Try again later.' });
+        }
+
         const { username, password } = Object.fromEntries(await request.formData()) as Record<string, string>;
 
         if (!username || !password) {
@@ -26,11 +32,14 @@ export const actions = {
             });
         }
 
+		const rawSessionId = crypto.randomUUID();
+		const hashedSessionId = hashSessionToken(rawSessionId);
+
         await db.user.create({
             data: {
                 username: username.trim(),
                 password: await bcrypt.hash(password, 10),
-                token: crypto.randomUUID()
+				sessionHash: hashedSessionId
             }
         })
 
