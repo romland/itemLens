@@ -4,6 +4,8 @@
     import { tick, onDestroy } from 'svelte';
     import { page } from '$app/stores';
     import { notify } from '$lib/client/notifications';
+    import { bodyScrollLock } from '$lib/client/scrollLock';
+    import GestureShield from './GestureShield.svelte';
 
     export let isOpen = false;
     let doc: any = null;
@@ -40,14 +42,6 @@
     let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
     let isSavingHighlight = false;
 
-    // Prevent background scrolling when lightbox is open
-    $: if (typeof document !== 'undefined') {
-        if (isOpen) document.body.classList.add('overflow-hidden');
-        else document.body.classList.remove('overflow-hidden');
-    }
-    onDestroy(() => {
-        if (typeof document !== 'undefined') document.body.classList.remove('overflow-hidden');
-    });
 
     export async function open(documentRecord: any) {
         doc = documentRecord;
@@ -190,11 +184,6 @@
                 updateProgress(rendition.currentLocation());
             });
             
-            // Pass through tap and swipe events from the iframe to Svelte
-            rendition.on('touchstart', handleTouchStart);
-            rendition.on('touchend', handleTouchEnd);
-            rendition.on('click', handleIframeClick);
-
             // === CONTEXT HIGHLIGHT EXTRACTOR ===
             rendition.on('selected', async (cfiRange: string, contents: any) => {
                 const text = rendition.getRange(cfiRange).toString().trim();
@@ -350,37 +339,6 @@
         resetMenuTimeout();
     }
 
-    function handleIframeClick(e: any) {
-        // Do not navigate if the user is actively highlighting text
-        const selection = e.view?.getSelection();
-        if (selection && selection.toString().trim().length > 0) return;
-
-        const width = window.innerWidth;
-        const x = e.clientX;
-        if (x < width * 0.25) prevPage();
-        else if (x > width * 0.75) nextPage();
-        else toggleMenu();
-    }
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    function handleTouchStart(e: any) {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }
-    function handleTouchEnd(e: any) {
-        const touchEndX = e.changedTouches[0].screenX;
-        const touchEndY = e.changedTouches[0].screenY;
-        const diffX = touchEndX - touchStartX;
-        const diffY = touchEndY - touchStartY;
-        
-        if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-            if (diffX > 0) prevPage();
-            else nextPage();
-        } else if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
-            handleIframeClick({ clientX: touchEndX, view: e.view || window });
-        }
-    }
     
     function handleGlobalKeydown(e: KeyboardEvent) {
         if (!isOpen) return;
@@ -400,7 +358,6 @@
 
     async function confirmHighlight() {
         if (!pendingHighlight) return;
-        isSavingHighlight = true;
         
         const fd = new FormData();
         fd.append('content', `**Highlight from ${doc.title}:**\n> "${pendingHighlight.text}"`);
@@ -414,12 +371,11 @@
         }));
         if (doc.itemId) fd.append('linkedItemIds[]', doc.itemId.toString());
         
-        try {
-            await fetch('/timeline?/capture', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true', 'accept': 'application/json' } });
-            notify('success', 'Highlight saved to Notebook!');
-        } catch (e) { console.error("Failed to save highlight", e); notify('error', 'Failed to save highlight.'); }
+        // Fire and forget, don't await the network
+        fetch('/timeline?/capture', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true', 'accept': 'application/json' } })
+            .then(() => notify('success', 'Highlight saved to Notebook!'))
+            .catch(() => notify('error', 'Failed to save highlight.'));
         
-        isSavingHighlight = false;
         highlightModal.close();
         pendingHighlight = null;
     }
@@ -431,9 +387,10 @@
     <!-- Main Background (Dimmed to separate the book from the OS layer) -->
     <div 
         bind:this={overlayRef}
-        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col overscroll-none touch-none outline-none"
+        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col outline-none"
         transition:fade={{ duration: 250, easing: cubicOut }}
         tabindex="-1"
+        use:bodyScrollLock={isOpen}
     >
         <!-- === TOP CHROME === -->
         <div 
@@ -471,6 +428,16 @@
         <div class="flex-1 w-full h-full flex items-center justify-center pt-[10vh] pb-[10vh] md:py-8 px-0 md:px-4 relative z-10">
             <div class="w-full h-full max-w-2xl md:max-h-[800px] relative bg-base-100 md:rounded-3xl md:shadow-2xl md:border md:border-base-300 overflow-hidden">
                 
+                <GestureShield 
+                    active={!showToc && !showSettings && !pendingHighlight} 
+                    allowVerticalScroll={docType === 'iframe'}
+                    on:swipeLeft={nextPage}
+                    on:swipeRight={prevPage}
+                    on:tapLeft={prevPage}
+                    on:tapRight={nextPage}
+                    on:tapCenter={toggleMenu}
+                />
+
                 {#if loading}
                     <div class="absolute inset-0 flex items-center justify-center z-10" transition:fade>
                         <span class="loading loading-spinner loading-lg text-primary"></span>
