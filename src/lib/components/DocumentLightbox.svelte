@@ -28,6 +28,7 @@
     // Reading State
     let atStart = true;
     let atEnd = false;
+    let isTurningPage = false;
     let progress = 0;
     let currentChapter = "";
     let toc: any[] = [];
@@ -283,9 +284,27 @@
     }
 
     // --- Gesture & Navigation ---
+    const FADE_DURATION = 75; // Fast enough to be snappy, long enough to hide the flash
     
-    function prevPage() { if (rendition) rendition.prev(); resetMenuTimeout(); }
-    function nextPage() { if (rendition) rendition.next(); resetMenuTimeout(); }
+    async function prevPage() { 
+        if (!rendition || isTurningPage) return; 
+        isTurningPage = true;
+        // Wait for the viewer to actually turn invisible before thrashing the DOM
+        await new Promise(r => setTimeout(r, FADE_DURATION)); 
+        await rendition.prev(); 
+        isTurningPage = false;
+        resetMenuTimeout(); 
+    }
+    
+    async function nextPage() { 
+        if (!rendition || isTurningPage) return; 
+        isTurningPage = true;
+        // Wait for the viewer to actually turn invisible before thrashing the DOM
+        await new Promise(r => setTimeout(r, FADE_DURATION)); 
+        await rendition.next(); 
+        isTurningPage = false;
+        resetMenuTimeout(); 
+    }
     
     function toggleMenu() {
         if (docType === 'iframe') return; // Enforce always visible
@@ -428,16 +447,6 @@
         <div class="flex-1 w-full h-full flex items-center justify-center pt-[10vh] pb-[10vh] md:py-8 px-0 md:px-4 relative z-10">
             <div class="w-full h-full max-w-2xl md:max-h-[800px] relative bg-base-100 md:rounded-3xl md:shadow-2xl md:border md:border-base-300 overflow-hidden">
                 
-                <GestureShield 
-                    active={!showToc && !showSettings && !pendingHighlight} 
-                    allowVerticalScroll={docType === 'iframe'}
-                    on:swipeLeft={nextPage}
-                    on:swipeRight={prevPage}
-                    on:tapLeft={prevPage}
-                    on:tapRight={nextPage}
-                    on:tapCenter={toggleMenu}
-                />
-
                 {#if loading}
                     <div class="absolute inset-0 flex items-center justify-center z-10" transition:fade>
                         <span class="loading loading-spinner loading-lg text-primary"></span>
@@ -445,7 +454,19 @@
                 {/if}
                 
                 {#if docType === 'epub'}
-                    <div bind:this={viewerRef} class="w-full h-full"></div>
+                    <GestureShield 
+                        active={!showToc && !showSettings && !pendingHighlight} 
+                        on:swipeLeft={nextPage}
+                        on:swipeRight={prevPage}
+                        on:tapLeft={prevPage}
+                        on:tapRight={nextPage}
+                        on:tapCenter={toggleMenu}
+                    />
+                    <div 
+                        bind:this={viewerRef} 
+                        class="w-full h-full epub-viewer transition-opacity duration-75 ease-out"
+                        style="opacity: {isTurningPage ? 0 : 1};"
+                    ></div>
                 {:else if docType === 'iframe'}
                     <iframe 
                         bind:this={iframeRef}
@@ -557,3 +578,10 @@
     <form method="dialog" class="modal-backdrop"><button disabled={isSavingHighlight}>close</button></form>
 </dialog>
 {/if}
+
+<style>
+    /* Instantly neutralize epub.js default white iframes before hooks run */
+    :global(.epub-viewer iframe) {
+        background-color: transparent !important;
+    }
+</style>

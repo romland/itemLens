@@ -1,7 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher, onDestroy } from 'svelte';
     export let active = true;
-    export let allowVerticalScroll = false;
 
     const dispatch = createEventDispatcher();
 
@@ -10,10 +9,16 @@
     let startTime = 0;
     let longPressTimer: ReturnType<typeof setTimeout>;
     let passThrough = false;
+    let isTouch = false; // The Ghost-Click preventer
 
     function handleStart(e: TouchEvent | MouseEvent) {
         if (!active) return;
-        const pt = 'touches' in e ? e.touches[0] : e;
+        
+        // If this is a touch event, flag it. If it's a mouse event right after a touch, ignore it.
+        if (e.type.startsWith('touch')) isTouch = true;
+        else if (isTouch) return;
+
+        const pt = 'touches' in e ? e.touches[0] : (e as MouseEvent);
         startX = pt.clientX;
         startY = pt.clientY;
         startTime = Date.now();
@@ -27,7 +32,9 @@
 
     function handleMove(e: TouchEvent | MouseEvent) {
         if (!active || passThrough) return;
-        const pt = 'touches' in e ? e.touches[0] : e;
+        if (e.type.startsWith('mouse') && isTouch) return;
+
+        const pt = 'touches' in e ? e.touches[0] : (e as MouseEvent);
         
         // If they start moving, it's a swipe, not a highlight attempt. Cancel the drop.
         if (Math.abs(pt.clientX - startX) > 10 || Math.abs(pt.clientY - startY) > 10) {
@@ -38,6 +45,12 @@
     function handleEnd(e: TouchEvent | MouseEvent) {
         clearTimeout(longPressTimer);
         if (!active) return;
+        if (e.type.startsWith('mouse') && isTouch) return;
+
+        // Lock out ghost mouse clicks for 500ms after the touch ends
+        if (e.type.startsWith('touch')) {
+            setTimeout(() => { isTouch = false; }, 500);
+        }
 
         if (passThrough) {
             // Keep shield down just long enough for the native OS selection menu to pop up
@@ -69,7 +82,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div 
     class="absolute inset-0 z-40"
-    style="pointer-events: {passThrough || !active ? 'none' : 'auto'}; touch-action: {allowVerticalScroll ? 'pan-y' : 'none'};"
+    style="pointer-events: {passThrough || !active ? 'none' : 'auto'};"
     on:touchstart|passive={handleStart}
     on:touchmove|passive={handleMove}
     on:touchend|passive={handleEnd}
