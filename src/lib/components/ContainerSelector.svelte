@@ -200,16 +200,6 @@
         </div>
 
         <div class="flex flex-col h-full w-full animate-fade-in" class:hidden={activeTab !== 'select'}>
-            <div class="flex items-center gap-3 mb-4 px-2">
-                <div class="bg-base-200 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
-                    <i class="bi bi-ui-checks text-gray-500"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold">Manual Selection</h3>
-                    <p class="text-xs text-gray-400">Select one or multiple locations</p>
-                </div>
-            </div>
-            
 			<!-- Persistent Inline Create -->
 			<div class="flex items-center gap-2 mb-3 bg-base-200/50 p-2 rounded-xl border border-base-200">
 				<input type="text" placeholder="Quick create new container..." class="input input-sm border-none shadow-inner bg-base-100 flex-1" bind:value={explicitNewName} on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), createContainer(explicitNewName))} />
