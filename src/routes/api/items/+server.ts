@@ -113,6 +113,19 @@ export async function GET({ url, setHeaders, locals }) {
         } catch(e) { console.error("Recent documents fetch failed", e); }
     }
 
+    // Clean up SQLite FTS JSON artifacts (literal \n, \t, brackets) from the excerpts
+    documentResults.forEach(d => {
+        if (d.excerpt) {
+            d.excerpt = d.excerpt
+                .replace(/\\[nrt]/g, ' ')          // Strip literal \n, \r, \t
+                .replace(/\\"/g, '"')            // Unescape quotes
+                .replace(/^\["?|"?\]$/g, '')     // Remove leading/trailing JSON array brackets
+                .replace(/","/g, ' ... ')        // Replace JSON array commas with a nice separator
+                .replace(/\s+/g, ' ')            // Collapse multiple spaces
+                .trim();
+        }
+    });
+
     // Enrich Document Results with Rich Item Data for the UI
     if (documentResults.length > 0) {
         const docItemIds = [...new Set(documentResults.map(d => d.itemId).filter(Boolean))];
