@@ -459,11 +459,13 @@
                                         </form>
 
                                         <!-- Manual Schema Retry Action -->
-										<form method="POST" action="?/retrySchemaBootstrap" use:enhance={createEnhancer} on:submit={async (e) => { 
-											e.preventDefault(); 
-											const form = e.currentTarget;
-											const res = await confirmModal.ask('Regenerate Rules?', 'Are you sure you want to regenerate Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.', 'Regenerate', 'Cancel', true);
-											if (res) form.requestSubmit(); 
+                                        <form method="POST" action="?/retrySchemaBootstrap" use:enhance={async ({ cancel }) => {
+                                            const res = await confirmModal.ask('Regenerate Rules?', 'Are you sure you want to regenerate Taxonomy Rules? This will overwrite the current global schema. Existing items will keep their attributes, but they may no longer align with the new structure.', 'Regenerate', 'Cancel', true);
+                                            if (!res) {
+                                                cancel();
+                                                return;
+                                            }
+                                            return createEnhancer();
 										}}>
                                             <input type="hidden" name="inventoryId" value={v.id}>
                                             <input type="hidden" name="name" value={v.name}>
@@ -471,11 +473,13 @@
                                         </form>
 
                                         <!-- Retroactive Duplicates Sweep -->
-										<form method="POST" action="?/rebuildDuplicates" use:enhance={createEnhancer} on:submit={async (e) => { 
-											e.preventDefault(); 
-											const form = e.currentTarget;
-											const res = await confirmModal.ask('Re-scan Duplicates?', 'Re-scan the entire collection for duplicates? This runs in the background and may take a few moments.', 'Re-scan', 'Cancel');
-											if (res) form.requestSubmit(); 
+                                        <form method="POST" action="?/rebuildDuplicates" use:enhance={async ({ cancel }) => {
+                                            const res = await confirmModal.ask('Re-scan Duplicates?', 'Re-scan the entire collection for duplicates? This runs in the background and may take a few moments.', 'Re-scan', 'Cancel');
+                                            if (!res) {
+                                                cancel();
+                                                return;
+                                            }
+                                            return createEnhancer();
 										}}>
                                             <input type="hidden" name="inventoryId" value={v.id}>
                                             <button type="submit" class="btn btn-xs btn-outline btn-warning gap-1 text-[10px]"><i class="bi bi-intersect"></i> Re-scan Duplicates</button>
