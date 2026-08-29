@@ -1,0 +1,82 @@
+diff --git a/README.md b/README.md
+index 85d979b..9452c90 100644
+--- a/README.md
++++ b/README.md
+@@ -25,6 +25,7 @@ If feeling particularly ambitious on a day, you can also:
+ - add additional photos (using camera or just paste in links)
+ - scan QR-codes containing URLs to relevant documents
+ - paste in a list of attributes (weight/color/size/etc)
++- **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
+ - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
+ - Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
+ - **Knowledge Base / Second Brain:** itemLens isn't just for physical objects. Because it downloads, parses, and indexes linked articles, EPUBs, and PDFs, it doubles as a localized knowledge base for your topics and projects. The bookmark feature and making it searchable is the knowledge base version of "where is it" (entity knows how often I've gone: where did I read that...).
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 55dba3a..460e9c1 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -79,7 +79,7 @@ model Inventory {
+   extractExif         Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
+   deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+   bgRemovalEnabled    Boolean @default(true) // Whether to run background removal
+-  bgRemovalModel      String  @default("u2net") // Which model to use: "bria-rmbg", "u2net", etc
++  bgRemovalModel      String  @default("bria-rmbg") // Which model to use: "bria-rmbg", "u2net", etc
+   bgRemovalPreCrop    Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
+   enablePaddleOCR     Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
+   duplicateStrategy   String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
+diff --git a/src/lib/server/imageProcessor.ts b/src/lib/server/imageProcessor.ts
+index a2721a0..b7baa8f 100644
+--- a/src/lib/server/imageProcessor.ts
++++ b/src/lib/server/imageProcessor.ts
+@@ -8,7 +8,7 @@ import type { Photo } from '@prisma/client';
+ import type { TaskContext } from '$lib/server/taskManager';
+ import sharp from 'sharp';
+ 
+-export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string, model: string = 'u2net'): Promise<string> {
++export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string, model: string = 'bria-rmbg'): Promise<string> {
+     // Allow an explicit input path so we can feed it pre-cropped images, 
+     // otherwise fallback to deriving the original path from the output filename.
+     const localPath = inputLocalPath || outputFileNoBkg.replace(/_crop\.png$/, '');
+@@ -51,7 +51,7 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string,
+     return outputFileNoBkg;
+ }
+ 
+-export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext, foregroundBox?: number[] | null, bgRemovalEnabled: boolean = true, bgRemovalModel: string = 'u2net'): Promise<Partial<Photo>> {
++export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext, foregroundBox?: number[] | null, bgRemovalEnabled: boolean = true, bgRemovalModel: string = 'bria-rmbg'): Promise<Partial<Photo>> {
+     // Monolithic Lock: Prevent fragmented queue interleaving so items finish entirely 1-by-1
+     return heavyMlQueue.add(async () => {
+         const updates: Partial<Photo> = {};
+diff --git a/src/lib/server/photouploads.ts b/src/lib/server/photouploads.ts
+index c386448..13e6cf7 100644
+--- a/src/lib/server/photouploads.ts
++++ b/src/lib/server/photouploads.ts
+@@ -57,7 +57,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type:
+     let exifDataJson: string | null = null;
+     let bgRemovalEnabled = true;
+     let bgRemovalPreCrop = false;
+-    let bgRemovalModel = 'u2net';
++    let bgRemovalModel = 'bria-rmbg';
+     let enablePaddleOCR = true;
+     try {
+         const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true, enablePaddleOCR: true, bgRemovalModel: true }});
+@@ -82,7 +82,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type:
+         }
+         bgRemovalEnabled = vault?.bgRemovalEnabled ?? true;
+         bgRemovalPreCrop = vault?.bgRemovalPreCrop ?? false;
+-        bgRemovalModel = vault?.bgRemovalModel ?? 'u2net';
++        bgRemovalModel = vault?.bgRemovalModel ?? 'bria-rmbg';
+         enablePaddleOCR = vault?.enablePaddleOCR ?? true;
+     } catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
+     
+diff --git a/src/routes/settings/+page.svelte b/src/routes/settings/+page.svelte
+index 809a4df..8101bdf 100644
+--- a/src/routes/settings/+page.svelte
++++ b/src/routes/settings/+page.svelte
+@@ -415,7 +415,7 @@
+                                     </form>
+                                     <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                         <input type="hidden" name="id" value={v.id}>
+-                                        <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'u2net'}>
++                                    <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'bria-rmbg'}>
+                                             <option value="bria-rmbg">BRIA v2.0 (Slow / Best Quality)</option>
+                                             <option value="isnet-general-use">ISNet (Balanced)</option>
+                                             <option value="u2net">U2Net (Fast / Moderate)</option>

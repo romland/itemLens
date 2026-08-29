@@ -57,7 +57,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let exifDataJson: string | null = null;
     let bgRemovalEnabled = true;
     let bgRemovalPreCrop = false;
-    let bgRemovalModel = 'u2net';
+    let bgRemovalModel = 'bria-rmbg';
     let enablePaddleOCR = true;
     try {
         const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true, enablePaddleOCR: true, bgRemovalModel: true }});
@@ -82,7 +82,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
         }
         bgRemovalEnabled = vault?.bgRemovalEnabled ?? true;
         bgRemovalPreCrop = vault?.bgRemovalPreCrop ?? false;
-        bgRemovalModel = vault?.bgRemovalModel ?? 'u2net';
+        bgRemovalModel = vault?.bgRemovalModel ?? 'bria-rmbg';
         enablePaddleOCR = vault?.enablePaddleOCR ?? true;
     } catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
     

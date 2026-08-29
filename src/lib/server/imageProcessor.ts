@@ -8,7 +8,7 @@ import type { Photo } from '@prisma/client';
 import type { TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
 
-export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string, model: string = 'u2net'): Promise<string> {
+export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string, model: string = 'bria-rmbg'): Promise<string> {
     // Allow an explicit input path so we can feed it pre-cropped images, 
     // otherwise fallback to deriving the original path from the output filename.
     const localPath = inputLocalPath || outputFileNoBkg.replace(/_crop\.png$/, '');
@@ -51,7 +51,7 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
     return outputFileNoBkg;
 }
 
-export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext, foregroundBox?: number[] | null, bgRemovalEnabled: boolean = true, bgRemovalModel: string = 'u2net'): Promise<Partial<Photo>> {
+export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: string, getColors: boolean = true, tracking?: TaskContext, foregroundBox?: number[] | null, bgRemovalEnabled: boolean = true, bgRemovalModel: string = 'bria-rmbg'): Promise<Partial<Photo>> {
     // Monolithic Lock: Prevent fragmented queue interleaving so items finish entirely 1-by-1
     return heavyMlQueue.add(async () => {
         const updates: Partial<Photo> = {};

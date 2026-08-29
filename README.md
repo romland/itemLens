@@ -25,6 +25,7 @@ If feeling particularly ambitious on a day, you can also:
 - add additional photos (using camera or just paste in links)
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
+- **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
 - Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
 - **Knowledge Base / Second Brain:** itemLens isn't just for physical objects. Because it downloads, parses, and indexes linked articles, EPUBs, and PDFs, it doubles as a localized knowledge base for your topics and projects. The bookmark feature and making it searchable is the knowledge base version of "where is it" (entity knows how often I've gone: where did I read that...).

@@ -415,7 +415,7 @@
                                     </form>
                                     <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                        <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'u2net'}>
+                                    <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'bria-rmbg'}>
                                             <option value="bria-rmbg">BRIA v2.0 (Slow / Best Quality)</option>
                                             <option value="isnet-general-use">ISNet (Balanced)</option>
                                             <option value="u2net">U2Net (Fast / Moderate)</option>
