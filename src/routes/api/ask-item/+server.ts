@@ -6,7 +6,9 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import { getSafeFilename } from '$lib/server/photouploads';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import fs from 'fs';
+    import path from 'path';
 import { logActivity } from '$lib/server/logger';
+    import { withRetry } from '$lib/server/retry';
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
@@ -14,7 +16,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
     if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden' }, { status: 403 });
 
-    const { itemId, question } = await request.json();
+        const { itemId, question, includePhoto } = await request.json();
 
     const item = await db.item.findUnique({
         where: { id: itemId, inventoryId: locals.activeInventoryId },
@@ -55,18 +57,38 @@ ${docsText.substring(0, 3000)}
 USER QUESTION: ${question}
 `;
 
+        const parts: any[] = [{ text: prompt }];
+
+        if (includePhoto) {
+            const primaryPhoto = item.photos.find(p => p.type === 'product' && p.orgPath);
+            if (primaryPhoto) {
+                try {
+                    const localFilePath = `static${primaryPhoto.orgPath}`;
+                    const fileBuffer = fs.readFileSync(localFilePath);
+                    const ext = path.extname(localFilePath).toLowerCase();
+                    let mimeType = 'image/jpeg';
+                    if (ext === '.png') mimeType = 'image/png';
+                    else if (ext === '.webp') mimeType = 'image/webp';
+
+                    parts.push({ inlineData: { mimeType, data: fileBuffer.toString('base64') } });
+                } catch (err) {
+                    console.error("Failed to load photo for AI context:", err);
+                }
+            }
+        }
+
     try {
-        const response = await ai.models.generateContent({
+            const response = await withRetry(() => ai.models.generateContent({
             model: 'gemini-3.1-flash-lite',
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
+                contents: [{ role: 'user', parts }]
+            }), 3, 2000, 'AI Assistant Q&A', { prompt, itemId });
 
         const answer = response.text!;
 
         // Save to Notebook (Document)
         const filename = getSafeFilename(`item-${item.id}-qna`);
         
-        const markdownContent = `## 💬 Question\n> **${question}**\n\n---\n\n${answer}`;
+        const markdownContent = `## 💬 Question\n> ${question}\n\n---\n\n${answer}`;
         // const markdownContent = `# ${question}\n\n---\n\n${answer}`;
         // const markdownContent = `> ### 💬 ${question}\n\n---\n\n${answer}`;
         fs.writeFileSync(`${uploadsDiskFolder}/${filename}.md`, markdownContent, { encoding: "utf8" });
@@ -87,6 +109,7 @@ USER QUESTION: ${question}
         const debugPayload = JSON.stringify({
             model: 'gemini-3.1-flash-lite',
             question: question,
+                includedPhoto: includePhoto ? 'Yes' : 'No',
             prompt: prompt,
             response: answer
         }, null, 2);

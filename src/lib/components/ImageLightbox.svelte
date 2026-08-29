@@ -42,9 +42,6 @@
     // Tap tracking for manual double-tap
     let lastTapTime = 0;
 
-    // Rotation Save State
-    let saveRotationModal: HTMLDialogElement;
-    let isSavingRotation = false;
 	let promptModal: PromptModal;
 
     export function open(p: any) {
@@ -93,10 +90,9 @@
         // We strictly check if force is exactly the boolean 'true'.
         const isForce = force === true;
 
-        // Intercept closing if we have an unsaved rotation
+        // Auto-save rotation in the background
         if (!isForce && photo?.id && rotation % 360 !== 0) {
-            saveRotationModal.showModal();
-            return;
+            saveRotationBackground(rotation, photo.id);
         }
         isOpen = false;
         setTimeout(() => {
@@ -106,33 +102,17 @@
         }, 300); // Matches transition duration
     }
 
-    async function saveRotation() {
-        if (!photo?.id) return close(true);
-        isSavingRotation = true;
-        
-        // Normalize rotation to positive 0-360
-        const degrees = ((rotation % 360) + 360) % 360;
-        
-        try {
-            const res = await fetch('/api/photo-rotate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ photoId: photo.id, degrees })
-            });
-            
-            if (res.ok) await invalidateAll(); // Force SvelteKit URL cache refresh
-            else console.error('Failed to save rotation');
-        } catch (e) { console.error('Network error during rotation save', e); }
-        
-        isSavingRotation = false;
-        saveRotationModal.close();
-        close(true);
-    }
-
-    function discardRotation() {
-        rotation = 0;
-        saveRotationModal.close();
-        close(true);
+    function saveRotationBackground(deg: number, pid: number) {
+        const degrees = ((deg % 360) + 360) % 360;
+        notify('info', 'Saving image rotation...');
+        fetch('/api/photo-rotate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ photoId: pid, degrees })
+        }).then(res => {
+            if (res.ok) invalidateAll();
+            else notify('error', 'Failed to save rotation');
+        }).catch(e => notify('error', 'Network error during rotation save'));
     }
 
     function resetZoom(hard: boolean | Event = false) {
@@ -393,9 +373,6 @@
 
 <svelte:window on:keydown={(e) => {
     if (e.key === 'Escape' && isOpen) {
-        if (saveRotationModal?.open) {
-            return; // Let native dialog close handle it
-        }
         e.preventDefault(); // Stop browser from instantly dismissing the dialog we are about to open
         close();
     }
@@ -621,27 +598,5 @@
 
     </div>
 {/if}
-
-<dialog bind:this={saveRotationModal} class="modal modal-bottom sm:modal-middle" on:close={() => { if (!isSavingRotation) discardRotation(); }}>
-    <div class="modal-box p-6 sm:rounded-3xl bg-base-100/95 backdrop-blur-xl border border-base-200 shadow-2xl">
-        <h3 class="font-bold text-xl mb-3 flex items-center gap-2">
-            <i class="bi bi-arrow-clockwise text-primary"></i> Save Rotation?
-        </h3>
-        <p class="text-sm text-gray-500 mb-6">You've rotated this image. Do you want to permanently save this new orientation?</p>
-        
-        <div class="modal-action mt-0 flex gap-2">
-            <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={discardRotation} disabled={isSavingRotation}>Discard</button>
-            <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={saveRotation} disabled={isSavingRotation}>
-                {#if isSavingRotation}
-                    <span class="loading loading-spinner loading-sm"></span> Saving...
-                {:else}
-                    Save & Close
-                {/if}
-            </button>
-        </div>
-    </div>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div class="modal-backdrop" role="button" tabindex="0" on:keydown={(e) => { if(e.key==='Escape' && !isSavingRotation) saveRotationModal.close()}} on:click={() => { if (!isSavingRotation) saveRotationModal.close(); }}></div>
-</dialog>
 
 <PromptModal bind:this={promptModal} />

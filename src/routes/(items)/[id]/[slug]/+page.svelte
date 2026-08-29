@@ -57,6 +57,7 @@
     // Assistant State
     let aiQuestion = "";
     let isAskingAi = false;
+    let includePhotoContext = true;
 
     async function runDevDebug() {
         if (!selectedTargetItem) return;
@@ -79,7 +80,7 @@
             const res = await fetch('/api/ask-item', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemId: data.item.id, question: aiQuestion })
+                body: JSON.stringify({ itemId: data.item.id, question: aiQuestion, includePhoto: includePhotoContext && productPhotos.length > 0 })
             });
             if (res.ok) {
                 notify('success', 'Answer added to Local Archive!');
@@ -696,7 +697,18 @@ $: if (data.duplicateItemDetails?.debugTrace) {
         <div class="mb-6 bg-base-200/50 p-4 rounded-2xl border border-base-200">
             <p class="text-xs text-gray-500 mb-3">Ask questions about this item based on its photos, OCR text, and downloaded manuals.</p>
             <div class="flex gap-2 relative">
-                <input type="text" bind:value={aiQuestion} placeholder="e.g. What kind of batteries does this take?" class="input input-sm input-bordered w-full rounded-xl pr-20" on:keydown={(e) => e.key === 'Enter' && askAiQuestion()} disabled={isAskingAi} />
+                <div class="relative w-full flex items-center">
+                    <input type="text" bind:value={aiQuestion} placeholder="e.g. What kind of batteries does this take?" class="input input-sm input-bordered w-full rounded-xl pr-20 {productPhotos.length > 0 ? 'pl-24' : 'pl-4'}" on:keydown={(e) => e.key === 'Enter' && askAiQuestion()} disabled={isAskingAi} />
+                    
+                    {#if productPhotos.length > 0}
+                        <button 
+                            type="button" 
+                            class="absolute left-2 top-1/2 -translate-y-1/2 badge badge-sm gap-1.5 transition-all cursor-pointer font-medium {includePhotoContext ? 'badge-primary shadow-sm' : 'badge-ghost text-gray-400 border-base-300'}" 
+                            on:click={() => includePhotoContext = !includePhotoContext}
+                            title={includePhotoContext ? "Click to exclude photo context" : "Click to include photo context"}
+                        ><i class="bi bi-image"></i> <span>Photo</span></button>
+                    {/if}
+                </div>
                 <button type="button" class="btn btn-sm btn-primary absolute right-0 top-0 rounded-l-none rounded-r-xl" on:click={askAiQuestion} disabled={isAskingAi || !aiQuestion.trim()}>
                     {#if isAskingAi}
                         <span class="loading loading-spinner loading-xs"></span>
