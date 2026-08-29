@@ -19,6 +19,8 @@ TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ url, setHeaders, locals }) {
+    if (!locals.user) return new Response('Unauthorized', { status: 401 });
+
 	setHeaders({
 		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
 	});
