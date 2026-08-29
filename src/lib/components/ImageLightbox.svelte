@@ -318,45 +318,69 @@
 
 
     // Rotation State
-	function copyImageToClipboard() {
-		try {
-			const mediaEl = document.getElementById('lightbox-active-media') as HTMLImageElement;
-			if (!mediaEl || mediaEl.tagName !== 'IMG') {
-				notify('error', 'Cannot copy video files');
-				return;
-			}
+	function copyImageToClipboard(withBackground = false) {
+        try {
+            const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
+            
+            // iOS Safari requires navigator.clipboard.write to be called synchronously.
+            // By passing a Promise into ClipboardItem, we keep the gesture trust window open 
+            // while we fetch and safely transcode the image to PNG.
+            const blobPromise = fetch(path)
+                .then(res => res.blob())
+                .then(blob => new Promise<Blob>((resolve, reject) => {
+                    // Extracting from the pristine Blob prevents DOM CSS properties 
+                    // (like mix-blend-multiply) from corrupting the canvas alpha channel on iOS.
+                    if (blob.type === 'image/webp' || blob.type === 'image/jpeg' || withBackground) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width; 
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            
+                            if (withBackground) {
+                                // Draw a sleek dark card background to neutralize WhatsApp's white outline
+                                ctx.fillStyle = '#2a323c';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                
+                                if (cols.length > 0) {
+                                    ctx.globalAlpha = 0.3;
+                                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                                    gradient.addColorStop(0, cols[0]);
+                                    gradient.addColorStop(1, cols[1] || cols[0]);
+                                    ctx.fillStyle = gradient;
+                                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                    ctx.globalAlpha = 1.0;
+                                }
+                            }
+                            
+                            ctx?.drawImage(img, 0, 0);
+                            canvas.toBlob((pngBlob) => {
+                                if (pngBlob) resolve(pngBlob);
+                                else reject(new Error("Canvas toBlob failed"));
+                            }, 'image/png');
+                            URL.revokeObjectURL(img.src);
+                        };
+                        img.onerror = reject;
+                        img.src = URL.createObjectURL(blob);
+                    } else {
+                        resolve(blob);
+                    }
+                }));
 
-			// iOS Safari's Clipboard API gesture window is extremely aggressive (~200ms).
-			// Doing a network fetch() inside the Promise takes too long and causes it to fail.
-			// Drawing the already-loaded DOM image directly to Canvas is near-instantaneous.
-			const blobPromise = new Promise<Blob>((resolve, reject) => {
-				const canvas = document.createElement('canvas');
-				canvas.width = mediaEl.naturalWidth || mediaEl.width;
-				canvas.height = mediaEl.naturalHeight || mediaEl.height;
-				const ctx = canvas.getContext('2d', { willReadFrequently: true });
-				
-				ctx?.clearRect(0, 0, canvas.width, canvas.height);
-				ctx?.drawImage(mediaEl, 0, 0);
-				
-				canvas.toBlob((blob) => {
-					if (blob) resolve(blob);
-					else reject(new Error("Canvas export failed"));
-				}, 'image/png');
-			});
-
-			navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
-				.then(() => {
-					showMenu = false;
-					notify('success', 'Image copied to clipboard!');
-				})
-				.catch((err) => {
-					console.error('Clipboard write rejected by browser:', err);
-					notify('error', 'Browser blocked clipboard access');
-				});
-		} catch (e) {
-			console.error('Copy image setup failed', e);
-			notify('error', 'Failed to copy image');
-		}
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+                .then(() => {
+                    showMenu = false;
+                    notify('success', withBackground ? 'Image with gradient copied!' : 'Image copied to clipboard!');
+                })
+                .catch((e) => {
+                    console.error('Clipboard write failed:', e);
+                    notify('error', 'Failed to copy image');
+                });
+        } catch (e) {
+            console.error('Copy image setup failed', e);
+            notify('error', 'Failed to copy image');
+        }
     }
     let rotation = 0;
     function rotateLeft() { rotation -= 90; }
@@ -478,8 +502,11 @@
                             </div>
                         {/if}
                         
-                        <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={copyImageToClipboard}>
+                        <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={() => copyImageToClipboard(false)}>
                             <i class="bi bi-clipboard text-lg w-5 opacity-70"></i> Copy Image
+                        </button>
+                        <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={() => copyImageToClipboard(true)}>
+                            <i class="bi bi-palette text-lg w-5 opacity-70"></i> Copy with Gradient
                         </button>
 						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
 							<i class="bi bi-download text-lg w-5 opacity-70"></i> Save to Device
