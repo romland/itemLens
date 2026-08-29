@@ -22,6 +22,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         if (type === 'url') {
             console.log(`[Background Task] Fetching URL: ${payload}`);
+            if (!QRUrlDownloader.isURL(payload)) {
+                return json({ error: 'Invalid or unsafe URL' }, { status: 400 });
+            }
             const result = await QRUrlDownloader.downloadURL(payload);
             if (result) {
                 const parsed = JSON.parse(result);

@@ -128,18 +128,18 @@ export const actions = {
 			const { getOrCreateCategory } = await import('$lib/server/categories');
 			const cat = await getOrCreateCategory(value.trim(), locals.activeInventoryId);
 			await db.photo.updateMany({
-				where: { itemId: { in: itemIds } },
+                where: { itemId: { in: itemIds }, item: { inventoryId: locals.activeInventoryId } },
 				data: { categoryId: cat.id }
 			});
 
             const { scrubEmptyCategories } = await import('$lib/server/categories');
             scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
         } else if (action === 'flagDuplicate') {
-            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'FLAGGED' } });
+            await db.item.updateMany({ where: { id: { in: itemIds }, inventoryId: locals.activeInventoryId }, data: { duplicateStatus: 'FLAGGED' } });
         } else if (action === 'dismissDuplicate') {
-            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'DISMISSED' } });
+            await db.item.updateMany({ where: { id: { in: itemIds }, inventoryId: locals.activeInventoryId }, data: { duplicateStatus: 'DISMISSED' } });
         } else if (action === 'clearDuplicate') {
-            await db.item.updateMany({ where: { id: { in: itemIds } }, data: { duplicateStatus: 'NONE' } });
+            await db.item.updateMany({ where: { id: { in: itemIds }, inventoryId: locals.activeInventoryId }, data: { duplicateStatus: 'NONE' } });
 		}
 
 		return { success: true };

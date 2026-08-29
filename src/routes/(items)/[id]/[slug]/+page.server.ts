@@ -100,8 +100,8 @@ export const actions = {
 		if (photoId && categoryName) {
 			const { getOrCreateCategory, scrubEmptyCategories } = await import('$lib/server/categories');
 			const cat = await getOrCreateCategory(categoryName, locals.activeInventoryId);
-			await db.photo.update({
-				where: { id: photoId },
+            await db.photo.updateMany({
+                where: { id: photoId, item: { inventoryId: locals.activeInventoryId } },
 				data: { categoryId: cat.id }
 			});
 			scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
@@ -117,8 +117,8 @@ export const actions = {
 		const photoId = Number(data.get('photoId'));
 		const showOriginal = data.get('showOriginal') === 'true';
 		if (photoId) {
-			await db.photo.update({
-				where: { id: photoId },
+            await db.photo.updateMany({
+                where: { id: photoId, item: { inventoryId: locals.activeInventoryId } },
 				data: { showOriginal }
 			});
 		}
@@ -164,7 +164,9 @@ export const actions = {
 		const kvps = Object.entries(attrs).filter(([k,v]) => v !== null && v !== '').map(([k,v]) => ({ key: k, value: String(v) }));
 		
 		const itemId = Number(params.id);
-		const existingItem = await db.item.findUnique({ where: { id: itemId }, include: { attributes: true }});
+        const existingItem = await db.item.findUnique({ where: { id: itemId, inventoryId: locals.activeInventoryId }, include: { attributes: true }});
+        if (!existingItem) return fail(404, { error: 'Item not found' });
+
 		let humanOverrides = 0;
 		for (const kvp of kvps) {
 			const ext = existingItem?.attributes.find(a => a.key === kvp.key);
@@ -232,7 +234,7 @@ export const actions = {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
         
-		await db.item.delete({ where: { id: Number(params.id) } });
+        await db.item.deleteMany({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
 		
 		const { scrubEmptyCategories } = await import('$lib/server/categories');
 		scrubEmptyCategories(locals.activeInventoryId).catch(console.error);
@@ -248,8 +250,8 @@ export const actions = {
 		if (!locals.user) return fail(401, { error: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
         
-		await db.item.update({
-			where: { id: Number(params.id) },
+        await db.item.updateMany({
+            where: { id: Number(params.id), inventoryId: locals.activeInventoryId },
             data: { duplicateStatus: 'DISMISSED' }
 		});
 		return { success: true };
@@ -284,7 +286,17 @@ export const actions = {
         const data = await request.formData();
         const docId = Number(data.get('docId'));
         
-        if (docId) await db.document.delete({ where: { id: docId } });
+        if (docId) {
+            await db.document.deleteMany({ 
+                where: { 
+                    id: docId,
+                    OR: [
+                        { item: { inventoryId: locals.activeInventoryId } },
+                        { timelineNote: { inventoryId: locals.activeInventoryId } }
+                    ]
+                } 
+            });
+        }
         return { success: true };
     }
 
