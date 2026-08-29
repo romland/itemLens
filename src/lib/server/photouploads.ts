@@ -107,59 +107,79 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let extractedAttributes = null;
     let foregroundBox = precomputedBox || null;
 
-    // RUN GEMINI VISION FIRST TO GET THE FOREGROUND BOX (If not skipped)
-    // We run this before generatePhotoDerivatives so we can pass the bounding box to RemBG,
-    // ensuring the background removal only focuses on the primary item.
+    // 1. KICK OFF GEMINI (Network I/O, does not block local CPU)
+    let geminiPromise = Promise.resolve<any>(null);
     if (!skipLlm && (type === 'product' || type === 'information' || type === 'other')) {
-        try {
-            const { analyzePhoto } = await import('$lib/server/gemini-classification');
-            const { getExistingCategoryNames } = await import('$lib/server/categories');
-            const { getActiveSchema } = await import('$lib/server/ontology');
-            const existingCategories = await getExistingCategoryNames(inventoryId);
-            const inv = await db.inventory.findUnique({ where: { id: inventoryId } });
-            const allowNew = inv?.allowNewCategories ?? true;
-            
-            const activeSchema = await getActiveSchema(inventoryId, tempPhoto.categoryId);      
+        geminiPromise = (async () => {
+            try {
+                const { analyzePhoto } = await import('$lib/server/gemini-classification');
+                const { getExistingCategoryNames } = await import('$lib/server/categories');
+                const { getActiveSchema } = await import('$lib/server/ontology');
+                const existingCategories = await getExistingCategoryNames(inventoryId);
+                const inv = await db.inventory.findUnique({ where: { id: inventoryId } });
+                const allowNew = inv?.allowNewCategories ?? true;
+                const activeSchema = await getActiveSchema(inventoryId, tempPhoto.categoryId);      
 
-            // Pass the ORIGINAL uncropped image to Gemini, never a thumbnail or cutout!
-            const analysis = await apiQueue.add(
-                () => analyzePhoto(currentLocalPath, existingCategories, allowNew, activeSchema, tracking?.targetId as number | undefined),
-                tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
-            );
-            llmAnalysis = JSON.stringify(analysis);
-            categoryName = analysis.subCategory;
-            foregroundBox = analysis.foregroundBox || null;
-            if (analysis.extractedAttributes) extractedAttributes = JSON.stringify(analysis.extractedAttributes);
-            
-            // Save the search synonyms instantly as tags
-            if (analysis.searchSynonyms && tempPhoto.itemId) {
-                const { getTagIds } = await import('$lib/server/services');
-                const tagIds = await getTagIds(analysis.searchSynonyms.join(','), inventoryId);
-                await db.item.update({ where: { id: tempPhoto.itemId }, data: { tags: { connect: tagIds } }});
+                const analysis = await apiQueue.add(
+                    () => analyzePhoto(currentLocalPath, existingCategories, allowNew, activeSchema, tracking?.targetId as number | undefined),
+                    tracking ? { ...tracking, description: 'Classifying image via ML' } : undefined
+                );
+                
+                if (analysis.searchSynonyms && tempPhoto.itemId) {
+                    const { getTagIds } = await import('$lib/server/services');
+                    const tagIds = await getTagIds(analysis.searchSynonyms.join(','), inventoryId);
+                    await db.item.update({ where: { id: tempPhoto.itemId }, data: { tags: { connect: tagIds } }});
+                }
+                return analysis;
+            } catch (e) { 
+                console.error("[Background Task] LLM classification failed:", e); 
+                return null;
             }
-        } catch (e) { console.error("[Background Task] LLM classification failed:", e); }
+        })();
     }
-    
-    // 2. RUN OCR & DERIVATIVES (Passing the new foregroundBox down to guide RemBG!)
-    const [ocrResult, imgUpdates] = await Promise.all([
-        enablePaddleOCR ? lightMlQueue.add(async () => {
-            if (ocrCircuitBreaker.isTripped()) return null;
 
+    // 2. KICK OFF LOCAL ML (Sequential to protect CPU, concurrent with Gemini)
+    const localPipelinePromise = (async () => {
+        const ocrResult = enablePaddleOCR ? await lightMlQueue.add(async () => {
+            if (ocrCircuitBreaker.isTripped()) return null;
             try {
                 const res = await Promise.race([
                     getOCRdata(currentLocalPath, undefined).catch(() => null),
-                    new Promise<null>((_, reject) => setTimeout(() => reject(new Error('OCR Timeout')), 10000)) // Reduced to 10s
+                    new Promise<null>((_, reject) => setTimeout(() => reject(new Error('OCR Timeout')), 10000))
                 ]);
-                ocrCircuitBreaker.reset(); // Success! Reset the strike counter
+                ocrCircuitBreaker.reset();
                 return res;
             } catch (e) {
                 console.error(`[Background Task] OCR timed out or failed for ${currentLocalPath}`);
                 ocrCircuitBreaker.trip();
-                return null; // Gracefully degrade, allowing the queue to unlock and continue
+                return null;
             }
-        }, tracking ? { ...tracking, description: 'Extracting text (OCR)' } : undefined) : Promise.resolve(null),
-    generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled, bgRemovalModel)
+        }, tracking ? { ...tracking, description: 'Extracting text (OCR)' } : undefined) : null;
+
+        let boxToUse = precomputedBox || null;
+        if (bgRemovalPreCrop && !skipLlm) {
+            // Will gracefully await Gemini only if pre-crop setting is actually turned on
+            const analysis = await geminiPromise;
+            boxToUse = analysis?.foregroundBox || null;
+        }
+        
+        const imgUpdates = await generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, boxToUse, bgRemovalEnabled, bgRemovalModel);
+        
+        return { ocrResult, imgUpdates };
+    })();
+
+    // 3. WAIT FOR BOTH PIPELINES TO FINISH
+    const [analysisResult, { ocrResult, imgUpdates }] = await Promise.all([
+        geminiPromise,
+        localPipelinePromise
     ]);
+
+    if (analysisResult) {
+        llmAnalysis = JSON.stringify(analysisResult);
+        categoryName = analysisResult.subCategory;
+        foregroundBox = analysisResult.foregroundBox || null;
+        if (analysisResult.extractedAttributes) extractedAttributes = JSON.stringify(analysisResult.extractedAttributes);
+    }
     
     // 3. RUN INVOICE EXTRACTION (Must run after OCR completes)
     if (!skipLlm && type === 'invoice or receipt') {
