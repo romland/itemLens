@@ -84,3 +84,7 @@ echo ""
 echo " Install 'rootCA.crt' as a Trusted Root CA on your device."
 echo " Your Vite dev server will run at: https://${LAN_IP}:5173"
 echo "=================================================================="
+
+echo "[+] Starting HTTP server to serve the certificate..."
+echo "[!] Press Ctrl+C to stop this server once you've downloaded it to your phone."
+python3 -m http.server 1025 --bind 0.0.0.0

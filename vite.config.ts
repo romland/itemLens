@@ -166,6 +166,7 @@ export default defineConfig({
 		// https: false,
 		// https: true,
 		allowedHosts: [
+			'192.168.178.104'
 		]
 	}
 });
