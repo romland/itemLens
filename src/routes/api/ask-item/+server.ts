@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const prompt = `You are a helpful, premium assistant embedded in a personal inventory app called itemLens.
 The user is asking a question about a specific item they own. 
-Provide a clear, concise, and beautifully formatted Markdown answer. 
+Provide a clear, concise, brief without losing information, and beautifully formatted Markdown answer. 
 If the answer requires general knowledge (like "what glue sticks does a Dremel 930 use?"), seamlessly utilize your general knowledge, but ground it in the item's context if applicable.
 IMPORTANT: Do not use H1 (#) or H2 (##) headers in your response. Use H3 (###) or bold text for sections.
 
