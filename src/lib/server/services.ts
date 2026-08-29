@@ -541,9 +541,5 @@ export async function createItemEntity(params: {
         await logActivity(item.id, 'Location', `Could not assign to location '${missing}' because it no longer exists. Saved without location.`, 'warning');
     }
 
-    const { ioQueue } = await import('$lib/server/queue/index');
-    const { runDuplicateSweep } = await import('$lib/server/matcher');
-    ioQueue.add(() => runDuplicateSweep(item.id, params.inventoryId), { targetType: 'item', targetId: item.id, description: 'Checking for duplicates' }).catch(console.error);
-
     return item;
 }

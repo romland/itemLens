@@ -548,7 +548,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                     </button>
                                 {/if}
                             </div>
-                            <p class="text-sm text-gray-500 m-0 mt-1">This item is not currently stored in any container.</p>
+                            <p class="text-sm text-gray-500 m-0 mt-1">This does not have a home.</p>
                         </div>
                     </div>
                 {/if}

@@ -394,7 +394,7 @@ export default class QRUrlDownloader
     {
         const imageData = await QRUrlDownloader.getImageData(imagePath);
         const qrData = await QRUrlDownloader.decodeQR(imageData);
-        console.log("QR DATA:", qrData);
+        // console.log("QR DATA:", qrData);
 
         if(!qrData) {
             return null;

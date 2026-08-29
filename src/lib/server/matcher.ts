@@ -166,7 +166,7 @@ export function computeIdfMap(dbItems: any[]): Map<string, number> {
 }
 
 function calculateWeightedJaccard(tokensA: string[], tokensB: string[], idfMap?: Map<string, number>): number {
-    if (tokensA.length === 0 && tokensB.length === 0) return 1.0;
+    if (tokensA.length === 0 || tokensB.length === 0) return 0.0;
     let intersection = 0, union = 0;
     const unique = new Set([...tokensA, ...tokensB]);
     for (const t of unique) {
@@ -413,7 +413,12 @@ export function computeMatch(
     try { dbTokens = dbItem.semanticTokens ? JSON.parse(dbItem.semanticTokens) : tokenizeAndStem([dbItem.title, dbItem.description]); } catch(e) {}
 
     const safeScanTokens = Array.isArray(scan.tokens) ? scan.tokens : []; // Failsafe
-    const jaccard = calculateWeightedJaccard(dbTokens, safeScanTokens, idfMap);
+    
+    const ignoreTokens = new Set(['new', 'item', 'untitled', 'product', 'default', 'unknown']);
+    const cleanDbTokens = dbTokens.filter(t => !ignoreTokens.has(t));
+    const cleanScanTokens = safeScanTokens.filter(t => !ignoreTokens.has(t));
+    
+    const jaccard = calculateWeightedJaccard(cleanDbTokens, cleanScanTokens, idfMap);
     
     if (jaccard >= 0.45) { // Lowered slightly from 0.50 to catch 49.4% near-misses
         fuzzyMatches += 3.0;
