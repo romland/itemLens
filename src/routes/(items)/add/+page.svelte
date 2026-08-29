@@ -18,6 +18,8 @@
 	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
 
+    const CONTINUOUS_SCANNING = false;
+
     let saving = false;
     let isDirty = false;
     let hasSubmitted = false;
