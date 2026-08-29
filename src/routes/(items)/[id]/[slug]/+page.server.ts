@@ -133,6 +133,10 @@ export const actions = {
 		const orgData = await request.formData();
 		const itemId = Number(params.id);
 		
+        // CRITICAL SECURITY FIX: Ensure the item belongs to the active inventory before allowing uploads
+        const existingItem = await db.item.findFirst({ where: { id: itemId, inventoryId: locals.activeInventoryId } });
+        if (!existingItem) return fail(404, { error: 'Item not found in current collection.' });
+
 		const { photos } = await savePhotos(Object.fromEntries(orgData), uploadsDiskFolder, uploadsWebFolder, "file.", "");
 		
 		if (photos.length > 0) {
@@ -303,7 +307,7 @@ export const actions = {
     
     incStock: async ({ locals, params }) => {
         if (!locals.user || (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin)) return fail(403);
-        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
+        const item = await db.item.findFirst({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
         if (!item) return fail(404);
         await db.item.update({ where: { id: Number(params.id) }, data: { amount: item.amount === null ? 1 : { increment: 1 } } });
         return { success: true };
@@ -311,7 +315,7 @@ export const actions = {
 
     decStock: async ({ locals, params }) => {
         if (!locals.user || (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin)) return fail(403);
-        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
+        const item = await db.item.findFirst({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
         if (item && item.amount !== null && item.amount > 0) {
             const newAmount = Math.max(0, item.amount - 1);
             await db.item.update({ where: { id: Number(params.id) }, data: { amount: newAmount } });
