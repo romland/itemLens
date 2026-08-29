@@ -22,9 +22,9 @@ export const actions = {
         const data = Object.fromEntries(orgData);
 
 		const containers = [...new Set(orgData.getAll("containers").map(String).filter(c => c.trim().length > 0 && c !== 'undefined'))];
-        const title = data.title as string;
-        const description = data.description as string;
-        const tagcsv = data.tagcsv as string;
+        const title = (data.title as string) || '';
+        const description = (data.description as string) || '';
+        const tagcsv = (data.tagcsv as string) || '';
         const clientId = data.clientId as string;
 
         /*

@@ -20,6 +20,7 @@
     export let item: any = null;
     export let saving = false;
     export let isDirty = false;
+    export let mode: 'single' | 'rapid' = 'single';
     export let pastedDocCount = 0;
 
     onMount(() => {
@@ -55,6 +56,18 @@
 
         if (selectedLocations.length > 0) {
             dispatch('success', `Location auto-set to ${selectedLocations.join(', ')}`);
+        }
+    }
+
+    export function triggerCamera() {
+        const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
+        const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+        const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
+        const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
+        if (fileInput && typeInput) {
+            typeInput.value = 'product';
+            fileInput.setAttribute('capture', 'environment');
+            fileInput.click();
         }
     }
 
@@ -190,6 +203,13 @@
     function handlePendingChange(ev: any) {
         pendingPhotos = ev.detail;
         photoCount = (item?.photos?.length || 0) + pendingPhotos.length;
+        
+        if (mode === 'rapid' && pendingPhotos.length > 0) {
+            setTimeout(() => {
+                const form = document.getElementById('eltForm') as HTMLFormElement;
+                if (form) form.requestSubmit();
+            }, 50);
+        }
     }
 
     function changePendingType(index: number, newType: string) {
@@ -324,17 +344,7 @@
                 {/if}
 
                 <button type="button" class="btn btn-primary btn-circle relative h-28 w-28 shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden p-0 z-10 border-4 border-base-100 group" aria-label="Quick Take Photo"
-                on:click={() => {
-                    const fileInputs = document.querySelectorAll('input[type="file"][name^="file."]');
-                    const fileInput = fileInputs[fileInputs.length - 1] as HTMLInputElement;
-                    const typeInputs = document.querySelectorAll('input[type="hidden"][name^="file.type."]');
-                    const typeInput = typeInputs[typeInputs.length - 1] as HTMLInputElement;
-                    if (fileInput && typeInput) {
-                        typeInput.value = 'product';
-                        fileInput.setAttribute('capture', 'environment');
-                        fileInput.click();
-                    }
-                }}>
+                on:click={triggerCamera}>
                 {#if pendingPhotos.length > 0 && pendingPhotos[pendingPhotos.length - 1].isAnalyzing}
                     <div class="absolute inset-0 bg-base-100/60 backdrop-blur-sm flex items-center justify-center z-10">
                         <span class="loading loading-spinner loading-lg text-primary"></span>

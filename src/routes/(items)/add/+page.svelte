@@ -16,6 +16,7 @@
     import { onMount } from 'svelte';
 	import { notify } from "$lib/client/notifications";
 	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import { ambientLocation } from '$lib/client/ambientContext';
 
     let saving = false;
     let isDirty = false;
@@ -33,14 +34,34 @@
 	let confirmModal: ConfirmModal;
 	let pendingNav: string | null = null;
 
-    // =========================================================================================
-    // TODO: USER PREFERENCES WIRING
-    // In the future, to make this togglable in the UI:
-    // 1. Add `continuousScanning Boolean @default(false)` to the User model in schema.prisma.
-    // 2. Add a toggle in settings.
-    // 3. Read it here via SvelteKit data: `const CONTINUOUS_SCANNING = data.user.continuousScanning;`
-    // =========================================================================================
-    const CONTINUOUS_SCANNING = false;
+    // Rapid Intake State
+    let rapidScanCount = 0;
+    let rapidFileInput: HTMLInputElement;
+    let isRapidSaving = false;
+
+    async function handleRapidFileSelect(e: Event) {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        isRapidSaving = true;
+        const fd = new FormData();
+        fd.append('file.0', file);
+        fd.append('file.type.0', 'product');
+        const rClientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        fd.append('clientId', rClientId);
+        $ambientLocation.forEach(loc => fd.append('containers', loc));
+        try {
+            await saveToQueue('/add', fd);
+            rapidScanCount++;
+            notify('success', 'Item secured in outbox!');
+            window.dispatchEvent(new CustomEvent('outbox-trigger'));
+        } catch (err) {
+            notify('error', 'Failed to capture item.');
+        } finally {
+            isRapidSaving = false;
+            if (rapidFileInput) rapidFileInput.value = '';
+        }
+    }
 
 	beforeNavigate(async ({ cancel, to }) => {
 		if (isDirty && !hasSubmitted && !pendingNav) {
@@ -57,9 +78,9 @@
     export let form: ActionData;
     export let data: PageServerData;
     
-    let mode: 'single' | 'collection' | 'compare' = (data as any).activeAddMode;
+    let mode: 'single' | 'collection' | 'compare' | 'rapid' = (data as any).activeAddMode;
     
-    function setMode(newMode: 'single' | 'collection' | 'compare') {
+    function setMode(newMode: 'single' | 'collection' | 'compare' | 'rapid') {
         mode = newMode;
         document.cookie = `itemlens_add_mode=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
     }
@@ -67,7 +88,7 @@
     onMount(() => {
         // FIX: Bypass SvelteKit layout caching staleness by reading the real browser cookie.
         const match = document.cookie.match(/(?:^|;\s*)itemlens_add_mode=([^;]*)/);
-        if (match && match[1] && ['single', 'collection', 'compare'].includes(match[1])) {
+        if (match && match[1] && ['single', 'collection', 'compare', 'rapid'].includes(match[1])) {
             console.log('[Add Hub] Cookie sync on mount:', match[1]);
             if (mode !== match[1]) mode = match[1] as any;
         }
@@ -130,7 +151,7 @@
     
     
     pageTitle.set("Add new product");
-    $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : "Compare Collection");
+    $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : mode === 'compare' ? "Compare Collection" : "Rapid Intake");
     
 </script>
 
@@ -183,7 +204,7 @@ on:processingComplete={(ev) => {
             }
             isDirty = false;
             setMode('single');
-        }}>Single Item</button>
+        }}>Single</button>
         <button type="button" class="flex-1 btn btn-sm border-none {mode === 'collection' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={async () => {
             if (mode !== 'collection' && isDirty) {
                 const res = await confirmModal.ask('Unsaved Changes', 'You have unsaved changes. Switch modes and lose them?', 'Switch Mode', 'Cancel', true);
@@ -191,12 +212,18 @@ on:processingComplete={(ev) => {
             }
             isDirty = false;
             setMode('collection');
-        }}>Multi-Scan</button>
+        }}>Multi</button>
         
         <button type="button" class="flex-1 btn btn-sm border-none {mode === 'compare' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-primary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
             isDirty = false;
             setMode('compare');
-        }}>Comparison</button>
+        }}>Compare</button>
+        
+        <button type="button" class="flex-1 btn btn-sm border-none {mode === 'rapid' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content font-bold text-secondary' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => {
+            isDirty = false;
+            setMode('rapid');
+            setTimeout(() => rapidFileInput?.click(), 100);
+        }}>Rapid</button>
     </div>
 
     {#if mode === 'single'}
@@ -212,6 +239,38 @@ on:processingComplete={(ev) => {
             on:processingComplete={(ev) => notify(ev.detail.status, ev.detail.message, ev.detail.taskId)}
             />
         </form>
+    {:else if mode === 'rapid'}
+        <div class="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-sm mx-auto px-4 animate-fade-in">
+            <div class="w-32 h-32 bg-base-100 border border-base-200 text-secondary rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl relative">
+                {#if isRapidSaving}
+                    <span class="loading loading-spinner loading-lg"></span>
+                {:else}
+                    <i class="bi bi-lightning-charge-fill text-6xl"></i>
+                    {#if rapidScanCount > 0}
+                        <div class="absolute -top-3 -right-3 bg-success text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md border-[3px] border-base-100 text-lg animate-fade-in">
+                            {rapidScanCount}
+                        </div>
+                    {/if}
+                {/if}
+            </div>
+            <h2 class="text-3xl font-bold mb-3 tracking-tight">Rapid Intake</h2>
+            <p class="text-gray-500 mb-10 text-sm">
+                {#if rapidScanCount > 0}
+                    <strong>{rapidScanCount} item{rapidScanCount === 1 ? '' : 's'}</strong> secured in your outbox.
+                {:else}
+                    Skip the details. Just snap, save, and sort it out later.
+                {/if}
+            </p>
+            <div class="flex flex-col w-full gap-4">
+                <button type="button" class="btn btn-secondary btn-lg w-full rounded-2xl shadow-xl text-lg h-16 active:scale-95 transition-transform" disabled={isRapidSaving} on:click={() => rapidFileInput.click()}>
+                    <i class="bi bi-camera-fill text-2xl mr-2"></i> {#if rapidScanCount > 0}Scan Next Item{:else}Start Scanning{/if}
+                </button>
+                {#if rapidScanCount > 0}
+                    <button type="button" class="btn btn-ghost btn-lg w-full rounded-2xl text-lg h-16 font-semibold" on:click={() => { rapidScanCount = 0; setMode('single'); goto('/', { invalidateAll: true }); }}>I'm Done</button>
+                {/if}
+            </div>
+            <input type="file" bind:this={rapidFileInput} accept="image/*" capture="environment" class="hidden" on:change={handleRapidFileSelect} />
+        </div>
     {:else if mode === 'collection'}
         <BulkTriage 
             bind:this={bulkTriageComponent}
