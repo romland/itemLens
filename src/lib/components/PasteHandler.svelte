@@ -187,6 +187,8 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             
             clipboardQueue = [...clipboardQueue, { type: 'image', label: `Image (${selectedPhotoType})` }];
             dispatch('success', `Added pasted image (${selectedPhotoType})`);
+            dispatch('processingComplete', { taskId: 'instant', status: 'success', message: '' });
+        } else if (pastedType === 'document' && pastedFile) {
             const taskId = Math.random().toString(36).substring(2);
             
             const fileInput = document.createElement('input');
