@@ -54,6 +54,9 @@
         isScanning = true;
         dispatch('processingStart', { message: 'Comparing with your Collection...', taskId: 'compare' });
 
+        let wakeLock: any = null;
+        try { if ('wakeLock' in navigator) wakeLock = await (navigator as any).wakeLock.request('screen'); } catch (err) {}
+
         const fd = new FormData();
         fd.append('file', file);
         fd.append('scopeType', 'all');
@@ -78,6 +81,7 @@
         } finally {
             isScanning = false;
             dispatch('processingComplete', { taskId: 'compare', status: 'success' });
+            if (wakeLock) try { await wakeLock.release(); } catch (err) {}
         }
     }
 

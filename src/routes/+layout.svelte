@@ -29,6 +29,7 @@
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import InstallPrompt from "$lib/components/InstallPrompt.svelte";
 
     let mounted = false;    
     let confirmModal: ConfirmModal;
@@ -539,6 +540,7 @@ $:  isDemoMode =
 </dialog>
 
 <Notifications bind:notifications={$notifications} />
+<InstallPrompt />
 
 <!-- Global Ambient Container Selector -->
 <dialog bind:this={ambientContainerModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">

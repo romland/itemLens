@@ -68,6 +68,9 @@
         isUploadingMessage = "Analyzing items...";
         dispatch('processingStart', { message: isUploadingMessage, taskId: 'bulk' });
         
+        let wakeLock: any = null;
+        try { if ('wakeLock' in navigator) wakeLock = await (navigator as any).wakeLock.request('screen'); } catch (err) {}
+
         const fd = new FormData();
         fd.append('file', file);
 		if (collectionHint.trim()) fd.append('hint', collectionHint.trim());
@@ -141,6 +144,7 @@
         } finally {
             isUploading = false;
             dispatch('processingComplete', { taskId: 'bulk', status: uploadError ? 'error' : 'success' });
+            if (wakeLock) try { await wakeLock.release(); } catch (err) {}
         }
     }
 
