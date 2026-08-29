@@ -316,38 +316,48 @@
         notify('success', 'Link copied to clipboard!');
 	}
 
-    async function copyImageToClipboard() {
-        try {
-            const path = showOriginal ? photo.orgPath : (photo.cropPath || photo.orgPath);
-            const res = await fetch(path);
-            const blob = await res.blob();
-            
-            // The Clipboard API strictly rejects WebP and JPEG in most browsers.
-            // We must transcode it to a pure PNG via Canvas before copying.
-            if (blob.type === 'image/webp' || blob.type === 'image/jpeg') {
-                const img = new Image();
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = URL.createObjectURL(blob); });
-                
-                canvas.width = img.width; canvas.height = img.height;
-                ctx?.drawImage(img, 0, 0);
-                
-                const pngBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-                if (pngBlob) await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
-            } else {
-                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-            }
-            showMenu = false;
-            notify('success', 'Image copied to clipboard!');
-        } catch (e) {
-            console.error('Copy image failed', e);
-            notify('error', 'Failed to copy image');
-        }
-    }
 
     // Rotation State
+	function copyImageToClipboard() {
+		try {
+			const mediaEl = document.getElementById('lightbox-active-media') as HTMLImageElement;
+			if (!mediaEl || mediaEl.tagName !== 'IMG') {
+				notify('error', 'Cannot copy video files');
+				return;
+			}
+
+			// iOS Safari's Clipboard API gesture window is extremely aggressive (~200ms).
+			// Doing a network fetch() inside the Promise takes too long and causes it to fail.
+			// Drawing the already-loaded DOM image directly to Canvas is near-instantaneous.
+			const blobPromise = new Promise<Blob>((resolve, reject) => {
+				const canvas = document.createElement('canvas');
+				canvas.width = mediaEl.naturalWidth || mediaEl.width;
+				canvas.height = mediaEl.naturalHeight || mediaEl.height;
+				const ctx = canvas.getContext('2d', { willReadFrequently: true });
+				
+				ctx?.clearRect(0, 0, canvas.width, canvas.height);
+				ctx?.drawImage(mediaEl, 0, 0);
+				
+				canvas.toBlob((blob) => {
+					if (blob) resolve(blob);
+					else reject(new Error("Canvas export failed"));
+				}, 'image/png');
+			});
+
+			navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+				.then(() => {
+					showMenu = false;
+					notify('success', 'Image copied to clipboard!');
+				})
+				.catch((err) => {
+					console.error('Clipboard write rejected by browser:', err);
+					notify('error', 'Browser blocked clipboard access');
+				});
+		} catch (e) {
+			console.error('Copy image setup failed', e);
+			notify('error', 'Failed to copy image');
+		}
+    }
     let rotation = 0;
     function rotateLeft() { rotation -= 90; }
     function rotateRight() { rotation += 90; }
@@ -516,6 +526,7 @@
                         <video 
                             src="{photo?.orgPath}" 
                             class="object-contain max-w-full max-h-full origin-center select-none rounded-xl"
+                            id="lightbox-active-media"
                             controls autoplay
                             draggable="false"
                         >
@@ -527,6 +538,7 @@
                             src="{(showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)) + cb}"
                             alt="Product preview" 
                             class="object-contain max-w-full max-h-full origin-center select-none"
+                            id="lightbox-active-media"
                             draggable="false"
                         />
                     {/if}
