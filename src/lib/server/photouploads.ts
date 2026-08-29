@@ -93,7 +93,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
         const newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
         const newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
         await heavyMlQueue.add(
-            () => sharp(localPath).webp({ quality: 85 }).toFile(newLocalPath),
+            () => sharp(localPath).rotate().webp({ quality: 85 }).toFile(newLocalPath),
             tracking ? { ...tracking, description: 'Converting image to WebP' } : undefined
         );
         fs.unlinkSync(localPath);
