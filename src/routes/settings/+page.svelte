@@ -7,6 +7,7 @@
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
+    import { clearEntireQueue } from "$lib/client/offlineQueue";
 	import { nukeAllCaches } from "$lib/client/utils";
 	import { notify } from "$lib/client/notifications";
     import DeviceSessionList from "$lib/components/DeviceSessionList.svelte";
@@ -118,8 +119,8 @@
 	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
 		<h3 class="font-bold text-lg mb-4">Device Management</h3>
 		<button type="button" class="btn btn-outline border-base-300 hover:border-error hover:bg-error/10 hover:text-error flex items-center justify-between w-full h-auto py-4 rounded-xl" on:click={async () => {
-			const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, caches, and force a hard reload. Continue?', 'Clear', 'Cancel', true);
-			if (res) nukeAllCaches(true);
+            const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
+            if (res) { await clearEntireQueue(); nukeAllCaches(true); }
 		}}>
 			<div class="flex items-center gap-3">
 				<i class="bi bi-trash3-fill text-xl text-error"></i>

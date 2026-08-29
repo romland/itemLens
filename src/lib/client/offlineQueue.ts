@@ -124,6 +124,15 @@ export async function clearQueueItem(id: number) {
     });
 }
 
+export async function clearEntireQueue() {
+    const db = await initDB();
+    return new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => { refreshStore(); resolve(); };
+    });
+}
+
 export async function updateQueueItemStatus(id: number, status: OutboxItem['status'], retries: number) {
     const db = await initDB();
     return new Promise<void>((resolve) => {

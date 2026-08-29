@@ -18,7 +18,7 @@
     import { onMount, onDestroy } from 'svelte'
     // @ts-expect-error virtual module provided by vite-pwa
     import { pwaInfo } from 'virtual:pwa-info'
-    import { outboxStore, completedOutboxStore, getQueue, clearQueueItem, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
+    import { outboxStore, completedOutboxStore, getQueue, clearQueueItem, clearEntireQueue, deserializeToFormData, updateQueueItemStatus, refreshStore } from '$lib/client/offlineQueue';
 	import { nukeAllCaches } from '$lib/client/utils';
     
 	import Notifications from "$lib/components/Notifications.svelte";
@@ -117,7 +117,11 @@
         try {
             const queue = await getQueue();
             for (const item of queue) {
-                if (item.status === 'syncing') continue;
+                // Since we obtained the exclusive 'itemlens-outbox-sync' Web Lock, we know for a fact 
+                // that no other tab is currently syncing. If an item is stuck in 'syncing' status, 
+                // it's a zombie from a browser crash or closed tab. We should process it.
+                // if (item.status === 'syncing') continue; 
+
                 await updateQueueItemStatus(item.id!, 'syncing', item.retries);
                 try {
                     const fd = deserializeToFormData(item.payload);
@@ -617,8 +621,8 @@ $:  isDemoMode =
 				{#if $page.data.user?.isAdmin}
 					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={async () => { 
 						mobileMenuModal.close(); 
-						const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, caches, and force a hard reload. Continue?', 'Clear', 'Cancel', true);
-						if (res) nukeAllCaches(true);
+                        const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
+                        if (res) { await clearEntireQueue(); nukeAllCaches(true); }
 					}}>
 						<div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
 							<i class="bi bi-trash3 text-xl"></i>
