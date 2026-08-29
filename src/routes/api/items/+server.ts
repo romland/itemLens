@@ -228,13 +228,19 @@ export async function GET({ url, setHeaders, locals }) {
         }
     }
 
-    const [items, totalCount] = await Promise.all([
+    const [rawItems, totalCount] = await Promise.all([
         db.item.findMany(query),
         db.item.count({ where: query.where })
     ]);
 
-    items.forEach((item: any) => {
+    const items = rawItems.map((item: any) => {
+        // Strip massive background data not needed for the list view to save network/cache quota
+        delete item.semanticTokens;
+        if (item.photos) item.photos.forEach((p: any) => { delete p.ocr; delete p.exifData; });
+        if (item.documents) item.documents.forEach((d: any) => { delete d.extracts; });
+
         if (item.duplicateStatus === 'FLAGGED') item.hasDuplicate = true;
+        return item;
     });
 
     const prevPage = page == 1 ? 0 : page - 1;
