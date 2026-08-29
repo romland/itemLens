@@ -32,6 +32,8 @@ If feeling particularly ambitious on a day, you can also:
 - never run into a dead link again, all pages you link to are downloaded and stored locally on your disk
 - **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - **Nudge the Vision Model:** Does it sometimes guess wrong? Look for the ✨ Sparkle icon next to the title in the item details or scan preview. Click it to provide a hint (e.g. "It's an IKEA MITTZON desk") to dramatically improve classification accuracy!
+- **Scraper Limits:** itemLens attempts to fetch and summarize documents linked in text automatically, but restricts depth to one level to prevent infinite spidering. Use `httrack` or similar tools for full website archival.
+- **Empty Category Cleanup:** If you delete or move the last item out of a category, itemLens will automatically vaporize the category and its associated taxonomy rules. This facilitates easy cleanup if you import an item into the wrong collection.
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
 **Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run itemLens. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.

@@ -146,6 +146,7 @@
     $: {
         if(data.item?.photos?.length > 0) {
             productPhotos = data.item.photos.filter((photo) => { return photo.type === "product" });
+            productPhotos.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
             invoicePhotos = data.item.photos.filter((photo) => { return photo.type === "invoice or receipt" });
             otherPhotos =  data.item.photos.filter((photo) => { return photo.type === "information" || photo.type === "other" });
         } else {

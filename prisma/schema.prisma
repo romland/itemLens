@@ -236,6 +236,7 @@ model ItemsInContainer {
 model Photo {
   id          Int      @id @unique @default(autoincrement())
   type        String   @default("product")
+  isPrimary   Boolean  @default(false)
   orgPath     String?
   cropPath    String?
   thumbPath   String?

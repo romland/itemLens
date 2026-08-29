@@ -46,6 +46,9 @@
 
     function getFirstProductPhoto(item) {
         if (item?.photos?.length > 0) {
+            const primary = item.photos.find((p) => p.type === "product" && p.isPrimary);
+            if (primary) return primary;
+
             for (let i = 0; i < item.photos.length; i++) {
                 if (item.photos[i].type === "product") {
                     return item.photos[i];

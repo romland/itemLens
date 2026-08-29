@@ -3,8 +3,7 @@
     import { createEventDispatcher } from 'svelte';
     const dispatch = createEventDispatcher();
 
-    // $: colorSource = item?.colors || item?.photos?.[0]?.colors;
-    $: mainPhoto = item?.photos?.[0] || {};
+    $: mainPhoto = item?.photos?.find(p => p.type === 'product' && p.isPrimary) || item?.photos?.find(p => p.type === 'product') || item?.photos?.[0] || {};
     $: colorSource = item?.colors || mainPhoto?.colors;
     $: cols = colorSource && colorSource.length > 2 ? Object.keys(JSON.parse(colorSource)) : [];
     $: cb = mainPhoto?.updatedAt ? '?v=' + new Date(mainPhoto.updatedAt).getTime() : (item?.updatedAt ? '?v=' + new Date(item.updatedAt).getTime() : '');

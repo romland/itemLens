@@ -382,6 +382,25 @@
             notify('error', 'Failed to copy image');
         }
     }
+
+    async function makePrimary() {
+        try {
+            const res = await fetch('/api/photo-primary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photoId: photo.id, itemId: photo.itemId })
+            });
+            if (res.ok) {
+                photo.isPrimary = true;
+                notify('success', 'Set as key photo!');
+                invalidateAll();
+                showMenu = false;
+            } else {
+                notify('error', 'Failed to set key photo');
+            }
+        } catch (e) { notify('error', 'Network error'); }
+    }
+
     let rotation = 0;
     function rotateLeft() { rotation -= 90; }
     function rotateRight() { rotation += 90; }
@@ -463,6 +482,14 @@
 							<span class="text-xs text-white/90"><i class="bi bi-aspect-ratio mr-1"></i> {fileDetails.dimensions}</span>
 							<span class="text-xs text-white/90"><i class="bi bi-hdd mr-1"></i> {fileDetails.size}</span>
 						</div>
+
+                        {#if photo?.type === 'product' && photo?.id && !photo.isPrimary}
+                            <div class="border-b border-white/10 pb-1 mb-1">
+                                <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl w-full" on:click={makePrimary}>
+                                    <i class="bi bi-star text-lg w-5 opacity-70"></i> Make Key Photo
+                                </button>
+                            </div>
+                        {/if}
 
                         {#if allowCategoryEdit && photo?.type === 'product' && photo?.id}
                             <div class="border-b border-white/10 pb-1 mb-1">
