@@ -19,23 +19,6 @@
     let createInventoryModal: CreateInventoryModal;
 	let confirmModal: ConfirmModal;
 
-    const updateTheme: SubmitFunction = ({ action }) => {
-        const theme = action.searchParams.get('theme');
-
-        if (theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-        }
-
-        return async ({ result, update }) => {
-            // Intercept the server redirect to force a replaceState instead of a history push
-            if (result.type === 'redirect') {
-                await goto(result.location, { replaceState: true, invalidateAll: true });
-            } else {
-                await update();
-            }
-        };        
-    }
-
     const themes = [
         { id: 'rehoboam', name: 'Westworld', icon: 'bi-record-circle' },
         { id: 'matrix', name: 'The Matrix', icon: 'bi-code-square' },
@@ -182,8 +165,8 @@
                 <form method="POST" action="/?/setTheme&theme={theme.id}&redirectTo=/settings" use:enhance={() => {
                     // Instantly apply the theme in the browser while the server saves the cookie
                     document.documentElement.setAttribute('data-theme', theme.id);
-                    return async ({ update }) => {
-                        await update({ reset: false });
+                    return async () => {
+                        // Do nothing! The DOM is updated and the cookie is saved. No navigation needed.
                     };
                 }}>
                     <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border transition-all {currentTheme === theme.id ? 'border-primary ring-2 ring-primary/30 bg-base-300' : 'border-base-300 hover:border-primary/50 bg-base-200 hover:bg-base-300'}">
