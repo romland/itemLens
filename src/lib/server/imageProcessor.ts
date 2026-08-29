@@ -59,7 +59,7 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
         let t0 = performance.now();
         
         try {
-            const orgThumbnail = await sharp(`static${photo.orgPath}`).resize({ width: 256 }).webp({ quality: 80 }).toBuffer();
+            const orgThumbnail = await sharp(`static${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toBuffer();
             fs.writeFileSync(`static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_org_thumb.webp`, orgThumbnail);
             timings.push(`OrgThumb: ${(performance.now() - t0).toFixed(0)}ms`);
         } catch (ex) { console.error("Error generating original thumbnail", ex); }
@@ -123,7 +123,7 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
             } else {
                 // Fallback: Just generate thumbnails and colors from the original un-cropped image
                 t0 = performance.now();
-                await sharp(`static${photo.orgPath}`).resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath);
+                await sharp(`static${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath);
                 updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
                 updates.cropPath = photo.orgPath; // No cutout created
                 timings.push(`Thumb(NoBG): ${(performance.now() - t0).toFixed(0)}ms`);
@@ -168,6 +168,7 @@ export async function extractBoundingBox(
         const filename = getSafeFilename(filenamePrefix, 'crop') + '.webp';
         
         await sharp(sourceLocalPath)
+            .rotate()
             .extract({ left, top, width: boxW, height: boxH })
             .withMetadata()
             .webp({ quality: 85 })
