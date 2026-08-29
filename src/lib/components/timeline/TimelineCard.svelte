@@ -126,7 +126,9 @@
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-bold text-sm text-base-content line-clamp-1 m-0">{doc.title || doc.source}</h4>
                                 <div class="flex items-center gap-3 mt-1.5">
-                                    <a href={doc.source} target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1"><i class="bi bi-globe"></i> Original</a>
+                                    {#if doc.source && doc.source.startsWith('http')}
+                                        <a href="{doc.source}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1 min-w-0 max-w-[150px] sm:max-w-[250px]" title="{doc.source}"><i class="bi bi-globe shrink-0"></i> <span class="truncate normal-case tracking-normal font-mono">{doc.source.replace(/^https?:\/\//, '')}</span></a>
+                                    {/if}
                                     {#if doc.path}
                                         {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
 											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>

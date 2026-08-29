@@ -119,7 +119,8 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                         extractedText = textResult.text;
                         
                         const infoResult = await parser.getInfo();
-                        if (infoResult.info?.Title && infoResult.info.Title.trim()) finalTitle = infoResult.info.Title;
+                        const metaTitle = infoResult.info?.Title?.trim();
+                        if (metaTitle && metaTitle.toLowerCase() !== 'untitled') finalTitle = metaTitle;
                     } catch (e) { console.error("Failed to parse local PDF:", e); } 
                     finally { if (parser) await parser.destroy(); }
                 } else if (ext === 'epub') {

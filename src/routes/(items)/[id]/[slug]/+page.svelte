@@ -823,26 +823,33 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                         {@html alterSummary(doc.summary)}
     
                         <div class="flex justify-between items-center mt-2">
-                            <div class="flex justify-start items-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <div class="flex justify-start items-center gap-3 flex-1 min-w-0 pr-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 shrink-0">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                                 </svg>
                                 
                                 {#if doc.path.toLowerCase().endsWith('.epub')}
-                                    <button type="button" class="btn btn-sm btn-primary rounded-xl" on:click={() => docLightbox.open(doc)}>
+                                        <button type="button" class="btn btn-sm btn-primary rounded-xl shrink-0" on:click={() => docLightbox.open(doc)}>
                                         <i class="bi bi-book"></i> Read Book
                                     </button>
                                 {:else if doc.path.toLowerCase().match(/\.(md|txt)$/i) || doc.type === 'note'}
-                                    <button type="button" class="btn btn-sm btn-secondary rounded-xl shadow-sm" on:click={() => docLightbox.open(doc)}>
+                                        <button type="button" class="btn btn-sm btn-secondary rounded-xl shadow-sm shrink-0" on:click={() => docLightbox.open(doc)}>
                                         <i class="bi bi-file-text"></i> Read Note
                                     </button>
                                 {:else if doc.path.toLowerCase().match(/\.(pdf|html|htm)$/i)}
-                                    <button type="button" class="btn btn-sm btn-outline border-base-300 rounded-xl bg-base-100 shadow-sm hover:border-primary" on:click={() => docLightbox.open(doc)}>
+                                        <button type="button" class="btn btn-sm btn-outline border-base-300 rounded-xl bg-base-100 shadow-sm hover:border-primary shrink-0" on:click={() => docLightbox.open(doc)}>
                                         <i class="bi bi-file-earmark"></i> View Document
                                     </button>
                                 {:else}
-                                    <a href="{doc.path}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium" title="{doc.source}">
+                                    <a href="{doc.path || doc.source}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium shrink-0" title="{doc.source}">
                                         {doc.source}
+                                    </a>
+                                {/if}
+                                    
+                                {#if doc.path && doc.path.match(/\.(epub|md|txt|pdf|html|htm)$/i) && doc.source && doc.source.startsWith('http')}
+                                    <span class="text-gray-300 shrink-0 hidden sm:inline mx-1">•</span>
+                                    <a href="{doc.source}" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-primary hover:underline truncate flex items-center gap-1 min-w-0 max-w-[150px] sm:max-w-[300px]" title="{doc.source}">
+                                        <i class="bi bi-link-45deg text-sm shrink-0"></i> <span class="truncate font-mono">{doc.source.replace(/^https?:\/\//, '')}</span>
                                     </a>
                                 {/if}
                             </div>

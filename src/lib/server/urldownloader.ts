@@ -13,22 +13,25 @@ import { taskManager } from '$lib/server/taskManager';
 import { fetchVideoIfSupported } from './ytdlp';
 import { extractEpubText } from './epub';
 
-export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string)
+export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string, depth: number = 0)
 {
     const targetType = target.itemId ? 'item' : 'note';
     const targetId = target.itemId || target.timelineNoteId || 0;
     const taskId = taskManager.start(targetType, targetId, 'Fetching and parsing linked documents');
     try {  
-      //
-      // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
-      // (this is largely obsolete after I started using client-side QR code scanner)
-      //
-      await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, target.itemId ? { id: target.itemId } : { id: target.timelineNoteId });
+      if (depth === 0) {
+          //
+          // Download all URLs contained in _uploaded_ pictures containing QR codes (TODO: SECURITY?)
+          // (this is largely obsolete after I started using client-side QR code scanner)
+          //
+          await downloadQRURLs(data, diskFolder, webFolder, formPrefix, remoteSite, target.itemId ? { id: target.itemId } : { id: target.timelineNoteId });
+      }
 
       //
       // Download all URLs in the URLs field (TODO: SECURITY?)
       //
-      const lines = (data.urls as string).split("\n");
+      const lines = (data.urls as string || "").split("\n");
+      const deepLinksToFetch: string[] = [];
 
       for(let i = 0; i < lines.length; i++) {
         let rawLine = lines[i].trim();
@@ -76,7 +79,10 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
                   extracts: "[]"
                 }
               });
-          }        
+          } else if (document.path && document.path.trim().length > 0) {
+              console.log(`https://en1.savefrom.net/19wr/ Already downloaded, skipping: ${line}`);
+              continue;
+          }
         } catch (ex) {
           console.error("Error creating document in DB:", ex);
         }
@@ -89,6 +95,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
           } catch (e) {
             console.error(`Error downloading PDF ${line}:`, e);
             await logActivity(target.itemId, 'PDF Download', `Failed to download PDF: ${line}`, 'error');
+            if (document && !document.path) await db.document.delete({ where: { id: document.id } });
           }
           continue; // Skip SingleFile logic
         }
@@ -101,6 +108,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
           } catch (e) {
             console.error(`Error downloading EPUB ${line}:`, e);
             await logActivity(target.itemId, 'EPUB Download', `Failed to download EPUB: ${line}`, 'error');
+            if (document && !document.path) await db.document.delete({ where: { id: document.id } });
           }
           continue; // Skip SingleFile logic
         }
@@ -136,7 +144,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
         if(!str) {
           console.log(`Did not get any result when downloading: ${line}`);
           await logActivity(target.itemId, 'Web Scraper', `Failed to fetch webpage: ${line}`, 'warning');
-          // return;
+          if (document && !document.path) await db.document.delete({ where: { id: document.id } });
           continue;
         }
 
@@ -223,15 +231,20 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
             if (keywords.test(href) || keywords.test(text)) {
                 try {
                     const absUrl = new URL(href, line).href;
-                    await db.document.create({
-                        data: { title: `Found: ${text || href.split('/').pop()}`, source: absUrl, path: '', extracts: '[]', itemId: target.itemId || null, timelineNoteId: target.timelineNoteId || null }
-                    });
-                    await logActivity(target.itemId, 'Web Scraper', `Deep link discovered: ${absUrl}`, 'info');
-                    deepLinksFound++;
+                    if (!deepLinksToFetch.includes(absUrl)) {
+                        deepLinksToFetch.push(absUrl);
+                        await logActivity(target.itemId, 'Web Scraper', `Deep link queued for fetching: ${absUrl}`, 'info');
+                        deepLinksFound++;
+                    }
                 } catch (e) { /* ignore invalid urls */ }
             }
         }      
         console.log("Downloaded explicitly stated URL:", line);
+      }
+      
+      if (depth === 0 && deepLinksToFetch.length > 0) {
+          await logActivity(target.itemId, 'Web Scraper', `Initiating deep scrape for ${deepLinksToFetch.length} discovered links...`, 'info');
+          await downloadAndStoreDocuments(target, remoteSite, { urls: deepLinksToFetch.join('\n') }, diskFolder, webFolder, formPrefix, depth + 1);
       }
     } finally {
         taskManager.end(taskId);
@@ -283,7 +296,12 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
     fs.writeFileSync(`${diskFolder}/${docFilename}.pdf`, pdfBuffer);
     
     let extractedText = "";
-    let pdfTitle = "PDF Document";
+        let pdfTitle = "";
+        
+        // First, check if the deep scraper gave us a nice anchor text label when it found the link
+        const existingDoc = await db.document.findUnique({ where: { id: Number(documentId) }, select: { title: true } });
+        let dbTitle = existingDoc?.title?.trim() || "";
+        if (dbTitle.startsWith('Found: ')) dbTitle = dbTitle.substring(7).trim();
     
     let parser;
     try {
@@ -296,8 +314,20 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
       
       // 3. Extract metadata (returns an InfoResult object)
       const infoResult = await parser.getInfo();
-      if (infoResult.info?.Title) {
-          pdfTitle = infoResult.info.Title;
+          const metaTitle = infoResult.info?.Title?.trim();
+          
+          // Fallback Chain: Metadata -> Scraped Anchor Text -> Decoded Filename
+          if (metaTitle && metaTitle.toLowerCase() !== 'untitled') {
+              pdfTitle = metaTitle;
+          } else if (dbTitle) {
+              pdfTitle = dbTitle;
+          } else {
+              const urlName = url.split('/').pop()?.split('?')[0];
+              if (urlName) {
+                  try {
+                      pdfTitle = decodeURIComponent(urlName).replace(/[-_]/g, ' ').trim();
+                  } catch(e) { pdfTitle = urlName; }
+              }
       }
       
     } catch (e: any) {
@@ -308,6 +338,8 @@ async function handlePdfDownload(url: string, target: { itemId?: number, timelin
           await parser.destroy();
       }
     }
+        
+        if (!pdfTitle) pdfTitle = "PDF Document";
 
     const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
 
@@ -346,7 +378,20 @@ async function handleEpubDownload(url: string, target: { itemId?: number, timeli
     const extractedText = await extractEpubText(localPath);
     const cappedText = extractedText.substring(0, 10000); // Cap for LLM safety
     
-    const epubTitle = url.split('/').pop() || "EPUB Document";
+        let epubTitle = "";
+        const existingDoc = await db.document.findUnique({ where: { id: Number(documentId) }, select: { title: true } });
+        let dbTitle = existingDoc?.title?.trim() || "";
+        if (dbTitle.startsWith('Found: ')) dbTitle = dbTitle.substring(7).trim();
+        
+        if (dbTitle) {
+            epubTitle = dbTitle;
+        } else {
+            const urlName = url.split('/').pop()?.split('?')[0];
+            if (urlName) {
+                try { epubTitle = decodeURIComponent(urlName).replace(/[-_]/g, ' ').trim(); } catch(e) { epubTitle = urlName; }
+            }
+        }
+        if (!epubTitle) epubTitle = "EPUB Document";
     
     await db.document.update({
       where: { id: Number(documentId) },
