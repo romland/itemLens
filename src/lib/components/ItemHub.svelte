@@ -110,7 +110,8 @@
         if (qrScannerCount > 0) dirty = true;
         if (pastedDocCount > 0) dirty = true;
         
-        const initialLocations = item?.locations?.map(l => l.container?.name).sort().join(',') || "";
+        // FIX: If it's a new item, the baseline location is the ambient location, not an empty string.
+        const initialLocations = item ? (item.locations?.map(l => l.container?.name).sort().join(',') || "") : [...$ambientLocation].sort().join(',');
         const currentLocs = [...selectedLocations].sort().join(',');
         if (initialLocations !== currentLocs) dirty = true;
         
