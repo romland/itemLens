@@ -254,13 +254,28 @@ on:processingComplete={(ev) => {
                 {/if}
             </div>
             <h2 class="text-3xl font-bold mb-3 tracking-tight">Rapid Intake</h2>
-            <p class="text-gray-500 mb-10 text-sm">
+            <p class="text-gray-500 mb-6 text-sm">
                 {#if rapidScanCount > 0}
                     <strong>{rapidScanCount} item{rapidScanCount === 1 ? '' : 's'}</strong> secured in your outbox.
                 {:else}
                     Skip the details. Just snap, save, and sort it out later.
                 {/if}
             </p>
+
+            +            <div class="w-full max-w-sm mb-6 bg-base-100 p-4 rounded-2xl border border-base-200 shadow-sm flex flex-col gap-2 text-left">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500"><i class="bi bi-pin-angle-fill mr-1"></i> Default Location (L)</span>
+                    <button type="button" class="btn btn-xs btn-ghost text-primary h-auto min-h-0 py-1" on:click={() => document.getElementById('ambient-container-btn')?.click()}>Change</button>
+                </div>
+                <div class="font-medium text-sm text-base-content truncate">
+                    {#if $ambientLocation.length > 0}
+                        {$ambientLocation.join(', ')}
+                    {:else}
+                        <span class="text-gray-400 italic">Unassigned</span>
+                    {/if}
+                </div>
+            </div>
+
             <div class="flex flex-col w-full gap-4">
                 <button type="button" class="btn btn-secondary btn-lg w-full rounded-2xl shadow-xl text-lg h-16 active:scale-95 transition-transform" disabled={isRapidSaving} on:click={() => rapidFileInput.click()}>
                     <i class="bi bi-camera-fill text-2xl mr-2"></i> {#if rapidScanCount > 0}Scan Next Item{:else}Start Scanning{/if}
