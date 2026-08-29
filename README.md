@@ -4,7 +4,7 @@
 Inventory management (for at home). There are many like it, but this one is mine.
 
 The primary use is:
-`Do I have that, where the heck is it?` and `Why did I buy it?`
+`Do I have that, where the heck is it?` and `What does it do and why did I buy it?`
 
 I am no fan of data-entry, so, adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into making
