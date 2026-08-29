@@ -19,6 +19,7 @@
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import { notify } from "$lib/client/notifications";
     import { dev } from '$app/environment';
+    import { onMount } from 'svelte';
 
     export let data: PageServerData;
     
@@ -123,6 +124,23 @@
         finally { isMoving = false; moveModal.close(); }
     }
 
+    onMount(() => {
+        const handleInc = () => { 
+            if (data.item?.inventory?.enableQuickStock && data.canEdit) document.getElementById('incStockBtn')?.click(); 
+            else console.log('[QuickStock] Increment ignored. Enabled:', data.item?.inventory?.enableQuickStock, 'canEdit:', data.canEdit);
+        };
+        const handleDec = () => { 
+            if (data.item?.inventory?.enableQuickStock && data.canEdit) document.getElementById('decStockBtn')?.click(); 
+            else console.log('[QuickStock] Decrement ignored. Enabled:', data.item?.inventory?.enableQuickStock, 'canEdit:', data.canEdit);
+        };
+        window.addEventListener('shortcut:stockInc', handleInc);
+        window.addEventListener('shortcut:stockDec', handleDec);
+        return () => {
+            window.removeEventListener('shortcut:stockInc', handleInc);
+            window.removeEventListener('shortcut:stockDec', handleDec);
+        };
+    });
+
     // Svelte Reactivity: Whenever SvelteKit's 'data' prop updates (via form action or SSE invalidateAll),
     // this block automatically re-runs and updates our local state instantly.
     $: {
@@ -223,6 +241,28 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 }
 
 </script>
+
+<form id="incStockForm" method="POST" action="?/incStock" style="display: none;" use:enhance={() => {
+    // Optimistic UI: Update the number instantly without waiting for the server
+    if (data.item.amount === null) data.item.amount = 1;
+    else data.item.amount += 1;
+    return async ({ update }) => {
+        await update({ reset: false });
+        notify('success', 'Stock increased (+1)');
+    };
+}}>
+    <button id="incStockBtn" type="submit"></button>
+</form>
+<form id="decStockForm" method="POST" action="?/decStock" style="display: none;" use:enhance={() => {
+    // Optimistic UI: Update the number instantly without waiting for the server
+    if (data.item.amount !== null && data.item.amount > 0) data.item.amount -= 1;
+    return async ({ update }) => {
+        await update({ reset: false });
+        notify('info', 'Stock decreased (-1)');
+    };
+}}>
+    <button id="decStockBtn" type="submit"></button>
+</form>
 
 <PasteHandler 
     bind:this={pasteHandler}
@@ -450,9 +490,17 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             <div class="md:hidden bg-base-100 shadow-sm border border-base-200 rounded-xl p-3 flex flex-col gap-3">
                 <div class="flex items-center gap-3">
                     <!-- Stock Box -->
-                    <div class="flex flex-col justify-center bg-base-200/60 px-3 py-2 rounded-xl text-center shrink-0 min-w-[4.5rem]">
+                    <div class="flex flex-col justify-center bg-base-200/60 px-2 py-2 rounded-xl text-center shrink-0 min-w-[4.5rem]">
                         <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Stock</div>
-                        <div class="text-2xl font-bold leading-tight">{data.item.amount !== null ? data.item.amount : '-'}</div>
+                        <div class="text-2xl font-bold leading-tight flex items-center justify-center gap-1">
+                            {#if data.item?.inventory?.enableQuickStock && data.canEdit}
+                                <button class="btn btn-xs btn-ghost p-0 w-5 h-5 -ml-1" on:click={() => document.getElementById('decStockBtn')?.click()}><i class="bi bi-dash"></i></button>
+                            {/if}
+                            <span>{data.item.amount !== null ? data.item.amount : '-'}</span>
+                            {#if data.item?.inventory?.enableQuickStock && data.canEdit}
+                                <button class="btn btn-xs btn-ghost p-0 w-5 h-5 -mr-1" on:click={() => document.getElementById('incStockBtn')?.click()}><i class="bi bi-plus"></i></button>
+                            {/if}
+                        </div>
                     </div>
 
                     <!-- Container (First location) -->
@@ -522,9 +570,15 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                         <div class="stat-title">
                             <span class="text-xs">Stock</span>
                         </div>
-                        <div class="stat-value text-secondary">
-                            {#if data.item.amount !== null}
-                                {data.item.amount}
+                        <div class="stat-value text-secondary flex items-center gap-2">
+                            {#if data.item?.inventory?.enableQuickStock && data.canEdit}
+                                <button class="btn btn-sm btn-ghost p-0 w-8 h-8" on:click={() => document.getElementById('decStockBtn')?.click()}><i class="bi bi-dash"></i></button>
+                            {/if}
+                            <span>
+                                {#if data.item.amount !== null}{data.item.amount}{:else}-{/if}
+                            </span>
+                            {#if data.item?.inventory?.enableQuickStock && data.canEdit}
+                                <button class="btn btn-sm btn-ghost p-0 w-8 h-8" on:click={() => document.getElementById('incStockBtn')?.click()}><i class="bi bi-plus"></i></button>
                             {/if}
                         </div>
                         <div class="stat-desc">&nbsp;</div>

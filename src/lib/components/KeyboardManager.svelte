@@ -5,22 +5,19 @@
     export let preferences = '{}';
     
     $: keymap = (() => {
+        const defaults = {
+            newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p', 
+            editItem: 'e', setDefaultContainer: 'l', goHome: 'h',
+            tab1: '1', tab2: '2', tab3: '3', tab4: '4',
+            stockInc: '+', stockDec: '-'
+        };
         try { 
             const prefs = JSON.parse(preferences || '{}');
-            return prefs.shortcuts || {
-                newSingle: 'n',
-                newCollection: 'c',
-                settings: 's',
-                profile: 'p', 
-                editItem: 'e',
-                setDefaultContainer: 'l',
-                goHome: 'h',
-                tab1: '1',
-                tab2: '2',
-                tab3: '3',
-                tab4: '4'
+            return {
+                ...defaults,
+                ...(prefs.shortcuts || {})
             };
-        } catch { return {}; }
+        } catch { return defaults; }
     })();
 
     function handleKeydown(e: KeyboardEvent) {
@@ -28,13 +25,34 @@
         const activeTag = (document.activeElement as HTMLElement)?.tagName;
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || (document.activeElement as HTMLElement)?.isContentEditable) return;
         
-        // Abort if modifier keys are held (we want raw single keys)
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // Ignore standalone modifier presses
+        if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
         
-        const key = e.key.toLowerCase();
+        let combo = [];
+        if (e.ctrlKey) combo.push('ctrl');
+        if (e.altKey) combo.push('alt');
+        if (e.metaKey) combo.push('meta');
         
-        switch (key) {
-            case keymap.newSingle:
+        // Only add 'shift' if it's a standard letter. Symbols like '+' are already shifted!
+        if (e.shiftKey && e.key.toLowerCase() !== e.key.toUpperCase()) {
+            combo.push('shift');
+        }
+        combo.push(e.key.toLowerCase());
+        
+        const pressedCombo = combo.join('+');
+        let matchedAction = null;
+        
+        for (const [action, shortcut] of Object.entries(keymap)) {
+            if (shortcut === pressedCombo) {
+                matchedAction = action;
+                break;
+            }
+        }
+        
+        if (!matchedAction) return;
+        
+        switch (matchedAction) {
+            case 'newSingle':
                 e.preventDefault();
                 console.log('[Keybind] Shortcut pressed: New Single');
                 document.cookie = `itemlens_add_mode=single; path=/; max-age=31536000`;
@@ -46,7 +64,7 @@
                     });
                 }
                 break;
-            case keymap.newCollection:
+            case 'newCollection':
                 e.preventDefault();
                 console.log('[Keybind] Shortcut pressed: New Multi-Scan');
                 document.cookie = `itemlens_add_mode=collection; path=/; max-age=31536000`;
@@ -58,34 +76,42 @@
                     });
                 }
                 break;
-            case keymap.goHome:
+            case 'goHome':
                 e.preventDefault();
                 goto('/');
                 break;
-            case keymap.settings:
+            case 'settings':
                 e.preventDefault();
                 goto('/settings');
                 break;
-            case keymap.profile:
+            case 'profile':
                 e.preventDefault();
                 document.getElementById('profile-menu-btn')?.click();
                 break;
-            case keymap.editItem:
+            case 'editItem':
                 e.preventDefault();
                 // Regex checks if we are on a specific item view route (/[id]/[slug])
                 if ($page.url.pathname.match(/^\/\d+\/[\w-]+$/)) {
                     goto($page.url.pathname.replace(/\/[^\/]+$/, '/edit'));
                 }
                 break;
-            case keymap.setDefaultContainer:
+            case 'setDefaultContainer':
                 e.preventDefault();
                 document.getElementById('ambient-container-btn')?.click();
                 break;
             // Broadcast contextual tabs to ItemHub
-            case keymap.tab1: window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'photos' })); break;
-            case keymap.tab2: window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'location' })); break;
-            case keymap.tab3: window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'details' })); break;
-            case keymap.tab4: window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'links' })); break;
+            case 'tab1': window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'photos' })); break;
+            case 'tab2': window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'location' })); break;
+            case 'tab3': window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'details' })); break;
+            case 'tab4': window.dispatchEvent(new CustomEvent('shortcut:tab', { detail: 'links' })); break;
+            case 'stockInc': 
+                e.preventDefault(); 
+                window.dispatchEvent(new CustomEvent('shortcut:stockInc')); 
+                break;
+            case 'stockDec': 
+                e.preventDefault(); 
+                window.dispatchEvent(new CustomEvent('shortcut:stockDec')); 
+                break;
         }
     }
 </script>

@@ -93,11 +93,31 @@
     let editUserId: number | null = null;
 
     let currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
-    let shortcuts = currentPrefs.shortcuts || {
-        newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p', 
+    let shortcuts = {
+        newSingle: 'n', newCollection: 'c', settings: 's', profile: 'p',
         editItem: 'e', setDefaultContainer: 'l', goHome: 'h',
-        tab1: '1', tab2: '2', tab3: '3', tab4: '4'
+        tab1: '1', tab2: '2', tab3: '3', tab4: '4',
+        stockInc: '+', stockDec: '-',
+        ...(currentPrefs.shortcuts || {})
     };
+
+    function recordKey(e: KeyboardEvent, id: string) {
+        e.preventDefault();
+        // Ignore standalone modifier presses
+        if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+        let combo = [];
+        if (e.ctrlKey) combo.push('ctrl');
+        if (e.altKey) combo.push('alt');
+        if (e.metaKey) combo.push('meta');
+        
+        // Only add 'shift' if it's a standard letter. Symbols like '+' are already shifted!
+        if (e.shiftKey && e.key.toLowerCase() !== e.key.toUpperCase()) {
+            combo.push('shift');
+        }
+        combo.push(e.key.toLowerCase());
+        shortcuts[id] = combo.join('+');
+        shortcuts = shortcuts; // Trigger Svelte reactivity
+    }
 
     let storageMetrics: any = null;
     let loadingStorage = false;
@@ -192,11 +212,13 @@
                     { id: 'tab1', label: 'Edit Hub: Photos' },
                     { id: 'tab2', label: 'Edit Hub: Location' },
                     { id: 'tab3', label: 'Edit Hub: Details' },
-                    { id: 'tab4', label: 'Edit Hub: Links' }
+                    { id: 'tab4', label: 'Edit Hub: Links' },
+                    { id: 'stockInc', label: 'Stock Up (+)' },
+                    { id: 'stockDec', label: 'Stock Down (-)' }
                 ] as sc}
                     <div class="flex justify-between items-center bg-base-200/50 p-2 px-3 rounded-lg border border-base-200">
                         <span class="text-sm font-semibold">{sc.label}</span>
-                        <input type="text" class="input input-xs input-bordered w-12 text-center uppercase font-mono bg-base-100" maxlength="1" bind:value={shortcuts[sc.id]} />
+                        <input type="text" class="input input-xs input-bordered w-32 text-center font-mono bg-base-100 cursor-pointer" readonly placeholder="Press keys..." on:keydown={(e) => recordKey(e, sc.id)} value={shortcuts[sc.id] || ''} />
                     </div>
                 {/each}
             </div>
@@ -440,6 +462,13 @@
                                         <input type="hidden" name="archiveSingleScans" value={(!v.archiveSingleScans).toString()}>
                                         <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.archiveSingleScans} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
                                         <span class="text-xs text-gray-500 font-medium">Save backup pictures of single item scans to Notebook</span>
+                                    </form>
+
+                                    <form method="POST" action="?/toggleQuickStock" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <input type="hidden" name="enableQuickStock" value={(!v.enableQuickStock).toString()}>
+                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.enableQuickStock} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+                                        <span class="text-xs text-gray-500 font-medium">Enable Quick Stock adjustment (+ / -)</span>
                                     </form>
 
                                     <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">

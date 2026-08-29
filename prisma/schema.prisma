@@ -84,6 +84,7 @@ model Inventory {
   enablePaddleOCR     Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
   duplicateStrategy   String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   archiveSingleScans  Boolean @default(false) // Whether to automatically archive single scans to the Notebook
+  enableQuickStock    Boolean @default(false) // Whether quick stock adjustment buttons/hotkeys are active
   containerMode       String @default("scan") // "scan" or "select" - defaults selector to camera or list
   templateFields      TemplateField[]
 

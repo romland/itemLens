@@ -33,6 +33,7 @@ export const load = async ({ locals, cookies }) => {
                 duplicateStrategy: true,
                 containerMode: true,
                 archiveSingleScans: true,
+                enableQuickStock: true,
                 templateFields: {
                     select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
                 },
@@ -415,6 +416,18 @@ export const actions = {
         const allow = data.get('archiveSingleScans') === 'true';
         await db.inventory.update({ where: { id }, data: { archiveSingleScans: allow } });
         return { success: true, message: "Archive setting updated." };
+    },
+
+    toggleQuickStock: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+        const allow = data.get('enableQuickStock') === 'true';
+        await db.inventory.update({ where: { id }, data: { enableQuickStock: allow } });
+        return { success: true, message: "Quick stock settings updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {

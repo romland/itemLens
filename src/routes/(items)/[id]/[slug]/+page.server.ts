@@ -299,6 +299,24 @@ export const actions = {
             });
         }
         return { success: true };
+    },
+    
+    incStock: async ({ locals, params }) => {
+        if (!locals.user || (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin)) return fail(403);
+        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
+        if (!item) return fail(404);
+        await db.item.update({ where: { id: Number(params.id) }, data: { amount: item.amount === null ? 1 : { increment: 1 } } });
+        return { success: true };
+    },
+
+    decStock: async ({ locals, params }) => {
+        if (!locals.user || (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin)) return fail(403);
+        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId } });
+        if (item && item.amount !== null && item.amount > 0) {
+            const newAmount = Math.max(0, item.amount - 1);
+            await db.item.update({ where: { id: Number(params.id) }, data: { amount: newAmount } });
+        }
+        return { success: true };
     }
 
 } satisfies Actions;
