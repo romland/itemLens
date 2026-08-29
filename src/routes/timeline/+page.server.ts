@@ -46,6 +46,7 @@ export const actions = {
         const linkedIds = formData.getAll('linkedItemIds[]').map(id => ({ id: Number(id) }));
         const pastedUrls = formData.getAll("pasted_urls[]") as string[];
         const preDocsRaw = formData.getAll("preprocessed_docs[]");
+        const pastedDocsRaw = formData.getAll("pasted_documents[]");
 
         for (const url of pastedUrls) {
             if (!content.includes(url)) content += (content.length > 0 ? "\n" : "") + url;
@@ -82,7 +83,9 @@ export const actions = {
             photosToConnect = photos;
         }
 
-        if (!content && photosToConnect.length === 0 && linkedIds.length === 0 && preDocsRaw.length === 0) {
+        const hasUploadedDocs = Array.from(formData.keys()).some(k => k.startsWith('uploaded_document_file.'));
+
+        if (!content && photosToConnect.length === 0 && linkedIds.length === 0 && preDocsRaw.length === 0 && pastedDocsRaw.length === 0 && !hasUploadedDocs) {
             return fail(400, { error: true, message: "Note cannot be empty." });
         }
 
