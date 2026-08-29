@@ -238,20 +238,30 @@
     });
 
     onNavigate((navigation) => {
-        // API only supported by Chromium as yet? (At least not Firefox or iOS Safari :/ )
-        // https://caniuse.com/view-transitions
-        //
-        // Safari: https://github.com/WebKit/standards-positions/issues/48
-        // Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1823896
         if (!document.startViewTransition) {
-            console.warn("No startViewTransition");
             return;
         }
 
+        // Bypassing View Transitions on popstate allows the native iOS swipe-back
+        // snapshot to smoothly handoff without CSS animations jerking it around.
+        if (navigation.type === 'popstate') return;
+
+        // Determine if we're programmatically going backwards
+        if (navigation.delta != null && navigation.delta < 0) {
+            document.documentElement.classList.add('back-transition');
+        } else {
+            document.documentElement.classList.remove('back-transition');
+        }
+
         return new Promise((resolve) => {
-            document.startViewTransition(async () => {
+            const transition = document.startViewTransition(async () => {
                 resolve();
                 await navigation.complete;
+            });
+
+            // Clean up the class after the animation completes
+            transition.finished.finally(() => {
+                document.documentElement.classList.remove('back-transition');
             });
         });
     });    
