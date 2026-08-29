@@ -1,6 +1,7 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
     import { createEventDispatcher } from "svelte";
+	import { ARCHETYPES } from "$lib/shared/constants";
 
     const dispatch = createEventDispatcher();
     let modal: HTMLDialogElement;
@@ -21,45 +22,6 @@
     // 2. The LLM prompts (src/lib/server/ontology.ts)
     // =============================================================================
     let selectedArchetype = 'hardware';
-
-    // Defines the UI representation of the archetypes and their backend defaults
-    const archetypes = [
-        { 
-            id: 'hardware', name: 'Hardware & Equipment', icon: 'bi-tools', 
-            examples: 'Cameras, instruments, sports, electronics, tools, laptops, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Automatically generates a dynamic schema based on item properties'}] 
-        },
-        { 
-            id: 'apparel', name: 'Apparel & Soft Goods', icon: 'bi-handbag', 
-            examples: 'Clothes, shoes, scarves, belts, bags, textiles, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}, {label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images to find multiple distinct items'}] 
-        },
-        { 
-            id: 'media', name: 'Media & Publications', icon: 'bi-book', 
-            examples: 'Books, comics, CDs, DVDs, vinyls, games, etc.', 
-            defaults: [{label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images'}, {label: 'No BG Removal', icon: 'bi-image-fill', highlight: false, tooltip: 'Leaves the background intact, better for books and flat media'}] 
-        },
-        { 
-            id: 'consumables', name: 'Consumables & Pantry', icon: 'bi-basket', 
-            examples: 'Whiskys, wines, groceries, canned veggies, spices, etc', 
-            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false, tooltip: 'Standard default extraction'}] 
-        },
-        { 
-            id: 'collectibles', name: 'Valuables/Collectibles', icon: 'bi-gem', 
-            examples: 'Coins, stamps, cards, sculptures, toys, Lego, posters, pet rocks, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}, {label: 'Deep Scan', icon: 'bi-search', highlight: true, tooltip: 'Analyzes bulk images'}] 
-        },
-        { 
-            id: 'natural', name: 'Natural Specimens', icon: 'bi-tree', 
-            examples: 'Plants, rocks, crystals, seashells, fossils, etc.', 
-            defaults: [{label: 'AI Taxonomy', icon: 'bi-diagram-3', highlight: true, tooltip: 'Generates schemas'}] 
-        },
-        { 
-            id: 'generic', name: 'Generic / Mixed', icon: 'bi-box-seam', 
-            examples: 'A mix of various unrelated items.', 
-            defaults: [{label: 'Standard', icon: 'bi-gear', highlight: false, tooltip: 'Standard default extraction'}] 
-        }
-    ];
 
     function handleEnhance() {
         return async ({ result, update }: any) => {
@@ -103,7 +65,7 @@
                 <div>
                     <label class="label"><span class="label-text font-semibold text-lg">Select Archetype</span></label>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                        {#each archetypes as type}
+						{#each ARCHETYPES as type}
                             <label class="cursor-pointer relative">
                                 <input type="radio" name="archetype" value={type.id} bind:group={selectedArchetype} class="peer sr-only" />
                                 <div class="card bg-base-100 border-2 transition-all duration-200 h-full p-4 peer-checked:border-primary peer-checked:shadow-[0_0_15px_rgba(var(--p),0.2)] peer-checked:bg-primary/5 border-base-200 hover:border-primary/50">

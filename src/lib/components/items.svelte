@@ -224,8 +224,7 @@
                             <div class="flex flex-col gap-1 min-w-[4rem]">
                                 {#if item.locations}
                                     {#each item.locations as loc}
-                                        <div class="badge badge-ghost badge-sm w-16 overflow-hidden shrink-0">
-                                            <a href="/container/{loc.container.name.replace(/ /g, '-')}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
+                                        <div class="badge badge-ghost badge-sm w-20 overflow-hidden shrink-0">
                                             <a href="/container/{encodeURIComponent(loc.container.name)}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
                                         </div>
                                     {/each}
