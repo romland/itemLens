@@ -19,3 +19,4 @@ prompt.txt
 old
 rootCA.crt
 apply-llm.sh
+services/rembg-data/

@@ -3,8 +3,12 @@ services:
     container_name: itemlens-rembg
     image: danielgatis/rembg
     command: s --no-ui
+    environment:
+      - OMP_NUM_THREADS=2
     ports:
       - "7000:7000"
+    volumes:
+      - ./rembg-data:/root/.rembg
     restart: unless-stopped
 
   paddleocr:

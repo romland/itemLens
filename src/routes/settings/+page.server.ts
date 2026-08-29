@@ -27,6 +27,7 @@ export const load = async ({ locals, cookies }) => {
                 extractExif: true,
                 deepScanCollections: true,
                 bgRemovalEnabled: true,
+                bgRemovalModel: true,
                 bgRemovalPreCrop: true,
                 enablePaddleOCR: true,
                 duplicateStrategy: true,
@@ -334,6 +335,19 @@ export const actions = {
         const allow = data.get('bgRemovalEnabled') === 'true';
         await db.inventory.update({ where: { id }, data: { bgRemovalEnabled: allow } });
         return { success: true, message: "Background removal settings updated." };
+    },
+
+    toggleBgRemovalModel: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
+        const model = data.get('bgRemovalModel') as string;
+        await db.inventory.update({ where: { id }, data: { bgRemovalModel: model } });
+        return { success: true, message: "Background removal model updated." };
     },
 
     toggleBgPreCrop: async ({ request, locals }) => {

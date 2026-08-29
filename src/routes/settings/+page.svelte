@@ -413,6 +413,15 @@
                                         <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
                                         <span class="text-xs text-gray-500 font-medium">Remove image backgrounds</span>
                                     </form>
+                                    <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'u2net'}>
+                                            <option value="bria-rmbg">BRIA v2.0 (Slow / Best Quality)</option>
+                                            <option value="isnet-general-use">ISNet (Balanced)</option>
+                                            <option value="u2net">U2Net (Fast / Moderate)</option>
+                                        </select>
+                                        <span class="text-xs text-gray-500 font-medium" class:opacity-50={!v.bgRemovalEnabled}>Background removal model</span>
+                                    </form>
                                     <form method="POST" action="?/toggleBgPreCrop" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
                                         <input type="hidden" name="bgRemovalPreCrop" value={(!v.bgRemovalPreCrop).toString()}>

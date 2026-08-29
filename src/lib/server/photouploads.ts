@@ -57,9 +57,10 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let exifDataJson: string | null = null;
     let bgRemovalEnabled = true;
     let bgRemovalPreCrop = false;
+    let bgRemovalModel = 'u2net';
     let enablePaddleOCR = true;
     try {
-        const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true, enablePaddleOCR: true }});
+        const vault = await db.inventory.findUnique({ where: { id: inventoryId }, select: { extractExif: true, bgRemovalEnabled: true, bgRemovalPreCrop: true, enablePaddleOCR: true, bgRemovalModel: true }});
         if (vault?.extractExif) {
             const metadata = await sharp(localPath).metadata();
             if (metadata.exif) {
@@ -81,6 +82,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
         }
         bgRemovalEnabled = vault?.bgRemovalEnabled ?? true;
         bgRemovalPreCrop = vault?.bgRemovalPreCrop ?? false;
+        bgRemovalModel = vault?.bgRemovalModel ?? 'u2net';
         enablePaddleOCR = vault?.enablePaddleOCR ?? true;
     } catch(e) { console.error("[Background Task] EXIF extraction failed:", e); }
     
@@ -156,7 +158,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
                 return null; // Gracefully degrade, allowing the queue to unlock and continue
             }
         }, tracking ? { ...tracking, description: 'Extracting text (OCR)' } : undefined) : Promise.resolve(null),
-        generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled)
+    generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, bgRemovalPreCrop ? foregroundBox : null, bgRemovalEnabled, bgRemovalModel)
     ]);
     
     // 3. RUN INVOICE EXTRACTION (Must run after OCR completes)
