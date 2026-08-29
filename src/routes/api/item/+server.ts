@@ -161,8 +161,8 @@ export async function PATCH({ request, locals }) {
     const exists = await db.container.findUnique({ where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } }});
     
     if (exists) {
-        await db.item.updateMany({
-            where: { id: itemId, inventoryId: locals.activeInventoryId },
+        await db.item.update({
+            where: { id: itemId },
             data: {
                 locations: {
                     deleteMany: {},

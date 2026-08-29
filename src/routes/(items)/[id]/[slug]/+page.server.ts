@@ -84,7 +84,8 @@ export const load = (async ({ locals, params }) => {
 		activeTasks: taskManager.getTasks('item', item.id),
 		categories,
 		duplicateItemDetails,
-        activeSchema
+        activeSchema,
+		canEdit: locals.role === 'EDITOR' || locals.role === 'OWNER' || locals.user.isAdmin
 	};
 }) satisfies PageServerLoad;
 

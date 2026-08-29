@@ -476,6 +476,19 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                                 <div class="text-xs text-gray-500 leading-snug line-clamp-1 mt-0.5">{loc.container?.parent?.description || loc.container?.description || 'No description'}</div>
                             </div>
                         </div>
+                    {:else}
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-dashed border-base-300 bg-base-50 flex items-center justify-center">
+                                <i class="bi bi-pin-map text-2xl text-gray-400"></i>
+                            </div>
+                            <div class="flex flex-col justify-center min-w-0">
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold leading-none mb-0.5">Location</div>
+                                <div class="font-bold text-sm leading-tight truncate text-warning">Unassigned</div>
+                                {#if data.canEdit}
+                                    <button class="text-[11px] font-bold text-primary hover:underline text-left mt-0.5 w-max shrink-0 whitespace-nowrap" on:click={() => openMoveModal()}>+ Assign</button>
+                                {/if}
+                            </div>
+                        </div>
                     {/if}
                 </div>
 
@@ -517,6 +530,28 @@ $: if (data.duplicateItemDetails?.debugTrace) {
                         <div class="stat-desc">&nbsp;</div>
                     </div>
                 </div>
+
+                {#if data.item.locations.length === 0}
+                    <div class="card bg-base-100 shadow-sm border border-dashed border-base-300 w-full overflow-hidden">
+                        <figure class="w-full h-20 border-b border-dashed border-base-300 bg-base-50 m-0 flex items-center justify-center">
+                            <i class="bi bi-pin-map text-4xl text-gray-400"></i>
+                        </figure>
+                        <div class="card-body p-4 gap-1 relative">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Location</div>
+                                    <div class="card-title text-lg m-0 text-warning leading-none">Unassigned</div>
+                                </div>
+                                {#if data.canEdit}
+                                    <button class="btn btn-sm btn-outline border-base-300 rounded-xl hover:border-primary text-xs shrink-0 whitespace-nowrap" on:click={() => openMoveModal()}>
+                                        <i class="bi bi-pin-map-fill"></i> Assign
+                                    </button>
+                                {/if}
+                            </div>
+                            <p class="text-sm text-gray-500 m-0 mt-1">This item is not currently stored in any container.</p>
+                        </div>
+                    </div>
+                {/if}
 
                 {#each data.item.locations as loc, i}
                     <div class="card bg-base-100 shadow-sm border border-base-200 w-full overflow-hidden">
