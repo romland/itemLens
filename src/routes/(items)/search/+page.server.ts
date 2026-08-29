@@ -82,12 +82,16 @@ export const actions = {
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
 
 		const data = await request.formData();
-		const itemIds = data.getAll('itemIds[]').map(Number);
+        const rawItemIds = data.getAll('itemIds[]').map(Number);
 		const action = data.get('bulkAction') as string;
 		const value = data.get('bulkValue') as string;
 
-		if (itemIds.length === 0) return fail(400, { message: 'No items selected' });
+        if (rawItemIds.length === 0) return fail(400, { message: 'No items selected' });
 		if (!value || value.trim() === '') return fail(400, { message: 'Value cannot be empty' });
+
+        const validItems = await db.item.findMany({ where: { id: { in: rawItemIds }, inventoryId: locals.activeInventoryId }, select: { id: true } });
+        const itemIds = validItems.map(i => i.id);
+        if (itemIds.length === 0) return fail(400, { message: 'No valid items selected' });
 
 		if (action === 'addTag') {
 			const { getTagIds } = await import('$lib/server/services');

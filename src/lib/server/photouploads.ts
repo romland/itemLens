@@ -589,6 +589,9 @@ export async function savePhotos(
         remoteFilesPromises = externalUrls.map(async (urlWithType, index) => {
             const [type, url] = urlWithType.split(' ')
             try {
+                if (!QRUrlDownloader.isURL(url)) {
+                    throw new Error("Invalid or unsafe URL");
+                }
                 const response = await fetch(url);
                 const arrayBuffer = await response.arrayBuffer();
                 

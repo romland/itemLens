@@ -194,10 +194,10 @@ export const actions = {
 		const sourceId = Number(params.id);
 		
 		if (targetId && sourceId) {
-			const sourceItem = await db.item.findUnique({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { locations: true } });
+            const sourceItem = await db.item.findFirst({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { locations: true } });
 			if (!sourceItem) return fail(404, { message: 'Item not found' });
 			
-            const targetItem = await db.item.findUnique({ where: { id: targetId, inventoryId: locals.activeInventoryId } });
+            const targetItem = await db.item.findFirst({ where: { id: targetId, inventoryId: locals.activeInventoryId } });
 			if (!targetItem) return fail(404, { message: 'Target item not found' });
 			
 			await db.item.update({
@@ -261,7 +261,7 @@ export const actions = {
         if (!locals.user) return fail(401, { error: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: 'Forbidden' });
         
-        const item = await db.item.findUnique({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId }, include: { photos: true } });
+        const item = await db.item.findFirst({ where: { id: Number(params.id), inventoryId: locals.activeInventoryId }, include: { photos: true } });
         if (item) {
             // Clean up DB corruption from previously saved cache-busters before retrying
             for (const photo of item.photos) {

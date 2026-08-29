@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
             // 1. Context Preservation: Update the pre-created notebook entry
             if (noteId) {
-                await db.timelineNote.update({
+                await db.timelineNote.updateMany({
                     where: { id: noteId, inventoryId },
                     data: {
                         content: `Collection Scan - ${containers?.length ? containers.join(', ') : 'Unassigned Location'}`,

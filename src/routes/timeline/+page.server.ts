@@ -125,21 +125,21 @@ export const actions = {
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
 
         const data = await request.formData();
-        await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: data.get('category') as string } });
+        await db.timelineNote.updateMany({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: data.get('category') as string } });
     },
     delete: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
 
         const data = await request.formData();
-		await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: 'trash' } });
+        await db.timelineNote.updateMany({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { category: 'trash' } });
     },
     edit: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
         if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
 
         const data = await request.formData();
-        await db.timelineNote.update({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { content: data.get('content') as string } });
+        await db.timelineNote.updateMany({ where: { id: Number(data.get('id')), inventoryId: locals.activeInventoryId }, data: { content: data.get('content') as string } });
     },
     promote: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: 'Unauthorized' });
@@ -148,7 +148,7 @@ export const actions = {
         const data = await request.formData();
         const noteId = Number(data.get('id'));
         
-        const note = await db.timelineNote.findUnique({
+        const note = await db.timelineNote.findFirst({
             where: { id: noteId, inventoryId: locals.activeInventoryId },
             include: { photos: true, documents: true }
         });
