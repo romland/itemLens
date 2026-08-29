@@ -45,6 +45,7 @@
     let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
     let isSavingHighlight = false;
 
+    let isMaximized = false;
 
     export async function open(documentRecord: any) {
         doc = documentRecord;
@@ -60,6 +61,7 @@
         toc = [];
         locationsGenerated = false;
         invertIframe = false;
+        isMaximized = false;
 
         const rawPath = doc.path || doc.source || '';
         let path = rawPath.toLowerCase();
@@ -287,6 +289,13 @@
         }
     }
 
+    function toggleMaximize() {
+        isMaximized = !isMaximized;
+        if (docType === 'epub' && rendition) {
+            setTimeout(() => rendition.resize(), 300); // Recalculate pagination after CSS transition
+        }
+    }
+
     export function close() {
         isOpen = false;
         showToc = false;
@@ -468,7 +477,7 @@
     >
         <!-- === TOP CHROME === -->
         <div 
-            class="absolute top-4 inset-x-4 max-w-2xl mx-auto flex justify-between items-center bg-base-200/95 backdrop-blur-xl border border-base-300 shadow-xl rounded-full p-2 z-50 transition-all duration-300"
+            class="absolute top-4 inset-x-4 {isMaximized ? 'max-w-none' : 'max-w-2xl'} mx-auto flex justify-between items-center bg-base-200/95 backdrop-blur-xl border border-base-300 shadow-xl rounded-full p-2 z-50 transition-all duration-300"
             class:opacity-0={!showMenu && !showToc && !showSettings}
             class:-translate-y-4={!showMenu && !showToc && !showSettings}
             class:pointer-events-none={!showMenu && !showToc && !showSettings}
@@ -497,13 +506,16 @@
                     <i class="bi bi-list"></i>
                 </button>
             {/if}
+                <button class="hidden md:inline-flex btn btn-circle btn-sm btn-ghost" on:click={toggleMaximize} title={isMaximized ? "Restore Size" : "Maximize"}>
+                    <i class="bi {isMaximized ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'} text-lg"></i>
+                </button>
             </div>
         </div>
 
         <!-- === READER CANVAS === -->
         <!-- Floating Page Layout: Constrains height on Desktop, fills screen on mobile -->
         <div class="flex-1 w-full h-full flex items-center justify-center pt-[10vh] pb-[10vh] md:py-8 px-0 md:px-4 relative z-10">
-            <div class="w-full h-full max-w-2xl md:max-h-[800px] relative bg-base-100 md:rounded-3xl md:shadow-2xl md:border md:border-base-300 overflow-hidden">
+            <div class="w-full h-full {isMaximized ? 'max-w-none' : 'max-w-2xl md:max-h-[800px]'} relative bg-base-100 md:rounded-3xl md:shadow-2xl md:border md:border-base-300 overflow-hidden transition-all duration-300">
                 
                 {#if loading}
                     <div class="absolute inset-0 flex items-center justify-center z-10" transition:fade>
@@ -549,7 +561,7 @@
         <!-- === BOTTOM CHROME (Progress) === -->
         {#if docType === 'epub'}
         <div 
-            class="absolute bottom-4 inset-x-4 max-w-2xl mx-auto flex flex-col justify-center items-center bg-base-200/95 backdrop-blur-xl border border-base-300 shadow-xl rounded-2xl p-4 z-50 transition-all duration-300"
+            class="absolute bottom-4 inset-x-4 {isMaximized ? 'max-w-none' : 'max-w-2xl'} mx-auto flex flex-col justify-center items-center bg-base-200/95 backdrop-blur-xl border border-base-300 shadow-xl rounded-2xl p-4 z-50 transition-all duration-300"
             class:opacity-0={!showMenu && !showToc && !showSettings}
             class:translate-y-4={!showMenu && !showToc && !showSettings}
             class:pointer-events-none={!showMenu && !showToc && !showSettings}
