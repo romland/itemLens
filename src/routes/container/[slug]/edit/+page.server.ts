@@ -84,19 +84,40 @@ export const actions = {
             filename = "/images/containers/" + filename;
         }
 
+        const oldName = data.id as string;
+        const newName = name.trim();
+
         await db.container.update({
-            where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: data.id as string } },
+            where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: oldName } },
             data: {
-                name: name.trim(),
                 photoPath: filename,
-                description: description.trim(),
-                location : (data.location as string) || null,
+                name: newName,
+                description: (description || '').trim(),
+                location : (data.location as string)?.trim() || null,
             }
         });
+
+        // Automatically rename all sub-trays to match the new parent prefix
+        if (oldName !== newName && post) {
+            const children = await db.container.findMany({
+                where: { parentId: post.id }
+            });
+
+            for (const child of children) {
+                const newChildName = child.name.startsWith(oldName) 
+                    ? newName + child.name.substring(oldName.length) 
+                    : child.name.replace(oldName, newName);
+                
+                await db.container.update({
+                    where: { id: child.id },
+                    data: { name: newChildName }
+                });
+            }
+        }
 
         // TODO: act on numtrays (removing them is futile... perhaps just allow adding for now, can't be arsed to remove)
         // TODO: We don't touch the number of trays at all for now (since it involves possibly related items). Later. CBA.
 
-        redirect(302, `/container/${encodeURIComponent(name.trim())}`);
+        redirect(302, `/container/${encodeURIComponent(newName)}`);
     }
 } satisfies Actions;

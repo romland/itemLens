@@ -22,6 +22,16 @@
     let activeTab = defaultTab; // 'scan' | 'select'
     let searchQuery = '';
 
+    // Auto-focus search input when it becomes visible (but only on desktop to avoid annoying mobile keyboard popups)
+    function autoFocusSearch(node: HTMLInputElement) {
+        if (typeof window === 'undefined' || !window.IntersectionObserver) return;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && window.innerWidth >= 768) setTimeout(() => node.focus(), 100);
+        });
+        observer.observe(node);
+        return { destroy() { observer.disconnect(); } };
+    }
+
     // Flatten parent/child hierarchy for easier searching and displaying
     $: flatContainers = containers.reduce((acc, c) => {
         acc.push({ ...c, isChild: false });
@@ -229,7 +239,7 @@
             <div class="form-control mb-3">
                 <div class="input input-bordered flex items-center gap-2 rounded-xl shadow-sm">
                     <i class="bi bi-search text-gray-400"></i>
-                    <input type="text" bind:value={searchQuery} placeholder="Search containers..." class="grow bg-transparent border-none focus:outline-none" />
+                    <input type="text" use:autoFocusSearch bind:value={searchQuery} placeholder="Search containers..." class="grow bg-transparent border-none focus:outline-none" />
                 </div>
             </div>
 

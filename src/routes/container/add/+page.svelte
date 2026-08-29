@@ -45,7 +45,7 @@
                 <div class="flex gap-4">
                     <div class="form-control w-1/2">
                         <label class="label"><span class="label-text font-semibold">Number of trays</span></label>
-                        <input type="number" name="numtrays" placeholder="10" min="1" class="input input-bordered w-full shadow-sm">
+                        <input type="number" name="numtrays" value="10" placeholder="10" min="1" class="input input-bordered w-full shadow-sm">
                     </div>
                     <div class="form-control w-1/2">
                         <label class="label"><span class="label-text font-semibold">Start number</span></label>

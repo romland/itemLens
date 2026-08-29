@@ -39,14 +39,14 @@ export const actions = {
             data: {
                 name: name.trim(),
                 photoPath: filename,
-                description: description.trim(),
-                location : (data.location as string)?.trim(),
+                description: (description || '').trim(),
+                location : (data.location as string)?.trim() || null,
                 inventoryId: locals.activeInventoryId
             }
         });
 
         if (mode === 'batch') {
-            const trayCount = Number(data.numtrays) || 0;
+            const trayCount = Number(data.numtrays) || 10;
             const startTray = Number(data.starttray) || 1;
 
             for(let i = startTray; i < (trayCount + startTray); i++) {
@@ -54,7 +54,7 @@ export const actions = {
                 await db.container.create({
                     data: {
                         parentId: container.id,
-                        name: `${name} ${trayId}`,
+                        name: `${name.trim()} ${trayId}`,
                         description: "",
                         inventoryId: locals.activeInventoryId
                     }
