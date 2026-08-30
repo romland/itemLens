@@ -4,14 +4,15 @@ Doc: https://kit.svelte.dev/docs/routing#server
 import { db } from '$lib/server/database';
 import type { Prisma } from '@prisma/client';
 import { normalizeStr } from '$lib/server/matcher';
+import { tokenizeAndStem } from '$lib/server/nlp';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
-function scoreSearchRelevance(itemTitle: string, query: string, terms: string[]): number {
-    if (!itemTitle) return 0;
-    const title = normalizeStr(itemTitle);
+function scoreSearchRelevance(item: any, query: string, terms: string[], stems: string[]): number {
+    if (!item.title) return 0;
+    const title = normalizeStr(item.title);
     const q = normalizeStr(query);
     let score = 0;
     
@@ -35,6 +36,16 @@ function scoreSearchRelevance(itemTitle: string, query: string, terms: string[])
         score += (matches / terms.length) * 40;
         if (inOrder && matches === terms.length) score += 10;
     }
+
+    // NLP Stemming Fallback: If title didn't score high, check the semantic tokens
+    if (score < 50 && item.semanticTokens && stems.length > 0) {
+        let stemMatches = 0;
+        for (const stem of stems) {
+            if (item.semanticTokens.includes(`"${stem}"`)) stemMatches++;
+        }
+        if (stemMatches > 0) score += (stemMatches / stems.length) * 15;
+    }
+
     return score;
 }
 
@@ -104,10 +115,23 @@ export async function GET({ url, setHeaders, locals }) {
     // Full Text Search for Documents (SQLite FTS5)
     let tFtsStart = performance.now();
     const ftsQuery = q || docStr;
-    const safeQ = ftsQuery.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+
+    // Parse exact phrases (e.g. "usb ttl") vs individual words
+    const parsedTerms: { text: string, isPhrase: boolean }[] = [];
+    const termRegex = /"([^"]+)"|(\S+)/g;
+    let match;
+    while ((match = termRegex.exec(ftsQuery)) !== null) {
+        if (match[1]) {
+            const cleanPhrase = match[1].replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+            if (cleanPhrase) parsedTerms.push({ text: cleanPhrase, isPhrase: true });
+        } else if (match[2]) {
+            const cleanWord = match[2].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+            if (cleanWord) parsedTerms.push({ text: cleanWord, isPhrase: false });
+        }
+    }
 
     // Prevent FTS5 index explosions on 1-character prefix queries (like "t*") which take 5+ seconds
-    const ftsTerms = safeQ.split(/\s+/).filter(word => word.length > 1);
+    const ftsTerms = parsedTerms.map(t => t.text).filter(text => text.length > 1);
     if (ftsTerms.length > 0) {
         const matchQuery = ftsTerms.map(word => `"${word}"*`).join(' AND ');
         try {
@@ -183,18 +207,27 @@ export async function GET({ url, setHeaders, locals }) {
         }
     }
 
-    const searchTerms = safeQ.split(/\s+/).filter(t => t.length > 0);
-    if (q && searchTerms.length > 0) {
-        const termConditions = searchTerms.map(term => ({
-            OR: [
-                { title: { contains: term } },
-                { description: { contains: term } },
-                { locations: { some: { container: { name: { contains: term } } } } },
-                { tags: { some: { name: { contains: term } } } },
-                { photos: { some: { llmAnalysis: { contains: term } } } },
-                { photos: { some: { ocr: { contains: term } } } }
-            ]
-        }));
+    const searchTerms = parsedTerms.map(t => t.text);
+    const stemmedTerms = tokenizeAndStem([q]);
+
+    if (q && parsedTerms.length > 0) {
+        const termConditions = parsedTerms.map(({ text, isPhrase }) => {
+            const orConditions: any[] = [
+                { title: { contains: text } },
+                { description: { contains: text } },
+                { locations: { some: { container: { name: { contains: text } } } } },
+                { tags: { some: { name: { contains: text } } } },
+                { photos: { some: { llmAnalysis: { contains: text } } } },
+                { photos: { some: { ocr: { contains: text } } } }
+            ];
+
+            if (!isPhrase) {
+                const stem = tokenizeAndStem([text])[0] || text;
+                orConditions.push({ semanticTokens: { contains: `"${stem}"` } });
+            }
+
+            return { OR: orConditions };
+        });
         
         query.where = {
             ...query.where,
@@ -292,7 +325,7 @@ export async function GET({ url, setHeaders, locals }) {
     // In-memory rank sorting based on query exactness and word-order
     let tSortStart = performance.now();
     if (q && searchTerms.length > 0) {
-        items.sort((a, b) => scoreSearchRelevance(b.title, q, searchTerms) - scoreSearchRelevance(a.title, q, searchTerms));
+        items.sort((a, b) => scoreSearchRelevance(b, q, searchTerms, stemmedTerms) - scoreSearchRelevance(a, q, searchTerms, stemmedTerms));
     }
     let tSortEnd = performance.now();
 

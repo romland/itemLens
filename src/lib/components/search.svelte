@@ -82,7 +82,7 @@
 
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="dropdown-content mt-2 z-[999] w-[calc(100vw-2rem)] sm:w-[28rem] shadow-2xl shadow-black/30 bg-base-200/95 backdrop-blur-xl border border-base-300 rounded-2xl p-2 flex flex-col gap-1" on:click={(e) => { if ((e.target).closest('a')) resultsAsYouType.classList.remove('dropdown-open'); }}>
+        <div class="dropdown-content mt-2 z-[999] w-[calc(100vw-2rem)] sm:w-[28rem] md:right-auto md:left-1/2 md:-ml-[14rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-base-100/95 backdrop-blur-2xl ring-1 ring-base-content/10 rounded-2xl p-2 flex flex-col gap-1" on:click={(e) => { if ((e.target).closest('a')) resultsAsYouType.classList.remove('dropdown-open'); }}>
             {#if items?.length > 0}
                 <div class="max-h-[60vh] overflow-y-auto rounded-xl">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
@@ -90,7 +90,7 @@
             {/if}
             <div class="{(items?.length > 0) ? 'mt-1 pt-1 border-t border-base-200/60' : ''} flex flex-col gap-1">
                 <a href="/search{q ? `?q=${encodeURIComponent(q)}` : ''}" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
-                    <i class="bi bi-search"></i> {q ? `See all results for "${q}"` : 'Advanced Search & Bulk Edit'}
+                    <i class="bi bi-search"></i> {q ? `See all results for "${q.replace(/^"|"$/g, '')}"` : 'Advanced Search & Bulk Edit'}
                 </a>
             </div>
         </div>
