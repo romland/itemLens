@@ -91,9 +91,9 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 
 *Side note: It did not take me more than an hour or two to scan 16 cardboard boxes full of books. The unpacking and packing the books back into the box was the time-consuming part.*
 
-### Bulk Import & The Comparison Lens (Set Operations)
 
 __this is so cringe -- I the human should rewrite this -- now here as reminder__ 
+### Bulk Import & The Comparison Lens (Set Operations) *[ALPHA/TESTING]*
 
 The **Entity-Attribute-Value (EAV) Taxonomy** automatically tailors schemas based on your collection's archetype. It intuitively knows that a t-shirt needs a "Garment Style" and "Fabric", while a drill requires a "Form Factor" and "Power Delivery". It enforces strict vocabulary to eliminate search friction.
 

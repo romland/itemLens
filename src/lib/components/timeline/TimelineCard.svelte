@@ -135,6 +135,8 @@
                                     {#if doc.path}
                                         {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
                                             <TextButton colorClass="text-secondary" icon="bi-book" on:click={() => dispatch('openDoc', doc)}>Read Book</TextButton>
+                                        {:else if doc.path.match(/\.(mp4|webm|mov|mkv)$/i)}
+                                            <TextButton colorClass="text-info" icon="bi-play-circle" on:click={() => dispatch('openImage', { orgPath: doc.path, type: 'video' })}>Play Video</TextButton>
 										{:else}
                                             <TextButton colorClass="text-secondary" icon="bi-hdd-network" on:click={() => dispatch('openDoc', doc)}>Local Cache</TextButton>
 										{/if}
@@ -143,8 +145,8 @@
                             </div>
                         </div>
                         {#if getDocSnippet(doc)}
-                            <div class="mt-2 text-xs text-gray-500 line-clamp-3 leading-relaxed">
-                                {getDocSnippet(doc).replace(/<[^>]+>/g, '')}
+                            <div class="mt-2 text-xs text-gray-500 line-clamp-3 leading-relaxed prose prose-sm prose-p:my-1 prose-a:text-primary max-w-none" use:openLinksInNewTab>
+                                {@html marked.parse(getDocSnippet(doc), { breaks: true })}
                             </div>
                         {/if}
                     </div>

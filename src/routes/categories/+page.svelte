@@ -121,7 +121,7 @@
         <p class="text-gray-500 text-center sm:text-left text-sm mb-6">
             Are you sure you want to delete <strong class="text-base-content capitalize">"{categoryToDelete?.name}"</strong>? 
             <br><br>
-            This will unlink it from <strong>{categoryToDelete?._count.photos}</strong> photo(s). The photos will remain, but the category tag will be removed.
+            <strong>WARNING:</strong> This will unlink it from <strong>{categoryToDelete?._count.photos}</strong> photo(s). Any specific taxonomy rules and extracted attributes bound to this category will be orphaned or lost! The photos will remain, but the category classification will be completely destroyed.
         </p>
         <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
             <form method="POST" action="?/delete" class="w-full sm:w-auto flex-1" use:enhance={({ formElement }) => {
@@ -152,6 +152,8 @@
 <Modal bind:this={mergeModal} blur={false} title="Merge Category" titleClass="font-bold text-xl mb-2 text-center sm:text-left" boxClass="sm:rounded-[2rem] p-6" on:close={() => categoryToMerge = null}>
         <p class="text-gray-500 text-center sm:text-left text-sm mb-6">
             Move all <strong>{categoryToMerge?._count.photos}</strong> photos from <strong class="text-base-content capitalize">"{categoryToMerge?.name}"</strong> into another category, then delete this one.
+            <br><br>
+            <strong>WARNING:</strong> This may cause taxonomy mismatches! The newly merged photos will inherit the taxonomy rules of the destination category. Any unique attributes from the old category might no longer align.
         </p>
         <form method="POST" action="?/merge" class="flex flex-col gap-4" use:enhance={({ formElement }) => {
             isMerging = true;

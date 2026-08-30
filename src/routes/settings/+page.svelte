@@ -122,6 +122,17 @@
 <div class="max-w-2xl mx-auto">
 
 	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
+        {#if !$page.data.user?.isAdmin && !$page.data.user?.canCreateInventories && $page.data.allInventories?.length === 0}
+            <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 text-center animate-fade-in relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-warning/50"></div>
+                <div class="w-16 h-16 bg-warning/10 text-warning rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="bi bi-hourglass-split text-3xl"></i>
+                </div>
+                <h3 class="font-bold text-lg mb-2">Pending Approval</h3>
+                <p class="text-gray-500 text-sm">Your account is created, but you need an administrator to grant you access to an existing collection or permission to create your own.</p>
+            </div>
+        {/if}
+
 		<h3 class="font-bold text-lg mb-4">Device Management</h3>
         <ActionCard
             title="Clear Offline Cache"
@@ -336,7 +347,13 @@
                 </table>
             </div>
 
-            <div class="divider my-6">Collection Access</div>
+        </div>
+    {/if}
+
+    {#if $page.data.allInventories?.length > 0}
+        <div class="bg-base-100 border border-warning/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-warning text-warning-content text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Owner Actions</div>
+            <div class="divider my-6 mt-0">Collection Access</div>
 
 			<form method="POST" action="?/assignAccess" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2 mb-6">
                 <select name="userId" class="select select-bordered w-full" required>
@@ -420,7 +437,7 @@
                                     <!-- UI View Toggles -->
                                     <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                                         <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
-                                        <div class="grid grid-cols-2 gap-2">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
                                                 <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                             {/each}
@@ -533,8 +550,14 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    {/if}
 
-			<div class="divider my-6">System Management</div>
+    {#if $page.data.user?.isAdmin}
+        <div class="bg-base-100 border border-error/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-error text-error-content text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Admin Only</div>
+			<div class="divider my-6 mt-0">System Management</div>
+
 			
             <div class="bg-base-200/50 rounded-xl p-5 mb-6 border border-base-200">
                 <div class="flex justify-between items-center mb-4">

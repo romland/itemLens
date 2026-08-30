@@ -496,7 +496,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
-        class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center overscroll-none touch-none overflow-y-scroll"
+        class="fixed inset-0 z-[9999] bg-black/90 {photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i) ? '' : 'backdrop-blur-xl'} flex flex-col items-center justify-center overscroll-none touch-none overflow-y-scroll"
         transition:fade={{ duration: 250, easing: cubicOut }}
 		on:click|self={handleBackgroundClick}
     >
@@ -518,9 +518,11 @@
                         </span>
                     {/if}
                     {#if ai?.description}
-                        <span class="text-xs sm:text-sm text-gray-200 line-clamp-1 ml-1">
-                            &mdash; {ai.description}
-                        </span>
+                        <details class="text-xs sm:text-sm text-gray-200 ml-1 group cursor-pointer">
+                            <summary class="list-none line-clamp-1 group-open:line-clamp-none group-open:mb-2 outline-none">
+                                &mdash; {ai.description}
+                            </summary>
+                        </details>
                     {/if}
                 </div>
             </div>
@@ -613,49 +615,48 @@
 			</div>
         </div>
 
-        <!-- Interactive Image Canvas -->
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <div 
-			class="w-full h-full flex items-center justify-center overflow-hidden {$scaleVal > 1 ? 'cursor-move' : ''}"
-            on:wheel|nonpassive={handleWheel}
-            on:mousedown={startDrag}
-            on:mousemove={onDrag}
-            on:mouseup={endDrag}
-            on:mouseleave={endDrag}
-            on:touchstart|nonpassive={handleTouchStart}
-            on:touchmove|nonpassive={handleTouchMove}
-            on:touchend={endDrag}
-			on:dblclick={(e) => handleDoubleTap(e.clientX, e.clientY)}
-			on:click|self={handleBackgroundClick}
-        >
+        {#if photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+            <!-- Pure Video Player (Bypasses gesture canvas to prevent Safari iOS freezing bugs) -->
+            <div class="w-full h-full flex items-center justify-center p-4 z-10" on:click|self={handleBackgroundClick}>
+                <!-- svelte-ignore a11y-media-has-caption -->
+                <video 
+                    src="{photo?.orgPath}" 
+                    class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none" 
+                    controls playsinline preload="metadata"
+                    in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
+                ></video>
+            </div>
+        {:else}
+            <!-- Interactive Image Canvas -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div 
-                class="w-full h-full flex items-center justify-center origin-center will-change-transform"
-                style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal})"
-                in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
-                on:click|self={handleBackgroundClick}
+			    class="w-full h-full flex items-center justify-center overflow-hidden {$scaleVal > 1 ? 'cursor-move' : ''}"
+                on:wheel|nonpassive={handleWheel}
+                on:mousedown={startDrag}
+                on:mousemove={onDrag}
+                on:mouseup={endDrag}
+                on:mouseleave={endDrag}
+                on:touchstart|nonpassive={handleTouchStart}
+                on:touchmove|nonpassive={handleTouchMove}
+                on:touchend={endDrag}
+			    on:dblclick={(e) => handleDoubleTap(e.clientX, e.clientY)}
+			    on:click|self={handleBackgroundClick}
             >
-                <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
-                <div class="relative inline-flex max-w-full max-h-full shadow-2xl transition-transform duration-300 ease-out {photo?.box ? 'overflow-hidden rounded-xl' : ''}" style="transform: rotate({rotation}deg);">
-                    {#if photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
-                        <video 
-                            src="{photo?.orgPath}" 
-                            class="object-contain max-w-full max-h-full origin-center select-none rounded-xl"
-                            id="lightbox-active-media"
-                            controls autoplay
-                            draggable="false"
-                        >
-                            <track kind="captions" />
-                        </video>
-                    {:else}
-                        {@const cb = photo?.updatedAt ? '?v=' + new Date(photo.updatedAt).getTime() : ''}
+                <div 
+                    class="w-full h-full flex items-center justify-center origin-center will-change-transform"
+                    style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal})"
+                    in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
+                    on:click|self={handleBackgroundClick}
+                >
+                    <!-- Tightly wrapped container ensures absolute percentage math perfectly matches the image -->
+                    <div class="relative inline-flex max-w-full max-h-full shadow-2xl transition-transform duration-300 ease-out {photo?.box ? 'overflow-hidden rounded-xl' : ''}" style="transform: rotate({rotation}deg);">
                         <img 
-                            src="{(showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)) + cb}"
+                            src="{(showOriginal ? photo?.orgPath : (photo?.cropPath || photo?.orgPath)) + (photo?.updatedAt ? '?v=' + new Date(photo.updatedAt).getTime() : '')}"
                             alt="Product preview" 
                             class="object-contain max-w-full max-h-full origin-center select-none"
                             id="lightbox-active-media"
                             draggable="false"
                         />
-                    {/if}
                     {#if photo?.box}
                         <!-- The massive box-shadow dims everything OUTSIDE the bounding box -->
                         <div class="absolute border-4 border-primary z-10 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]"
@@ -669,6 +670,7 @@
         </div>
 
         <!-- Footer (Controls & Swatches) -->
+        {/if}
         <div class="absolute bottom-0 inset-x-0 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-50 pointer-events-none">
             
             <!-- Color Swatches -->

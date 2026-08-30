@@ -357,6 +357,8 @@ export async function processItemPhotosBackground(item: any) {
                         } catch(e) {}
                     }
 
+                    if (item.title?.toLowerCase() === 'unknown') itemNeedsTitleUpdate = true;
+
                     if (itemNeedsTitleUpdate) {
                         try {
                             if (!aiTitle) {

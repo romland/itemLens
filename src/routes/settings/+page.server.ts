@@ -18,40 +18,44 @@ export const load = async ({ locals, cookies }) => {
 
     if (locals.user.isAdmin) {
         allUsers = await db.user.findMany({ select: { id: true, username: true, name: true, email: true, isAdmin: true, canCreateInventories: true } });
-		allInventories = await db.inventory.findMany({ 
-            select: { 
-                id: true, 
-                name: true,
-                allowNewCategories: true,
-                allowAutoTaxonomy: true,
-                extractExif: true,
-                deepScanCollections: true,
-                bgRemovalEnabled: true,
-                bgRemovalModel: true,
-                bgRemovalPreCrop: true,
-                enablePaddleOCR: true,
-                duplicateStrategy: true,
-                containerMode: true,
-                defaultView: true,
-                archiveSingleScans: true,
-                trackQuantity: true,
-                showExif: true,
-                showColors: true,
-                showOcr: true,
-                enableNotebook: true,
-                enableDocuments: true,
-                notebookCategories: true,
-                enableFuzzySearch: true,
-                templateFields: {
-                    select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
-                },
-                _count: { select: { items: true, notes: true, containers: true } }
-            } 
-        });
         accessMap = await db.userInventoryAccess.findMany({
             include: { user: { select: { username: true } }, inventory: { select: { name: true } } }
         });
     }
+
+    const inventoryWhere = locals.user.isAdmin ? {} : { users: { some: { userId: locals.user.id, role: 'OWNER' } } };
+
+    allInventories = await db.inventory.findMany({ 
+        where: inventoryWhere,
+        select: { 
+            id: true, 
+            name: true,
+            allowNewCategories: true,
+            allowAutoTaxonomy: true,
+            extractExif: true,
+            deepScanCollections: true,
+            bgRemovalEnabled: true,
+            bgRemovalModel: true,
+            bgRemovalPreCrop: true,
+            enablePaddleOCR: true,
+            duplicateStrategy: true,
+            containerMode: true,
+            defaultView: true,
+            archiveSingleScans: true,
+            trackQuantity: true,
+            showExif: true,
+            showColors: true,
+            showOcr: true,
+            enableNotebook: true,
+            enableDocuments: true,
+            notebookCategories: true,
+            enableFuzzySearch: true,
+            templateFields: {
+                select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
+            },
+            _count: { select: { items: true, notes: true, containers: true } }
+        } 
+    });
 
     // Load active devices
     const rawSessionId = cookies.get('session');

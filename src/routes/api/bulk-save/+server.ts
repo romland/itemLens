@@ -45,6 +45,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             // 3. Process approved items
             for (const item of items) {
                 if (item.resolution === 'merge' && item.duplicateItemDetails?.id) {
+                    // SECURITY: Verify the target item belongs to the active inventory before mutating!
+                    const targetItem = await db.item.findUnique({ where: { id: item.duplicateItemDetails.id }, select: { inventoryId: true } });
+                    if (!targetItem || targetItem.inventoryId !== inventoryId) {
+                        console.warn(`[Security] Blocked IDOR attempt: Tried to merge into item ${item.duplicateItemDetails.id} outside inventory ${inventoryId}`);
+                        continue;
+                    }
                     await db.item.update({
                         where: { id: item.duplicateItemDetails.id },
                         data: { amount: { increment: 1 } }
@@ -110,6 +116,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     timelineNoteId: noteId,
                     duplicateStatus: item.resolution === 'new' ? 'DISMISSED' : (item.isDuplicate ? 'FLAGGED' : 'NONE')
                 });
+
+                // QUEUE BACKGROUND REMOVAL & ML PROCESSING!
+                const { processItemPhotosBackground } = await import('$lib/server/photouploads');
+                const itemForBg = await db.item.findUnique({ where: { id: createdItem.id }, include: { photos: true } });
+                if (itemForBg) processItemPhotosBackground(itemForBg).catch(e => console.error(e));
             }
         } catch (e) {
             console.error("Bulk processing failed:", e);

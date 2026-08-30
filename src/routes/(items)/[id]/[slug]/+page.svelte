@@ -275,7 +275,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     </div>
 
     {#if data.item?.contentToHtml?.length > 0}
-        <div class="content prose max-w-none mb-3">
+        <div class="content prose max-w-none mb-3 break-words overflow-hidden">
             {@html data.item?.contentToHtml}
         </div>
     {/if}
