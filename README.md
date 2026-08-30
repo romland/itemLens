@@ -25,6 +25,8 @@ If feeling particularly ambitious on a day, you can also:
 - add additional photos (using camera or just paste in links)
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
+- **Fuzzy Search Toggles:** Unhappy with search results? The AI stems words (e.g., "Jeans" -> "Jean") which is great for finding electronics or tools but sometimes too broad for clothes. You can toggle "Fuzzy Word Search" off per-collection in Settings for strict text matching.
+- **Multiple Categories:** Need an item to exist in two categories? Give it multiple photos and assign a different category to each photo. The engine resolves categories at the photo level.
 - **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
 - Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
@@ -114,6 +116,8 @@ It performs set math between what your camera sees (**Set A**) and what your dat
   - By Location/Container (e.g., `Box A 001`)
 - **Triage Actions:** When you spot something missing that you want to track, the **Add** menu lets you route it straight to **Collection**, your **Shopping List**, or **To-Do List** in the Notebook (for current Collection).
 
+### Random note to refine in the future
+**The Knowledge Base of Your Stuff:** We've blurred the lines between a strict inventory tracker and a personal knowledge base. By integrating an overarching Notebook and automatically downloading linked articles/manuals, itemLens isn't just about *where* an item is, but capturing the ideas, projects, and context surrounding it.
 
 ### Info how I use itemLens
 - TODO: 

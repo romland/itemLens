@@ -87,7 +87,14 @@ model Inventory {
   enablePaddleOCR     Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
   duplicateStrategy   String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   archiveSingleScans  Boolean @default(false) // Whether to automatically archive single scans to the Notebook
-  enableQuickStock    Boolean @default(false) // Whether quick stock adjustment buttons/hotkeys are active
+  trackQuantity       Boolean @default(true) // Whether this collection uses quantities/stock
+  showExif            Boolean @default(false) // Show EXIF data in item details
+  showColors          Boolean @default(false) // Show extracted colors in item details
+  showOcr             Boolean @default(true) // Show OCR text blocks in item details
+  enableNotebook      Boolean @default(true) // Whether the Notebook/Timeline is enabled
+  enableDocuments     Boolean @default(true) // Whether Documents/Links are enabled for items
+  notebookCategories  String  @default("[\"idea\", \"todo\", \"to buy\", \"to read\", \"other\", \"archive\"]")
+  enableFuzzySearch   Boolean @default(true) // Whether to use NLP stemming/fuzzy matching in search
   containerMode       String @default("scan") // "scan" or "select" - defaults selector to camera or list
   templateFields      TemplateField[]
 

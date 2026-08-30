@@ -55,6 +55,18 @@
     });
 
     $: displayedNotes = data.notes ? data.notes.slice(0, displayLimit) : [];
+
+    // Dynamically inject the active category into the form so pastes land in the correct tab
+    $: if (typeof document !== 'undefined' && data.currentCategory) {
+        setTimeout(() => {
+            const f = document.getElementById('timelineForm');
+            if (f) {
+                let input = f.querySelector('input[name="category"]');
+                if (!input) { input = document.createElement('input'); input.type = 'hidden'; input.name = 'category'; f.appendChild(input); }
+                input.value = data.currentCategory === 'all' ? 'idea' : data.currentCategory;
+            }
+        }, 50);
+    }
 </script>
 
 <PasteHandler 
@@ -71,16 +83,22 @@
     }}
 />
 
+{#if !data.enableNotebook}
+    <div class="flex flex-col items-center justify-center min-h-[50vh] text-center max-w-md mx-auto px-4 mt-10">
+        <div class="w-20 h-20 bg-base-200 text-gray-400 rounded-full flex items-center justify-center mb-6 shadow-sm">
+            <i class="bi bi-journal-x text-4xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold mb-3 tracking-tight">Notebook Disabled</h2>
+        <p class="text-gray-500 mb-8">The notebook module has been turned off for this collection.</p>
+    </div>
+{:else}
 <div class="flex flex-col h-full max-w-2xl mx-auto pb-32 box-border overflow-x-hidden">
     <div class="flex justify-start sm:justify-center pt-4 px-2 w-full overflow-hidden">
         <div class="tabs tabs-boxed bg-base-200/50 flex-nowrap overflow-x-auto hide-scrollbar w-full sm:w-auto">
             <a href="/timeline?category=all" class="tab whitespace-nowrap {data.currentCategory === 'all' ? 'tab-active' : ''}">All</a>
-            <a href="/timeline?category=idea" class="tab whitespace-nowrap {data.currentCategory === 'idea' ? 'tab-active' : ''}">Ideas</a>
-            <a href="/timeline?category=todo" class="tab whitespace-nowrap {data.currentCategory === 'todo' ? 'tab-active' : ''}">To Do</a>
-            <a href="/timeline?category=to buy" class="tab whitespace-nowrap {data.currentCategory === 'to buy' ? 'tab-active' : ''}">To Buy</a>
-            <a href="/timeline?category=to read" class="tab whitespace-nowrap {data.currentCategory === 'to read' ? 'tab-active' : ''}">To Read</a>
-            <a href="/timeline?category=other" class="tab whitespace-nowrap {data.currentCategory === 'other' ? 'tab-active' : ''}">Other</a>
-            <a href="/timeline?category=archive" class="tab whitespace-nowrap {data.currentCategory === 'archive' ? 'tab-active' : ''}">Archive</a>
+            {#each data.parsedCategories as cat}
+                <a href="/timeline?category={encodeURIComponent(cat)}" class="tab capitalize whitespace-nowrap {data.currentCategory === cat ? 'tab-active' : ''}">{cat}</a>
+            {/each}
         </div>
     </div>
 
@@ -108,6 +126,7 @@
 
 <!-- Fixed Input Bar Component -->
 <TimelineInput on:posted={() => { pasteHandler?.clearQueue(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+{/if}
 
 <Notifications bind:notifications />
 

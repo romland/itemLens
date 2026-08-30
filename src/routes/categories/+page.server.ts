@@ -87,5 +87,72 @@ export const actions = {
                await db.category.delete({ where: { id } });
             }
         }
+    },
+    merge: async ({ request, locals }) => {
+        if (!locals.user) return fail(401, { message: 'Unauthorized' });
+        if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return fail(403, { message: 'Forbidden. Viewer access only.' });
+
+        const data = await request.formData();
+        const sourceId = Number(data.get('sourceId'));
+        const targetId = Number(data.get('targetId'));
+
+        if (sourceId && targetId && sourceId !== targetId) {
+            const targetCategory = await db.category.findUnique({ where: { id: targetId, inventoryId: locals.activeInventoryId } });
+            const sourceCategory = await db.category.findUnique({ where: { id: sourceId, inventoryId: locals.activeInventoryId }, include: { photos: true } });
+
+            if (targetCategory && sourceCategory) {
+                // 1. MIGRATE TAXONOMY RULES (TemplateFields)
+                const sourceFields = await db.templateField.findMany({ where: { categoryId: sourceId } });
+                const targetFields = await db.templateField.findMany({ where: { categoryId: targetId } });
+
+                for (const sField of sourceFields) {
+                    const tField = targetFields.find(f => f.name === sField.name);
+                    if (tField) {
+                        // Collision: Merge enum options if both are enums
+                        if (sField.type === 'enum' && tField.type === 'enum') {
+                            let sOpts = [], tOpts = [];
+                            try { if (sField.options) sOpts = JSON.parse(sField.options); } catch(e){}
+                            try { if (tField.options) tOpts = JSON.parse(tField.options); } catch(e){}
+                            
+                            const mergedOpts = [...new Set([...tOpts, ...sOpts])];
+                            await db.templateField.update({
+                                where: { id: tField.id },
+                                data: { options: JSON.stringify(mergedOpts) }
+                            });
+                        }
+                        // Delete the redundant source field
+                        await db.templateField.delete({ where: { id: sField.id } });
+                    } else {
+                        // No collision: Just move the rule to the target category
+                        await db.templateField.update({
+                            where: { id: sField.id },
+                            data: { categoryId: targetId }
+                        });
+                    }
+                }
+
+                // 2. MIGRATE PHOTOS
+                await db.photo.updateMany({
+                    where: { categoryId: sourceId },
+                    data: { categoryId: targetId }
+                });
+
+                // 3. REWRITE AI CACHES
+                for (const photo of sourceCategory.photos) {
+                    if (photo.llmAnalysis) {
+                        try {
+                            const analysis = JSON.parse(photo.llmAnalysis);
+                            if (analysis.subCategory === sourceCategory.name) {
+                                analysis.subCategory = targetCategory.name;
+                                await db.photo.update({ where: { id: photo.id }, data: { llmAnalysis: JSON.stringify(analysis) } });
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                // 4. VAPORIZE OLD CATEGORY
+                await db.category.delete({ where: { id: sourceId } });
+            }
+        }
     }
 } satisfies Actions;

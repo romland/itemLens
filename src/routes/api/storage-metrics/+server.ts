@@ -36,10 +36,17 @@ export async function GET({ locals }) {
         const dbSize = dbStat.size;
         const uploadsSize = await getDirSize('static/images/u');
 
+        // Tap OS level file system stats (Requires Node 19+)
+        const statfs = await fs.statfs('static/images/u').catch(() => null);
+        const freeBytes = statfs ? statfs.bavail * statfs.bsize : null;
+        const totalDiskBytes = statfs ? statfs.blocks * statfs.bsize : null;
+
         cachedMetrics = {
             dbBytes: dbSize,
             uploadsBytes: uploadsSize,
             totalBytes: dbSize + uploadsSize,
+            freeBytes,
+            totalDiskBytes
         };
         lastFetch = Date.now();
 

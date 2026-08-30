@@ -451,12 +451,41 @@
                                         <span class="text-xs text-gray-500 font-medium">Save backup pictures of single item scans to Notebook</span>
                                     </form>
 
-                                    <form method="POST" action="?/toggleQuickStock" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                    <form method="POST" action="?/toggleTrackQuantity" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                        <input type="hidden" name="enableQuickStock" value={(!v.enableQuickStock).toString()}>
-                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.enableQuickStock} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                        <span class="text-xs text-gray-500 font-medium">Enable Quick Stock adjustment (+ / -)</span>
+                                        <input type="hidden" name="trackQuantity" value={(!v.trackQuantity).toString()}>
+                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.trackQuantity} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+                                        <span class="text-xs text-gray-500 font-medium">Track Quantity / Stock for items</span>
                                     </form>
+
+                                    <!-- UI View Toggles -->
+                                    <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
+                                        <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
+                                                <form method="POST" action="?/toggleUiFlag" use:enhance={createEnhancer} class="flex items-center gap-2">
+                                                    <input type="hidden" name="id" value={v.id}>
+                                                    <input type="hidden" name="field" value={field}>
+                                                    <input type="hidden" name="value" value={(!v[field]).toString()}>
+                                                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked={v[field]} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
+                                                    <span class="text-xs text-gray-500 font-medium">{label}</span>
+                                                </form>
+                                            {/each}
+                                        </div>
+                                        {#if v.enableNotebook}
+                                            <div class="mt-3 pt-3 border-t border-base-200/50">
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1 block">Notebook Tabs</span>
+                                                <form method="POST" action="?/updateNotebookCategories" use:enhance={createEnhancer} class="flex gap-2">
+                                                    <input type="hidden" name="id" value={v.id}>
+                                                    <div class="flex-1">
+                                                        <input type="text" name="notebookCategories" class="input input-xs input-bordered w-full" value={JSON.parse(v.notebookCategories || '[]').join(', ')} />
+                                                        <div class="text-[9px] text-gray-400 mt-1 leading-tight">Comma separated. Removing a category hides the tab, but existing notes remain accessible under "All".</div>
+                                                    </div>
+                                                    <button type="submit" class="btn btn-xs btn-primary shrink-0">Save</button>
+                                                </form>
+                                            </div>
+                                        {/if}
+                                    </div>
 
                                     <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
@@ -558,8 +587,12 @@
                     {@const dbMb = (storageMetrics.dbBytes / (1024 * 1024)).toFixed(1)}
                     {@const uploadsMb = (storageMetrics.uploadsBytes / (1024 * 1024)).toFixed(1)}
                     {@const totalMb = ((storageMetrics.dbBytes + storageMetrics.uploadsBytes) / (1024 * 1024)).toFixed(1)}
+                    {@const freeGb = storageMetrics.freeBytes ? (storageMetrics.freeBytes / (1024 * 1024 * 1024)).toFixed(1) : null}
                     <div class="flex items-end justify-between mb-2">
                         <span class="text-2xl font-bold">{totalMb} <span class="text-sm font-medium text-gray-400">MB Used</span></span>
+                        {#if freeGb !== null}
+                            <span class="text-sm font-bold text-base-content/70">{freeGb} GB <span class="font-medium text-gray-400">Disk Free</span></span>
+                        {/if}
                     </div>
                     <!-- Stacked bar -->
                     <div class="w-full h-3 bg-base-300 rounded-full overflow-hidden flex shadow-inner mb-3">

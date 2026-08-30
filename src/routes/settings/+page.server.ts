@@ -33,7 +33,14 @@ export const load = async ({ locals, cookies }) => {
                 duplicateStrategy: true,
                 containerMode: true,
                 archiveSingleScans: true,
-                enableQuickStock: true,
+                trackQuantity: true,
+                showExif: true,
+                showColors: true,
+                showOcr: true,
+                enableNotebook: true,
+                enableDocuments: true,
+                notebookCategories: true,
+                enableFuzzySearch: true,
                 templateFields: {
                     select: { id: true, name: true, uiLabel: true, type: true, options: true, matchWeight: true, extractionMethod: true, categoryId: true }
                 },
@@ -420,16 +427,50 @@ export const actions = {
         return { success: true, message: "Archive setting updated." };
     },
 
-    toggleQuickStock: async ({ request, locals }) => {
+    toggleTrackQuantity: async ({ request, locals }) => {
         const data = await request.formData();
         const id = Number(data.get('id'));
         if (!locals.user?.isAdmin) {
             const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
             if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
         }
-        const allow = data.get('enableQuickStock') === 'true';
-        await db.inventory.update({ where: { id }, data: { enableQuickStock: allow } });
-        return { success: true, message: "Quick stock settings updated." };
+        const allow = data.get('trackQuantity') === 'true';
+        await db.inventory.update({ where: { id }, data: { trackQuantity: allow } });
+        return { success: true, message: "Quantity tracking updated." };
+    },
+
+    toggleUiFlag: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+        const field = data.get('field') as string;
+        const value = data.get('value') === 'true';
+        
+        if (['showExif', 'showColors', 'showOcr', 'enableNotebook', 'enableDocuments', 'enableFuzzySearch'].includes(field)) {
+            await db.inventory.update({ where: { id }, data: { [field]: value } });
+        }
+        return { success: true, message: "UI settings updated." };
+    },
+
+    updateNotebookCategories: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+        
+        const csv = data.get('notebookCategories') as string;
+        const cats = csv.split(',').map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+        
+        // Ensure "archive" is always present as the system needs it for background scans
+        if (!cats.includes('archive')) cats.push('archive');
+
+        await db.inventory.update({ where: { id }, data: { notebookCategories: JSON.stringify(cats) } });
+        return { success: true, message: "Notebook categories updated." };
     },
 
     retrySchemaBootstrap: async ({ request, locals }) => {

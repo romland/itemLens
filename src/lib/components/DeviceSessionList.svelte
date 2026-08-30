@@ -36,7 +36,11 @@
                         {/if}
                     </div>
                     <div class="text-xs text-gray-500 truncate mt-0.5">
-                        <span class="mr-2">Last active <RelativeDate date={session.lastActiveAt} /></span>
+                                {#if isCurrent}
+                                    <span class="mr-2 text-success font-semibold">Active now</span>
+                                {:else}
+                                    <span class="mr-2">Last active <RelativeDate date={session.lastActiveAt} /></span>
+                                {/if}
                         {#if session.ipAddress}
                             <span class="opacity-50 font-mono hidden sm:inline">• {session.ipAddress}</span>
                         {/if}

@@ -79,6 +79,12 @@ export async function GET({ url, setHeaders, locals }) {
     const colorMix = url.searchParams.get('color');
     const attrsJson = url.searchParams.get('attrs');
 
+    // Fetch inventory settings for search logic
+    const inventory = await db.inventory.findUnique({
+        where: { id: locals.activeInventoryId },
+        select: { enableFuzzySearch: true }
+    });
+
     let orderBy: any = [{ id: 'desc' }];
     switch(sort) {
         case 'oldest': orderBy = [{ id: 'asc' }]; break;
@@ -208,7 +214,7 @@ export async function GET({ url, setHeaders, locals }) {
     }
 
     const searchTerms = parsedTerms.map(t => t.text);
-    const stemmedTerms = tokenizeAndStem([q]);
+    const stemmedTerms = inventory?.enableFuzzySearch ? tokenizeAndStem([q]) : [];
 
     if (q && parsedTerms.length > 0) {
         const termConditions = parsedTerms.map(({ text, isPhrase }) => {
@@ -217,13 +223,16 @@ export async function GET({ url, setHeaders, locals }) {
                 { description: { contains: text } },
                 { locations: { some: { container: { name: { contains: text } } } } },
                 { tags: { some: { name: { contains: text } } } },
-                { photos: { some: { llmAnalysis: { contains: text } } } },
                 { photos: { some: { ocr: { contains: text } } } }
             ];
 
             if (!isPhrase) {
-                const stem = tokenizeAndStem([text])[0] || text;
-                orConditions.push({ semanticTokens: { contains: `"${stem}"` } });
+                if (inventory?.enableFuzzySearch) {
+                    const stem = tokenizeAndStem([text])[0] || text;
+                    orConditions.push({ semanticTokens: { contains: `"${stem}"` } });
+                    // Only search the AI's raw metadata dump if fuzzy search is enabled
+                    orConditions.push({ photos: { some: { llmAnalysis: { contains: text } } } });
+                }
             }
 
             return { OR: orConditions };

@@ -90,8 +90,15 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let currentLocalPath = localPath;
     const isVideo = localPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
     if (!isVideo && !localPath.endsWith('.webp')) {
-        const newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
-        const newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
+        let newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
+        let newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
+
+        // Fallback: If slugify stripped the extension entirely, just append .webp
+        if (newLocalPath === localPath) {
+            newLocalPath = `${localPath}.webp`;
+            newWebPath = `${webPath}.webp`;
+        }
+
         await heavyMlQueue.add(
             () => sharp(localPath).rotate().webp({ quality: 85 }).toFile(newLocalPath),
             tracking ? { ...tracking, description: 'Converting image to WebP' } : undefined

@@ -59,18 +59,28 @@
 <!-- MOBILE ONLY: Compact Side-by-Side Row -->
 <div class="md:hidden bg-base-100 shadow-sm border border-base-200 rounded-xl p-3 flex flex-col gap-3">
     <div class="flex items-center gap-3">
+        {#if item?.inventory?.trackQuantity}
         <div class="flex flex-col justify-center bg-base-200/60 px-2 py-2 rounded-xl text-center shrink-0 min-w-[4.5rem]">
             <div class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Stock</div>
-            <div class="text-2xl font-bold leading-tight flex items-center justify-center gap-1">
-                {#if item?.inventory?.enableQuickStock && canEdit}
-                    <button class="btn btn-xs btn-ghost p-0 w-5 h-5 -ml-1" on:click={() => document.getElementById('decStockBtn')?.click()}><i class="bi bi-dash"></i></button>
+            <div class="text-2xl font-bold leading-tight flex items-center justify-center gap-1 {item.amount === 0 ? 'opacity-50' : ''}">
+                {#if canEdit}
+                    <button class="btn btn-xs btn-ghost p-0 w-5 h-5 -ml-1" on:click={() => item.amount > 0 && document.getElementById('decStockBtn')?.click()} disabled={item.amount === 0}><i class="bi bi-dash"></i></button>
                 {/if}
                 <span>{item.amount !== null ? item.amount : '-'}</span>
-                {#if item?.inventory?.enableQuickStock && canEdit}
+                {#if canEdit}
                     <button class="btn btn-xs btn-ghost p-0 w-5 h-5 -mr-1" on:click={() => document.getElementById('incStockBtn')?.click()}><i class="bi bi-plus"></i></button>
                 {/if}
             </div>
+            {#if item.amount === 0 && item?.inventory?.enableNotebook}
+                <form method="POST" action="/timeline?/capture" use:enhance={() => { return async ({ update }) => { notify('success', 'Added to Shopping List!'); await update({ reset: false }); }; }}>
+                    <input type="hidden" name="content" value="Need to restock: {item.title}">
+                    <input type="hidden" name="category" value="to buy">
+                    <input type="hidden" name="linkedItemIds[]" value={item.id}>
+                    <button type="submit" class="text-[9px] font-bold text-primary hover:bg-primary/20 bg-primary/10 rounded-full px-2 py-1 mt-1 transition-colors leading-tight block mx-auto whitespace-nowrap active:scale-95 transition-transform"><i class="bi bi-cart-plus"></i> Buy List</button>
+                </form>
+            {/if}
         </div>
+        {/if}
 
         {#if item.locations?.[0]}
             {@const loc = item.locations[0]}
@@ -124,21 +134,35 @@
 
 <!-- DESKTOP ONLY: Stacked Layout -->
 <div class="hidden md:flex flex-col gap-4">
+    {#if item?.inventory?.trackQuantity}
     <div class="stats shadow w-full">
         <div class="stat">
             <div class="stat-title"><span class="text-xs">Stock</span></div>
-            <div class="stat-value text-secondary flex items-center gap-2">
-                {#if item?.inventory?.enableQuickStock && canEdit}
-                    <button class="btn btn-sm btn-ghost p-0 w-8 h-8" on:click={() => document.getElementById('decStockBtn')?.click()}><i class="bi bi-dash"></i></button>
+            <div class="stat-value text-secondary flex items-center gap-2 {item.amount === 0 ? 'opacity-50' : ''}">
+                {#if canEdit}
+                    <button class="btn btn-sm btn-ghost p-0 w-8 h-8" on:click={() => item.amount > 0 && document.getElementById('decStockBtn')?.click()} disabled={item.amount === 0}><i class="bi bi-dash"></i></button>
                 {/if}
                 <span>{#if item.amount !== null}{item.amount}{:else}-{/if}</span>
-                {#if item?.inventory?.enableQuickStock && canEdit}
+                {#if canEdit}
                     <button class="btn btn-sm btn-ghost p-0 w-8 h-8" on:click={() => document.getElementById('incStockBtn')?.click()}><i class="bi bi-plus"></i></button>
                 {/if}
             </div>
-            <div class="stat-desc">&nbsp;</div>
+            <div class="stat-desc mt-1 h-5">
+                {#if item.amount === 0 && item?.inventory?.enableNotebook}
+                    <form method="POST" action="/timeline?/capture" class="flex items-center gap-2" use:enhance={() => { return async ({ update }) => { notify('success', 'Added to Shopping List!'); await update({ reset: false }); }; }}>
+                        <span class="text-error/80 font-medium">Out of stock</span>
+                        <input type="hidden" name="content" value="Need to restock: {item.title}">
+                        <input type="hidden" name="category" value="to buy">
+                        <input type="hidden" name="linkedItemIds[]" value={item.id}>
+                        <button type="submit" class="text-[10px] font-bold text-primary hover:bg-primary/20 bg-primary/10 rounded-full px-2 py-0.5 transition-colors active:scale-95 transition-transform"><i class="bi bi-cart-plus"></i> Add to list</button>
+                    </form>
+                {:else}
+                    &nbsp;
+                {/if}
+            </div>
         </div>
     </div>
+    {/if}
 
     {#if !item.locations || item.locations.length === 0}
         <div class="card bg-base-100 shadow-sm border border-dashed border-base-300 w-full overflow-hidden">

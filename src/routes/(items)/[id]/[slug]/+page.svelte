@@ -38,12 +38,10 @@
     let pasteHandler: PasteHandler;
     onMount(() => {
         const handleInc = () => { 
-            if (data.item?.inventory?.enableQuickStock && data.canEdit) document.getElementById('incStockBtn')?.click(); 
-            else console.log('[QuickStock] Increment ignored. Enabled:', data.item?.inventory?.enableQuickStock, 'canEdit:', data.canEdit);
+            if (data.item?.inventory?.trackQuantity && data.canEdit) document.getElementById('incStockBtn')?.click();
         };
         const handleDec = () => { 
-            if (data.item?.inventory?.enableQuickStock && data.canEdit) document.getElementById('decStockBtn')?.click(); 
-            else console.log('[QuickStock] Decrement ignored. Enabled:', data.item?.inventory?.enableQuickStock, 'canEdit:', data.canEdit);
+            if (data.item?.inventory?.trackQuantity && data.canEdit) document.getElementById('decStockBtn')?.click();
         };
         window.addEventListener('shortcut:stockInc', handleInc);
         window.addEventListener('shortcut:stockDec', handleDec);
@@ -76,41 +74,42 @@
         // Driven completely by centralized server state now!
         isProcessingItem = data.activeTasks && data.activeTasks.length > 0;
 
-        // TODO: This should be done during initial processing (once), not every time rendering
+
         photoAttributes = [];
-        
-        for(let i = 0; i < data.item.photos?.length; i++) {
-            const photo = data.item.photos[i];
-            
-            try {
-                const ocr = JSON.parse(photo.ocr)?.data[0] || [];
-                // console.log("photo ocr:", ocr, ocr.length);
-                for(let j = 0; j < ocr.length; j++) {
-                    if(photo.type !== "product") {
-                        continue;
+        if (data.item?.inventory?.showOcr) {
+            for(let i = 0; i < data.item.photos?.length; i++) {
+                const photo = data.item.photos[i];
+                
+                try {
+                    const ocr = JSON.parse(photo.ocr)?.data[0] || [];
+                    // console.log("photo ocr:", ocr, ocr.length);
+                    for(let j = 0; j < ocr.length; j++) {
+                        if(photo.type !== "product") {
+                            continue;
+                        }
+                        
+                        // Add text in product photos to attributes
+                        const block = ocr[j];
+                        
+                        // Too low confidence
+                        if(block[1][1] < 0.85) {
+                            continue;
+                        }
+                        
+                        // Too short string
+                        if(block[1][0].length < 3) {
+                            continue;
+                        }
+                        
+                        photoAttributes.push({
+                            photo: photo.id,
+                            key: "OCR " + i + "." + j,
+                            value: block[1][0]
+                        })
                     }
-                    
-                    // Add text in product photos to attributes
-                    const block = ocr[j];
-                    
-                    // Too low confidence
-                    if(block[1][1] < 0.85) {
-                        continue;
-                    }
-                    
-                    // Too short string
-                    if(block[1][0].length < 3) {
-                        continue;
-                    }
-                    
-                    photoAttributes.push({
-                        photo: photo.id,
-                        key: "OCR " + i + "." + j,
-                        value: block[1][0]
-                    })
+                } catch(ex) {
+                    // console.warn("No or faulty OCR data for photo", photo.id)
                 }
-            } catch(ex) {
-                // console.warn("No or faulty OCR data for photo", photo.id)
             }
         }
     }
@@ -291,7 +290,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
         />
     {/if}
     
-    {#if productPhotos.some(p => p.exifData)}
+    {#if data.item?.inventory?.showExif && productPhotos.some(p => p.exifData)}
         <div class="border-b border-base-300 pb-3 mb-3">
             <div class="title font-bold mb-3 flex items-center gap-2">
                 <i class="bi bi-camera"></i> EXIF & Image Data
@@ -365,25 +364,27 @@ $: if (data.duplicateItemDetails?.debugTrace) {
         </div>
     {/if}
 
-    <div class="border-b border-base-300 pb-3 mb-3">
-        <div class="title font-bold">
-            Colors in product photos
-        </div>
-        <div class="flex flex-wrap gap-2 mt-2">
-            {#each productPhotos as photo}
-                {#if photo.colors?.length > 2}
-                    {@const cols=Object.keys(JSON.parse(photo.colors))}
-                    {@const names=Object.values(JSON.parse(photo.colors))}
-                    {#each cols as col, i}
-                        <div class="tooltip shadow text-xs items-center text-center rounded" data-tip="{names[i]} ({col})">
-                            <div class="w-8 h-8 rounded border border-base-200/50" style="background-color:{col}">
+    {#if data.item?.inventory?.showColors}
+        <div class="border-b border-base-300 pb-3 mb-3">
+            <div class="title font-bold">
+                Colors in product photos
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                {#each productPhotos as photo}
+                    {#if photo.colors?.length > 2}
+                        {@const cols=Object.keys(JSON.parse(photo.colors))}
+                        {@const names=Object.values(JSON.parse(photo.colors))}
+                        {#each cols as col, i}
+                            <div class="tooltip shadow text-xs items-center text-center rounded" data-tip="{names[i]} ({col})">
+                                <div class="w-8 h-8 rounded border border-base-200/50" style="background-color:{col}">
+                                </div>
                             </div>
-                        </div>
-                    {/each}
-                {/if}
-            {/each}
+                        {/each}
+                    {/if}
+                {/each}
+            </div>
         </div>
-    </div>
+    {/if}
 
     <!-- Background Activity Log -->
     {#if dev}

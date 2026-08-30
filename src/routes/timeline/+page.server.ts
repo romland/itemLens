@@ -8,6 +8,16 @@ import { processFormDocuments } from '$lib/server/services';
 
 export const load = (async ({ locals, url }) => {
     const category = url.searchParams.get('category') || 'all';
+
+    // Get custom tabs from DB
+    const inventory = await db.inventory.findUnique({
+        where: { id: locals.activeInventoryId },
+        select: { enableNotebook: true, notebookCategories: true }
+    });
+    
+    let parsedCategories = ["idea", "todo", "to buy", "to read", "other", "archive"];
+    try { if (inventory?.notebookCategories) parsedCategories = JSON.parse(inventory.notebookCategories); } catch (e) {}
+
     const whereClause: any = { inventoryId: locals.activeInventoryId };
 
     if (category !== 'all') {
@@ -25,7 +35,7 @@ export const load = (async ({ locals, url }) => {
             linkedItems: { select: { id: true, title: true, slug: true } }
         }
     });
-    return { notes, currentCategory: category };
+    return { notes, currentCategory: category, parsedCategories, enableNotebook: inventory?.enableNotebook };
 }) satisfies PageServerLoad;
 
 export const actions = {

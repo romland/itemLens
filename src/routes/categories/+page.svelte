@@ -16,7 +16,11 @@
     let confirmModal: HTMLDialogElement;
     let isDeleting = false;
     let notifications: any[] = [];
-    
+
+    let mergeModal: HTMLDialogElement;
+    let categoryToMerge: any = null;
+    let isMerging = false;
+
     let addModal: HTMLDialogElement;
     let isAdding = false;
     let newCategoryName = "";
@@ -24,6 +28,11 @@
     $: if (confirmModal) {
         if (categoryToDelete && !confirmModal.open) confirmModal.showModal();
         if (!categoryToDelete && confirmModal.open) confirmModal.close();
+    }
+
+    $: if (mergeModal) {
+        if (categoryToMerge && !mergeModal.open) mergeModal.showModal();
+        if (!categoryToMerge && mergeModal.open) mergeModal.close();
     }
 
     function notify(status: string, message: string) {
@@ -83,6 +92,9 @@
                         </form>
                     </div>
 
+                    <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors" on:click={() => categoryToMerge = cat} aria-label="Merge Category">
+                        <i class="bi bi-intersect text-lg"></i>
+                    </button>
                     <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-error hover:bg-error/10 transition-colors" on:click={() => categoryToDelete = cat} aria-label="Delete Category">
                         <i class="bi bi-trash text-lg"></i>
                     </button>
@@ -144,6 +156,40 @@
     <form method="dialog" class="modal-backdrop">
         <button disabled={isDeleting}>close</button>
     </form>
+</dialog>
+
+<!-- Merge Modal -->
+<dialog bind:this={mergeModal} class="modal modal-bottom sm:modal-middle" on:close={() => categoryToMerge = null}>
+    <div class="modal-box sm:rounded-[2rem] p-6">
+        <h3 class="font-bold text-xl mb-2 text-center sm:text-left">Merge Category</h3>
+        <p class="text-gray-500 text-center sm:text-left text-sm mb-6">
+            Move all <strong>{categoryToMerge?._count.photos}</strong> photos from <strong class="text-base-content capitalize">"{categoryToMerge?.name}"</strong> into another category, then delete this one.
+        </p>
+        <form method="POST" action="?/merge" class="flex flex-col gap-4" use:enhance={() => {
+            isMerging = true;
+            return async ({ update }) => {
+                await update();
+                isMerging = false;
+                categoryToMerge = null;
+                notify('success', 'Categories merged successfully.');
+            };
+        }}>
+            <input type="hidden" name="sourceId" value={categoryToMerge?.id}>
+            <select name="targetId" class="select select-bordered w-full rounded-xl capitalize" required>
+                <option value="" disabled selected>Select destination category...</option>
+                {#each data.categories.filter(c => c.id !== categoryToMerge?.id) as c}
+                    <option value={c.id}>{c.name}</option>
+                {/each}
+            </select>
+            <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3 mt-2">
+                <button type="submit" class="btn btn-primary w-full sm:w-auto flex-1 shadow-sm rounded-xl" disabled={isMerging}>
+                    {#if isMerging}<span class="loading loading-spinner"></span>{:else}Merge & Delete{/if}
+                </button>
+                <button type="button" class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => categoryToMerge = null} disabled={isMerging}>Cancel</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button disabled={isMerging}>close</button></form>
 </dialog>
 
 <!-- Add Category Modal -->

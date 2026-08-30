@@ -196,6 +196,8 @@
 
     import pageTitle from '$lib/stores';
 	$: pageTitle.set(data.cat ? "Category: " + data.cat : (data.q ? "Search for " + data.q : "Search"));
+
+    $: currentInventory = $page.data.inventories?.find(i => i.id === $page.data.activeInventoryId);
 </script>
 
 <div class="flex justify-between items-center mb-6 px-2">
@@ -228,7 +230,7 @@
 </div>
 {/if}
 
-{#if !bulkMode}
+{#if !bulkMode && currentInventory?.enableDocuments !== false}
 <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300 shadow-inner">
     <button type="button" class="flex-1 btn btn-sm border-none {searchTab === 'items' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => searchTab = 'items'}>
         Items <span class="badge badge-sm badge-ghost ml-1">{data.totalCount}</span>
