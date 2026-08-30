@@ -303,6 +303,10 @@
                                                         <input type="checkbox" name="isAdmin" value="true" checked={u.isAdmin} class="checkbox checkbox-sm checkbox-error" />
                                                         <span class="label-text font-bold text-error">System Admin</span>
                                                     </label>
+                                                    <label class="label cursor-pointer justify-start gap-3 w-fit mt-[-10px]">
+                                                        <input type="checkbox" name="canCreateInventories" value="true" checked={u.canCreateInventories} class="checkbox checkbox-sm checkbox-primary" />
+                                                        <span class="label-text font-bold text-primary">Can Create Collections</span>
+                                                    </label>
                                                 </div>
                                             </div>
                                             <div class="flex gap-2 justify-end mt-2">
@@ -594,15 +598,17 @@
         </div>
     {/if}
 
-    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
-            <h3 class="font-bold text-lg mb-1">Create New Collection</h3>
-            <p class="text-sm text-gray-500">Set up a new isolated space for a specific group of items.</p>
+    {#if $page.data.user?.isAdmin || $page.data.user?.canCreateInventories}
+        <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h3 class="font-bold text-lg mb-1">Create New Collection</h3>
+                <p class="text-sm text-gray-500">Set up a new isolated space for a specific group of items.</p>
+            </div>
+            <button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
+                <i class="bi bi-plus-lg"></i> Create Collection
+            </button>
         </div>
-        <button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
-            <i class="bi bi-plus-lg"></i> Create Collection
-        </button>
-    </div>
+    {/if}
 </div>
 
 <ConfirmModal bind:this={confirmModal} />

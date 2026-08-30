@@ -17,7 +17,7 @@ export const load = async ({ locals, cookies }) => {
     let currentSessionHash = '';
 
     if (locals.user.isAdmin) {
-        allUsers = await db.user.findMany({ select: { id: true, username: true, name: true, email: true, isAdmin: true } });
+        allUsers = await db.user.findMany({ select: { id: true, username: true, name: true, email: true, isAdmin: true, canCreateInventories: true } });
 		allInventories = await db.inventory.findMany({ 
             select: { 
                 id: true, 
@@ -114,6 +114,7 @@ export const actions = {
 
 	createInventory: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
+        if (!locals.user.isAdmin && !locals.user.canCreateInventories) return fail(403, { error: true, message: "You do not have permission to create new collections." });
         
         const data = await request.formData();
         const name = data.get('name') as string;
@@ -221,12 +222,13 @@ export const actions = {
         const email = data.get('email') as string;
         const password = data.get('password') as string;
         const isAdmin = data.get('isAdmin') === 'true';
+        const canCreateInventories = data.get('canCreateInventories') === 'true';
 
         if (id === locals.user.id && !isAdmin) {
             return fail(400, { error: true, message: "You cannot revoke your own admin status." });
         }
 
-        let updateData: any = { name: name.trim(), email: email.trim(), isAdmin };
+        let updateData: any = { name: name.trim(), email: email.trim(), isAdmin, canCreateInventories };
         if (password && password.trim().length >= 6) {
             updateData.password = await bcrypt.hash(password, 10);
         }

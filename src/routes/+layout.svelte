@@ -393,7 +393,7 @@ $:  isDemoMode =
                     -->
                 </select>
             </form>
-        {:else if $page.data.user}
+        {:else if $page.data.user && ($page.data.user.isAdmin || $page.data.user.canCreateInventories)}
             <button class="btn btn-sm btn-primary ml-4 rounded-xl shadow-sm" on:click={() => createInventoryModal.showModal()}>
                 <i class="bi bi-plus-lg"></i> Create Collection
             </button>

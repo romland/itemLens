@@ -32,7 +32,8 @@ export const handle = (async ({ event, resolve }) => {
                 email: user.email,
                 avatar: user.avatar,
                 isAdmin: user.isAdmin,
-                preferences: user.preferences
+                preferences: user.preferences,
+                canCreateInventories: user.canCreateInventories
             } as any;
 
             // Inventory Routing Logic
