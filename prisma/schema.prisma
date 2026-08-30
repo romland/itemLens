@@ -5,8 +5,10 @@ generator client {
 datasource db {
   provider = "sqlite"
   // `https://github.com/prisma/prisma/issues/11789#issuecomment-1900773221
-  url      = "file:./dev.db?connection_limit=1"
-//url      = "file:./v2.db?connection_limit=1"
+  // url      = "file:./dev.db?connection_limit=1"
+  // url      = "file:./v2.db?connection_limit=1"
+  // above undone by: https://github.com/prisma/prisma-engines/pull/4907
+  url      = "file:./dev.db"
 }
 
 

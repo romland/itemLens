@@ -3,13 +3,44 @@ Doc: https://kit.svelte.dev/docs/routing#server
 */
 import { db } from '$lib/server/database';
 import type { Prisma } from '@prisma/client';
+import { normalizeStr } from '$lib/server/matcher';
 
 /*
 TODO SECURITY: NEED TO IMPLEMENT AUTHORIZATION HERE (HOW IS IT DONE ELSEWHERE?)
 */
 
+function scoreSearchRelevance(itemTitle: string, query: string, terms: string[]): number {
+    if (!itemTitle) return 0;
+    const title = normalizeStr(itemTitle);
+    const q = normalizeStr(query);
+    let score = 0;
+    
+    if (title === q) score += 100;
+    else if (title.startsWith(q)) score += 80;
+    else if (title.includes(q)) score += 60;
+    else {
+        let matches = 0;
+        let lastIndex = -1;
+        let inOrder = true;
+        
+        for (const term of terms) {
+            const t = normalizeStr(term);
+            const idx = title.indexOf(t);
+            if (idx !== -1) {
+                matches++;
+                if (idx > lastIndex) lastIndex = idx;
+                else inOrder = false;
+            }
+        }
+        score += (matches / terms.length) * 40;
+        if (inOrder && matches === terms.length) score += 10;
+    }
+    return score;
+}
+
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ url, setHeaders, locals }) {
+    const tStart = performance.now();
     if (!locals.user) return new Response('Unauthorized', { status: 401 });
 	setHeaders({
 		'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
@@ -71,11 +102,14 @@ export async function GET({ url, setHeaders, locals }) {
     let documentResults: any[] = [];
 
     // Full Text Search for Documents (SQLite FTS5)
+    let tFtsStart = performance.now();
     const ftsQuery = q || docStr;
     const safeQ = ftsQuery.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-    if (safeQ.length > 0) {
-        // Create a prefix search query: "apple" -> '"apple"*'
-        const matchQuery = safeQ.split(/\s+/).map(word => `"${word}"*`).join(' AND ');
+
+    // Prevent FTS5 index explosions on 1-character prefix queries (like "t*") which take 5+ seconds
+    const ftsTerms = safeQ.split(/\s+/).filter(word => word.length > 1);
+    if (ftsTerms.length > 0) {
+        const matchQuery = ftsTerms.map(word => `"${word}"*`).join(' AND ');
         try {
             documentResults = await db.$queryRawUnsafe(`
                 SELECT d.id, d.title, d.path, d.source, d.itemId, 
@@ -110,6 +144,7 @@ export async function GET({ url, setHeaders, locals }) {
             `, locals.activeInventoryId, locals.activeInventoryId, docLimit) as any[];
         } catch(e) { console.error("Recent documents fetch failed", e); }
     }
+    const tFtsEnd = performance.now();
 
     // Clean up SQLite FTS JSON artifacts (literal \n, \t, brackets) from the excerpts
     documentResults.forEach(d => {
@@ -148,15 +183,24 @@ export async function GET({ url, setHeaders, locals }) {
         }
     }
 
-    if(q && q.length > 0) {
+    const searchTerms = safeQ.split(/\s+/).filter(t => t.length > 0);
+    if (q && searchTerms.length > 0) {
+        const termConditions = searchTerms.map(term => ({
+            OR: [
+                { title: { contains: term } },
+                { description: { contains: term } },
+                { locations: { some: { container: { name: { contains: term } } } } },
+                { tags: { some: { name: { contains: term } } } },
+                { photos: { some: { llmAnalysis: { contains: term } } } },
+                { photos: { some: { ocr: { contains: term } } } }
+            ]
+        }));
+        
         query.where = {
             ...query.where,
-            OR: [
-                { title: { contains: q }},
-                { description: { contains: q }},
-                { locations: { some: { container: { name: { contains: q } } } } },
-                { photos: { some: { llmAnalysis: { contains: q } } } },
-                { photos: { some: { ocr: { contains: q } } } }
+            AND: [
+                ...(query.where.AND as any || []),
+                ...termConditions
             ]
         };
     }
@@ -228,10 +272,12 @@ export async function GET({ url, setHeaders, locals }) {
         } catch(e) { console.error('Failed to parse attrs filter', e); }
     }
 
+    let tDbStart = performance.now();
     const [rawItems, totalCount] = await Promise.all([
         db.item.findMany(query),
         db.item.count({ where: query.where })
     ]);
+    let tDbEnd = performance.now();
 
     const items = rawItems.map((item: any) => {
         // Strip massive background data not needed for the list view to save network/cache quota
@@ -243,8 +289,18 @@ export async function GET({ url, setHeaders, locals }) {
         return item;
     });
 
+    // In-memory rank sorting based on query exactness and word-order
+    let tSortStart = performance.now();
+    if (q && searchTerms.length > 0) {
+        items.sort((a, b) => scoreSearchRelevance(b.title, q, searchTerms) - scoreSearchRelevance(a.title, q, searchTerms));
+    }
+    let tSortEnd = performance.now();
+
     const prevPage = page == 1 ? 0 : page - 1;
     const nextPage = items.length < count ? 0 : page + 1;
+    
+    const totalTime = (performance.now() - tStart).toFixed(2);
+    console.log(`[Search Telemetry] Total: ${totalTime}ms | FTS: ${(tFtsEnd-tFtsStart).toFixed(2)}ms | Prisma DB: ${(tDbEnd-tDbStart).toFixed(2)}ms | JS Sort: ${(tSortEnd-tSortStart).toFixed(2)}ms | Query: "${q}"`);
 
     return new Response(JSON.stringify({ q, items, documentResults, totalCount, prevPage, nextPage }));
 }
