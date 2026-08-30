@@ -36,7 +36,7 @@
                         {#if data.item?.location}
                             <span class="flex items-center gap-1"><i class="bi bi-geo-alt-fill text-primary"></i> {data.item.location}</span>
                         {/if}
-                        <span class="flex items-center gap-1"><i class="bi bi-box"></i> {data.items.length} Items</span>
+                        <span class="flex items-center gap-1"><i class="bi bi-box"></i> {data.totalCount} Items</span>
                         {#if data.item?.children?.length > 0}
                             <span class="flex items-center gap-1"><i class="bi bi-grid-3x3-gap"></i> {data.item.children.length} Trays</span>
                         {/if}
@@ -84,7 +84,7 @@
                     <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked={data.includeTrays} on:change={(e) => {
                         const url = new URL(window.location.href);
                         if (e.currentTarget.checked) url.searchParams.set('includeTrays', 'true'); else url.searchParams.delete('includeTrays');
-                        goto(url.search, { invalidateAll: true, keepFocus: true });
+                        goto(url.href, { invalidateAll: true, keepFocus: true });
                     }} />
                     Include nested trays
                 </label>

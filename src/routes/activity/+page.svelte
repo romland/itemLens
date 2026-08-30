@@ -7,6 +7,7 @@
     import { page } from '$app/stores';
     import pageTitle from '$lib/stores';
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import { notify } from "$lib/client/notifications";
 
     export let data: PageServerData;
 
@@ -45,7 +46,7 @@
 <div class="max-w-4xl mx-auto flex flex-col gap-6 animate-fade-in pb-12">
     <!-- Header Stats -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between items-start relative overflow-hidden h-36">
+        <button type="button" on:click={() => activeTab = 'queues'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between items-start relative overflow-hidden h-36 w-full text-left group hover:border-primary transition-colors cursor-pointer">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
             <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 relative z-10 w-full">Active Tasks</div>
             <div class="text-5xl font-bold tracking-tight text-base-content flex items-center gap-3">
@@ -57,7 +58,7 @@
                     </span>
                 {/if}
             </div>
-        </div>
+        </button>
         
         <button type="button" on:click={() => activeTab = 'llms'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-info transition-colors cursor-pointer relative overflow-hidden h-36 w-full text-left">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-info/10 rounded-full blur-2xl"></div>
@@ -239,16 +240,19 @@
                                     <span class="text-xs text-gray-500">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                 </div>
                                 <span class="badge badge-ghost badge-sm font-mono border-base-300">{log.durationMs}ms</span>
-                                <span class="badge badge-ghost badge-sm font-mono border-base-300">{log.durationMs}ms | {log.tokensIn} in / {log.tokensOut} out</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="badge badge-ghost badge-sm font-mono border-base-300">{log.durationMs}ms | {log.tokensIn} in / {log.tokensOut} out</span>
+                                    <button type="button" class="btn btn-xs btn-ghost hover:text-primary gap-1" on:click={() => { navigator.clipboard.writeText(`PROMPT:\n${typeof log.input === 'string' ? log.input : JSON.stringify(log.input, null, 2)}\n\nRESPONSE:\n${typeof log.output === 'string' ? log.output : JSON.stringify(log.output, null, 2)}`); notify('success', 'Copied to clipboard!'); }}><i class="bi bi-copy"></i> Copy</button>
+                                </div>
                             </div>
                             <div class="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                                 <div class="flex flex-col min-w-0">
                                     <h3 class="font-bold text-xs uppercase text-gray-500 mb-2 tracking-wider flex items-center gap-2"><i class="bi bi-box-arrow-in-right"></i> Prompt Sent</h3>
-                                    <pre class="bg-base-200/50 border border-base-200 p-4 rounded-2xl text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto w-full font-mono">{typeof log.input === 'string' ? log.input : JSON.stringify(log.input, null, 2)}</pre>
+                                    <pre class="bg-base-200/50 text-base-content border border-base-200 p-4 rounded-2xl text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto w-full font-mono">{typeof log.input === 'string' ? log.input : JSON.stringify(log.input, null, 2)}</pre>
                                 </div>
                                 <div class="flex flex-col min-w-0">
                                     <h3 class="font-bold text-xs uppercase text-gray-500 mb-2 tracking-wider flex items-center gap-2"><i class="bi bi-box-arrow-right text-success"></i> Response Received</h3>
-                                    <pre class="bg-success/5 text-success-content border border-success/20 p-4 rounded-2xl text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto w-full font-mono">{typeof log.output === 'string' ? log.output : JSON.stringify(log.output, null, 2)}</pre>
+                                    <pre class="bg-success/5 text-base-content border border-success/20 p-4 rounded-2xl text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto w-full font-mono">{typeof log.output === 'string' ? log.output : JSON.stringify(log.output, null, 2)}</pre>
                                 </div>
                             </div>
                         </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
+    import { getFileInfo } from "$lib/client/utils";
     export let documents: any[] = [];
 
     const dispatch = createEventDispatcher();
@@ -16,23 +17,6 @@
             dispatch('openImage', { orgPath: doc.path || doc.source, showOriginal: true });
         }
     }
-
-    function getFileInfo(doc: any) {
-        const path = (doc.path || '').toLowerCase().split('#')[0];
-        const source = (doc.source || '').toLowerCase();
-        
-        if (path.endsWith('.pdf')) return { icon: 'bi-filetype-pdf', label: 'PDF' };
-        if (path.endsWith('.epub')) return { icon: 'bi-book', label: 'EPUB' };
-        if (path.match(/\.(mp4|webm|mov|mkv)$/i)) return { icon: 'bi-filetype-mp4', label: 'VIDEO' };
-        if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return { icon: 'bi-image', label: 'IMAGE' };
-        if (path.endsWith('.html') || source.startsWith('http')) return { icon: 'bi-globe', label: 'WEB' };
-        if (doc.type === 'note') return { icon: 'bi-sticky', label: 'NOTE' };
-        
-        const match = path.match(/\.([a-z0-9]+)$/i);
-        if (match) return { icon: 'bi-file-earmark-text', label: match[1].toUpperCase() };
-        
-        return { icon: 'bi-file-earmark-text', label: 'DOC' };
-    }
 </script>
 
 <div class="flex flex-col gap-2 pb-32 animate-fade-in px-2 sm:px-0">
@@ -45,8 +29,8 @@
             
             <!-- Icon (Left Column) -->
             <div class="shrink-0 relative z-10 pointer-events-none mt-0.5 sm:mt-0">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-base-200 flex items-center justify-center text-base-content/60 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <i class="{info.icon} text-xl sm:text-2xl"></i>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-base-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <i class="{info.icon} {info.color} text-xl sm:text-2xl"></i>
                 </div>
             </div>
 

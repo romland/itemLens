@@ -6,6 +6,9 @@
     export let activeSchema: any[] = [];
 
     const dispatch = createEventDispatcher();
+
+    let showAll = false;
+    $: visibleAttributes = showAll ? attributes : attributes.slice(0, 6);
 </script>
 
 <div class="bg-base-100 rounded-3xl border border-base-200 shadow-sm p-4 sm:p-6 mb-6">
@@ -22,7 +25,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="flex flex-col gap-2">
-            {#each attributes as attrib}
+            {#each visibleAttributes as attrib}
                 {@const schemaField = activeSchema.find(f => f.name === attrib.key)}
                 {@const displayKey = attrib.key === 'color_mix' ? 'Colors' : (schemaField?.uiLabel || attrib.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                 {@const displayVal = (() => {
@@ -50,6 +53,11 @@
                     {/if}
                 </div>
             {/each}
+            {#if attributes.length > 6}
+                <button type="button" class="btn btn-ghost btn-xs text-primary mt-1 self-start" on:click={() => showAll = !showAll}>
+                    {showAll ? 'Show Less' : `Show All (${attributes.length})`}
+                </button>
+            {/if}
         </div>
 
         {#if photoAttributes.length > 0}

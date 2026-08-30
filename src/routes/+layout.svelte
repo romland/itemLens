@@ -656,7 +656,10 @@ $:  isDemoMode =
                             <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">
                                 <i class="bi bi-box-arrow-right text-xl"></i>
                             </div>
-                            <div class="flex-1 font-semibold text-lg">Sign out</div>
+                            <div class="flex-1 font-semibold text-lg flex flex-col leading-tight">
+                                <span>Sign out</span>
+                                <span class="text-[10px] text-gray-500 font-normal">{$page.data.user?.name?.split(' ')[0] || $page.data.user?.username}</span>
+                            </div>
                         </button>
                     </form>
                 {/if}

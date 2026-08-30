@@ -50,3 +50,20 @@ export async function nukeAllCaches(skipConfirm: boolean = false) {
 		window.location.reload();
 	}
 }
+
+export function getFileInfo(doc: any) {
+    const path = (doc.path || '').toLowerCase().split('#')[0];
+    const source = (doc.source || '').toLowerCase();
+    
+    if (path.endsWith('.pdf')) return { icon: 'bi-filetype-pdf', color: 'text-error', label: 'PDF' };
+    if (path.endsWith('.epub')) return { icon: 'bi-book', color: 'text-secondary', label: 'EPUB' };
+    if (path.match(/\.(mp4|webm|mov|mkv)$/i)) return { icon: 'bi-filetype-mp4', color: 'text-info', label: 'VIDEO' };
+    if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return { icon: 'bi-image', color: 'text-success', label: 'IMAGE' };
+    if (path.endsWith('.html') || source.startsWith('http')) return { icon: 'bi-globe', color: 'text-primary', label: 'WEB' };
+    if (doc.type === 'note') return { icon: 'bi-sticky', color: 'text-warning', label: 'NOTE' };
+    
+    const match = path.match(/\.([a-z0-9]+)$/i);
+    if (match) return { icon: 'bi-file-earmark-text', color: 'text-gray-500', label: match[1].toUpperCase() };
+    
+    return { icon: 'bi-file-earmark-text', color: 'text-gray-500', label: 'DOC' };
+}

@@ -172,6 +172,31 @@
 
 <div class="flex flex-col w-full">
     <!-- Tab Navigation -->
+    {#snippet containerItem(container)}
+        <div class="flex flex-col p-3 hover:bg-base-200/50 rounded-xl cursor-pointer transition-colors border border-base-200 shadow-sm">
+            <label class="flex items-center gap-3 cursor-pointer w-full">
+                <input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" on:change={dispatchUserChange} />
+                <div class="flex flex-col flex-1 {container.isChild ? 'ml-6' : ''}">
+                    <span class="font-semibold text-sm leading-none flex items-center gap-2">
+                        {#if container.isChild}<i class="bi bi-arrow-return-right text-gray-400 text-xs"></i>{/if}
+                        {container.name}
+                    </span>
+                    {#if container.description}
+                        <span class="text-xs text-gray-500 mt-1 opacity-80">{container.description}</span>
+                    {/if}
+                </div>
+            </label>
+            {#if container.children && container.children.length > 0 && !searchQuery.trim()}
+                <div class="ml-8 mt-2 flex flex-wrap gap-1.5">
+                    {#each container.children as child}
+                        <button type="button" class="badge gap-1 p-3 cursor-pointer transition-colors {manualSelected.includes(child.name) ? 'badge-primary shadow-sm' : 'badge-ghost bg-base-200 border-base-300 hover:border-primary/50'}" on:click|preventDefault|stopPropagation={() => toggleSelection(child.name)}>
+                            {child.name}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 	<div role="tablist" class="flex bg-base-200/70 p-1 mb-4 w-full rounded-xl">
         <button 
             type="button" 
@@ -246,18 +271,7 @@
             {#if searchQuery.trim().length > 0}
                 <div class="bg-base-100 border border-base-200 rounded-xl overflow-y-auto max-h-64 p-2 flex flex-col gap-1 shadow-inner">
                     {#each filteredContainers as container}
-                        <label class="flex items-center gap-3 p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-base-300">
-                            <input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" on:change={dispatchUserChange} />
-                            <div class="flex flex-col {container.isChild ? 'ml-6' : ''}">
-                                <span class="font-semibold text-sm leading-none flex items-center gap-2">
-                                    {#if container.isChild}<i class="bi bi-arrow-return-right text-gray-400 text-xs"></i>{/if}
-                                    {container.name}
-                                </span>
-                                {#if container.description}
-                                    <span class="text-xs text-gray-500 mt-1 opacity-80">{container.description}</span>
-                                {/if}
-                            </div>
-                        </label>
+                        {@render containerItem(container)}
                     {:else}
                         <div class="p-6 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
                             <i class="bi bi-inbox text-2xl"></i>
@@ -278,33 +292,7 @@
             {:else}
                 <div class="bg-base-100 border border-base-200 rounded-xl overflow-y-auto max-h-64 p-2 flex flex-col gap-2 shadow-inner">
                     {#each containers as container}
-                        <div class="flex flex-col p-3 hover:bg-base-200/50 rounded-xl cursor-pointer transition-colors border border-base-200 shadow-sm">
-                            <label class="flex items-center gap-3 cursor-pointer w-full">
-                                <input type="checkbox" bind:group={manualSelected} value="{container.name}" class="checkbox checkbox-sm checkbox-primary" on:change={dispatchUserChange} />
-                                <div class="flex flex-col flex-1">
-                                    <span class="font-semibold text-sm leading-none flex items-center gap-2">
-                                        {container.name}
-                                    </span>
-                                    {#if container.description}
-                                        <span class="text-xs text-gray-500 mt-1 opacity-80">{container.description}</span>
-                                    {/if}
-                                </div>
-                            </label>
-                            
-                            {#if container.children && container.children.length > 0}
-                                <div class="ml-8 mt-2 flex flex-wrap gap-1.5">
-                                    {#each container.children as child}
-                                        <button 
-                                            type="button" 
-                                            class="badge gap-1 p-3 cursor-pointer transition-colors {manualSelected.includes(child.name) ? 'badge-primary shadow-sm' : 'badge-ghost bg-base-200 border-base-300 hover:border-primary/50'}"
-                                            on:click|preventDefault|stopPropagation={() => toggleSelection(child.name)}
-                                        >
-                                            {child.name}
-                                        </button>
-                                    {/each}
-                                </div>
-                            {/if}
-                        </div>
+                        {@render containerItem(container)}
                     {:else}
                         <div class="p-6 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
                             <i class="bi bi-inbox text-2xl"></i>

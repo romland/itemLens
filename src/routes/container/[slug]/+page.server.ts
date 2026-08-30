@@ -45,6 +45,7 @@ export const load = (async ({ locals, params, url, fetch }) => {
     return {
         item: item,
         items: data.items,
+        totalCount: data.totalCount || 0,
         includeTrays,
         prevPage: data.prevPage,
         nextPage: data.nextPage,

@@ -4,6 +4,7 @@
     import { marked } from 'marked';
     import { notify } from "$lib/client/notifications";
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import { getFileInfo } from "$lib/client/utils";
 
     export let documents: any[] = [];
     const dispatch = createEventDispatcher();
@@ -13,14 +14,28 @@
         if(!txt) return "";
         return marked.parse(txt, {gfm:true,breaks:true});
     }
+
+    function getDocIcon(doc: any) {
+        const path = (doc.path || '').toLowerCase().split('#')[0];
+        const source = (doc.source || '').toLowerCase();
+        if (path.endsWith('.pdf')) return 'bi-filetype-pdf text-error';
+        if (path.endsWith('.epub')) return 'bi-book text-secondary';
+        if (path.match(/\.(mp4|webm|mov|mkv)$/i)) return 'bi-filetype-mp4 text-info';
+        if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return 'bi-image text-success';
+        if (path.endsWith('.html') || source.startsWith('http')) return 'bi-globe text-primary';
+        if (doc.type === 'note') return 'bi-sticky text-warning';
+        return 'bi-file-earmark-text text-gray-500';
+    }
 </script>
 
 <div role="tablist" class="tabs tabs-bordered w-full">
     {#each documents as doc, i}
+        {@const info = getFileInfo(doc)}
         <div class="collapse collapse-arrow bg-base-200 mb-1">
             <input type="radio" name="my-accordion-2" checked={i===0} />
-            <div class="collapse-title font-semibold bg-base-300">
-                {doc.title}
+            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3">
+                <i class="bi {info.icon} {info.color} text-lg"></i>
+                <span class="truncate">{doc.title}</span>
             </div>
             <div class="collapse-content prose prose-sm max-w-none"> 
                 {@html alterSummary(doc.summary)}
