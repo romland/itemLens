@@ -38,7 +38,6 @@ export async function GET({ url, setHeaders, locals }) {
     const attrsJson = url.searchParams.get('attrs');
 
     let orderBy: any = [{ id: 'desc' }];
-    let isAttention = false;
     switch(sort) {
         case 'oldest': orderBy = [{ id: 'asc' }]; break;
         case 'name_asc': orderBy = [{ title: 'asc' }]; break;
@@ -47,7 +46,6 @@ export async function GET({ url, setHeaders, locals }) {
         case 'dust': orderBy = [{ updatedAt: 'asc' }]; break;
         case 'amount_asc': orderBy = [{ amount: 'asc' }]; break;
         case 'amount_desc': orderBy = [{ amount: 'desc' }]; break;
-        case 'attention': orderBy = [{ updatedAt: 'desc' }]; isAttention = true; break;
     }
 
     const query: Prisma.ItemFindManyArgs = {
@@ -228,17 +226,6 @@ export async function GET({ url, setHeaders, locals }) {
                 query.where = { ...query.where, AND: [...(query.where.AND as any || []), ...andClauses] };
             }
         } catch(e) { console.error('Failed to parse attrs filter', e); }
-    }
-
-    if (isAttention) {
-        const attentionFilter = { OR: [{ locations: { none: {} } }, { title: 'New Item' }, { title: '' }] };
-        if (query.where?.OR) {
-            const existingOr = query.where.OR;
-            delete query.where.OR;
-            query.where.AND = [ { OR: existingOr }, attentionFilter ];
-        } else {
-            query.where.AND = [ attentionFilter ];
-        }
     }
 
     const [rawItems, totalCount] = await Promise.all([

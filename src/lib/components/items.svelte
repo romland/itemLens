@@ -31,8 +31,7 @@
         { id: 'updated', label: 'Recently Updated', icon: 'bi-clock-history' },
         { id: 'dust', label: 'Dust Collectors', icon: 'bi-hourglass-bottom' },
         { id: 'amount_asc', label: 'Quantity (Low-High)', icon: 'bi-sort-numeric-down' },
-        { id: 'amount_desc', label: 'Quantity (High-Low)', icon: 'bi-sort-numeric-down-alt' },
-        { id: 'attention', label: 'Needs Attention', icon: 'bi-exclamation-circle' }
+        { id: 'amount_desc', label: 'Quantity (High-Low)', icon: 'bi-sort-numeric-down-alt' }
     ];
     $: activeSort = $page.url.searchParams.get('sort') || $page.data.activeSort || 'newest';
     $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest Added';
@@ -135,6 +134,33 @@
 
 </script>
 
+{#if showControls}
+    <div class="flex justify-between items-center mb-3 mt-1 gap-2">
+        <div class="dropdown dropdown-bottom">
+            <button tabindex="0" class="btn btn-sm bg-base-200/60 border-base-300/50 shadow-sm font-medium text-base-content hover:bg-base-300 gap-1.5 sm:gap-2 rounded-lg h-8 min-h-0">
+                <i class="bi bi-sort-down text-gray-500 text-lg"></i>
+                <span class="hidden sm:inline"></span> {activeSortLabel}
+                <i class="bi bi-chevron-down text-[10px] opacity-50 ml-0.5"></i>
+            </button>
+            <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-xl w-56 border border-base-200 mt-2 gap-1">
+                {#each sortOptions as opt}
+                    <li>
+                        <button type="button" class="flex justify-between items-center py-2.5 {activeSort === opt.id ? 'text-primary font-bold bg-primary/5' : 'text-base-content hover:bg-base-200'}" on:click={() => applySort(opt.id)}>
+                            <span class="flex items-center gap-3"><i class="bi {opt.icon} opacity-60 text-lg"></i> {opt.label}</span>
+                            {#if activeSort === opt.id}<i class="bi bi-check-lg text-lg"></i>{/if}
+                        </button>
+                    </li>
+                {/each}
+                </ul>
+        </div>
+
+        <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
+            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('list')} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
+            <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('grid')} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
+        </div>
+    </div>
+{/if}
+
 {#if (!displayItems || displayItems.length === 0)}
     {#if showControls}
         <div class="py-12 border border-base-200/50 bg-base-100/50 rounded-3xl mt-4">
@@ -150,33 +176,6 @@
         </div>
     {/if}
 {:else}
-    {#if showControls}
-        <div class="flex justify-between items-center mb-3 mt-1 gap-2">
-            <div class="dropdown dropdown-bottom">
-                <button tabindex="0" class="btn btn-sm bg-base-200/60 border-base-300/50 shadow-sm font-medium text-base-content hover:bg-base-300 gap-1.5 sm:gap-2 rounded-lg h-8 min-h-0">
-                    <i class="bi bi-sort-down text-gray-500 text-lg"></i>
-                    <span class="hidden sm:inline"></span> {activeSortLabel}
-                    <i class="bi bi-chevron-down text-[10px] opacity-50 ml-0.5"></i>
-                </button>
-                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-                <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-base-100 rounded-xl w-56 border border-base-200 mt-2 gap-1">
-                    {#each sortOptions as opt}
-                        <li>
-                            <button type="button" class="flex justify-between items-center py-2.5 {activeSort === opt.id ? 'text-primary font-bold bg-primary/5' : 'text-base-content hover:bg-base-200'}" on:click={() => applySort(opt.id)}>
-                                <span class="flex items-center gap-3"><i class="bi {opt.icon} opacity-60 text-lg"></i> {opt.label}</span>
-                                {#if activeSort === opt.id}<i class="bi bi-check-lg text-lg"></i>{/if}
-                            </button>
-                        </li>
-                    {/each}
-                </ul>
-            </div>
-
-            <div class="join bg-base-200/60 p-0.5 rounded-lg border border-base-300/60 shadow-sm">
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'list' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('list')} aria-label="List View"><i class="bi bi-list-ul text-lg"></i></button>
-                <button type="button" class="join-item btn btn-sm border-none shadow-none h-8 min-h-0 {$sharedViewMode === 'grid' ? 'bg-base-100 text-base-content font-bold' : 'bg-transparent text-gray-500 hover:bg-base-300'}" on:click={() => toggleViewMode('grid')} aria-label="Grid View"><i class="bi bi-grid text-lg"></i></button>
-            </div>
-        </div>
-    {/if}
     {#if $sharedViewMode === 'list' || forceListView}
         <div class="overflow-x-auto bg-base-100 border border-base-200 rounded-xl shadow-sm">
         <table class="table w-full">
