@@ -492,6 +492,7 @@ $:  isDemoMode =
       </a>
   {/if}
 
+  {#if $page.data.inventories?.find(i => i.id === $page.data.activeInventoryId)?.enableNotebook !== false}
   <a class="active:scale-95 transition-all duration-200 flex flex-col items-center justify-center gap-1 select-none relative {$page.url.pathname.startsWith('/timeline') ? 'active' : ''} {quickNoteReady ? 'text-primary drop-shadow-md' : ''}" href="/timeline"
      style="-webkit-touch-callout: none; touch-action: none;"
      on:click={(e) => { if (quickNoteFired) e.preventDefault(); }}
@@ -512,6 +513,7 @@ $:  isDemoMode =
     <i class="bi bi-journal-bookmark text-xl"></i>
     <span class="btm-nav-label text-[10px]">Notebook</span>
   </a>
+  {/if}
 
 </div>
 
