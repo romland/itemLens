@@ -8,6 +8,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,7 @@ const USER_ID = 2; // User ID to execute as
 const DELAY_BETWEEN_UPLOADS_MS = 5000; // 20 seconds to respect LLM quotas (adjust as needed)
 
 const CLOTHES_PATH = "/mnt/k/development/2024/inventory/USE_WSL_itemlens/static/images/tests/clothes";
+const CLOTHES_PATH2 = "/mnt/k/development/2024/inventory/USE_WSL_itemlens/static/images/tests/clothesbatch/";
 
 // Provide the absolute or relative paths to the images on your disk
 // Batch 1 - a mix 1
@@ -139,7 +141,7 @@ const singleImages4: string[] = [
 ];
 
 // Jerseys
-const singleImages: string[] = [
+const singleImages5: string[] = [
     CLOTHES_PATH+"/4857.jpg",
     CLOTHES_PATH+"/4858.jpg",
     CLOTHES_PATH+"/4859.jpg",
@@ -153,6 +155,7 @@ const singleImages: string[] = [
     CLOTHES_PATH+"/4867.jpg",
     CLOTHES_PATH+"/4986.jpg",
 ];
+
 
 const collectionImages: string[] = [
     // "./test-images/bookshelf.jpg",
@@ -172,13 +175,26 @@ function getMimeType(filePath: string) {
 
 async function getAuthHeaders() {
     const user = await prisma.user.findUnique({ where: { id: USER_ID } });
-    if (!user || !user.token) throw new Error(`User ID ${USER_ID} not found or missing token.`);
+    if (!user) throw new Error(`User ID ${USER_ID} not found.`);
     
     const inv = await prisma.inventory.findFirst({ where: { name: TARGET_INVENTORY_NAME } });
     if (!inv) throw new Error(`Inventory '${TARGET_INVENTORY_NAME}' not found.`);
 
+    const rawSessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionHash = crypto.createHash('sha256').update(rawSessionToken).digest('hex');
+
+    await prisma.session.create({
+        data: {
+            sessionHash,
+            userId: user.id,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+            userAgent: 'Simulator/1.0',
+            ipAddress: '127.0.0.1'
+        }
+    });
+
     return {
-        "Cookie": `session=${user.token}; activeInventoryId=${inv.id}`
+        "Cookie": `session=${rawSessionToken}; activeInventoryId=${inv.id}`
     };
 }
 

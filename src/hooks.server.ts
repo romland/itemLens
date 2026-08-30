@@ -67,7 +67,15 @@ export const handle = (async ({ event, resolve }) => {
             }
 
             // UI View Modes
-            (event.locals as any).activeViewMode = event.cookies.get('itemlens_viewmode_' + event.locals.activeInventoryId) || 'list';
+            const cookieViewMode = event.cookies.get('itemlens_viewmode_' + event.locals.activeInventoryId);
+            if (cookieViewMode) {
+                (event.locals as any).activeViewMode = cookieViewMode;
+            } else if (event.locals.activeInventoryId) {
+                const inv = await db.inventory.findUnique({ where: { id: event.locals.activeInventoryId }, select: { defaultView: true } });
+                (event.locals as any).activeViewMode = inv?.defaultView || 'grid';
+            } else {
+                (event.locals as any).activeViewMode = 'grid';
+            }
             (event.locals as any).activeAddMode = event.cookies.get('itemlens_add_mode') || 'single';
 
         } else {

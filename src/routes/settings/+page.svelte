@@ -506,6 +506,15 @@
                                         <span class="text-xs text-gray-500 font-medium">is default container selector mode</span>
                                     </form>
 
+                                    <form method="POST" action="?/updateDefaultView" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+                                        <input type="hidden" name="id" value={v.id}>
+                                        <select name="defaultView" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.defaultView || 'grid'}>
+                                            <option value="grid">Grid</option>
+                                            <option value="list">List</option>
+                                        </select>
+                                        <span class="text-xs text-gray-500 font-medium">is default item view</span>
+                                    </form>
+
                                     <div class="flex flex-wrap gap-2 mt-2">
                                         <!-- Beautify Action -->
                                         <form method="POST" action="?/beautifyTaxonomy" use:enhance={createEnhancer} on:submit={() => notify('info', 'Beautifying labels... This may take a few seconds.')}>

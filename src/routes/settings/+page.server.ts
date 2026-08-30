@@ -32,6 +32,7 @@ export const load = async ({ locals, cookies }) => {
                 enablePaddleOCR: true,
                 duplicateStrategy: true,
                 containerMode: true,
+                defaultView: true,
                 archiveSingleScans: true,
                 trackQuantity: true,
                 showExif: true,
@@ -147,33 +148,65 @@ export const actions = {
         // NOTE: Modify this switch statement as we discover better default 
         // behaviors for new archetypes!
         // =========================================================================
+        let allowNewCategories = true;
         let allowAutoTaxonomy = false;
+        let extractExif = true;
         let deepScanCollections = false;
         let bgRemovalEnabled = true;
+        let bgRemovalModel = 'bria-rmbg';
+        let bgRemovalPreCrop = false;
+        let enablePaddleOCR = false;
+        let duplicateStrategy = 'PROMPT';
+        let archiveSingleScans = false;
+        let trackQuantity = true;
+        let showExif = false;
+        let showColors = false;
+        let showOcr = true;
+        let enableNotebook = true;
+        let enableDocuments = true;
+        let enableFuzzySearch = true;
+        let containerMode = 'scan';
+        let defaultView = 'grid';
 
         switch (archetype) {
             case 'media':
                 deepScanCollections = true;
                 bgRemovalEnabled = false; // Flat covers, background removal ruins edges
+                enablePaddleOCR = true; // High value for reading titles/spines
+                defaultView = 'list'; // Better for scanning titles
                 break;
             case 'apparel':
                 allowAutoTaxonomy = true;
                 deepScanCollections = true;
+                showColors = true; // Crucial for clothing
+                bgRemovalPreCrop = true; // Helps isolate garments laying on beds/floors
                 break;
             case 'hardware':
                 allowAutoTaxonomy = true;
+                enablePaddleOCR = true; // High value for model numbers and specs
+                duplicateStrategy = 'AUTO_BUMP'; // Screws, cables, identical tools
+                containerMode = 'select'; // Sorting into bins is easier with lists
+                defaultView = 'list'; // Specs are easier to scan in lists
                 break;
             case 'consumables':
                 deepScanCollections = true;
                 bgRemovalEnabled = false;
+                duplicateStrategy = 'AUTO_BUMP'; // Easy restocks
+                enableNotebook = false; // Rarely take notes on pantry items
+                enableDocuments = false; // Rarely need manuals for beans
                 break;
             case 'collectibles':
                 allowAutoTaxonomy = true;
                 deepScanCollections = true;
+                trackQuantity = false; // Usually tracked as individual unique items
+                showColors = true;
                 break;
             case 'natural':
                 allowAutoTaxonomy = true;
-                break;                
+                bgRemovalPreCrop = true;
+                trackQuantity = false;
+                showExif = true; // GPS tags on finds are crucial
+                break;
         }
 
         const inventory = await db.inventory.create({
@@ -182,9 +215,25 @@ export const actions = {
                 description: contentsHint.trim(),
                 classes: "[]",
                 archetype: archetype,
+                allowNewCategories,
                 allowAutoTaxonomy,
+                extractExif,
                 deepScanCollections,
-                bgRemovalEnabled,                
+                bgRemovalEnabled,
+                bgRemovalModel,
+                bgRemovalPreCrop,
+                enablePaddleOCR,
+                duplicateStrategy,
+                archiveSingleScans,
+                trackQuantity,
+                showExif,
+                showColors,
+                showOcr,
+                enableNotebook,
+                enableDocuments,
+                enableFuzzySearch,
+                containerMode,
+                defaultView,
                 users: { create: { userId: locals.user.id, role: "OWNER" } }
             }
         });
@@ -412,6 +461,19 @@ export const actions = {
         const containerMode = data.get('containerMode') as string;
         await db.inventory.update({ where: { id }, data: { containerMode } });
         return { success: true, message: "Container mode updated." };
+    },
+
+    updateDefaultView: async ({ request, locals }) => {
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!locals.user?.isAdmin) {
+            const access = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: id, userId: locals.user!.id } } });
+            if (access?.role !== 'OWNER') return fail(403, { error: true, message: "Forbidden. Owners only." });
+        }
+
+        const defaultView = data.get('defaultView') as string;
+        await db.inventory.update({ where: { id }, data: { defaultView } });
+        return { success: true, message: "Default view updated." };
     },
 
     toggleArchiveSingle: async ({ request, locals }) => {

@@ -342,7 +342,7 @@
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative z-20 cursor-pointer" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
 						{#if $page.data.user && ($page.data.user.isAdmin || $page.data.role === 'EDITOR' || $page.data.role === 'OWNER')}
-							<a href="/{item.id}/edit" on:click|stopPropagation title="Edit Item" class="absolute top-2 left-2 z-40 w-7 h-7 rounded-full bg-base-100/40 backdrop-blur-md border border-base-200/50 shadow-sm flex items-center justify-center text-base-content/60 hover:text-primary hover:bg-base-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <a href="/{item.id}/edit" on:click|stopPropagation title="Edit Item" class="absolute top-2 left-2 z-40 w-7 h-7 rounded-full bg-base-100/40 backdrop-blur-md border border-base-200/50 shadow-sm flex items-center justify-center text-base-content/60 hover:text-primary hover:bg-base-100 lg:opacity-0 lg:group-hover:opacity-100 opacity-100 transition-opacity duration-200">
 								<i class="bi bi-pencil-square text-xs"></i>
 							</a>
 						{/if}

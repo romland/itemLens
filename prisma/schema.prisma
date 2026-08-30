@@ -96,6 +96,7 @@ model Inventory {
   notebookCategories  String  @default("[\"idea\", \"todo\", \"to buy\", \"to read\", \"other\", \"archive\"]")
   enableFuzzySearch   Boolean @default(true) // Whether to use NLP stemming/fuzzy matching in search
   containerMode       String @default("scan") // "scan" or "select" - defaults selector to camera or list
+  defaultView         String @default("grid") // "grid" or "list"
   templateFields      TemplateField[]
 
   users               UserInventoryAccess[]
