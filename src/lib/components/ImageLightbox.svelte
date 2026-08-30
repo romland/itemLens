@@ -26,9 +26,13 @@
     let startX = 0;
     let startY = 0;
     
-    // Touch pinch state
-    let initialPinchDistance: number | null = null;
-    let initialScale = 1;
+    // Advanced Pinch & Focal State
+    let pinchInitialDistance = 0;
+    let pinchInitialScale = 1;
+    let pinchInitialTx = 0;
+    let pinchInitialTy = 0;
+    let pinchFocalX = 0;
+    let pinchFocalY = 0;
 	let dragHasMoved = false;
 
 	// Momentum (Gliding) Trackers
@@ -122,18 +126,53 @@
         translateY.set(0, { hard: isHard });
         rotation = 0;
         isDragging = false;
-        initialPinchDistance = null;
+        pinchInitialDistance = 0;
 		dragHasMoved = false;
 		velocityX = 0;
 		velocityY = 0;
     }
 
+    // Apple-y Edge Constraints: Prevents panning out of bounds when zoomed in
+    function applyBounds(tx: number, ty: number, scale: number) {
+        if (scale <= 1) return { x: 0, y: 0 };
+        const maxTx = Math.max(0, (window.innerWidth * (scale - 1)) / 2);
+        const maxTy = Math.max(0, (window.innerHeight * (scale - 1)) / 2);
+        return {
+            x: Math.max(-maxTx, Math.min(maxTx, tx)),
+            y: Math.max(-maxTy, Math.min(maxTy, ty))
+        };
+    }
+
+    // True Focal-Point Zooming: Keeps the pixel under your finger/cursor exactly where it is
+    function zoomTo(newScale: number, focalX: number, focalY: number, hard = false) {
+        let targetScale = newScale;
+        if (targetScale < 1 && hard) targetScale = 1 - (1 - targetScale) * 0.5; // Rubber banding
+        else if (targetScale < 1) targetScale = 1; // Snap back instantly
+        targetScale = Math.min(targetScale, 5);
+
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        // Calculate where the focal point sits on the original un-scaled image
+        const imageX = (focalX - cx - $translateX) / $scaleVal;
+        const imageY = (focalY - cy - $translateY) / $scaleVal;
+
+        // Project the new translation to keep that exact pixel under the focal point
+        let newTx = (focalX - cx) - (imageX * targetScale);
+        let newTy = (focalY - cy) - (imageY * targetScale);
+
+        // Enforce edge gravity
+        const bounded = applyBounds(newTx, newTy, targetScale);
+
+        scaleVal.set(targetScale, { hard });
+        translateX.set(bounded.x, { hard });
+        translateY.set(bounded.y, { hard });
+    }
+
     function handleWheel(e: WheelEvent) {
         e.preventDefault();
         const delta = e.deltaY * -0.005;
-		const newScale = Math.min(Math.max(1, $scaleVal + delta), 5);
-		scaleVal.set(newScale);
-		if (newScale === 1) { translateX.set(0); translateY.set(0); }
+        zoomTo($scaleVal + delta, e.clientX, e.clientY, false);
     }
 
     function startDrag(e: MouseEvent | TouchEvent) {
@@ -198,12 +237,10 @@
 
     function endDrag() {
         isDragging = false;
-        initialPinchDistance = null;
+        pinchInitialDistance = 0;
 		
 		if ($scaleVal < 1) {
-			scaleVal.set(1);
-			translateX.set(0);
-			translateY.set(0);
+			zoomTo(1, window.innerWidth / 2, window.innerHeight / 2, false);
             swipeOffsetY = 0;
 			return;
 		}
@@ -233,25 +270,33 @@
 
 		// Clamp the projected target to the boundaries. 
 		// The spring will naturally decelerate and glide smoothly into these limits.
-		translateX.set(Math.max(-maxTx, Math.min(maxTx, targetTx)));
-		translateY.set(Math.max(-maxTy, Math.min(maxTy, targetTy)));
+		const bounded = applyBounds(targetTx, targetTy, $scaleVal);
+		translateX.set(bounded.x);
+		translateY.set(bounded.y);
+    }
+
+    function handleDoubleTap(clientX: number, clientY: number) {
+        if ($scaleVal > 1) zoomTo(1, clientX, clientY, false);
+        else zoomTo(2.5, clientX, clientY, false);
     }
 
     function handleTouchStart(e: TouchEvent) {
         if (e.touches.length === 2) {
-            initialPinchDistance = Math.hypot(
+            pinchInitialDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-			initialScale = $scaleVal;
+            pinchFocalX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            pinchFocalY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            pinchInitialScale = $scaleVal;
+            pinchInitialTx = $translateX;
+            pinchInitialTy = $translateY;
+            isDragging = false;
         } else {
            const now = Date.now();
            if (now - lastTapTime < 300) {
-               // Double tap detected
-               const target = $scaleVal > 1 ? 1 : 2.5; 
-               scaleVal.set(target); 
-               translateX.set(0); translateY.set(0);
-               lastTapTime = 0; // reset
+               handleDoubleTap(e.touches[0].clientX, e.touches[0].clientY);
+               lastTapTime = 0;
                e.preventDefault();
            } else {
                lastTapTime = now;
@@ -261,19 +306,34 @@
     }
 
     function handleTouchMove(e: TouchEvent) {
-        if (e.touches.length === 2 && initialPinchDistance) {
+        if (e.touches.length === 2 && pinchInitialDistance) {
             e.preventDefault();
             const currentDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-			const newScale = Math.min(Math.max(1, initialScale * (currentDistance / initialPinchDistance)), 5);
-			
-			let elasticScale = newScale;
-			// Apply rubber-band resistance if pinching out smaller than original size
-			if (elasticScale < 1) elasticScale = 1 - (1 - elasticScale) * 0.5;
+            const currentFocalX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const currentFocalY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-			scaleVal.set(elasticScale, { hard: true });
+            let targetScale = pinchInitialScale * (currentDistance / pinchInitialDistance);
+            if (targetScale < 1) targetScale = 1 - (1 - targetScale) * 0.5;
+            targetScale = Math.min(targetScale, 5);
+
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+
+            // Calculate pan difference + zoom difference
+            const imageX = (pinchFocalX - cx - pinchInitialTx) / pinchInitialScale;
+            const imageY = (pinchFocalY - cy - pinchInitialTy) / pinchInitialScale;
+
+            let newTx = (currentFocalX - cx) - (imageX * targetScale);
+            let newTy = (currentFocalY - cy) - (imageY * targetScale);
+
+            const bounded = applyBounds(newTx, newTy, targetScale);
+
+            scaleVal.set(targetScale, { hard: true });
+            translateX.set(bounded.x, { hard: true });
+            translateY.set(bounded.y, { hard: true });
         } else {
             onDrag(e);
         }
@@ -565,7 +625,7 @@
             on:touchstart|nonpassive={handleTouchStart}
             on:touchmove|nonpassive={handleTouchMove}
             on:touchend={endDrag}
-			on:dblclick={() => { const target = $scaleVal > 1 ? 1 : 2.5; scaleVal.set(target); translateX.set(0); translateY.set(0); }}
+			on:dblclick={(e) => handleDoubleTap(e.clientX, e.clientY)}
 			on:click|self={handleBackgroundClick}
         >
             <div 
@@ -653,9 +713,9 @@
                     
                     <div class="w-px h-4 bg-white/20 mx-1 hidden sm:block"></div>
                     
-					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => { const newS = Math.max(1, $scaleVal - 0.5); scaleVal.set(newS); if(newS===1){translateX.set(0); translateY.set(0);} }} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => zoomTo($scaleVal - 0.5, window.innerWidth / 2, window.innerHeight / 2)} aria-label="Zoom Out"><i class="bi bi-zoom-out"></i></button>
                     <button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={resetZoom} aria-label="Reset"><i class="bi bi-arrows-collapse"></i></button>
-					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => scaleVal.set(Math.min(5, $scaleVal + 0.5))} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
+					<button class="hidden sm:inline-flex btn btn-circle btn-sm btn-ghost hover:bg-white/20 hover:text-white border-none" on:click={() => zoomTo($scaleVal + 0.5, window.innerWidth / 2, window.innerHeight / 2)} aria-label="Zoom In"><i class="bi bi-zoom-in"></i></button>
                      <!-- Mobile close button inside the toolbar to prevent overlap -->
                      <button class="sm:hidden btn btn-circle btn-sm btn-ghost bg-white/20 text-white border-none ml-1" on:click={() => close()} aria-label="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
