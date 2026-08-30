@@ -2,6 +2,7 @@
     import { createEventDispatcher } from 'svelte';
     import ItemMiniCard from '../ItemMiniCard.svelte';
     import ColorMixBar from '../ColorMixBar.svelte';
+    import Badge from '../Badge.svelte';
     export let item: any;
     export let type: 'unregistered' | 'missing' | 'elsewhere' | 'correct';
     export let draftPath: string;
@@ -109,7 +110,7 @@
                         {#if key === 'color_mix'}
                             <div class="w-full mb-1"><ColorMixBar colorMixStr={val as string} /></div>
                         {:else}
-                            <span class="badge badge-ghost badge-xs text-[9px] uppercase tracking-wider font-mono opacity-80 border-base-300">{val}</span>
+                            <Badge color="ghost" size="xs" class="uppercase tracking-wider font-mono opacity-80 border-base-300 text-[9px]">{val}</Badge>
                         {/if}
                     {/each}
                 </div>
@@ -117,19 +118,19 @@
             
             <div class="flex items-center gap-2 mt-2">
                 {#if type === 'unregistered'}
-                    <span class="badge badge-ghost badge-xs text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Collection</span>
+                    <Badge color="ghost" size="xs" class="text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Collection</Badge>
                 {:else if type === 'missing'}
-                    <span class="badge badge-error badge-outline badge-sm text-[10px] uppercase font-bold">Missing</span>
+                    <Badge color="error" variant="outline" size="sm" class="text-[10px] uppercase font-bold">Missing</Badge>
                     {#if item.locationName}
                         <span class="text-[10px] text-gray-400">Last in: {item.locationName}</span>
                     {/if}
                 {:else if type === 'elsewhere'}
-                    <span class="badge badge-warning badge-outline badge-sm text-[10px] uppercase font-bold">Wrong Location</span>
+                    <Badge color="warning" variant="outline" size="sm" class="text-[10px] uppercase font-bold">Wrong Location</Badge>
                     <span class="text-[10px] text-gray-400">Belongs in: {item.matchedItem?.locationName}</span>
                 {:else}
-                    <span class="badge badge-success badge-sm text-[10px] uppercase font-bold text-white"><i class="bi bi-check-lg mr-1"></i> Match</span>
+                    <Badge color="success" size="sm" class="text-[10px] uppercase font-bold text-white" icon="bi-check-lg">Match</Badge>
                     {#if item.matchedItem?.locationName}
-                        <span class="badge badge-ghost badge-sm text-xs font-mono"><i class="bi bi-box-seam mr-1 text-gray-400"></i> {item.matchedItem.locationName}</span>
+                        <Badge color="ghost" size="sm" class="text-xs font-mono text-gray-500 border-none" icon="bi-box-seam text-gray-400">{item.matchedItem.locationName}</Badge>
                     {/if}
                 {/if}
             </div>

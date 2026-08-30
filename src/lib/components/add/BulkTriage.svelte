@@ -13,6 +13,7 @@
     import { ambientLocation } from '$lib/client/ambientContext';
     import { pluralize } from '$lib/client/utils';
 	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
 
     export let isDirty = false;
     export let containers: any[] = [];
@@ -431,10 +432,9 @@
                         }} 
                     />
                 </div>
-                <!-- svelte-ignore a11y_label_has_associated_control -->
-                <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Apply a category for all</span></label>
-                    <input type="text" bind:value={globalCategory} placeholder="e.g. book, dvd, cd" class="input input-bordered w-full bg-base-100 rounded-xl" />
+                
+                <div>
+                    <FormInput label="Apply a category for all" bind:value={globalCategory} placeholder="e.g. book, dvd, cd" inputClass="bg-base-100" />
                     {#if globalCategory && !categories.some(c => c.name.toLowerCase() === globalCategory.toLowerCase())}
                         <div class="label pt-1 pb-0"><span class="label-text-alt text-warning font-semibold"><i class="bi bi-exclamation-triangle"></i> New category will be created</span></div>
                     {/if}
@@ -442,12 +442,8 @@
                         <div class="label pt-1 pb-0"><span class="label-text-alt text-error font-semibold"><i class="bi bi-exclamation-octagon"></i> Warning: This overwrites assigned categories (like "{items.find(i => i.category && i.category.toLowerCase() !== globalCategory.toLowerCase())?.category}") for all items!</span></div>
                     {/if}
                 </div>
-                <!-- svelte-ignore a11y_label_has_associated_control -->                
-                <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Apply tags for all</span></label>
-                    <input type="text" bind:value={globalTags} placeholder="e.g. donate, trash, read, living-room" class="input input-bordered w-full bg-base-100 rounded-xl" />
-                    <div class="label"><span class="label-text-alt text-gray-500">Comma separated</span></div>
-                </div>
+                
+                <FormInput label="Apply tags for all" bind:value={globalTags} placeholder="e.g. donate, trash, read, living-room" hint="Comma separated" inputClass="bg-base-100" />
             </div>
         </div>
 
@@ -465,16 +461,8 @@
 
 <!-- Native Bottom Sheet Editor -->
 <BottomSheet bind:this={editModal} title="Edit Item" on:close={() => editingIndex = -1}>
-    <!-- svelte-ignore a11y_label_has_associated_control -->
-    <div class="form-control w-full mb-1">
-        <label class="label"><span class="label-text font-semibold">Title</span></label>
-        <input type="text" bind:value={editTitle} class="input input-bordered w-full rounded-xl" />
-    </div>
-    <!-- svelte-ignore a11y_label_has_associated_control -->
-    <div class="form-control w-full mb-2">
-        <label class="label"><span class="label-text font-semibold">Subtitle</span></label>
-        <input type="text" bind:value={editSubtitle} class="input input-bordered w-full rounded-xl" />
-    </div>
+    <FormInput label="Title" bind:value={editTitle} class="mb-1" />
+    <FormInput label="Subtitle" bind:value={editSubtitle} class="mb-2" />
     <div slot="actions" class="flex gap-2">
         <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => editModal.close()}>Cancel</button>
         <button type="button" class="btn btn-primary flex-1 rounded-xl shadow-md" on:click={saveEdit}>Save Changes</button>

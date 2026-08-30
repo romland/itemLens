@@ -30,6 +30,8 @@
     import { ambientLocation } from '$lib/client/ambientContext';
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import InstallPrompt from "$lib/components/InstallPrompt.svelte";
+    import ActionCard from "$lib/components/ActionCard.svelte";
+    import Modal from "$lib/components/Modal.svelte";
 
     let mounted = false;    
     let confirmModal: ConfirmModal;
@@ -184,7 +186,7 @@
 
     let sysHealth = { status: 'healthy', reason: null };
 
-    let quickNoteModal: HTMLDialogElement;
+    let quickNoteModal: Modal;
     let quickNoteTimer: any;
     let quickNoteFired = false;
     let quickNoteReady = false;
@@ -517,10 +519,8 @@ $:  isDemoMode =
 
 </div>
 
-<dialog bind:this={quickNoteModal} class="modal modal-top sm:modal-middle backdrop-blur-sm" on:paste|stopPropagation>
-   <div class="modal-box mt-8 sm:mt-0 rounded-3xl sm:rounded-[2.5rem] p-6 bg-base-100 shadow-2xl border border-base-200">
-       <h3 class="font-bold text-lg mb-4">Quick Note</h3>
-       <form method="POST" action="/timeline?/capture" use:enhance={({ formElement }) => {
+<Modal bind:this={quickNoteModal} title="Quick Note" position="top" boxClass="mt-8 sm:mt-0 rounded-3xl sm:rounded-[2.5rem] p-6 border border-base-200">
+       <form method="POST" action="/timeline?/capture" on:paste|stopPropagation use:enhance={({ formElement }) => {
            quickNoteModal.close();
            return async ({ result }) => { 
                if (result.type === 'success' || result.type === 'redirect') {
@@ -537,33 +537,26 @@ $:  isDemoMode =
                <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md">Save Note</button>
            </div>
        </form>
-   </div>
-   <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>
 
 <Notifications bind:notifications={$notifications} />
 <InstallPrompt />
 
 <!-- Global Ambient Container Selector -->
-<dialog bind:this={ambientContainerModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box p-4 bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
-        <h3 class="font-bold text-xl mb-1">Set Default Location</h3>
-        <p class="text-xs text-gray-500 mb-4">This location will be automatically assigned to items you scan in this session.</p>
+<Modal bind:this={ambientContainerModal} title="Set Default Location" titleClass="font-bold text-xl mb-1" boxClass="p-4 sm:rounded-[2.5rem] border border-base-200">
+        <p class="text-xs text-gray-500 mb-4 mt-[-10px]">This location will be automatically assigned to items you scan in this session.</p>
         {#if loadingContainers}
             <div class="flex justify-center p-8"><span class="loading loading-spinner text-primary"></span></div>
         {:else}
             <ContainerSelector containers={globalContainers} values={$ambientLocation.map(name => ({ container: { name } }))} defaultTab="select" on:change={(e) => { ambientLocation.setContext(e.detail.containers); ambientContainerModal.close(); }} />
         {/if}
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>
 
 <CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => { notify('success', e.detail); window.location.reload(); }} on:error={(e) => notify('error', e.detail)} />
 
 <!-- Bottom Sheet Menu -->
-<dialog bind:this={mobileMenuModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
-        <div class="flex justify-between items-center mb-6 px-2">
+<Modal bind:this={mobileMenuModal} boxClass="sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
+        <div class="flex justify-between items-center mb-6 px-2 mt-[-10px]">
             <h3 class="font-bold text-2xl tracking-tight">Menu</h3>
             <button type="button" class="btn btn-sm btn-circle btn-ghost bg-base-200/50" on:click={() => mobileMenuModal.close()}>✕</button>
         </div>
@@ -595,82 +588,89 @@ $:  isDemoMode =
             <!-- Group 1: Navigation -->
             <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm">
                 {#if $page.data.user}
-                    <a href="/container" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-info/10 text-info flex items-center justify-center shrink-0">
-                            <i class="bi bi-box-seam-fill text-xl"></i>
-                        </div>
-                        <div class="flex-1 font-semibold text-lg">Containers</div>
-                        <i class="bi bi-chevron-right text-gray-400"></i>
-                    </a>
-
-                    <a href="/categories" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-success/10 text-success flex items-center justify-center shrink-0">
-                            <i class="bi bi-tags-fill text-xl"></i>
-                        </div>
-                        <div class="flex-1 font-semibold text-lg">Categories</div>
-                        <i class="bi bi-chevron-right text-gray-400"></i>
-                    </a>
+                    <ActionCard 
+                        title="Containers" 
+                        href="/container" 
+                        icon="bi-box-seam-fill" 
+                        iconColorClass="bg-info/10 text-info" 
+                        variant="flat" 
+                        on:click={() => mobileMenuModal.close()} 
+                    />
+                    <ActionCard 
+                        title="Categories" 
+                        href="/categories" 
+                        icon="bi-tags-fill" 
+                        iconColorClass="bg-success/10 text-success" 
+                        variant="flat" 
+                        on:click={() => mobileMenuModal.close()} 
+                    />
                 {/if}
             </div>
 
             <!-- Group 2: Sign out -->
             <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
-                <a href="/settings" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                    <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
-                        <i class="bi bi-gear-fill text-xl"></i>
-                    </div>
-                    <div class="flex-1 font-semibold text-lg">Settings & Profile</div>
-                    <i class="bi bi-chevron-right text-gray-400"></i>
-                </a>
+                <ActionCard 
+                    title="Settings & Profile" 
+                    href="/settings" 
+                    icon="bi-gear-fill" 
+                    iconColorClass="bg-warning/10 text-warning" 
+                    variant="flat" 
+                    on:click={() => mobileMenuModal.close()} 
+                />
 
-                <!-- This button is currently hidden, it feels a bit excessive; press the (by default) "L" keybind to get to it -->
-                <button style="display: none;" type="button" id="ambient-container-btn" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300 w-full text-left" on:click={() => { mobileMenuModal.close(); openAmbientModal(); }}>
-                    <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <i class="bi bi-pin-angle-fill text-xl"></i>
-                    </div>
-                    <div class="flex-1 font-semibold text-lg flex flex-col leading-tight"><span>Set Default Location</span> <span class="text-xs text-gray-500 font-normal">{$ambientLocation.length ? $ambientLocation.join(', ') : 'None'}</span></div>
-                    <i class="bi bi-chevron-right text-gray-400"></i>
-                </button>
+                <!-- This is currently hidden; press the (by default) "L" keybind to trigger it -->
+                <ActionCard 
+                    id="ambient-container-btn"
+                    style="display: none;"
+                    title="Set Default Location" 
+                    subtitle={$ambientLocation.length ? $ambientLocation.join(', ') : 'None'}
+                    icon="bi-pin-angle-fill" 
+                    iconColorClass="bg-primary/10 text-primary" 
+                    variant="flat" 
+                    on:click={() => { mobileMenuModal.close(); openAmbientModal(); }} 
+                />
 
 				{#if $page.data.user?.isAdmin}
-					<button type="button" class="flex items-center gap-4 p-4 hover:bg-error/10 hover:text-error transition-colors active:bg-base-300 w-full text-left" on:click={async () => { 
-						mobileMenuModal.close(); 
-                        const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
-                        if (res) { await clearEntireQueue(); nukeAllCaches(true); }
-					}}>
-						<div class="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
-							<i class="bi bi-trash3 text-xl"></i>
-						</div>
-						<div class="flex-1 font-semibold text-lg">Clear Cache</div>
-					</button>
+                    <ActionCard 
+                        title="Clear Cache" 
+                        icon="bi-trash3" 
+                        iconColorClass="bg-error/10 text-error" 
+                        buttonClass="hover:bg-error/10 hover:text-error"
+                        showChevron={false}
+                        variant="flat" 
+                        on:click={async () => { 
+                            mobileMenuModal.close(); 
+                            const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
+                            if (res) { await clearEntireQueue(); nukeAllCaches(true); }
+                        }} 
+                    />
 				{/if}
 
                 {#if !$page.data.user}
-                    <a href="/login" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300" on:click={() => mobileMenuModal.close()}>
-                        <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">
-                            <i class="bi bi-box-arrow-in-right text-xl"></i>
-                        </div>
-                        <div class="flex-1 font-semibold text-lg">Log in</div>
-                    </a>
+                    <ActionCard 
+                        title="Log in" 
+                        href="/login" 
+                        icon="bi-box-arrow-in-right" 
+                        iconColorClass="bg-base-300 text-base-content" 
+                        showChevron={false}
+                        variant="flat" 
+                        on:click={() => mobileMenuModal.close()} 
+                    />
                 {:else}
                     <form method="POST" action="/logout" use:enhance on:submit={() => mobileMenuModal.close()} class="m-0">
-                        <button type="submit" class="flex items-center gap-4 p-4 hover:bg-base-200 transition-colors active:bg-base-300 w-full text-left">
-                            <div class="w-10 h-10 rounded-full bg-base-300 text-base-content flex items-center justify-center shrink-0">
-                                <i class="bi bi-box-arrow-right text-xl"></i>
-                            </div>
-                            <div class="flex-1 font-semibold text-lg flex flex-col leading-tight">
-                                <span>Sign out</span>
-                                <span class="text-[10px] text-gray-500 font-normal">{$page.data.user?.name?.split(' ')[0] || $page.data.user?.username}</span>
-                            </div>
-                        </button>
+                        <ActionCard 
+                            title="Sign out" 
+                            subtitle={$page.data.user?.name?.split(' ')[0] || $page.data.user?.username}
+                            icon="bi-box-arrow-right" 
+                            iconColorClass="bg-base-300 text-base-content" 
+                            showChevron={false}
+                            variant="flat" 
+                            type="submit"
+                        />
                     </form>
                 {/if}
             </div>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
 
 <ConfirmModal bind:this={confirmModal} />
+</Modal>

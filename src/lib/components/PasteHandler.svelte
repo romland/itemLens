@@ -1,6 +1,9 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import { photoTypes } from '$lib/shared/constants';
+    import Modal from './Modal.svelte';
+    import FormInput from './FormInput.svelte';
+    import FormSelect from './FormSelect.svelte';
     
     export let formId = "eltForm";
     export let forcePhotoType: string | null = null;
@@ -15,7 +18,7 @@
 
     const dispatch = createEventDispatcher();
     
-    let modalOpen = false;
+    let pasteModal: Modal;
     let pastedType: 'image' | 'text' | 'url' | 'document' | null = null;
     let pastedImageUrl: string | null = null;
     let pastedFile: File | null = null;
@@ -38,11 +41,11 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             pastedFile = file;
             pastedImageUrl = URL.createObjectURL(file);
             pastedType = 'image';
-            modalOpen = true;
+            pasteModal.showModal();
             return true;
         } else if (file.type === "text/plain" || file.name.toLowerCase().endsWith('.txt')) {
             if (!isInputFocused) {
-                file.text().then(text => { pastedText = text; pastedType = 'text'; textDocumentTitle = file.name || "Pasted Note"; modalOpen = true; });
+                file.text().then(text => { pastedText = text; pastedType = 'text'; textDocumentTitle = file.name || "Pasted Note"; pasteModal.showModal(); });
                 return true;
             }
         } else {
@@ -51,7 +54,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             pastedFile = file;
             pastedType = 'document';
             textDocumentTitle = file.name || "Uploaded File";
-            modalOpen = true;
+            pasteModal.showModal();
             return true;
         }
         return false;
@@ -82,12 +85,12 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                         if (isURL(text)) {
                             pastedUrl = text.trim();
                             pastedType = 'url';
-                            modalOpen = true;
+                            pasteModal.showModal();
                         } else {
                             pastedText = text;
                             pastedType = 'text';
                             textDocumentTitle = `Note ${new Date().toLocaleString()}`;
-                            modalOpen = true;
+                            pasteModal.showModal();
                         }
                     });
                 }
@@ -243,7 +246,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
     }
     
     function closeModal() {
-        modalOpen = false;
+        pasteModal?.close();
         pastedType = null;
         if (pastedImageUrl) {
             URL.revokeObjectURL(pastedImageUrl);
@@ -255,13 +258,10 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
     }
 
     function handleKeydown(event: KeyboardEvent) {
-        if (modalOpen) {
-            if (event.key === 'Escape') {
-                closeModal();
-            } else if (event.key === 'Enter') {
-                event.preventDefault();
-                confirmPaste();
-            }
+        // The modal handles Escape naturally, but we can capture Enter
+        if (pastedType && event.key === 'Enter') {
+            event.preventDefault();
+            confirmPaste();
         }
     }    
 </script>
@@ -302,23 +302,17 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
     {/if}
 
 
-<dialog class="modal" class:modal-open={modalOpen}>
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Paste Detected</h3>
-        
+<Modal bind:this={pasteModal} title="Paste Detected" on:close={closeModal}>
         {#if pastedType === 'image'}
             <div class="mb-4">
                     <img src={pastedImageUrl} alt="Pasted" class="max-h-64 rounded-lg object-contain mx-auto border border-base-300" />
             </div>
             {#if !forcePhotoType}
-                <div class="form-control w-full">
-                    <div class="label"><span class="label-text font-semibold">What type of image is this?</span></div>
-                    <select bind:value={selectedPhotoType} class="select select-bordered w-full">
-                        {#each photoTypes as type}
-                            <option value={type.toLowerCase()}>{type}</option>
-                        {/each}
-                    </select>
-                </div>
+                <FormSelect label="What type of image is this?" bind:value={selectedPhotoType}>
+                    {#each photoTypes as type}
+                        <option value={type.toLowerCase()}>{type}</option>
+                    {/each}
+                </FormSelect>
             {/if}
         {:else if pastedType === 'document'}
             <div class="mb-4 flex flex-col items-center justify-center p-8 bg-base-200 rounded-xl border border-base-300 shadow-inner">
@@ -329,10 +323,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
                 {/if}
                 <span class="mt-4 font-bold text-lg break-all">{pastedFile?.name}</span>
             </div>
-            <div class="form-control w-full mb-4">
-                <div class="label"><span class="label-text font-semibold">Document Title</span></div>
-                <input type="text" bind:value={textDocumentTitle} class="input input-bordered w-full" />
-            </div>
+            <FormInput label="Document Title" bind:value={textDocumentTitle} class="mb-4" />
         {:else if pastedType === 'url'}
             <div class="alert alert-success border-none shadow-sm mb-4">
                 <i class="bi bi-link-45deg text-2xl"></i>
@@ -343,10 +334,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             </div>
             <p class="text-sm">Do you want to fetch and save this document when you submit the form?</p>            
         {:else if pastedType === 'text'}
-            <div class="form-control w-full mb-4">
-                <div class="label"><span class="label-text font-semibold">Note Title</span></div>
-                <input type="text" bind:value={textDocumentTitle} class="input input-bordered w-full" />
-            </div>
+            <FormInput label="Note Title" bind:value={textDocumentTitle} class="mb-4" />
             <div class="mb-4">
                 <div class="label"><span class="label-text font-semibold">Content</span></div>
                 <pre class="bg-base-200 p-3 rounded w-full text-xs overflow-x-auto max-h-48 whitespace-pre-wrap">{pastedText}</pre>
@@ -357,8 +345,4 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             <button type="button" class="btn" on:click={closeModal}>Cancel</button>
             <button type="button" class="btn btn-primary" on:click={confirmPaste}>Add</button>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button on:click={closeModal}>close</button>
-    </form>
-</dialog>
+</Modal>

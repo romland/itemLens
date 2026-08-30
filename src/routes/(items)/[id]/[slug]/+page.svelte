@@ -393,7 +393,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 </article>
 
 <form method="POST" action="?/saveAttributes" id="saveAttrsForm" use:enhance={() => {
-    return async ({ update }) => { attrModal.close(); await update(); };
+    return async ({ update }) => { attrModal.close(); await update({ reset: false }); };
 }}>
     <input type="hidden" name="attributes" id="attrsInput" />
 </form>

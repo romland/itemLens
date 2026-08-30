@@ -3,6 +3,7 @@
     import { onMount } from 'svelte';
     import { createEventDispatcher } from 'svelte';
     import { saveToQueue } from '$lib/client/offlineQueue';
+    import FormInput from '$lib/components/FormInput.svelte';
 
     const dispatch = createEventDispatcher();
 
@@ -148,12 +149,12 @@
         </div>
 
         <!-- Expanding Text Input -->
-        <div class="flex-1 bg-base-200 rounded-2xl relative border border-base-300">
-            <textarea 
+        <FormInput type="textarea"
                 name="content"
                 bind:value={content}
                 placeholder="Type an idea, paste a link/image, or @mention an item..." 
-                class="textarea textarea-ghost w-full min-h-[65px] max-h-32 bg-transparent border-0 focus:ring-0 resize-none py-3 px-4 leading-tight text-base"
+                class="flex-1 rounded-2xl border border-base-300 bg-base-200 relative"
+                inputClass="textarea-ghost min-h-[65px] max-h-32 bg-transparent border-0 focus:ring-0 resize-none py-3 px-4 leading-tight text-base"
                 rows="1"
                 on:input={handleInput}
                 on:keydown={(e) => {
@@ -162,13 +163,13 @@
                         e.currentTarget.form?.requestSubmit();
                     }
                 }}
-            ></textarea>
-            {#if locationStatus}
-                <div class="absolute -top-6 left-2 text-[10px] font-bold uppercase tracking-wider text-primary">
-                    {locationStatus}
-                </div>
-            {/if}
-        </div>
+        >
+                {#if locationStatus}
+                    <div class="absolute -top-6 left-2 text-[10px] font-bold uppercase tracking-wider text-primary">
+                        {locationStatus}
+                    </div>
+                {/if}
+        </FormInput>
 
         <!-- Submit Button -->
         <button type="submit" class="btn btn-circle btn-primary btn-sm mb-1 shadow-sm" aria-label="Submit note" disabled={isUploading || (!content.trim() && !fileInput?.files?.length)}>

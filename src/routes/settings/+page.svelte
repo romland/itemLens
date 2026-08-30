@@ -12,6 +12,8 @@
 	import { notify } from "$lib/client/notifications";
     import DeviceSessionList from "$lib/components/DeviceSessionList.svelte";
 	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import ActionCard from "$lib/components/ActionCard.svelte";
+    import SettingToggle from "$lib/components/SettingToggle.svelte";
 
     export let form: ActionData;
 
@@ -121,19 +123,20 @@
 
 	<div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
 		<h3 class="font-bold text-lg mb-4">Device Management</h3>
-		<button type="button" class="btn btn-outline border-base-300 hover:border-error hover:bg-error/10 hover:text-error flex items-center justify-between w-full h-auto py-4 rounded-xl" on:click={async () => {
-            const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
-            if (res) { await clearEntireQueue(); nukeAllCaches(true); }
-		}}>
-			<div class="flex items-center gap-3">
-				<i class="bi bi-trash3-fill text-xl text-error"></i>
-				<div class="text-left flex flex-col">
-					<span class="font-bold">Clear Offline Cache</span>
-					<span class="text-xs opacity-70 font-normal mt-0.5">Free up space and force a hard resync on this device.</span>
-				</div>
-			</div>
-			<i class="bi bi-arrow-clockwise opacity-50"></i>
-		</button>
+        <ActionCard
+            title="Clear Offline Cache"
+            subtitle="Free up space and force a hard resync on this device."
+            icon="bi-trash3-fill"
+            iconColorClass="bg-error/10 text-error"
+            buttonClass="border-base-300 hover:border-error hover:bg-error/10 hover:text-error"
+            showChevron={false}
+            on:click={async () => {
+                const res = await confirmModal.ask('Clear Caches?', 'This will clear all offline data, queues, and force a hard reload. Any pending uploads will be deleted. Continue?', 'Clear', 'Cancel', true);
+                if (res) { await clearEntireQueue(); nukeAllCaches(true); }
+            }}
+        >
+            <i class="bi bi-arrow-clockwise opacity-50"></i>
+        </ActionCard>
 	</div>
     
     <h2 class="text-2xl font-bold mb-6">Connected Devices</h2>
@@ -392,36 +395,13 @@
                                     {#if deleteConfirmId === v.id}
                                         <div class="text-[10px] text-error mt-0.5">Type <strong>{v.name}</strong> to confirm</div>
                                     {/if}
-									<form method="POST" action="?/toggleAutoCategories" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-										<input type="hidden" name="id" value={v.id}>
-										<input type="hidden" name="allowNewCategories" value={(!v.allowNewCategories).toString()}>
-										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowNewCategories} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-										<span class="text-xs text-gray-500 font-medium">Allow automated creation of categories</span>
-									</form>
-									<form method="POST" action="?/toggleAutoTaxonomy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-										<input type="hidden" name="id" value={v.id}>
-										<input type="hidden" name="allowAutoTaxonomy" value={(!v.allowAutoTaxonomy).toString()}>
-										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.allowAutoTaxonomy} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-										<span class="text-xs text-gray-500 font-medium">Enable AI Taxonomy & Attribute Extractions</span>
-									</form>
-									<form method="POST" action="?/toggleExtractExif" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-										<input type="hidden" name="id" value={v.id}>
-										<input type="hidden" name="extractExif" value={(!v.extractExif).toString()}>
-										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.extractExif} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-										<span class="text-xs text-gray-500 font-medium">Extract EXIF data (including GPS) from photos</span>
-									</form>
-									<form method="POST" action="?/toggleDeepScan" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-										<input type="hidden" name="id" value={v.id}>
-										<input type="hidden" name="deepScan" value={(!v.deepScanCollections).toString()}>
-										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.deepScanCollections} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-										<span class="text-xs text-gray-500 font-medium">Deep-scan collection imports (extracts detailed attributes for all items in collections)</span>
-									</form>
-                                    <form method="POST" action="?/toggleBgRemoval" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-                                        <input type="hidden" name="id" value={v.id}>
-                                        <input type="hidden" name="bgRemovalEnabled" value={(!v.bgRemovalEnabled).toString()}>
-                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                        <span class="text-xs text-gray-500 font-medium">Remove image backgrounds</span>
-                                    </form>
+
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleAutoCategories" name="allowNewCategories" checked={v.allowNewCategories} label="Allow automated creation of categories" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleAutoTaxonomy" name="allowAutoTaxonomy" checked={v.allowAutoTaxonomy} label="Enable AI Taxonomy & Attribute Extractions" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleExtractExif" name="extractExif" checked={v.extractExif} label="Extract EXIF data (including GPS) from photos" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleDeepScan" name="deepScan" checked={v.deepScanCollections} label="Deep-scan collection imports (extracts detailed attributes for all items in collections)" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleBgRemoval" name="bgRemovalEnabled" checked={v.bgRemovalEnabled} label="Remove image backgrounds" />
+
                                     <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
                                         <input type="hidden" name="id" value={v.id}>
                                     <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'bria-rmbg'}>
@@ -431,45 +411,18 @@
                                         </select>
                                         <span class="text-xs text-gray-500 font-medium" class:opacity-50={!v.bgRemovalEnabled}>Background removal model</span>
                                     </form>
-                                    <form method="POST" action="?/toggleBgPreCrop" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-                                        <input type="hidden" name="id" value={v.id}>
-                                        <input type="hidden" name="bgRemovalPreCrop" value={(!v.bgRemovalPreCrop).toString()}>
-                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.bgRemovalPreCrop} disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                        <span class="text-xs text-gray-500 font-medium" class:opacity-50={!v.bgRemovalEnabled}>Pre-crop image before background removal (good for some item-types)</span>
-                                    </form>
-									<form method="POST" action="?/togglePaddleOCR" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-										<input type="hidden" name="id" value={v.id}>
-										<input type="hidden" name="enablePaddleOCR" value={(!v.enablePaddleOCR).toString()}>
-										<input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.enablePaddleOCR} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-										<span class="text-xs text-gray-500 font-medium">Enable local PaddleOCR text extraction</span>
-									</form>
 
-                                    <form method="POST" action="?/toggleArchiveSingle" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-                                        <input type="hidden" name="id" value={v.id}>
-                                        <input type="hidden" name="archiveSingleScans" value={(!v.archiveSingleScans).toString()}>
-                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.archiveSingleScans} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                        <span class="text-xs text-gray-500 font-medium">Save backup pictures of single item scans to Notebook</span>
-                                    </form>
-
-                                    <form method="POST" action="?/toggleTrackQuantity" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
-                                        <input type="hidden" name="id" value={v.id}>
-                                        <input type="hidden" name="trackQuantity" value={(!v.trackQuantity).toString()}>
-                                        <input type="checkbox" class="toggle toggle-xs toggle-primary" checked={v.trackQuantity} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                        <span class="text-xs text-gray-500 font-medium">Track Quantity / Stock for items</span>
-                                    </form>
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleBgPreCrop" name="bgRemovalPreCrop" checked={v.bgRemovalPreCrop} disabled={!v.bgRemovalEnabled} label="Pre-crop image before background removal (good for some item-types)" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/togglePaddleOCR" name="enablePaddleOCR" checked={v.enablePaddleOCR} label="Enable local PaddleOCR text extraction" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleArchiveSingle" name="archiveSingleScans" checked={v.archiveSingleScans} label="Save backup pictures of single item scans to Notebook" />
+                                    <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleTrackQuantity" name="trackQuantity" checked={v.trackQuantity} label="Track Quantity / Stock for items" />
 
                                     <!-- UI View Toggles -->
                                     <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                                         <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
                                         <div class="grid grid-cols-2 gap-2">
                                             {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
-                                                <form method="POST" action="?/toggleUiFlag" use:enhance={createEnhancer} class="flex items-center gap-2">
-                                                    <input type="hidden" name="id" value={v.id}>
-                                                    <input type="hidden" name="field" value={field}>
-                                                    <input type="hidden" name="value" value={(!v[field]).toString()}>
-                                                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked={v[field]} on:change={(e) => e.currentTarget.form?.requestSubmit()} />
-                                                    <span class="text-xs text-gray-500 font-medium">{label}</span>
-                                                </form>
+                                                <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                             {/each}
                                         </div>
                                         {#if v.enableNotebook}
@@ -621,20 +574,23 @@
             </div>
 
 			<div class="flex flex-col gap-3">
-				<a href="/activity" class="btn btn-outline border-base-300 hover:border-primary flex items-center justify-between h-auto py-4 rounded-xl">
-					<div class="flex items-center gap-3">
-						<i class="bi bi-activity text-xl text-info"></i>
-						<span class="font-bold">System Activity Log</span>
-					</div>
-					<i class="bi bi-chevron-right text-gray-400"></i>
-				</a>
-				<a href="/api/backup" target="_blank" class="btn btn-outline border-base-300 hover:border-success flex items-center justify-between h-auto py-4 rounded-xl">
-					<div class="flex items-center gap-3">
-						<i class="bi bi-database-down text-xl text-success"></i>
-						<span class="font-bold">Backup Database</span>
-					</div>
-					<i class="bi bi-download text-gray-400"></i>
-				</a>
+                <ActionCard
+                    title="System Activity Log"
+                    href="/activity"
+                    icon="bi-activity"
+                    iconColorClass="bg-info/10 text-info"
+                />
+                <ActionCard
+                    title="Backup Database"
+                    href="/api/backup"
+                    target="_blank"
+                    icon="bi-database-down"
+                    iconColorClass="bg-success/10 text-success"
+                    buttonClass="border-base-300 hover:border-success hover:bg-success/10 hover:text-success"
+                    showChevron={false}
+                >
+                    <i class="bi bi-download text-gray-400"></i>
+                </ActionCard>
 			</div>
 
         </div>

@@ -629,8 +629,8 @@
 			on:click|self={handleBackgroundClick}
         >
             <div 
-                class="w-full h-full flex items-center justify-center origin-center"
-				style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal}); will-change: transform;"
+                class="w-full h-full flex items-center justify-center origin-center will-change-transform"
+                style="transform: translate({$translateX}px, {$translateY}px) scale({$scaleVal})"
                 in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
                 on:click|self={handleBackgroundClick}
             >
@@ -659,7 +659,7 @@
                     {#if photo?.box}
                         <!-- The massive box-shadow dims everything OUTSIDE the bounding box -->
                         <div class="absolute border-4 border-primary z-10 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.8)]"
-                             style="top: {photo.box[0]/10}%; left: {photo.box[1]/10}%; width: {(photo.box[3]-photo.box[1])/10}%; height: {(photo.box[2]-photo.box[0])/10}%;">
+                             style="top:{photo.box[0]/10}%; left:{photo.box[1]/10}%; width:{(photo.box[3]-photo.box[1])/10}%; height:{(photo.box[2]-photo.box[0])/10}%">
                             <!-- Inner pulsing reticle -->
                             <div class="absolute inset-0 border-2 border-white/60 animate-pulse"></div>
                         </div>

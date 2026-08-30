@@ -9,6 +9,10 @@
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import { photoTypes } from "$lib/shared/constants";
+    import ActionCard from "$lib/components/ActionCard.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
+    import Modal from "$lib/components/Modal.svelte";
+    import Badge from "$lib/components/Badge.svelte";
     import { marked } from 'marked';
     import { createEventDispatcher, onMount } from 'svelte';
     import { ambientLocation } from '$lib/client/ambientContext';
@@ -131,13 +135,9 @@
     let showAiDrawer = false;
     let userHint = "";
     let isRefining = false;
-    let aiDialog: HTMLDialogElement;
+    let aiDialog: Modal;
     let lightbox: ImageLightbox;
 
-    $: if (aiDialog) {
-        if (showAiDrawer && !aiDialog.open) aiDialog.showModal();
-        if (!showAiDrawer && aiDialog.open) aiDialog.close();
-    }
 
     function handleAnalyzingStart(ev: any) {
         isAnalyzing = true;
@@ -253,12 +253,12 @@
                 const aiData = result.aiData || result;
                 if (aiData.title) currentTitle = aiData.title;
                 if (aiData.description) currentDescription = aiData.description;
-                showAiDrawer = false;
+                aiDialog.close();
                 userHint = "";
                 dispatch('success', 'Item details enhanced by model!');
             } else {
 				notify('error', "AI Refinement failed. Check server logs.");
-                showAiDrawer = false;
+                aiDialog.close();
             }
         } catch (e) {
             console.error(e);
@@ -414,86 +414,50 @@
         {/if}
 
         <div class="flex flex-col gap-3 max-w-lg mx-auto flex-1 w-full {!pendingPhotos.length ? 'mt-10' : ''}">
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'photos'}>
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
-                        <i class="bi bi-camera"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="font-bold text-base">Photos</div>
-                        <div class="text-xs text-gray-500 font-normal">Upload or fetch</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    {#if photoCount > 0}
-                        <span class="badge badge-primary">{photoCount}</span>
-                    {/if}
-                    <i class="bi bi-chevron-right text-gray-400"></i>
-                </div>
-            </button>
+            <ActionCard 
+                title="Photos" subtitle="Upload or fetch" icon="bi-camera" iconColorClass="bg-blue-100 text-blue-600"
+                on:click={() => activeView = 'photos'}
+            >
+                {#if photoCount > 0}
+                    <Badge color="primary">{photoCount}</Badge>
+                {/if}
+            </ActionCard>
 
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <div role="button" tabindex="0" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50 cursor-pointer" on:click={() => activeView = 'location'}>
-                <div class="flex items-center gap-4">
-                    <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
-                        <i class="bi bi-box-seam"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="font-bold text-base">Location</div>
-                        <div class="text-xs text-gray-500 font-normal">Scan QR or select</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1 flex-wrap justify-end">
-                    {#if selectedLocations.length > 0}
-                        {#each selectedLocations.slice(0,2) as loc}
-                            <span class="badge badge-primary badge-sm font-mono pl-1.5 pr-1 gap-1">
-                                {#if !item && $ambientLocation.includes(loc)}
-                                    <i class="bi bi-pin-angle-fill text-[8px] opacity-70" title="Sticky Session Context"></i>
-                                {/if}
-                                {loc}
-                                <button type="button" class="btn btn-ghost btn-xs min-h-0 h-auto w-auto p-0 ml-0.5 hover:text-error" aria-label="Remove" on:click|stopPropagation={() => { selectedLocations = selectedLocations.filter(l => l !== loc); ambientLocation.setContext(selectedLocations); }}>
-                                    <i class="bi bi-x"></i>
-                                </button>
-                            </span>
-                        {/each}
-                        {#if selectedLocations.length > 2}
-                            <span class="badge badge-primary badge-sm">+{selectedLocations.length - 2}</span>
-                        {/if}
+            <ActionCard 
+                title="Location" subtitle="Scan QR or select" icon="bi-box-seam" iconColorClass="bg-purple-100 text-purple-600"
+                on:click={() => activeView = 'location'}
+            >
+                {#if selectedLocations.length > 0}
+                    {#each selectedLocations.slice(0,2) as loc}
+                            <Badge color="primary" size="sm" class="font-mono pl-1.5 pr-1 gap-1">
+                            {#if !item && $ambientLocation.includes(loc)}
+                                <i class="bi bi-pin-angle-fill text-[8px] opacity-70" title="Sticky Session Context"></i>
+                            {/if}
+                            {loc}
+                            <button type="button" class="btn btn-ghost btn-xs min-h-0 h-auto w-auto p-0 ml-0.5 hover:text-error" aria-label="Remove" on:click|stopPropagation={() => { selectedLocations = selectedLocations.filter(l => l !== loc); ambientLocation.setContext(selectedLocations); }}>
+                                <i class="bi bi-x"></i>
+                            </button>
+                            </Badge>
+                    {/each}
+                    {#if selectedLocations.length > 2}
+                            <Badge color="primary" size="sm">+{selectedLocations.length - 2}</Badge>
                     {/if}
-                    <i class="bi bi-chevron-right text-gray-400 ml-1"></i>
-                </div>
-            </div>
+                {/if}
+            </ActionCard>
 
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'details'}>
-                <div class="flex items-center gap-4">
-                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
-                        <i class="bi bi-pencil-square"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="font-bold text-base">Item Details</div>
-                        <div class="text-xs text-gray-500 font-normal">Title, qty, tags...</div>
-                    </div>
-                </div>
-                <i class="bi bi-chevron-right text-gray-400"></i>
-            </button>
+            <ActionCard 
+                title="Item Details" subtitle="Title, qty, tags..." icon="bi-pencil-square" iconColorClass="bg-orange-100 text-orange-600"
+                on:click={() => activeView = 'details'}
+            />
 
-            <button type="button" class="btn btn-outline h-auto py-4 px-4 w-full flex justify-between items-center rounded-xl border-base-300 hover:border-primary hover:bg-base-50" on:click={() => activeView = 'links'}>
-                <div class="flex items-center gap-4">
-                    <div class="bg-emerald-100 text-emerald-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0">
-                        <i class="bi bi-link-45deg"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="font-bold text-base">Documents</div>
-                        <div class="text-xs text-gray-500 font-normal">Manual or scan QR</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    {#if linkCount > 0}
-                        <span class="badge badge-primary">{linkCount}</span>
-                    {/if}
-                    <i class="bi bi-chevron-right text-gray-400"></i>
-                </div>
-            </button>
+            <ActionCard 
+                title="Documents" subtitle="Manual or scan QR" icon="bi-link-45deg" iconColorClass="bg-emerald-100 text-emerald-600"
+                on:click={() => activeView = 'links'}
+            >
+                {#if linkCount > 0}
+                    <Badge color="primary">{linkCount}</Badge>
+                {/if}
+            </ActionCard>
         </div>
 
         <!-- STICKY FOOTER -->
@@ -607,28 +571,16 @@
 
         <div class="px-4 sm:px-6 pb-6">
             <div class="flex flex-col gap-5 max-w-lg mx-auto w-full">
-                <div class="form-control w-full">
-                    <div class="label">
-                        <span class="label-text font-semibold flex items-center gap-2">
-                            Title
-                            {#if isAnalyzing}
-                                <span class="loading loading-spinner loading-xs text-primary"></span>
-                                <span class="text-xs text-primary font-normal">Analyzing image...</span>
-                            {/if}
-                        </span>
-                    </div>
-                    <div class="relative w-full">
-                        <input type="text" name="title" bind:value={currentTitle} placeholder="Leave blank for auto-fill..." class="input input-bordered w-full pr-12 rounded-xl" class:input-primary={isAnalyzing}>
-                        {#if previewImagePath}
-                            <button type="button" class="absolute right-3 top-3 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => showAiDrawer = true}>
-                                <i class="bi bi-stars text-xl"></i>
-                            </button>
-                        {/if}
-                    </div>
-                </div>
+                <FormInput label="Title {isAnalyzing ? '<span class=\'loading loading-spinner loading-xs text-primary ml-2\'></span><span class=\'text-xs text-primary font-normal ml-1\'>Analyzing image...</span>' : ''}" name="title" bind:value={currentTitle} placeholder="Leave blank for auto-fill..." inputClass="pr-12 {isAnalyzing ? 'input-primary' : ''}">
+                    {#if previewImagePath}
+                        <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => aiDialog.showModal()}>
+                            <i class="bi bi-stars text-xl"></i>
+                        </button>
+                    {/if}
+                </FormInput>
 
-                <div class="form-control w-full">
-                    <div class="label flex justify-between">
+                <div class="form-control">
+                    <div class="label flex justify-between pb-1 pt-0">
                         <span class="label-text font-semibold">Description</span>
                         <button type="button" class="btn btn-xs btn-ghost text-primary" on:click={() => showPreview = !showPreview}>
                             {showPreview ? 'Edit' : 'Preview'}
@@ -639,26 +591,16 @@
                             {@html currentDescription ? marked.parse(currentDescription, { breaks: true, gfm: true }) : '<span class="text-gray-400">Empty</span>'}
                         </div>
                     {:else}
-                        <textarea name="description" bind:value={currentDescription} rows="3" placeholder="Notes (Markdown supported)..." class="textarea textarea-bordered w-full rounded-xl" class:textarea-primary={isAnalyzing}></textarea>
+                        <textarea name="description" bind:value={currentDescription} rows="3" placeholder="Notes (Markdown supported)..." class="textarea textarea-bordered w-full rounded-xl {isAnalyzing ? 'textarea-primary' : ''}"></textarea>
                     {/if}
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="form-control w-full">
-                        <div class="label"><span class="label-text font-semibold">Amount</span></div>
-                        <input type="number" name="amount" bind:value={amount} placeholder="1" class="input input-bordered w-full rounded-xl">
-                    </div>
-                    <div class="form-control w-full">
-                        <div class="label"><span class="label-text font-semibold">Reason</span></div>
-                        <input type="text" name="reason" bind:value={reason} placeholder="Project Apollo" class="input input-bordered w-full rounded-xl">
-                    </div>
+                    <FormInput label="Amount" name="amount" type="number" bind:value={amount} placeholder="1" />
+                    <FormInput label="Reason" name="reason" bind:value={reason} placeholder="Project Apollo" />
                 </div>
 
-                <div class="form-control w-full">
-                    <div class="label"><span class="label-text font-semibold">Tags</span></div>
-                    <input type="text" name="tagcsv" bind:value={tagcsv} placeholder="electronics, office, spare..." class="input input-bordered w-full rounded-xl">
-                    <div class="label"><span class="label-text-alt text-gray-400">Separated by comma.</span></div>
-                </div>
+                <FormInput label="Tags" name="tagcsv" bind:value={tagcsv} placeholder="electronics, office, spare..." hint="Separated by comma." />
 
                 <div class="form-control w-full">
                     <div class="label"><span class="label-text font-semibold">Attributes</span></div>
@@ -678,30 +620,22 @@
 </div>
 
 <!-- The Bottom Drawer for LLM Refinement -->
-<dialog bind:this={aiDialog} class="modal modal-top sm:modal-middle" on:close={() => showAiDrawer = false}>
-    <div class="modal-box w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
-        <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
-            <i class="bi bi-stars text-primary"></i> Refine Guess
-        </h3>
-        <p class="text-sm text-gray-500 mb-6">Give the AI a nudge with a brand or model name to get a better match.</p>
-        
-        <input type="text" bind:value={userHint} on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runAiRefine(); } }} placeholder="e.g. It's actually a MITTZON desk" class="input input-bordered w-full rounded-xl mb-4" />
-        
-        <div class="modal-action mt-0 flex gap-2">
-            <button type="button" class="btn btn-ghost rounded-xl flex-1" on:click={() => showAiDrawer = false}>Cancel</button>
-            <button type="button" class="btn btn-primary rounded-xl flex-1 shadow-md" on:click={runAiRefine} disabled={isRefining}>
-                {#if isRefining}
-                    <span class="loading loading-spinner"></span>
-                {:else}
-                    Enhance
-                {/if}
-            </button>
-        </div>
+<Modal bind:this={aiDialog} position="top" title="<i class='bi bi-stars text-primary'></i> Refine Guess" titleClass="font-bold text-xl mb-2 flex items-center gap-2" boxClass="w-full max-w-[95vw] sm:max-w-md mx-auto mt-4 sm:mt-0 p-6 bg-base-100/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl">
+    <form on:submit|preventDefault={runAiRefine}>
+    <p class="text-sm text-gray-500 mb-6 mt-[-10px]">Give the AI a nudge with a brand or model name to get a better match.</p>
+    <FormInput bind:value={userHint} placeholder="e.g. It's actually a MITTZON desk" class="mb-4" />
+    <div class="modal-action mt-0 flex gap-2">
+        <button type="button" class="btn btn-ghost rounded-xl flex-1" on:click={() => aiDialog.close()}>Cancel</button>
+        <button type="button" class="btn btn-primary rounded-xl flex-1 shadow-md" on:click={runAiRefine} disabled={isRefining}>
+            {#if isRefining}
+                <span class="loading loading-spinner"></span>
+            {:else}
+                Enhance
+            {/if}
+        </button>
     </div>
-    <div class="modal-backdrop">
-        <button type="button" on:click={() => showAiDrawer = false}>close</button>
-    </div>
-</dialog>
+    </form>
+</Modal>
 
 <ImageLightbox bind:this={lightbox} />
 

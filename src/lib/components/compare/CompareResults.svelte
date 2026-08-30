@@ -8,6 +8,8 @@
     import CompareItemCard from './CompareItemCard.svelte';
     import CompareAttributeSheet from './CompareAttributeSheet.svelte';
     import BottomSheet from "$lib/components/BottomSheet.svelte";
+    import StatTab from './StatTab.svelte';
+    import ActionCard from '../ActionCard.svelte';
     import { ambientLocation } from '$lib/client/ambientContext';
 
     export let results: {
@@ -301,35 +303,43 @@
 
     <div class="grid {scopeType === 'container' ? 'grid-cols-2 md:grid-cols-4' : (scopeType !== 'all' ? 'grid-cols-3' : 'grid-cols-2')} gap-1 bg-base-200/80 p-1 rounded-2xl border border-base-300 w-full">
         {#if scopeType !== 'all'}
-            <button type="button" class="btn btn-sm h-auto py-2 flex-1 min-w-[130px] rounded-xl border-none transition-all flex flex-wrap items-center justify-center gap-1 {activeTab === 'missing' ? 'bg-base-100 shadow-sm text-error font-bold' : 'btn-ghost text-gray-500 font-medium hover:bg-base-300/50'}" on:click={() => activeTab = 'missing'}>
-                <div class="flex flex-col items-center leading-tight">
-                    <span class="flex items-center gap-1">{#if isRefiltering}<span class="loading loading-spinner loading-xs"></span>{:else}⚠️{/if} Missing</span>
-                    {#if scopeType === 'container'}
-                        <span class="text-[9px] opacity-70 max-w-[100px] truncate">in {scopeValue}</span>
-                    {/if}
-                </div>
-                <span class="badge badge-sm badge-outline bg-base-100/50 border-gray-300/50">{missing.length}</span>
-            </button>
+            <StatTab 
+                active={activeTab === 'missing'} 
+                count={missing.length} 
+                label="Missing" 
+                icon="⚠️" 
+                activeColorClass="text-error" 
+                sublabel={scopeType === 'container' ? `in ${scopeValue}` : ''}
+                loading={isRefiltering}
+                on:click={() => activeTab = 'missing'} 
+            />
             {#if scopeType === 'container'}
-                <button type="button" class="btn btn-sm h-auto py-2 flex-1 min-w-[130px] rounded-xl border-none transition-all flex flex-wrap items-center justify-center gap-1 {activeTab === 'elsewhere' ? 'bg-base-100 shadow-sm text-warning font-bold' : 'btn-ghost text-gray-500 font-medium hover:bg-base-300/50'}" on:click={() => activeTab = 'elsewhere'}>
-                    <span>📦 Elsewhere</span>
-                    <span class="badge badge-sm badge-outline bg-base-100/50 border-gray-300/50">{groupedElsewhere.length}</span>
-                </button>
+                <StatTab 
+                    active={activeTab === 'elsewhere'} 
+                    count={groupedElsewhere.length} 
+                    label="Elsewhere" 
+                    icon="📦" 
+                    activeColorClass="text-warning" 
+                    on:click={() => activeTab = 'elsewhere'} 
+                />
             {/if}
-
         {/if}
-        <button type="button" class="btn btn-sm h-auto py-2 flex-1 min-w-[130px] rounded-xl border-none transition-all flex flex-wrap items-center justify-center gap-1 {activeTab === 'unregistered' ? 'bg-base-100 shadow-sm text-primary font-bold' : 'btn-ghost text-gray-500 font-medium hover:bg-base-300/50'}" on:click={() => activeTab = 'unregistered'}>
-            <span>✨ New</span>
-            <span class="badge badge-sm badge-outline bg-base-100/50 border-gray-300/50">{groupedUnregistered.length}</span>
-        </button>
-        <button type="button" class="btn btn-sm h-auto py-2 flex-1 min-w-[130px] rounded-xl border-none transition-all flex flex-wrap items-center justify-center gap-1 {activeTab === 'correct' ? 'bg-base-100 shadow-sm text-success font-bold' : 'btn-ghost text-gray-500 font-medium hover:bg-base-300/50'}" on:click={() => activeTab = 'correct'}>
-            <span>✓ 
-                {#if scopeType === 'all'}Owned
-                {:else if scopeType === 'container'}In Place
-                {:else}In Stock{/if}
-            </span>
-            <span class="badge badge-sm badge-outline bg-base-100/50 border-gray-300/50">{groupedCorrect.length}</span>
-        </button>
+        <StatTab 
+            active={activeTab === 'unregistered'} 
+            count={groupedUnregistered.length} 
+            label="New" 
+            icon="✨" 
+            activeColorClass="text-primary" 
+            on:click={() => activeTab = 'unregistered'} 
+        />
+        <StatTab 
+            active={activeTab === 'correct'} 
+            count={groupedCorrect.length} 
+            label={scopeType === 'all' ? 'Owned' : (scopeType === 'container' ? 'In Place' : 'In Stock')} 
+            icon="✓" 
+            activeColorClass="text-success" 
+            on:click={() => activeTab = 'correct'} 
+        />
     </div>
 
     {#if activeTab === 'missing'}
@@ -457,12 +467,15 @@
 <BottomSheet bind:this={mergeModal} title="Link to Existing Item" subtitle={`Select the item that matches "${mergeSourceItem?.title}"`} on:close={() => mergeSourceItem = null}>
     <div class="flex flex-col gap-2">
         {#each results.missingFromScope as missingItem}
-            <button type="button" class="btn btn-ghost h-auto py-3 px-4 w-full justify-start text-left border border-base-200 shadow-sm hover:border-warning hover:bg-warning/10 rounded-2xl flex-col items-start gap-1" on:click={() => confirmMerge(missingItem)}>
-                <span class="font-bold text-sm text-base-content whitespace-normal">{missingItem.title}</span>
-                {#if missingItem.locationName}
-                    <span class="text-[10px] text-gray-400 font-medium font-mono uppercase"><i class="bi bi-box-seam mr-1"></i> {missingItem.locationName}</span>
-                {/if}
-            </button>
+                <ActionCard 
+                    title={missingItem.title} 
+                    subtitle={missingItem.locationName ? `IN ${missingItem.locationName.toUpperCase()}` : ''}
+                    icon="bi-link"
+                    iconColorClass="bg-base-200 text-gray-400"
+                    variant="flat"
+                    buttonClass="border border-base-200 shadow-sm hover:border-warning hover:bg-warning/10 rounded-2xl"
+                    on:click={() => confirmMerge(missingItem)}
+                />
         {/each}
     </div>
     <div slot="actions">
@@ -522,24 +535,12 @@
 <!-- Action Picker Bottom Sheet -->
 <BottomSheet bind:this={actionModal} title="Add to..." subtitle={`Where should "${actionItem?.title}" go?`} on:close={() => actionItem = null}>
     <div class="flex flex-col gap-3">
-        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }}>
-            <i class="bi bi-box-seam text-2xl mr-4 text-primary"></i>
-            <div><div class="font-bold text-base-content">{activeInvName}</div><div class="text-xs text-gray-500 font-normal">Add to collection</div></div>
-        </button>
-        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }}>
-            <i class="bi bi-cart text-2xl mr-4 text-warning"></i>
-            <div><div class="font-bold text-base-content">Shopping List</div><div class="text-xs text-gray-500 font-normal">Add to your buy list</div></div>
-        </button>
-        <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-success hover:bg-success/5 active:scale-95 transition-all p-4 text-left" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }}>
-            <i class="bi bi-list-check text-2xl mr-4 text-success"></i>
-            <div><div class="font-bold text-base-content">To-Do List</div><div class="text-xs text-gray-500 font-normal">Add as a task</div></div>
-        </button>
+        <ActionCard title={activeInvName} subtitle="Add to collection" icon="bi-box-seam" iconColorClass="text-primary bg-transparent" variant="flat" buttonClass="border border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 rounded-2xl" on:click={() => { actionModal.close(); quickAdd(actionItem, 'inventory'); }} />
+        <ActionCard title="Shopping List" subtitle="Add to your buy list" icon="bi-cart" iconColorClass="text-warning bg-transparent" variant="flat" buttonClass="border border-base-300 bg-base-100 hover:border-warning hover:bg-warning/5 rounded-2xl" on:click={() => { actionModal.close(); quickAdd(actionItem, 'to buy'); }} />
+        <ActionCard title="To-Do List" subtitle="Add as a task" icon="bi-list-check" iconColorClass="text-success bg-transparent" variant="flat" buttonClass="border border-base-300 bg-base-100 hover:border-success hover:bg-success/5 rounded-2xl" on:click={() => { actionModal.close(); quickAdd(actionItem, 'todo'); }} />
         {#if missing.length > 0}
             <div class="divider my-2 text-xs text-gray-400">OR</div>
-            <button type="button" class="w-full flex justify-start items-center rounded-2xl border border-base-300 bg-base-100 hover:border-info hover:bg-info/5 active:scale-95 transition-all p-4 text-left text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }}>
-                <i class="bi bi-link-45deg text-2xl mr-4 text-info"></i>
-                <div><div class="font-bold text-base-content">Link to Existing...</div><div class="text-xs text-gray-500 font-normal">Match it to an expected item</div></div>
-            </button>
+            <ActionCard title="Link to Existing..." subtitle="Match it to an expected item" icon="bi-link-45deg" iconColorClass="text-info bg-transparent" variant="flat" buttonClass="border border-base-300 bg-base-100 hover:border-info hover:bg-info/5 rounded-2xl text-info" on:click={() => { actionModal.close(); mergeSourceItem = actionItem; mergeModal.showModal(); }} />
         {/if}
     </div>
 </BottomSheet>

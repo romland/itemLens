@@ -7,6 +7,7 @@
     import { page } from '$app/stores';
     import pageTitle from '$lib/stores';
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import Badge from "$lib/components/Badge.svelte";
     import { notify } from "$lib/client/notifications";
 
     export let data: PageServerData;
@@ -230,18 +231,18 @@
                             <div class="bg-base-200/50 px-6 py-3 border-b border-base-200 flex justify-between items-center">
                                 <div class="flex items-center gap-3">
                                     <span class="font-bold text-info tracking-tight">{log.taskName}</span>
-                                    <span class="badge badge-sm font-bold uppercase">{log.service}</span>
+                                    <Badge size="sm" class="font-bold uppercase">{log.service}</Badge>
                                     {#if log.itemId}
-                                        <span class="badge badge-ghost badge-sm border-base-300 shadow-sm"><i class="bi bi-box mr-1"></i> Item #{log.itemId}</span>
+                                        <Badge color="ghost" size="sm" icon="bi-box" class="border-base-300 shadow-sm">Item #{log.itemId}</Badge>
                                     {/if}
                                     {#if log.path}
-                                        <button class="badge badge-ghost badge-sm border-base-300 shadow-sm max-w-[150px] truncate hover:border-primary cursor-zoom-in transition-colors" title="View {log.path}" on:click={() => lightbox.open({ orgPath: log.path.replace(/^static/, ''), showOriginal: true })}><i class="bi bi-file-image mr-1"></i> {log.path.split('/').pop()}</button>
+                                        <Badge color="ghost" size="sm" icon="bi-file-image" class="border-base-300 shadow-sm max-w-[150px] truncate hover:border-primary cursor-zoom-in transition-colors" title="View {log.path}" on:click={() => lightbox.open({ orgPath: log.path.replace(/^static/, ''), showOriginal: true })}>{log.path.split('/').pop()}</Badge>
                                     {/if}
                                     <span class="text-xs text-gray-500">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                 </div>
-                                <span class="badge badge-ghost badge-sm font-mono border-base-300">{log.durationMs}ms</span>
+                                <Badge color="ghost" size="sm" class="font-mono border-base-300">{log.durationMs}ms</Badge>
                                 <div class="flex items-center gap-2">
-                                    <span class="badge badge-ghost badge-sm font-mono border-base-300">{log.durationMs}ms | {log.tokensIn} in / {log.tokensOut} out</span>
+                                    <Badge color="ghost" size="sm" class="font-mono border-base-300">{log.durationMs}ms | {log.tokensIn} in / {log.tokensOut} out</Badge>
                                     <button type="button" class="btn btn-xs btn-ghost hover:text-primary gap-1" on:click={() => { navigator.clipboard.writeText(`PROMPT:\n${typeof log.input === 'string' ? log.input : JSON.stringify(log.input, null, 2)}\n\nRESPONSE:\n${typeof log.output === 'string' ? log.output : JSON.stringify(log.output, null, 2)}`); notify('success', 'Copied to clipboard!'); }}><i class="bi bi-copy"></i> Copy</button>
                                 </div>
                             </div>

@@ -5,6 +5,8 @@
     import { createEventDispatcher } from 'svelte';
     import { parsePlainTextKVPs } from '$lib/client/kvpParser';
 	import { notify } from '$lib/client/notifications';
+    import Modal from './Modal.svelte';
+    import FormInput from './FormInput.svelte';
 
     const dispatch = createEventDispatcher();
 
@@ -24,7 +26,7 @@
     let keyColIndex = 0;
     let valColIndex = 1;
     let targetIndex = 0;
-    let tableModalDialog: HTMLDialogElement;
+    let tableModalDialog: Modal;
     let isParsingLLM = false;
     let selectedRows: boolean[] = [];
 	let llmUsedForAttributes = false;
@@ -240,8 +242,8 @@
 
     {#each {length:numKVPs} as _, i}
         <div>
-            <input on:paste={(ev)=>pasteTable(ev, i)} type="text" name="kvpK-{i}" value="" placeholder="Attribute" class="input input-bordered w-1/3 mb-3">
-            <input on:paste={(ev)=>pasteTable(ev, i)} type="text" name="kvpV-{i}" value="" placeholder="Value" class="input input-bordered w-1/3 mb-3">
+            <FormInput type="text" name="kvpK-{i}" placeholder="Attribute" class="w-1/3 mb-3 inline-block align-middle" on:paste={(ev)=>pasteTable(ev, i)} />
+            <FormInput type="text" name="kvpV-{i}" placeholder="Value" class="w-1/3 mb-3 inline-block align-middle" on:paste={(ev)=>pasteTable(ev, i)} />
             <button on:click={(ev)=>{ removeKVP(ev, i) }} type="button" class="btn btn-warning">-</button>
             {#if i === numKVPs - 1}
                 <button on:click={(ev) => {
@@ -262,9 +264,7 @@
     </div>
 
 <!-- Column Picker Modal -->
-<dialog bind:this={tableModalDialog} class="modal" on:close={() => showTableModal = false}>
-    <div class="modal-box max-w-4xl">
-        <h3 class="font-bold text-lg mb-4">Select Columns to Import</h3>
+<Modal bind:this={tableModalDialog} title="Select Columns to Import" boxClass="max-w-4xl" blur={false} on:close={() => showTableModal = false}>
         <p class="text-sm mb-4">We detected multiple columns in your pasted data. Please select which one represents the <strong>Attribute</strong> and which is the <strong>Value</strong>.</p>
         
         <div class="overflow-x-auto max-h-96 border border-base-200 rounded-lg">
@@ -327,9 +327,4 @@
             <button type="button" class="btn" on:click={() => showTableModal = false}>Cancel</button>
             <button type="button" class="btn btn-primary" on:click={handleTableConfirm}>Import</button>
         </div>
-    </div>
-
-    <div class="modal-backdrop">
-        <button type="button" on:click={() => showTableModal = false}>close</button>
-    </div>    
-</dialog>
+</Modal>

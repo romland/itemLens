@@ -18,6 +18,7 @@
     import { browser } from '$app/environment';
     import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
     import { isSlowConnection } from '$lib/client/utils';
+    import Badge from "$lib/components/Badge.svelte";
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -230,9 +231,9 @@
                             <div class="flex flex-col gap-1 min-w-[4rem] relative z-20">
                                 {#if item.locations}
                                     {#each item.locations as loc}
-                                        <div class="badge badge-ghost badge-sm w-20 overflow-hidden shrink-0">
+                                        <Badge color="ghost" size="sm" class="w-20 overflow-hidden shrink-0">
                                             <a href="/container/{encodeURIComponent(loc.container.name)}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
-                                        </div>
+                                        </Badge>
                                     {/each}
                                 {/if}
                             </div>
@@ -269,9 +270,9 @@
                                 <div class="flex flex-wrap gap-1 relative z-20">
                                     {#if item.locations}
                                         {#each item.locations as loc}
-                                            <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
+                                            <Badge color="ghost" class="text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap">
                                                 <a href="/container/{encodeURIComponent(loc.container.name)}" class="truncate w-full text-center" title="{loc.container.name}">{loc.container.name}</a>
-                                            </div>
+                                            </Badge>
                                         {/each}
                                     {/if}
                                 </div>
@@ -286,22 +287,20 @@
                                 <div class="hidden lg:flex pt-2 gap-2 flex-wrap items-center relative z-20">
                                     {#if item.tags}
                                         {#each item.tags as tag}
-                                            <div class="badge badge-ghost badge-sm">
+                                            <Badge color="ghost" size="sm">
                                                 <a href="/tag/{tag.slug}">{tag.name}</a>
-                                            </div>
+                                            </Badge>
                                         {/each}
                                     {/if}
 
                                     {#if item.documents && item.documents.length > 0}
-                                        <div class="badge badge-ghost badge-sm gap-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                                            </svg>
+                                        <Badge color="ghost" size="sm">
+                                            <i class="bi bi-files"></i>
                                             {item.documents.length}
                                             {#if !hasSummarizedDocuments(item)}
                                                 <span class="text-warning ml-1">TODO: Need summary!</span>
                                             {/if}
-                                        </div>
+                                        </Badge>
                                     {/if}
 
                                     {#if mainPhoto.category?.name || mainPhoto.llmAnalysis}
@@ -396,15 +395,15 @@
                         <div class="flex flex-wrap gap-1 mt-1 relative z-20">
                             {#if item.locations}
                                 {#each item.locations as loc}
-                                    <div class="badge badge-ghost text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap truncate max-w-[80%]">
+                                    <Badge color="ghost" class="text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap truncate max-w-[80%]">
                                         {loc.container.name}
-                                    </div>
+                                    </Badge>
                                 {/each}
                             {/if}
                             {#if mainPhoto.category?.name || mainPhoto.llmAnalysis}
-                                <div class="badge badge-primary badge-outline text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap capitalize">
+                                <Badge color="primary" variant="outline" class="text-[10px] px-1.5 py-0.5 h-auto whitespace-nowrap capitalize">
                                     {mainPhoto.category?.name || JSON.parse(mainPhoto.llmAnalysis || '{}')?.subCategory || 'Unknown'}
-                                </div>
+                                </Badge>
                             {/if}
                         </div>
                     </div>

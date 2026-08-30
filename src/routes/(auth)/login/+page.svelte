@@ -2,6 +2,7 @@
     import { enhance } from "$app/forms";
     import type { ActionData } from "./$types";
     import pageTitle from '$lib/stores';
+    import FormInput from "$lib/components/FormInput.svelte";
 
     export let form: ActionData;
 
@@ -34,15 +35,9 @@
                 isLoggingIn = false;
             };
         }}>
-            <div class="form-control relative w-full">
-                <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
-                <input type="text" name="username" placeholder="Username" class="input input-bordered w-full pl-12 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" required autocomplete="username">
-            </div>
+            <FormInput icon="bi-person" name="username" placeholder="Username" required autocomplete="username" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" />
             
-            <div class="form-control relative w-full mb-2">
-                <i class="bi bi-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
-                <input type="password" name="password" placeholder="Password" class="input input-bordered w-full pl-12 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" required autocomplete="current-password">
-            </div>
+            <FormInput type="password" icon="bi-lock" name="password" placeholder="Password" required autocomplete="current-password" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" class="mb-2" />
 
             <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg text-base h-12" disabled={isLoggingIn}>
                 {#if isLoggingIn}<span class="loading loading-spinner loading-sm"></span>{/if}

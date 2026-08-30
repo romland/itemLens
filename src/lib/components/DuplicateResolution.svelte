@@ -4,6 +4,7 @@
     import { createEventDispatcher } from 'svelte';
     import RelativeDate from './RelativeDate.svelte';
     import ColorMixBar from './ColorMixBar.svelte';
+    import ActionCard from './ActionCard.svelte';
 
     export let scannedTitle: string;
     export let matchDetails: any; // ID, title, locationName, sharedAttributes
@@ -67,31 +68,43 @@
     </div>
 
     <div class="flex flex-col gap-2">
-        <button type="button" class="btn btn-outline h-auto py-2.5 px-3 w-full flex justify-start items-center rounded-xl transition-all {currentAction === 'merge' ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}" on:click={() => dispatch('resolve', 'merge')}>
-            <div class="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-3 shrink-0"><i class="bi bi-plus-slash-minus text-xs"></i></div>
-            <div class="text-left flex-1 min-w-0">
-                <div class="font-bold text-xs leading-tight">Merge (+1)</div>
-                <div class="text-[10px] text-gray-500 font-normal truncate">Bump quantity & link box</div>
-            </div>
+        <ActionCard
+            size="sm"
+            title="Merge (+1)"
+            subtitle="Bump quantity & link box"
+            icon="bi-plus-slash-minus"
+            iconColorClass="bg-primary/20 text-primary"
+            buttonClass="transition-all {currentAction === 'merge' ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}"
+            showChevron={false}
+            on:click={() => dispatch('resolve', 'merge')}
+        >
             {#if currentAction === 'merge'}<i class="bi bi-check-circle-fill text-primary ml-auto text-lg"></i>{/if}
-        </button>
+        </ActionCard>
 
-        <button type="button" class="btn btn-outline h-auto py-2.5 px-3 w-full flex justify-start items-center rounded-xl transition-all {currentAction === 'new' ? 'border-info bg-info/10' : 'border-base-300 hover:border-info/50'}" on:click={() => dispatch('resolve', 'new')}>
-            <div class="w-6 h-6 rounded-full bg-info/20 text-info flex items-center justify-center mr-3 shrink-0"><i class="bi bi-file-earmark-plus text-xs"></i></div>
-            <div class="text-left flex-1 min-w-0">
-                <div class="font-bold text-xs leading-tight">{isAfterTheFact ? 'Keep as Distinct' : 'Save as Distinct'}</div>
-                <div class="text-[10px] text-gray-500 font-normal truncate">{isAfterTheFact ? 'Leave as a separate physical item' : 'Track as a separate item'}</div>
-            </div>
+        <ActionCard
+            size="sm"
+            title={isAfterTheFact ? 'Keep as Distinct' : 'Save as Distinct'}
+            subtitle={isAfterTheFact ? 'Leave as a separate physical item' : 'Track as a separate item'}
+            icon="bi-file-earmark-plus"
+            iconColorClass="bg-info/20 text-info"
+            buttonClass="transition-all {currentAction === 'new' ? 'border-info bg-info/10' : 'border-base-300 hover:border-info/50'}"
+            showChevron={false}
+            on:click={() => dispatch('resolve', 'new')}
+        >
             {#if currentAction === 'new'}<i class="bi bi-check-circle-fill text-info ml-auto text-lg"></i>{/if}
-        </button>
+        </ActionCard>
 
-        <button type="button" class="btn btn-outline h-auto py-2.5 px-3 w-full flex justify-start items-center rounded-xl transition-all {currentAction === 'ignore' ? 'border-error bg-error/10' : 'border-base-300 hover:border-error/50'}" on:click={() => dispatch('resolve', 'ignore')}>
-            <div class="w-6 h-6 rounded-full bg-error/20 text-error flex items-center justify-center mr-3 shrink-0"><i class="bi bi-trash3 text-xs"></i></div>
-            <div class="text-left flex-1 min-w-0">
-                <div class="font-bold text-xs leading-tight">{isAfterTheFact ? 'Delete Duplicate' : 'Ignore'}</div>
-                <div class="text-[10px] text-gray-500 font-normal truncate">{isAfterTheFact ? 'Vaporize this anomaly' : 'Drop from this import'}</div>
-            </div>
+        <ActionCard
+            size="sm"
+            title={isAfterTheFact ? 'Delete Duplicate' : 'Ignore'}
+            subtitle={isAfterTheFact ? 'Vaporize this anomaly' : 'Drop from this import'}
+            icon="bi-trash3"
+            iconColorClass="bg-error/20 text-error"
+            buttonClass="transition-all {currentAction === 'ignore' ? 'border-error bg-error/10' : 'border-base-300 hover:border-error/50'}"
+            showChevron={false}
+            on:click={() => dispatch('resolve', 'ignore')}
+        >
             {#if currentAction === 'ignore'}<i class="bi bi-check-circle-fill text-error ml-auto text-lg"></i>{/if}
-        </button>
+        </ActionCard>
     </div>
 </div>

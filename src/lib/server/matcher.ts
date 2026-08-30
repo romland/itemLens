@@ -290,7 +290,7 @@ export function computeMatch(
             fuzzyMatches += 1.5;
             debugTrace.push(`[COLOR MATCH] Strong similarity: ${sim.toFixed(2)}`);
             sharedAttributes.push({ key: 'color_mix', value: typeof scan.colorMix === 'string' ? scan.colorMix : JSON.stringify(scan.colorMix) });
-        } else if (sim >= 0.60) {
+        } else if (sim >= 0.65) {
             fuzzyMatches += 0.5;
             debugTrace.push(`[COLOR MATCH] Partial similarity: ${sim.toFixed(2)}`);
             sharedAttributes.push({ key: 'color_mix', value: typeof scan.colorMix === 'string' ? scan.colorMix : JSON.stringify(scan.colorMix) });

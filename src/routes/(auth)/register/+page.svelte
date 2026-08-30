@@ -2,6 +2,7 @@
     import { enhance } from "$app/forms";
     import type { ActionData } from "./$types";
     import pageTitle from '$lib/stores';
+    import FormInput from "$lib/components/FormInput.svelte";
 
     export let form: ActionData;
     let isRegistering = false;
@@ -18,7 +19,7 @@
         </div>
         
         <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-center text-base-content mb-2">Create an account</h1>
-        <p class="text-sm text-gray-500 text-center mb-8 font-medium">Set up your personal inventory vault.</p>
+        <p class="text-sm text-gray-500 text-center mb-8 font-medium">Set up your personal collections.</p>
 
         {#if form?.error}
             <div class="mb-4 text-center animate-fade-in">
@@ -32,15 +33,9 @@
             isRegistering = true;
             return async ({ update }) => { await update(); isRegistering = false; };
         }}>
-            <div class="form-control relative w-full">
-                <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
-                <input type="text" name="username" placeholder="Choose a Username" class="input input-bordered w-full pl-12 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" required autocomplete="username">
-            </div>
+            <FormInput icon="bi-person" name="username" placeholder="Choose a Username" required autocomplete="username" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" />
             
-            <div class="form-control relative w-full mb-2">
-                <i class="bi bi-shield-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
-                <input type="password" name="password" placeholder="Create a Password" class="input input-bordered w-full pl-12 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" required autocomplete="new-password">
-            </div>
+            <FormInput type="password" icon="bi-shield-lock" name="password" placeholder="Create a Password" required autocomplete="new-password" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" class="mb-2" />
 
             <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg text-base h-12" disabled={isRegistering}>
                 {#if isRegistering}<span class="loading loading-spinner loading-sm"></span>{/if}

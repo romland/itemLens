@@ -14,15 +14,16 @@
 <button type="button" title="Delete Item" class={btnClass} on:click={() => dialog.showModal()}><i class={iconClass}></i></button>
 
 <dialog bind:this={dialog} class="modal">
-    <form {action} method="post" class="modal-box" use:enhance={() => {
+    <form {action} method="post" class="modal-box" use:enhance={({ formElement }) => {
         return async ({ result, update }) => {
+            dialog.close(); // ALWAYS close instantly before DOM destruction
+            
             if (result.type === 'success' && result.data?.deleted) {
-                dialog.close();
                 history.back();
                 setTimeout(() => { if (window.location.pathname.includes('/delete')) goto('/'); }, 100);
-            } else {
-                await update();
             }
+            
+            await update({ reset: false });
         };
     }}>
         <h3 class="font-bold text-lg">Confirm</h3>

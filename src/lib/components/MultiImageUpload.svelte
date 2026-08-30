@@ -117,7 +117,7 @@
 </script>
 
 <div class="group-container">
-    <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} style="position:absolute; top:-999px;" accept="image/*,video/*" class="file-input mb-3">
+    <input type="file" id="file.0" name="file.0" on:change={productPhotoUploadChanged} accept="image/*,video/*" class="file-input mb-3 sr-only">
     <input type="hidden" name="file.type.0" value="">
 
     <div class="flex justify-center w-full">

@@ -4,6 +4,9 @@
     import pageTitle from '$lib/stores';
     import { slide } from 'svelte/transition';
     import Notifications from "$lib/components/Notifications.svelte";
+    import Modal from "$lib/components/Modal.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
+    import FormSelect from "$lib/components/FormSelect.svelte";
 
     export let data: PageServerData;
     
@@ -13,27 +16,18 @@
     $: filteredCategories = data.categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     let categoryToDelete: any = null;
-    let confirmModal: HTMLDialogElement;
+    let confirmModal: Modal;
     let isDeleting = false;
     let notifications: any[] = [];
 
-    let mergeModal: HTMLDialogElement;
+    let mergeModal: Modal;
     let categoryToMerge: any = null;
     let isMerging = false;
 
-    let addModal: HTMLDialogElement;
+    let addModal: Modal;
     let isAdding = false;
     let newCategoryName = "";
 
-    $: if (confirmModal) {
-        if (categoryToDelete && !confirmModal.open) confirmModal.showModal();
-        if (!categoryToDelete && confirmModal.open) confirmModal.close();
-    }
-
-    $: if (mergeModal) {
-        if (categoryToMerge && !mergeModal.open) mergeModal.showModal();
-        if (!categoryToMerge && mergeModal.open) mergeModal.close();
-    }
 
     function notify(status: string, message: string) {
         const id = Math.random().toString(36);
@@ -92,10 +86,10 @@
                         </form>
                     </div>
 
-                    <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors" on:click={() => categoryToMerge = cat} aria-label="Merge Category">
+                        <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors" on:click={() => { categoryToMerge = cat; mergeModal.showModal(); }} aria-label="Merge Category">
                         <i class="bi bi-intersect text-lg"></i>
                     </button>
-                    <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-error hover:bg-error/10 transition-colors" on:click={() => categoryToDelete = cat} aria-label="Delete Category">
+                        <button type="button" class="btn btn-ghost btn-circle text-gray-400 hover:text-error hover:bg-error/10 transition-colors" on:click={() => { categoryToDelete = cat; confirmModal.showModal(); }} aria-label="Delete Category">
                         <i class="bi bi-trash text-lg"></i>
                     </button>
                 </div>
@@ -123,21 +117,21 @@
 </div>
 
 <!-- Action Sheet Modal -->
-<dialog bind:this={confirmModal} class="modal modal-bottom sm:modal-middle" on:close={() => categoryToDelete = null}>
-    <div class="modal-box sm:rounded-[2rem] p-6">
-        <h3 class="font-bold text-xl mb-2 text-center sm:text-left">Delete Category?</h3>
+<Modal bind:this={confirmModal} blur={false} title="Delete Category?" titleClass="font-bold text-xl mb-2 text-center sm:text-left" boxClass="sm:rounded-[2rem] p-6" on:close={() => categoryToDelete = null}>
         <p class="text-gray-500 text-center sm:text-left text-sm mb-6">
             Are you sure you want to delete <strong class="text-base-content capitalize">"{categoryToDelete?.name}"</strong>? 
             <br><br>
             This will unlink it from <strong>{categoryToDelete?._count.photos}</strong> photo(s). The photos will remain, but the category tag will be removed.
         </p>
         <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
-            <form method="POST" action="?/delete" class="w-full sm:w-auto flex-1" use:enhance={() => {
+            <form method="POST" action="?/delete" class="w-full sm:w-auto flex-1" use:enhance={({ formElement }) => {
                 isDeleting = true;
                 return async ({ update }) => {
-                    await update();
+                    await update({ reset: false });
                     isDeleting = false;
+                    confirmModal.close();
                     categoryToDelete = null;
+                    formElement.reset();
                     notify('success', 'Category deleted and unlinked.');
                 };
             }}>
@@ -150,66 +144,60 @@
                     {/if}
                 </button>
             </form>
-            <button class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => categoryToDelete = null} disabled={isDeleting}>Cancel</button>
+            <button class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => { confirmModal.close(); categoryToDelete = null; }} disabled={isDeleting}>Cancel</button>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button disabled={isDeleting}>close</button>
-    </form>
-</dialog>
+</Modal>
 
 <!-- Merge Modal -->
-<dialog bind:this={mergeModal} class="modal modal-bottom sm:modal-middle" on:close={() => categoryToMerge = null}>
-    <div class="modal-box sm:rounded-[2rem] p-6">
-        <h3 class="font-bold text-xl mb-2 text-center sm:text-left">Merge Category</h3>
+<Modal bind:this={mergeModal} blur={false} title="Merge Category" titleClass="font-bold text-xl mb-2 text-center sm:text-left" boxClass="sm:rounded-[2rem] p-6" on:close={() => categoryToMerge = null}>
         <p class="text-gray-500 text-center sm:text-left text-sm mb-6">
             Move all <strong>{categoryToMerge?._count.photos}</strong> photos from <strong class="text-base-content capitalize">"{categoryToMerge?.name}"</strong> into another category, then delete this one.
         </p>
-        <form method="POST" action="?/merge" class="flex flex-col gap-4" use:enhance={() => {
+        <form method="POST" action="?/merge" class="flex flex-col gap-4" use:enhance={({ formElement }) => {
             isMerging = true;
             return async ({ update }) => {
-                await update();
+                await update({ reset: false });
                 isMerging = false;
+                mergeModal.close();
                 categoryToMerge = null;
+                formElement.reset();
                 notify('success', 'Categories merged successfully.');
             };
         }}>
             <input type="hidden" name="sourceId" value={categoryToMerge?.id}>
-            <select name="targetId" class="select select-bordered w-full rounded-xl capitalize" required>
+            <FormSelect name="targetId" required selectClass="rounded-xl capitalize">
                 <option value="" disabled selected>Select destination category...</option>
                 {#each data.categories.filter(c => c.id !== categoryToMerge?.id) as c}
                     <option value={c.id}>{c.name}</option>
                 {/each}
-            </select>
+            </FormSelect>
             <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3 mt-2">
                 <button type="submit" class="btn btn-primary w-full sm:w-auto flex-1 shadow-sm rounded-xl" disabled={isMerging}>
                     {#if isMerging}<span class="loading loading-spinner"></span>{:else}Merge & Delete{/if}
                 </button>
-                <button type="button" class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => categoryToMerge = null} disabled={isMerging}>Cancel</button>
+                <button type="button" class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => { mergeModal.close(); categoryToMerge = null; }} disabled={isMerging}>Cancel</button>
             </div>
         </form>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button disabled={isMerging}>close</button></form>
-</dialog>
+</Modal>
 
 <!-- Add Category Modal -->
-<dialog bind:this={addModal} class="modal modal-bottom sm:modal-middle" on:close={() => newCategoryName = ""}>
-    <div class="modal-box sm:rounded-[2rem] p-6">
-        <h3 class="font-bold text-xl mb-4 text-center sm:text-left">Add Category</h3>
-        <form method="POST" action="?/create" class="flex flex-col gap-6" use:enhance={() => {
+<Modal bind:this={addModal} blur={false} title="Add Category" titleClass="font-bold text-xl mb-4 text-center sm:text-left" boxClass="sm:rounded-[2rem] p-6" on:close={() => newCategoryName = ""}>
+        <form method="POST" action="?/create" class="flex flex-col gap-6" use:enhance={({ formElement }) => {
             isAdding = true;
             return async ({ update, result }) => {
-                await update();
+                await update({ reset: false });
                 isAdding = false;
                 if (result.type === 'success') {
                     addModal.close();
+                    newCategoryName = "";
+                    formElement.reset();
                     notify('success', 'Category added.');
                 } else if (result.type === 'failure') {
                     notify('error', result.data?.message || 'Failed to add category.');
                 }
             };
         }}>
-            <input type="text" name="name" bind:value={newCategoryName} placeholder="e.g. electronics" class="input input-bordered w-full rounded-xl bg-base-50 focus:bg-base-100 transition-colors" required autocomplete="off" />
+            <FormInput name="name" bind:value={newCategoryName} placeholder="e.g. electronics" required autocomplete="off" inputClass="bg-base-50 focus:bg-base-100 transition-colors" />
             <div class="flex flex-col sm:flex-row-reverse gap-2 sm:gap-3">
                 <button type="submit" class="btn btn-primary w-full sm:w-auto flex-1 rounded-xl shadow-sm" disabled={!newCategoryName.trim() || isAdding}>
                     {#if isAdding}
@@ -221,10 +209,6 @@
                 <button type="button" class="btn btn-ghost w-full sm:w-auto flex-1 rounded-xl bg-base-200/50" on:click={() => addModal.close()} disabled={isAdding}>Cancel</button>
             </div>
         </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button disabled={isAdding}>close</button>
-    </form>
-</dialog>
+</Modal>
 
 <Notifications bind:notifications />

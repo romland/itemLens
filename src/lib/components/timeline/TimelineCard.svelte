@@ -4,6 +4,8 @@
     import RelativeDate from "$lib/components/RelativeDate.svelte";
     import { notify } from "$lib/client/notifications";
 	import { createEventDispatcher } from 'svelte';
+    import TextButton from "$lib/components/TextButton.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
 
     export let note;
 	const dispatch = createEventDispatcher();
@@ -67,7 +69,7 @@
     </div>
     <!-- Attached Photos -->
     {#if note.photos && note.photos.length > 0}
-        <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64" style="-ms-overflow-style: none; scrollbar-width: none;">
+        <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64 hide-scrollbar">
             {#each note.photos as photo}
 				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in relative" aria-label="View Attachment" on:click={() => dispatch('openImage', photo)}>
                     {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
@@ -88,14 +90,13 @@
         {#if isEditing}
             <form action="/timeline?/edit" method="POST" use:enhance={() => { return async ({ update }) => { await update(); isEditing = false; }}}>
                 <input type="hidden" name="id" value={note.id}>
-				<textarea name="content" bind:value={editContent} class="textarea textarea-bordered w-full text-sm leading-snug resize-none"
-					style="min-height: 4rem; max-height: 18rem; field-sizing: content;"
-					on:input={(e) => { e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'; }}
+                <FormInput type="textarea" name="content" bind:value={editContent} inputClass="text-sm leading-snug resize-none min-h-[4rem] max-h-[18rem] [field-sizing:content]" 
+                    on:input={(e) => { e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'; }}
                     on:keydown={(e) => {
                         if (e.key === 'Escape') isEditing = false;
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); }
                     }}
-                ></textarea>
+                />
                 <div class="flex justify-end gap-2 mt-2">
                     <button type="button" class="btn btn-ghost btn-sm" on:click={() => isEditing = false}>Cancel</button>
                     <button type="submit" class="btn btn-primary btn-sm">Save</button>
@@ -127,17 +128,15 @@
                                 <h4 class="font-bold text-sm text-base-content line-clamp-1 m-0">{doc.title || doc.source}</h4>
                                 <div class="flex items-center gap-3 mt-1.5">
                                     {#if doc.source && doc.source.startsWith('http')}
-                                        <a href="{doc.source}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline flex items-center gap-1 min-w-0 max-w-[150px] sm:max-w-[250px]" title="{doc.source}"><i class="bi bi-globe shrink-0"></i> <span class="truncate normal-case tracking-normal font-mono">{doc.source.replace(/^https?:\/\//, '')}</span></a>
+                                        <TextButton href={doc.source} target="_blank" colorClass="text-primary" icon="bi-globe" title={doc.source} isMono={true}>
+                                            {doc.source.replace(/^https?:\/\//, '')}
+                                        </TextButton>
                                     {/if}
                                     {#if doc.path}
                                         {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
-											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>
-												<i class="bi bi-book"></i> Read Book
-											</button>
+                                            <TextButton colorClass="text-secondary" icon="bi-book" on:click={() => dispatch('openDoc', doc)}>Read Book</TextButton>
 										{:else}
-											<button type="button" class="text-[10px] font-bold uppercase tracking-wider text-secondary hover:underline flex items-center gap-1 p-0 border-none bg-transparent cursor-pointer" on:click={() => dispatch('openDoc', doc)}>
-												<i class="bi bi-hdd-network"></i> Local Cache
-											</button>
+                                            <TextButton colorClass="text-secondary" icon="bi-hdd-network" on:click={() => dispatch('openDoc', doc)}>Local Cache</TextButton>
 										{/if}
                                     {/if}
                                 </div>

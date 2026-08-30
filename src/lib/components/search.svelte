@@ -4,6 +4,7 @@
      * that 'search-as-you-type' is tied to the input field.
      */
     import Items from "$lib/components/items.svelte";
+    import DropdownPanel from "$lib/components/DropdownPanel.svelte";
 
     export let q: string = '';
     let resultsAsYouType: HTMLDivElement;
@@ -63,6 +64,7 @@
 </script>
 
 <form method="GET" action="/search" class="w-full sm:w-auto relative">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div bind:this={resultsAsYouType} id="resultsAsYouType" class="dropdown dropdown-end w-full md:w-auto" on:keydown={handleKeydown}>
         
         <div class="form-control relative w-full">
@@ -80,9 +82,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
 
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="dropdown-content mt-2 z-[999] w-[calc(100vw-2rem)] sm:w-[28rem] md:right-auto md:left-1/2 md:-ml-[14rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-base-100/95 backdrop-blur-2xl ring-1 ring-base-content/10 rounded-2xl p-2 flex flex-col gap-1" on:click={(e) => { if ((e.target).closest('a')) resultsAsYouType.classList.remove('dropdown-open'); }}>
+        <DropdownPanel>
             {#if items?.length > 0}
                 <div class="max-h-[60vh] overflow-y-auto rounded-xl">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
@@ -93,7 +93,7 @@
                     <i class="bi bi-search"></i> {q ? `See all results for "${q.replace(/^"|"$/g, '')}"` : 'Advanced Search & Bulk Edit'}
                 </a>
             </div>
-        </div>
+        </DropdownPanel>
     </div>
 </form>
 

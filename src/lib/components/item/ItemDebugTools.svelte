@@ -1,10 +1,11 @@
 <script lang="ts">
     import ItemSelectorModal from "$lib/components/ItemSelectorModal.svelte";
+    import Modal from "$lib/components/Modal.svelte";
 
     export let item: any;
     export let activeTasks: any[] = [];
 
-    let payloadModal: HTMLDialogElement;
+    let payloadModal: Modal;
     let payloadModalTitle = "";
     let payloadModalContent = "";
     function openPayloadModal(log: any) {
@@ -13,8 +14,9 @@
         payloadModal.showModal();
     }
 
-    let devDebugModal: HTMLDialogElement;
-    let diagnosticModal: HTMLDialogElement;
+    let devDebugModal: Modal;
+    let diagnosticModal: Modal;
+
     let devDebugResult: any = null;
     let isDevDebugging = false;
     let selectorModal: ItemSelectorModal;
@@ -67,35 +69,22 @@
     </div>
 </div>
 
-<dialog bind:this={payloadModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem] w-11/12 max-w-5xl flex flex-col max-h-[90vh]">
-        <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
-            <h3 class="font-bold text-lg leading-tight">{payloadModalTitle}</h3>
-            <button class="btn btn-sm btn-circle btn-ghost" on:click={() => payloadModal.close()}><i class="bi bi-x-lg"></i></button>
-        </div>
+<Modal bind:this={payloadModal} title={payloadModalTitle} titleClass="font-bold text-lg leading-tight" boxClass="p-0 overflow-hidden sm:rounded-[2.5rem] w-11/12 max-w-5xl flex flex-col max-h-[90vh]">
         <div class="p-4 overflow-y-auto bg-base-200/50">
             <pre class="text-[10px] font-mono whitespace-pre-wrap break-words">{payloadModalContent}</pre>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>
 
-<dialog bind:this={diagnosticModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box bg-base-100 shadow-2xl border border-info/50">
-        <h3 class="font-bold text-lg mb-4 text-info"><i class="bi bi-clipboard-data"></i> Item Diagnostics</h3>
-        <p class="text-xs mb-2">Copy this payload for debugging pending states.</p>
+<Modal bind:this={diagnosticModal} title="<i class='bi bi-clipboard-data'></i> Item Diagnostics" titleClass="font-bold text-lg text-info flex items-center gap-2 mb-2" boxClass="border border-info/50 shadow-2xl">
+        <p class="text-xs mb-4 mt-[-10px]">Copy this payload for debugging pending states.</p>
         <textarea class="textarea textarea-bordered w-full h-64 text-[10px] font-mono" readonly>{JSON.stringify({ photos: item?.photos, tasks: activeTasks }, null, 2)}</textarea>
         <div class="modal-action">
             <button class="btn" on:click={() => diagnosticModal.close()}>Close</button>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>
 
-<dialog bind:this={devDebugModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box bg-base-100 shadow-2xl border border-warning/50">
-        <h3 class="font-bold text-lg mb-4 text-warning"><i class="bi bi-bug-fill"></i> Force Match Debugger</h3>
-        <div class="form-control mb-4">
+<Modal bind:this={devDebugModal} title="<i class='bi bi-bug-fill'></i> Force Match Debugger" titleClass="font-bold text-lg text-warning flex items-center gap-2 mb-4" boxClass="border border-warning/50 shadow-2xl">
+        <div class="form-control mb-4 mt-[-10px]">
             <button type="button" class="btn btn-outline border-base-300 justify-start h-auto py-3 px-4 rounded-xl font-normal text-left" on:click={() => selectorModal.showModal()}>
                 {#if selectedTargetItem}
                     <span class="font-bold">{selectedTargetItem.title}</span>
@@ -116,9 +105,7 @@
                 {/each}
             </div>
         {/if}
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>
 
 <ItemSelectorModal bind:this={selectorModal} title="Compare Debugger" subtitle="Browse or search all items (newest first)" on:select={(e) => {
     selectedTargetItem = e.detail;

@@ -11,6 +11,10 @@
     import DocumentList from "$lib/components/search/DocumentList.svelte";
     import DocumentLightbox from "$lib/components/DocumentLightbox.svelte";
     import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+    import Modal from "$lib/components/Modal.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
+    import FormSelect from "$lib/components/FormSelect.svelte";
+    import Badge from "$lib/components/Badge.svelte";
 
     export let data: PageServerData;
 
@@ -20,8 +24,8 @@
 	let bulkAction = 'addTag';
 	let bulkValue = '';
 	let isSubmitting = false;
-    let bulkDeleteModal: HTMLDialogElement;
-    let exportCsvModal: HTMLDialogElement;
+    let bulkDeleteModal: Modal;
+    let exportCsvModal: Modal;
     let exportConfig = { core: true, locs: true, attrs: true, tags: true, images: false };
     let isExporting = false;
 
@@ -217,14 +221,14 @@
 <!-- Active Filter Chips -->
 {#if data.tag || data.container || data.cat || data.unassigned || Object.keys(filterAttrs).length > 0}
 <div class="flex flex-wrap gap-2 px-2 mb-6">
-    {#if data.tag}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('tag')}><i class="bi bi-hash"></i> {data.tag} <i class="bi bi-x ml-1"></i></button>{/if}
-    {#if data.container}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('container')}><i class="bi bi-box-seam"></i> {data.container} <i class="bi bi-x ml-1"></i></button>{/if}
-    {#if data.cat}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('category')}><i class="bi bi-tags"></i> {data.cat} <i class="bi bi-x ml-1"></i></button>{/if}
-    {#if data.unassigned}<button class="badge badge-primary gap-1 p-3 font-semibold shadow-sm" on:click={() => removeFilter('unassigned')}><i class="bi bi-pin-map"></i> Unassigned <i class="bi bi-x ml-1"></i></button>{/if}
+    {#if data.tag}<Badge color="primary" class="p-3 font-semibold shadow-sm" icon="bi-hash" removable on:click={() => removeFilter('tag')}>{data.tag}</Badge>{/if}
+    {#if data.container}<Badge color="primary" class="p-3 font-semibold shadow-sm" icon="bi-box-seam" removable on:click={() => removeFilter('container')}>{data.container}</Badge>{/if}
+    {#if data.cat}<Badge color="primary" class="p-3 font-semibold shadow-sm capitalize" icon="bi-tags" removable on:click={() => removeFilter('category')}>{data.cat}</Badge>{/if}
+    {#if data.unassigned}<Badge color="primary" class="p-3 font-semibold shadow-sm" icon="bi-pin-map" removable on:click={() => removeFilter('unassigned')}>Unassigned</Badge>{/if}
     {#each Object.entries(filterAttrs) as [k,v]}
         {@const schemaField = (data.activeSchema || []).find(f => f.name === k)}
         {@const friendlyKey = schemaField?.uiLabel || k.replace(/_/g, ' ')}
-        <button class="badge badge-secondary gap-1 p-3 font-semibold shadow-sm capitalize" on:click={() => removeFilter('attrs', k)}>{COMPACT_PILLS ? v : `${friendlyKey}: ${v}`} <i class="bi bi-x ml-1"></i></button>
+        <Badge color="secondary" class="p-3 font-semibold shadow-sm capitalize" removable on:click={() => removeFilter('attrs', k)}>{COMPACT_PILLS ? v : `${friendlyKey}: ${v}`}</Badge>
     {/each}
     <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { window.location.href = '/search'; }}>Clear All</button>
 </div>
@@ -233,10 +237,10 @@
 {#if !bulkMode && currentInventory?.enableDocuments !== false}
 <div class="bg-base-200 p-1 rounded-2xl flex w-full max-w-md mx-auto mb-6 mt-2 relative z-10 border border-base-300 shadow-inner">
     <button type="button" class="flex-1 btn btn-sm border-none {searchTab === 'items' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => searchTab = 'items'}>
-        Items <span class="badge badge-sm badge-ghost ml-1">{data.totalCount}</span>
+        Items <Badge color="ghost" size="sm" class="ml-1">{data.totalCount}</Badge>
     </button>
     <button type="button" class="flex-1 btn btn-sm border-none {searchTab === 'documents' ? 'bg-base-100 shadow-sm hover:bg-base-100 text-base-content' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => searchTab = 'documents'}>
-        Documents <span class="badge badge-sm badge-ghost ml-1">{data.documentResults.length}</span>
+        Documents <Badge color="ghost" size="sm" class="ml-1">{data.documentResults.length}</Badge>
     </button>
 </div>
 {/if}
@@ -246,61 +250,36 @@
             <input type="hidden" name="attrs" value={JSON.stringify(filterAttrs)}>
 			
 			<div class="flex gap-4 flex-col sm:flex-row">
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Has Tag</span>
-                    <select name="tag" class="select select-sm select-bordered rounded-lg font-normal">
-                        <option value="">Any Tag</option>
-                        {#each (data.tags || []) as t}
-                            <option value={t.slug} selected={data.tag === t.slug}>{t.name}</option>
-                        {/each}
-                    </select>
-				</div>
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">In Container</span>
-                    <select name="container" class="select select-sm select-bordered rounded-lg font-normal">
-                        <option value="">Any Container</option>
-                        {#each (data.containers || []) as c}
-                            <option value={c.name} selected={data.container === c.name}>{c.name}</option>
-                        {/each}
-                    </select>
-				</div>
+                <FormSelect label="Has Tag" name="tag" selectClass="select-sm rounded-lg font-normal" labelClass="text-xs uppercase tracking-wider mb-0">
+                    <option value="">Any Tag</option>
+                    {#each (data.tags || []) as t}
+                        <option value={t.slug} selected={data.tag === t.slug}>{t.name}</option>
+                    {/each}
+                </FormSelect>
+                <FormSelect label="In Container" name="container" selectClass="select-sm rounded-lg font-normal" labelClass="text-xs uppercase tracking-wider mb-0">
+                    <option value="">Any Container</option>
+                    {#each (data.containers || []) as c}
+                        <option value={c.name} selected={data.container === c.name}>{c.name}</option>
+                    {/each}
+                </FormSelect>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Category</span>
-                    <select name="category" bind:value={selectedCategory} class="select select-sm select-bordered rounded-lg font-normal capitalize">
-						<option value="">Any Category</option>
-                        <option value="_uncategorized">Uncategorized</option>
-						{#each data.categories as c}
-                            <option value={c.name} class="capitalize">{c.name}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Title</span>
-                    <input type="text" name="title" value={data.titleStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. raspberry or Aerosmith..." />
-				</div>
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Description</span>
-					<input type="text" name="desc" value={data.descStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Description content..." />
-				</div>
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Document Contains</span>
-					<input type="text" name="doc" value={data.docStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="Search manuals, notes, extracts..." />
-				</div>
-				<div class="form-control w-full">
-					<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider">Reason</span>
-					<input type="text" name="reason" value={data.reasonStr || ''} class="input input-sm input-bordered rounded-lg" placeholder="e.g. Curiosity" />
-				</div>
+
+                <FormSelect label="Category" name="category" bind:value={selectedCategory} selectClass="select-sm rounded-lg font-normal capitalize" labelClass="text-xs uppercase tracking-wider mb-0">
+                    <option value="">Any Category</option>
+                    <option value="_uncategorized">Uncategorized</option>
+                    {#each data.categories as c}
+                        <option value={c.name} class="capitalize">{c.name}</option>
+                    {/each}
+                </FormSelect>
+                <FormInput label="Title" name="title" value={data.titleStr || ''} placeholder="e.g. raspberry or Aerosmith..." inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0" />
+                <FormInput label="Description" name="desc" value={data.descStr || ''} placeholder="Description content..." inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0" />
+                <FormInput label="Document Contains" name="doc" value={data.docStr || ''} placeholder="Search manuals, notes, extracts..." inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0" />
+                <FormInput label="Reason" name="reason" value={data.reasonStr || ''} placeholder="e.g. Curiosity" inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0" />
+
 				<div class="form-control w-full flex flex-row gap-2 items-end">
-					<div class="w-1/2">
-						<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider block">Min Qty</span>
-						<input type="number" name="minAmount" value={data.minAmount || ''} class="input input-sm input-bordered rounded-lg w-full" placeholder="0" />
-					</div>
-					<div class="w-1/2">
-						<span class="label-text text-xs font-semibold mb-1 uppercase tracking-wider block">Max Qty</span>
-						<input type="number" name="maxAmount" value={data.maxAmount || ''} class="input input-sm input-bordered rounded-lg w-full" placeholder="10" />
-					</div>
+                    <FormInput label="Min Qty" name="minAmount" type="number" value={data.minAmount || ''} placeholder="0" inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0 block" class="w-1/2" />
+                    <FormInput label="Max Qty" name="maxAmount" type="number" value={data.maxAmount || ''} placeholder="10" inputClass="input-sm rounded-lg" labelClass="text-xs uppercase tracking-wider mb-0 block" class="w-1/2" />
 				</div>
 
                 <div class="form-control w-full sm:col-span-2 overflow-x-auto pb-2">
@@ -338,7 +317,7 @@
     <form id="bulkEditForm" method="POST" action="?/bulkEdit" class="pb-32" use:enhance={() => {
 		isSubmitting = true;
 		return async ({ update }) => {
-			await update();
+			await update({ reset: false });
 			isSubmitting = false;
 			bulkMode = false;
 			selectedIds = [];
@@ -447,48 +426,35 @@
 		{/if}
 	</form>
 
-    <dialog bind:this={bulkDeleteModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div class="modal-box bg-base-100 border border-error/50 shadow-2xl">
-            <h3 class="font-bold text-lg text-error flex items-center gap-2">
-                <i class="bi bi-exclamation-triangle-fill"></i> Delete {selectedIds.length} Items?
-            </h3>
-            <p class="py-4 text-sm text-gray-600">You are about to permanently delete <strong>{selectedIds.length}</strong> items. This action cannot be undone and will destroy all associated photos, documents, and data.</p>
-            <div class="modal-action">
-                <button type="button" class="btn btn-ghost" on:click={() => bulkDeleteModal.close()}>Cancel</button>
-                <button type="button" class="btn btn-error" on:click={() => { bulkDeleteModal.close(); document.getElementById('bulkEditForm')?.requestSubmit(); }}>Delete Forever</button>
-            </div>
+    <Modal bind:this={bulkDeleteModal} title="<i class='bi bi-exclamation-triangle-fill'></i> Delete {selectedIds.length} Items?" titleClass="font-bold text-lg text-error flex items-center gap-2" boxClass="border border-error/50">
+        <p class="py-4 text-sm text-gray-600 mt-[-10px]">You are about to permanently delete <strong>{selectedIds.length}</strong> items. This action cannot be undone and will destroy all associated photos, documents, and data.</p>
+        <div class="modal-action">
+            <button type="button" class="btn btn-ghost" on:click={() => bulkDeleteModal.close()}>Cancel</button>
+            <button type="button" class="btn btn-error" on:click={() => { bulkDeleteModal.close(); document.getElementById('bulkEditForm')?.requestSubmit(); }}>Delete Forever</button>
         </div>
-        <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
+    </Modal>
 
-    <dialog bind:this={exportCsvModal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div class="modal-box bg-base-100 border border-base-200 shadow-2xl p-6 sm:rounded-3xl">
-            <h3 class="font-bold text-xl flex items-center gap-2 mb-2">
-                <i class="bi bi-filetype-csv text-secondary"></i> Export to CSV
-            </h3>
-            <p class="text-sm text-gray-500 mb-6">Select what data to include in your spreadsheet for the {selectedIds.length} selected items.</p>
-            
-            <div class="flex flex-col gap-3 mb-6 bg-base-200/50 p-4 rounded-xl border border-base-200">
-                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Core Details <span class="font-normal text-xs text-gray-500 block">Title, Qty, Desc</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.core} /></label>
-                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Storage Locations <span class="font-normal text-xs text-gray-500 block">Where it lives</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.locs} /></label>
-                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">AI Attributes & Traits <span class="font-normal text-xs text-gray-500 block">Dynamically creates columns per attribute</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.attrs} /></label>
-                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Tags</span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.tags} /></label>
-                <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Primary Image Link <span class="font-normal text-xs text-gray-500 block">Absolute server URL</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.images} /></label>
-            </div>
-
-            <div class="modal-action mt-0 flex gap-2">
-                <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => exportCsvModal.close()} disabled={isExporting}>Cancel</button>
-                <button type="button" class="btn btn-secondary flex-1 rounded-xl shadow-md" on:click={downloadCSV} disabled={isExporting}>
-                    {#if isExporting}
-                        <span class="loading loading-spinner loading-sm"></span> Generating...
-                    {:else}
-                        <i class="bi bi-download"></i> Download CSV
-                    {/if}
-                </button>
-            </div>
+    <Modal bind:this={exportCsvModal} title="<i class='bi bi-filetype-csv text-secondary'></i> Export to CSV" titleClass="font-bold text-xl flex items-center gap-2 mb-2" boxClass="p-6 sm:rounded-3xl border border-base-200">
+        <p class="text-sm text-gray-500 mb-6 mt-[-10px]">Select what data to include in your spreadsheet for the {selectedIds.length} selected items.</p>
+        
+        <div class="flex flex-col gap-3 mb-6 bg-base-200/50 p-4 rounded-xl border border-base-200">
+            <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Core Details <span class="font-normal text-xs text-gray-500 block">Title, Qty, Desc</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.core} /></label>
+            <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Storage Locations <span class="font-normal text-xs text-gray-500 block">Where it lives</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.locs} /></label>
+            <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">AI Attributes & Traits <span class="font-normal text-xs text-gray-500 block">Dynamically creates columns per attribute</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.attrs} /></label>
+            <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Tags</span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.tags} /></label>
+            <label class="flex justify-between items-center cursor-pointer hover:bg-base-200 p-1 rounded transition-colors"><span class="font-semibold text-sm text-base-content">Primary Image Link <span class="font-normal text-xs text-gray-500 block">Absolute server URL</span></span> <input type="checkbox" class="toggle toggle-primary" bind:checked={exportConfig.images} /></label>
         </div>
-        <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
+        <div class="modal-action mt-0 flex gap-2">
+            <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => exportCsvModal.close()} disabled={isExporting}>Cancel</button>
+            <button type="button" class="btn btn-secondary flex-1 rounded-xl shadow-md" on:click={downloadCSV} disabled={isExporting}>
+                {#if isExporting}
+                    <span class="loading loading-spinner loading-sm"></span> Generating...
+                {:else}
+                    <i class="bi bi-download"></i> Download CSV
+                {/if}
+            </button>
+        </div>
+    </Modal>
 {:else if searchTab === 'documents'}
     <DocumentList documents={data.documentResults} on:openDoc={(e) => docLightbox.open(e.detail)} on:openImage={(e) => imgLightbox.open(e.detail)} />
 {:else}

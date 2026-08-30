@@ -6,7 +6,7 @@ import { checkRateLimit } from '$lib/server/security';
 import { createSession, setSessionCookie } from '$lib/server/session';
 
 export const actions = {
-    default: async ({ request, getClientAddress }) => {
+    default: async ({ request, getClientAddress, cookies }) => {
         // Throttle registration to 3 per minute per IP to prevent bot accounts
         if (!checkRateLimit(`register:${getClientAddress()}`, 3, 60000)) {
             return fail(429, { error: true, message: 'Registration rate limited. Try again later.' });
@@ -21,18 +21,18 @@ export const actions = {
             });
         }
         
-        const user = await db.user.findUnique({
+        const existingUser = await db.user.findUnique({
             where: { username: username.trim() }
         });
 
-        if (user) {
+        if (existingUser) {
             return fail(400, {
                 error: true,
                 message: '<strong>Username</strong> already exists.'
             });
         }
 
-        const user = await db.user.create({
+        const newUser = await db.user.create({
             data: {
                 username: username.trim(),
                 password: await bcrypt.hash(password, 10)
@@ -41,7 +41,7 @@ export const actions = {
 
         const userAgent = request.headers.get('user-agent');
         const ip = getClientAddress();
-        const rawSessionId = await createSession(user.id, userAgent, ip);
+        const rawSessionId = await createSession(newUser.id, userAgent, ip);
         setSessionCookie(cookies, rawSessionId);
 
         redirect(303, '/');

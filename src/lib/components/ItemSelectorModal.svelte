@@ -4,9 +4,11 @@
     
     import { createEventDispatcher, onMount } from 'svelte';
     import ItemMiniCard from './ItemMiniCard.svelte';
+    import Modal from './Modal.svelte';
+    import FormInput from './FormInput.svelte';
     
     const dispatch = createEventDispatcher();
-    let modal: HTMLDialogElement;
+    let modal: Modal;
     
     let query = '';
     let items: any[] = [];
@@ -43,8 +45,7 @@
     export function close() { modal?.close(); }
 </script>
 
-<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close>
-    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 flex flex-col max-h-[85vh] sm:rounded-[2.5rem] w-full max-w-lg mx-auto">
+<Modal bind:this={modal} boxClass="p-0 overflow-hidden border border-base-200 flex flex-col max-h-[85vh] sm:rounded-[2.5rem] w-full max-w-lg mx-auto" on:close>
         <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
             <div>
                 <h3 class="font-bold text-lg leading-tight">{title}</h3>
@@ -54,7 +55,7 @@
         </div>
         
         <div class="p-4 bg-base-50 border-b border-base-200">
-            <input type="text" class="input input-bordered w-full rounded-xl bg-base-100" placeholder="Filter by name, tag, or attribute..." bind:value={query} on:input={handleInput} />
+            <FormInput placeholder="Filter by name, tag, or attribute..." bind:value={query} on:input={handleInput} inputClass="bg-base-100" />
         </div>
         
         <div class="overflow-y-auto p-4 flex flex-col gap-2 max-h-[50vh]">
@@ -72,6 +73,4 @@
                 </button>
             {/if}
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>

@@ -2,6 +2,7 @@
     import { enhance } from "$app/forms";
     import Alert from "$lib/components/alert.svelte";
     import type { ActionData } from "./$types";
+    import FormInput from "$lib/components/FormInput.svelte";
 
     export let form: ActionData;
 
@@ -31,42 +32,24 @@
         
         <!-- Left Column: Core Identity -->
         <div class="flex flex-col gap-4">
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Container Name</span></label>
-                <input type="text" name="name" placeholder={mode === 'single' ? "e.g. Red 30x30 Cube" : "e.g. Shelf A"} class="input input-bordered w-full shadow-sm">
-            </div>
+            <FormInput label="Container Name" name="name" placeholder={mode === 'single' ? "e.g. Red 30x30 Cube" : "e.g. Shelf A"} inputClass="shadow-sm" />
 
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Location</span></label>
-                <input type="text" name="location" placeholder="e.g. Living Room Bookshelf" class="input input-bordered w-full shadow-sm">
-            </div>
+            <FormInput label="Location" name="location" placeholder="e.g. Living Room Bookshelf" inputClass="shadow-sm" />
 
             {#if mode === 'batch'}
                 <div class="flex gap-4">
-                    <div class="form-control w-1/2">
-                        <label class="label"><span class="label-text font-semibold">Number of trays</span></label>
-                        <input type="number" name="numtrays" value="10" placeholder="10" min="1" class="input input-bordered w-full shadow-sm">
-                    </div>
-                    <div class="form-control w-1/2">
-                        <label class="label"><span class="label-text font-semibold">Start number</span></label>
-                        <input type="number" name="starttray" value="1" min="1" class="input input-bordered w-full shadow-sm">
-                    </div>
+                    <FormInput type="number" label="Number of trays" name="numtrays" value="10" placeholder="10" min="1" class="w-1/2" inputClass="shadow-sm" />
+                    <FormInput type="number" label="Start number" name="starttray" value="1" min="1" class="w-1/2" inputClass="shadow-sm" />
                 </div>
             {/if}
         </div>
 
         <!-- Right Column: Media & Extras -->
         <div class="flex flex-col gap-4">
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Photo</span></label>
-                <input type="file" name="photoPath" accept="image/*" class="file-input file-input-bordered w-full shadow-sm">
-            </div>
+            <FormInput type="file" label="Photo" name="photoPath" accept="image/*" inputClass="shadow-sm" />
 
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Description</span></label>
-                <textarea name="description" rows="2" placeholder="Optional notes..." class="textarea textarea-bordered w-full shadow-sm"></textarea>
-            </div>
-            
+            <FormInput type="textarea" label="Description" name="description" rows="2" placeholder="Optional notes about what goes in here..." inputClass="shadow-sm" />
+
             <!-- Label Studio Stub -->
             <div class="form-control bg-base-200 rounded-xl p-4 mt-2 border border-base-300">
                 <label class="label cursor-pointer justify-start gap-3 w-max p-0 mb-1">

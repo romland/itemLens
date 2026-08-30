@@ -2,14 +2,16 @@
     import { createEventDispatcher, tick } from 'svelte';
     const dispatch = createEventDispatcher();
     
+    import Modal from './Modal.svelte';
+    import FormInput from './FormInput.svelte';
+
     export let title = "Input required";
     export let message = "";
     export let placeholder = "Enter value...";
     export let confirmText = "Save";
     export let cancelText = "Cancel";
 
-    let dialog: HTMLDialogElement;
-    let inputEl: HTMLInputElement;
+    let dialog: Modal;
     let value = "";
     let resolvePromise: ((value: string | null) => void) | null = null;
 
@@ -21,7 +23,7 @@
         
         dialog.showModal();
         await tick();
-        inputEl?.focus();
+        document.getElementById('promptModalInput')?.focus();
         
         return new Promise((resolve) => {
             resolvePromise = resolve;
@@ -41,19 +43,13 @@
     }
 </script>
 
-<dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle backdrop-blur-sm" on:close={handleCancel}>
-    <div class="modal-box bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem]">
-        <h3 class="font-bold text-xl mb-2 flex items-center gap-2">
-            <i class="bi bi-input-cursor-text text-primary"></i> {title}
-        </h3>
+<Modal bind:this={dialog} title="<i class='bi bi-input-cursor-text text-primary'></i> {title}" titleClass="font-bold text-xl flex items-center gap-2 mb-2" boxClass="sm:rounded-[2.5rem] border border-base-200" on:close={handleCancel}>
         {#if message}<p class="text-sm text-gray-500 mb-4 leading-relaxed">{@html message}</p>{/if}
         <form on:submit|preventDefault={handleConfirm} class="w-full">
-            <input bind:this={inputEl} type="text" bind:value {placeholder} class="input input-bordered w-full rounded-xl mb-6 bg-base-200/50 focus:bg-base-100" />
+            <FormInput id="promptModalInput" bind:value {placeholder} class="mb-6" inputClass="bg-base-200/50 focus:bg-base-100" />
             <div class="modal-action mt-0 flex gap-2 w-full">
                 <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={handleCancel}>{cancelText}</button>
                 <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md" disabled={!value.trim()}>{confirmText}</button>
             </div>
         </form>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</Modal>

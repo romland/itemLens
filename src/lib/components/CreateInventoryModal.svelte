@@ -2,9 +2,11 @@
     import { enhance } from "$app/forms";
     import { createEventDispatcher } from "svelte";
 	import { ARCHETYPES } from "$lib/shared/constants";
+    import Modal from "$lib/components/Modal.svelte";
+    import FormInput from "$lib/components/FormInput.svelte";
 
     const dispatch = createEventDispatcher();
-    let modal: HTMLDialogElement;
+    let modal: Modal;
     export function showModal() { modal.showModal(); }
 
     let name = '';
@@ -23,7 +25,7 @@
     // =============================================================================
     let selectedArchetype = 'hardware';
 
-    function handleEnhance() {
+    function handleEnhance({ formElement }: any) {
         return async ({ result, update }: any) => {
             if (result.type === 'success' || result.type === 'redirect') {
                 dispatch('success', result.data?.message || 'Collection created successfully!');
@@ -31,6 +33,7 @@
                 name = '';
                 contentsHint = '';
                 selectedArchetype = 'hardware';
+                formElement.reset();
             } else {
                 dispatch('error', result.data?.message || 'An error occurred while creating collection.');
             }
@@ -39,8 +42,7 @@
     }
 </script>
 
-<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-    <div class="modal-box p-0 overflow-hidden bg-base-100 shadow-2xl border border-base-200 sm:rounded-[2.5rem] max-w-4xl flex flex-col max-h-[90vh]">
+<Modal bind:this={modal} boxClass="p-0 overflow-hidden sm:rounded-[2.5rem] max-w-4xl flex flex-col max-h-[90vh]">
         <div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
             <div>
                 <h3 class="font-bold text-xl leading-tight">Create New Collection</h3>
@@ -51,16 +53,9 @@
 
         <form method="POST" action="?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
             <div class="p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 bg-base-50">
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-semibold text-lg">Name your Collection</span></label>
-                    <input type="text" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar..." class="input input-bordered input-lg w-full rounded-2xl shadow-inner focus:border-primary" required autocomplete="off">
-                </div>
+                <FormInput label="Name your Collection" labelClass="font-semibold text-lg" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar..." required autocomplete="off" inputClass="input-lg rounded-2xl shadow-inner focus:border-primary" />
 
-                <div class="form-control w-full -mt-2">
-                    <label class="label"><span class="label-text font-semibold text-lg">What will be in it? (1-3 words)</span></label>
-                    <!-- This hint empowers the LLM to generate a bespoke schema even if the archetype is broad -->
-                    <input type="text" name="contentsHint" bind:value={contentsHint} placeholder="e.g. vintage stamps, lego, cables..." class="input input-bordered w-full rounded-2xl shadow-inner focus:border-primary" required>
-                </div>
+                <FormInput label="What will be in it? (1-3 words)" labelClass="font-semibold text-lg" name="contentsHint" bind:value={contentsHint} placeholder="e.g. vintage stamps, lego, cables..." required inputClass="rounded-2xl shadow-inner focus:border-primary" class="-mt-2" />
 
                 <div>
                     <label class="label"><span class="label-text font-semibold text-lg">Select Archetype</span></label>
@@ -95,6 +90,4 @@
                 <button type="submit" class="btn btn-primary btn-lg w-full rounded-2xl shadow-lg" disabled={!name.trim()}>Create "{name.trim() || 'Collection'}"</button>
             </div>
         </form>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button type="button" on:click={() => modal.close()}>close</button></form>
-</dialog>
+</Modal>
