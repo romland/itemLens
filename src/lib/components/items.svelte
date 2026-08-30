@@ -17,6 +17,7 @@
     import { fade } from 'svelte/transition';
     import { browser } from '$app/environment';
     import ContentUnavailable from "$lib/components/ContentUnavailable.svelte";
+    import { isSlowConnection } from '$lib/client/utils';
 
     export let items: any[] = [];
     export let brief: boolean = false;
@@ -132,6 +133,8 @@
     // Detect if the user is actively filtering to show context-aware empty states
     $: hasActiveFilters = browser && Array.from($page.url.searchParams.keys()).some(k => !['sort', 'theme', 'c', 'page'].includes(k));
 
+    const imgLoadStrategy = isSlowConnection() ? 'lazy' : 'eager';
+
 </script>
 
 {#if showControls}
@@ -209,7 +212,7 @@
                                                {#if serverSrc}
                                                    <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
                                                         src="{serverSrc}{cb}"
-                                                        loading="lazy"
+                                                        loading={imgLoadStrategy}
                                                         on:load={() => markLoaded(serverSrc)}
                                                         on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                                         alt="{item.title || 'Item image'}"/>
@@ -360,7 +363,7 @@
                             {#if serverSrc}
                                 <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
                                      src="{serverSrc}{cb}"
-                                     loading="lazy"
+                                     loading={imgLoadStrategy}
                                      on:load={() => markLoaded(serverSrc)}
                                      on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                      alt="{item.title || 'Item image'}"/>

@@ -67,3 +67,11 @@ export function getFileInfo(doc: any) {
     
     return { icon: 'bi-file-earmark-text', color: 'text-gray-500', label: 'DOC' };
 }
+
+export function isSlowConnection(): boolean {
+    if (typeof navigator === 'undefined' || !('connection' in navigator)) return false;
+    const conn = (navigator as any).connection;
+    if (conn.saveData) return true;
+    if (['slow-2g', '2g', '3g'].includes(conn.effectiveType)) return true;
+    return false;
+}
