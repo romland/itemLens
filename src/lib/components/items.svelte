@@ -194,10 +194,6 @@
                     {@const isLoaded = serverSrc ? loadedUrls.has(serverSrc) : false}
 
                     <tr animate:flip={{ duration: 300 }} in:fade={{ duration: 200 }} class="hover:bg-base-200/50 transition-all duration-200 border-b border-base-200/50 last:border-none relative {isNavigatingToThis ? 'opacity-50 pointer-events-none scale-[0.98]' : ''} {item.isGhost ? 'opacity-80 grayscale-[50%] pointer-events-none animate-pulse duration-1000' : ''}">
-                        <!-- Overlay Link: Restores right-click / middle-click while letting SvelteKit intercept normal clicks -->
-                        {#if !item.isGhost}
-                            <a href="/{item.id}/{item.slug}" class="absolute inset-0 z-10" aria-label={item.title}></a>
-                        {/if}
                        <td class="w-16 sm:w-20 min-w-[4rem] sm:min-w-[5rem] shrink-0 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="avatar">
@@ -213,6 +209,7 @@
                                                {#if serverSrc}
                                                    <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
                                                         src="{serverSrc}{cb}"
+                                                        loading="lazy"
                                                         on:load={() => markLoaded(serverSrc)}
                                                         on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                                         alt="{item.title || 'Item image'}"/>
@@ -238,7 +235,11 @@
                             </div>
                         </td>
 
-                        <td class="w-full">
+                        <td class="w-full relative">
+                            {#if !item.isGhost}
+                                <!-- Overlay Link: Restores right-click / middle-click while letting SvelteKit intercept normal clicks. Moved inside TD to fix iOS Safari bug where position:relative on TR is ignored -->
+                                <a href="/{item.id}/{item.slug}" class="absolute inset-0 z-10" aria-label={item.title}></a>
+                            {/if}
                             <div class="flex items-center gap-2">
                                 <a class="text-base font-semibold" href="/{item.id}/{item.slug}">{item.title}</a>
                                 {#if item.hasDuplicate}
@@ -359,6 +360,7 @@
                             {#if serverSrc}
                                 <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
                                      src="{serverSrc}{cb}"
+                                     loading="lazy"
                                      on:load={() => markLoaded(serverSrc)}
                                      on:error={(e) => { const target = e.currentTarget as HTMLImageElement; if (!target.dataset.fb) { target.dataset.fb = '1'; target.src = mainPhoto.orgPath || ''; } }} 
                                      alt="{item.title || 'Item image'}"/>
