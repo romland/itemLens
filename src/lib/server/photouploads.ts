@@ -164,11 +164,15 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
             }
         }, tracking ? { ...tracking, description: 'Extracting text (OCR)' } : undefined) : null;
 
-        let boxToUse = precomputedBox || null;
-        if (bgRemovalPreCrop && !skipLlm) {
-            // Will gracefully await Gemini only if pre-crop setting is actually turned on
-            const analysis = await geminiPromise;
-            boxToUse = analysis?.foregroundBox || null;
+        let boxToUse = null;
+        if (bgRemovalPreCrop) {
+            if (precomputedBox) {
+                boxToUse = precomputedBox;
+            } else if (!skipLlm) {
+                // Will gracefully await Gemini only if pre-crop setting is actually turned on
+                const analysis = await geminiPromise;
+                boxToUse = analysis?.foregroundBox || null;
+            }
         }
         
         const imgUpdates = await generatePhotoDerivatives(tempPhoto, currentLocalPath, true, tracking, boxToUse, bgRemovalEnabled, bgRemovalModel);
