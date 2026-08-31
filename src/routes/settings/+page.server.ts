@@ -47,6 +47,7 @@ export const load = async ({ locals, cookies }) => {
             showColors: true,
             showOcr: true,
             enableNotebook: true,
+			showNoteContextUrl: true,
             enableDocuments: true,
             notebookCategories: true,
             enableFuzzySearch: true,
@@ -515,7 +516,7 @@ export const actions = {
         const field = data.get('field') as string;
         const value = data.get('value') === 'true';
         
-        if (['showExif', 'showColors', 'showOcr', 'enableNotebook', 'enableDocuments', 'enableFuzzySearch'].includes(field)) {
+		if (['showExif', 'showColors', 'showOcr', 'enableNotebook', 'enableDocuments', 'enableFuzzySearch', 'showNoteContextUrl'].includes(field)) {
             await db.inventory.update({ where: { id }, data: { [field]: value } });
         }
         return { success: true, message: "UI settings updated." };

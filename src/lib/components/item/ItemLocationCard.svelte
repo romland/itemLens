@@ -36,7 +36,10 @@
             });
             if (res.ok) {
                 notify('success', `Moved to ${newContainer}`);
-                window.location.reload();
+				// Optimistic UI update to prevent the jarring page flash
+				const newContData = globalContainers.find(c => c.name === newContainer) || { name: newContainer };
+				item.locations = [{ container: newContData }];
+				item = item; // Trigger Svelte reactivity
             } else notify('error', 'Failed to move item.');
         } catch (e) { notify('error', 'Network error.'); } 
         finally { isMoving = false; moveModal.close(); }

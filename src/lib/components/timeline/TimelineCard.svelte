@@ -6,9 +6,12 @@
 	import { createEventDispatcher } from 'svelte';
     import TextButton from "$lib/components/TextButton.svelte";
     import FormInput from "$lib/components/FormInput.svelte";
+	import { page } from '$app/stores';
 
     export let note;
 	const dispatch = createEventDispatcher();
+	
+	$: showContextUrl = $page.data.inventories?.find((i: any) => i.id === $page.data.activeInventoryId)?.showNoteContextUrl ?? true;
     
     let isEditing = false;
     let editContent = "";
@@ -113,6 +116,26 @@
                     </div>
                 </div>
             {/if}
+
+			{#if note.linkedItems && note.linkedItems.length > 0}
+				<div class="mt-3 flex flex-wrap gap-2">
+					{#each note.linkedItems as linkedItem}
+						<div class="inline-flex bg-base-200/50 rounded-lg p-1.5 px-3 border border-base-300">
+							<TextButton href={`/${linkedItem.id}/${linkedItem.slug}`} icon="bi-box-seam" colorClass="text-primary" isMono={false}>
+								{linkedItem.title}
+							</TextButton>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			{#if note.referenceUrl && showContextUrl}
+				<div class="mt-3 inline-flex bg-base-200/50 rounded-lg p-1.5 px-3 border border-base-300">
+					<TextButton href={note.referenceUrl} icon="bi-link-45deg" colorClass="text-primary" isMono={true}>
+						{note.referenceUrl.replace(/^https?:\/\/(localhost:\d+|[^/]+)/, '') || 'Reference Link'}
+					</TextButton>
+				</div>
+			{/if}
         {/if}
 
         <!-- Rich Document/Link Previews -->

@@ -168,6 +168,14 @@
             <div class="flex flex-col"><span class="font-semibold text-sm">Force Dark Mode</span>
             <span class="text-[11px] text-gray-500">Inverts colors mathematically while attempting to preserve image hues.</span></div>
         </form>
+
+		<form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3 mt-4">
+			<input type="hidden" name="preferences" value={JSON.stringify(currentPrefs)} />
+			<input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.largeFont} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }} />
+			<div class="flex flex-col"><span class="font-semibold text-sm">Large Font Mode</span>
+			<span class="text-[11px] text-gray-500">Increases base text size for better readability across the app.</span></div>
+		</form>
+
     </div>
 
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8">
@@ -419,9 +427,9 @@
                                     <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleDeepScan" name="deepScan" checked={v.deepScanCollections} label="Deep-scan collection imports (extracts detailed attributes for all items in collections)" />
                                     <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleBgRemoval" name="bgRemovalEnabled" checked={v.bgRemovalEnabled} label="Remove image backgrounds" />
 
-                                    <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+									<form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                    <select name="bgRemovalModel" class="select select-bordered select-xs font-medium" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'bria-rmbg'}>
+										<select name="bgRemovalModel" class="select select-bordered select-xs font-medium w-full sm:w-auto" disabled={!v.bgRemovalEnabled} on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.bgRemovalModel || 'bria-rmbg'}>
                                             <option value="bria-rmbg">BRIA v2.0 (Slow / Best Quality)</option>
                                             <option value="isnet-general-use">ISNet (Balanced)</option>
                                             <option value="u2net">U2Net (Fast / Moderate)</option>
@@ -438,7 +446,7 @@
                                     <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                                         <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
+											{#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
                                                 <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                             {/each}
                                         </div>
@@ -457,9 +465,9 @@
                                         {/if}
                                     </div>
 
-                                    <form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+									<form method="POST" action="?/updateInventoryStrategy" use:enhance={createEnhancer} class="mt-2 flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                        <select name="strategy" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.duplicateStrategy || 'PROMPT'}>
+										<select name="strategy" class="select select-bordered select-xs font-medium w-full sm:w-auto" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.duplicateStrategy || 'PROMPT'}>
                                             <option value="PROMPT">Ask Me</option>
                                             <option value="AUTO_BUMP">Auto-Merge (+1)</option>
                                             <option value="AUTO_IGNORE">Auto-Ignore</option>
@@ -467,18 +475,18 @@
                                         <span class="text-xs text-gray-500 font-medium">is the default duplicate resolution</span>
                                     </form>
 
-                                    <form method="POST" action="?/updateContainerMode" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+									<form method="POST" action="?/updateContainerMode" use:enhance={createEnhancer} class="mt-2 flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                        <select name="containerMode" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.containerMode || 'scan'}>
+										<select name="containerMode" class="select select-bordered select-xs font-medium w-full sm:w-auto" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.containerMode || 'scan'}>
                                             <option value="scan">Scan QR</option>
                                             <option value="select">Manual List</option>
                                         </select>
                                         <span class="text-xs text-gray-500 font-medium">is default container selector mode</span>
                                     </form>
 
-                                    <form method="POST" action="?/updateDefaultView" use:enhance={createEnhancer} class="mt-2 flex items-center gap-2">
+									<form method="POST" action="?/updateDefaultView" use:enhance={createEnhancer} class="mt-2 flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-2">
                                         <input type="hidden" name="id" value={v.id}>
-                                        <select name="defaultView" class="select select-bordered select-xs font-medium" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.defaultView || 'grid'}>
+										<select name="defaultView" class="select select-bordered select-xs font-medium w-full sm:w-auto" on:change={(e) => e.currentTarget.form?.requestSubmit()} value={v.defaultView || 'grid'}>
                                             <option value="grid">Grid</option>
                                             <option value="list">List</option>
                                         </select>

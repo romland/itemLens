@@ -58,6 +58,25 @@ export const actions = {
         const preDocsRaw = formData.getAll("preprocessed_docs[]");
         const pastedDocsRaw = formData.getAll("pasted_documents[]");
 
+		// Auto-link item if the captured URL is an internal item URL, otherwise keep raw URL
+		let finalReferenceUrl = sharedUrl || null;
+		if (sharedUrl) {
+			const itemMatch = sharedUrl.match(/\/(\d+)(?:\/[^\/]+)?(?:\?.*)?(?:#.*)?$/);
+			if (itemMatch && itemMatch[1]) {
+				const itemId = Number(itemMatch[1]);
+				if (!isNaN(itemId)) {
+					const itemExists = await db.item.findFirst({ 
+						where: { id: itemId, inventoryId: locals.activeInventoryId },
+						select: { id: true }
+					});
+					if (itemExists) {
+						linkedIds.push({ id: itemId });
+						finalReferenceUrl = null; // Nullify so it doesn't render as a raw link
+					}
+				}
+			}
+		}
+
         for (const url of pastedUrls) {
             if (!content.includes(url)) content += (content.length > 0 ? "\n" : "") + url;
         }
@@ -70,7 +89,6 @@ export const actions = {
         }
 
         if (sharedTitle && !content.includes(sharedTitle)) content = `**${sharedTitle}**\n${content}`;
-        if (sharedUrl && !content.includes(sharedUrl)) content += `\n${sharedUrl}`;
 
         content = content.trim();
 
@@ -102,6 +120,7 @@ export const actions = {
         const note = await db.timelineNote.create({
             data: {
                 content,
+				referenceUrl: finalReferenceUrl,
                 category,
                 latitude: isNaN(lat) ? null : lat,
                 longitude: isNaN(lng) ? null : lng,

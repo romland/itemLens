@@ -148,7 +148,7 @@
         let targetScale = newScale;
         if (targetScale < 1 && hard) targetScale = 1 - (1 - targetScale) * 0.5; // Rubber banding
         else if (targetScale < 1) targetScale = 1; // Snap back instantly
-        targetScale = Math.min(targetScale, 5);
+		targetScale = Math.min(targetScale, 15);
 
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
@@ -317,7 +317,7 @@
 
             let targetScale = pinchInitialScale * (currentDistance / pinchInitialDistance);
             if (targetScale < 1) targetScale = 1 - (1 - targetScale) * 0.5;
-            targetScale = Math.min(targetScale, 5);
+			targetScale = Math.min(targetScale, 15);
 
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 2;
@@ -591,12 +591,14 @@
                             </div>
                         {/if}
                         
+						{#if !photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
                         <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={() => copyImageToClipboard(false)}>
                             <i class="bi bi-clipboard text-lg w-5 opacity-70"></i> Copy Image
                         </button>
                         <button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={() => copyImageToClipboard(true)}>
                             <i class="bi bi-palette text-lg w-5 opacity-70"></i> Copy with Gradient
                         </button>
+						{/if}
 						<button class="btn btn-ghost btn-sm text-white hover:bg-white/20 justify-start h-10 px-3 font-medium rounded-xl" on:click={downloadImage}>
 							<i class="bi bi-download text-lg w-5 opacity-70"></i> Save to Device
 						</button>

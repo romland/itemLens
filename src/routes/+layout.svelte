@@ -531,11 +531,14 @@ $:  isDemoMode =
                }
            };
        }}>
-           <textarea name="content" placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
-           <div class="modal-action mt-0 flex gap-2">
-               <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => quickNoteModal.close()}>Cancel</button>
-               <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md">Save Note</button>
-           </div>
+			{#if $page.url.pathname !== '/timeline' && $page.url.pathname !== '/'}
+				<input type="hidden" name="url" value={$page.url.href} />
+			{/if}
+            <textarea name="content" placeholder="Jot something down..." class="textarea textarea-bordered w-full resize-none h-32 rounded-xl mb-4"></textarea>
+            <div class="modal-action mt-0 flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1 rounded-xl" on:click={() => quickNoteModal.close()}>Cancel</button>
+                <button type="submit" class="btn btn-primary flex-1 rounded-xl shadow-md">Save Note</button>
+            </div>
        </form>
 </Modal>
 

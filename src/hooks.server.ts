@@ -57,6 +57,11 @@ export const handle = (async ({ event, resolve }) => {
                     event.locals.role = 'NONE';
             }
 
+				try {
+					const prefs = JSON.parse(user.preferences || '{}');
+					if (prefs.largeFont) (event.locals as any).largeFont = true;
+				} catch(e) {}
+
             // Sort Routing Logic (Remembered per inventory)
             const urlSort = event.url.searchParams.get('sort');
             if (urlSort) {
@@ -104,7 +109,12 @@ export const handle = (async ({ event, resolve }) => {
     }
 
 	return await resolve(event, {
-		transformPageChunk: ({ html }) =>
-			html.replace('data-theme=""', `data-theme="${theme}"`)
+		transformPageChunk: ({ html }) => {
+			let out = html.replace('data-theme=""', `data-theme="${theme}"`);
+			if ((event.locals as any).largeFont) {
+				out = out.replace('<html ', '<html style="font-size: 110%;" ');
+			}
+			return out;
+		}
 	});
 }) satisfies Handle;

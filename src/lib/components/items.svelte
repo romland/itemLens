@@ -208,7 +208,7 @@
                                        <a href="/{item.id}/{item.slug}" class="w-full h-full flex items-center justify-center bg-transparent relative z-10">
                                            <div class="relative w-full h-full flex items-center justify-center">
                                                {#if localBlob && !isLoaded}
-                                                   <img src={localBlob} class="absolute inset-0 object-contain w-full h-full p-1 rounded-xl z-0 blur-[2px] opacity-60 transition-opacity duration-700" alt="Preview"/>
+													<img src={localBlob} class="absolute inset-0 object-contain w-full h-full p-1 rounded-xl z-0 opacity-80 animate-pulse transition-opacity duration-700" alt="Preview"/>
                                                {/if}
                                                {#if serverSrc}
                                                    <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
@@ -343,6 +343,7 @@
                     {/if}
 
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <figure class="aspect-square bg-base-200/50 border-b border-base-200 p-2 relative z-20 cursor-pointer" on:click|stopPropagation={() => lightbox.open(mainPhoto)}>
 						{#if $page.data.user && ($page.data.user.isAdmin || $page.data.role === 'EDITOR' || $page.data.role === 'OWNER')}
                             <a href="/{item.id}/edit" on:click|stopPropagation title="Edit Item" class="absolute top-2 left-2 z-40 w-7 h-7 rounded-full bg-base-100/40 backdrop-blur-md border border-base-200/50 shadow-sm hidden md:flex items-center justify-center text-base-content/60 hover:text-primary hover:bg-base-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200">
@@ -357,7 +358,7 @@
                         {/if}
                         <div class="relative w-full h-full flex items-center justify-center">
                             {#if localBlob && !isLoaded}
-                                <img src={localBlob} class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-0 blur-[2px] opacity-60 transition-opacity duration-700" alt="Preview"/>
+                                <img src={localBlob} class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-0 opacity-80 animate-pulse transition-opacity duration-700" alt="Preview"/>
                             {/if}
                             {#if serverSrc}
                                 <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 

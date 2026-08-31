@@ -52,10 +52,13 @@ export async function fetchVideoIfSupported(
         
         // 2. Download the best available MP4 configuration
         // We strictly prefer H.264 (avc) video to ensure 100% cross-browser web playback, avoiding HEVC/H.265 blind spots.
+		const t0 = performance.now();
+		console.log(`[yt-dlp] 🚀 Starting heavy background download for: ${url}`);
         await execFileAsync('yt-dlp', [
             '-f', 'bestvideo+bestaudio/best', '-S', 'vcodec:h264,res,acodec:m4a', '--merge-output-format', 'mp4',
             '-o', finalDiskPath, '--no-playlist', '--playlist-items', '1', '--js-runtimes', 'node', url
         ]);
+		console.log(`[yt-dlp] ✅ Finished download in ${((performance.now() - t0) / 1000).toFixed(2)}s for: ${url}`);
 
         return {
             title: meta.title,

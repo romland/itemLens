@@ -92,6 +92,7 @@ model Inventory {
   showColors          Boolean @default(false) // Show extracted colors in item details
   showOcr             Boolean @default(true) // Show OCR text blocks in item details
   enableNotebook      Boolean @default(true) // Whether the Notebook/Timeline is enabled
+ showNoteContextUrl  Boolean @default(true) // Show the context URL captured with quick notes
   enableDocuments     Boolean @default(true) // Whether Documents/Links are enabled for items
   notebookCategories  String  @default("[\"idea\", \"todo\", \"to buy\", \"to read\", \"other\", \"archive\"]")
   enableFuzzySearch   Boolean @default(true) // Whether to use NLP stemming/fuzzy matching in search
@@ -210,6 +211,7 @@ model Item {
 model TimelineNote {
   id          Int      @id @unique @default(autoincrement())
   content     String?  
+  referenceUrl String?
   latitude    Float?   
   longitude   Float?
   category    String?  @default("idea") // 'idea', 'todo', 'to buy', 'other', 'archive'

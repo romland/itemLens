@@ -90,7 +90,7 @@
 
         <DropdownPanel>
             {#if items?.length > 0}
-                <div class="max-h-[50vh] overflow-y-auto rounded-xl overscroll-contain">
+				<div class="max-h-[35vh] sm:max-h-[50vh] overflow-y-auto rounded-xl overscroll-contain">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
                 </div>
             {/if}
