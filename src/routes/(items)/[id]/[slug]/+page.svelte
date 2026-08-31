@@ -275,7 +275,7 @@ $: if (data.duplicateItemDetails?.debugTrace) {
     </div>
 
     {#if data.item?.contentToHtml?.length > 0}
-        <div class="content prose max-w-none mb-3 break-words overflow-hidden">
+        <div class="content prose max-w-none mb-3 break-words overflow-x-auto prose-pre:max-w-full">
             {@html data.item?.contentToHtml}
         </div>
     {/if}
@@ -339,13 +339,16 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             </div>
         {/if}
 
-        <ItemAssistant itemId={data.item.id} hasPhotos={productPhotos.length > 0} />
+        {#if data.item?.inventory?.enableAskAi !== false}
+            <ItemAssistant itemId={data.item.id} hasPhotos={productPhotos.length > 0} />
+        {/if}
 
         {#if data.item.documents?.length > 0}
             <div class="title font-bold mb-3 mt-6">Local archive</div>
             <DocumentArchive 
                 documents={data.item.documents} 
                 on:openDoc={(e) => docLightbox.open(e.detail)}
+                on:openImage={(e) => lightbox.open(e.detail)}
             />
         {/if}
     </div>

@@ -171,7 +171,7 @@
 
 		<form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3 mt-4">
 			<input type="hidden" name="preferences" value={JSON.stringify(currentPrefs)} />
-			<input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.largeFont} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }} />
+            <input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.largeFont} on:change={(e) => { e.currentTarget.form?.requestSubmit(); document.documentElement.style.fontSize = currentPrefs.largeFont ? '110%' : ''; }} />
 			<div class="flex flex-col"><span class="font-semibold text-sm">Large Font Mode</span>
 			<span class="text-[11px] text-gray-500">Increases base text size for better readability across the app.</span></div>
 		</form>
@@ -446,7 +446,7 @@
                                     <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                                         <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-											{#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
+                                            {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableAskAi', 'Enable Ask ItemLens AI'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
                                                 <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                             {/each}
                                         </div>

@@ -91,6 +91,7 @@ model Inventory {
   showExif            Boolean @default(false) // Show EXIF data in item details
   showColors          Boolean @default(false) // Show extracted colors in item details
   showOcr             Boolean @default(true) // Show OCR text blocks in item details
+  enableAskAi         Boolean @default(true) // Whether the ItemLens AI is enabled
   enableNotebook      Boolean @default(true) // Whether the Notebook/Timeline is enabled
  showNoteContextUrl  Boolean @default(true) // Show the context URL captured with quick notes
   enableDocuments     Boolean @default(true) // Whether Documents/Links are enabled for items

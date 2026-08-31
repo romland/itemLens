@@ -32,6 +32,7 @@
     import InstallPrompt from "$lib/components/InstallPrompt.svelte";
     import ActionCard from "$lib/components/ActionCard.svelte";
     import Modal from "$lib/components/Modal.svelte";
+	import DropdownSelect from "$lib/components/DropdownSelect.svelte";
 
     let mounted = false;    
     let confirmModal: ConfirmModal;
@@ -385,16 +386,26 @@ $:  isDemoMode =
         </a>
 
         {#if $page.data.inventories && $page.data.inventories.length > 0}
-            <form action="/?/switchVault" method="POST" data-sveltekit-reload class="ml-4">
-                <select name="inventoryId" class="select select-sm select-ghost font-bold bg-base-200/50" on:change={(e) => { if (e.currentTarget.value === '_new') { e.currentTarget.value = $page.data.activeInventoryId; createInventoryModal.showModal(); } else e.currentTarget.form?.requestSubmit(); }} value={$page.data.activeInventoryId}>
-                    {#each $page.data.inventories as inv}
-                        <option value={inv.id}>{inv.name}</option>
-                    {/each}
-                    <!--
-                    <option value="_new">+ Create Collection...</option>
-                    -->
-                </select>
-            </form>
+			<DropdownSelect
+				dropdownClass="dropdown-bottom ml-4"
+				options={$page.data.inventories.map(inv => ({ value: inv.id, label: inv.name }))}
+				value={$page.data.activeInventoryId}
+				formAction="/?/switchVault"
+				name="inventoryId"
+				reload={true}
+			>
+				<div slot="header" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">Switch Collection</div>
+				<svelte:fragment slot="footer">
+					<!--
+					{#if $page.data.user && ($page.data.user.isAdmin || $page.data.user.canCreateInventories)}
+						<div class="contents">
+							<li class="divider my-1 h-[1px] bg-base-200"></li>
+							<li><button type="button" class="w-full justify-start font-medium text-gray-500 hover:text-primary" on:click={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); createInventoryModal.showModal(); }}><i class="bi bi-plus-lg opacity-70"></i> New Collection</button></li>
+						</div>
+					{/if}
+					-->
+				</svelte:fragment>
+			</DropdownSelect>
         {:else if $page.data.user && ($page.data.user.isAdmin || $page.data.user.canCreateInventories)}
             <button class="btn btn-sm btn-primary ml-4 rounded-xl shadow-sm" on:click={() => createInventoryModal.showModal()}>
                 <i class="bi bi-plus-lg"></i> Create Collection
@@ -558,7 +569,7 @@ $:  isDemoMode =
 <CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => { notify('success', e.detail); window.location.reload(); }} on:error={(e) => notify('error', e.detail)} />
 
 <!-- Bottom Sheet Menu -->
-<Modal bind:this={mobileMenuModal} boxClass="sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200">
+<Modal bind:this={mobileMenuModal} boxClass="sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200 !overflow-visible">
         <div class="flex justify-between items-center mb-6 px-2 mt-[-10px]">
             <h3 class="font-bold text-2xl tracking-tight">Menu</h3>
             <button type="button" class="btn btn-sm btn-circle btn-ghost bg-base-200/50" on:click={() => mobileMenuModal.close()}>✕</button>
@@ -566,23 +577,35 @@ $:  isDemoMode =
 
         <div class="flex flex-col gap-3">
             {#if $page.data.inventories && $page.data.inventories.length > 1}
-                <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mb-1">
+                <div class="bg-base-200/50 rounded-2xl border border-base-200 flex flex-col shadow-sm mb-1 overflow-visible relative z-50">
                     <div class="flex items-center gap-4 p-4">
                         <div class="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
                             <i class="bi bi-safe2-fill text-xl"></i>
                         </div>
                         <div class="flex-1">
 							<div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Collection</div>
-                            <form action="/?/switchVault" method="POST" data-sveltekit-reload>
-                                <select name="inventoryId" class="select select-sm select-ghost font-bold w-full p-0 h-auto min-h-0 bg-transparent focus:bg-transparent text-lg shadow-none" on:change={(e) => { if (e.currentTarget.value === '_new') { mobileMenuModal.close(); e.currentTarget.value = $page.data.activeInventoryId; createInventoryModal.showModal(); } else e.currentTarget.form?.requestSubmit(); }} value={$page.data.activeInventoryId}>
-                                    {#each $page.data.inventories as inv}
-                                        <option value={inv.id}>{inv.name}</option>
-                                    {/each}
-                                    <!--
-                                    <option value="_new">+ Create Collection...</option>
-                                    -->
-                                </select>
-                            </form>
+							<DropdownSelect
+								dropdownClass="dropdown-bottom w-full"
+								buttonClass="btn-sm btn-ghost bg-transparent hover:bg-base-200 font-bold w-full justify-between px-2 -ml-2 h-auto min-h-0 text-lg shadow-none rounded-xl"
+                                menuClass="bg-base-100 rounded-xl w-[calc(100%+2rem)] -ml-4 max-h-[50vh] overflow-y-auto flex-nowrap"
+								chevronClass="bi-chevron-expand text-sm opacity-50"
+								options={$page.data.inventories.map(inv => ({ value: inv.id, label: inv.name }))}
+								value={$page.data.activeInventoryId}
+								formAction="/?/switchVault"
+								name="inventoryId"
+								reload={true}
+							>
+								<svelte:fragment slot="footer">
+									<!--
+									{#if $page.data.user && ($page.data.user.isAdmin || $page.data.user.canCreateInventories)}
+										<div class="contents">
+											<li class="divider my-1 h-[1px] bg-base-200"></li>
+											<li><button type="button" class="w-full justify-start font-medium text-gray-500 hover:text-primary text-base" on:click={() => { mobileMenuModal.close(); createInventoryModal.showModal(); }}><i class="bi bi-plus-lg opacity-70"></i> New Collection</button></li>
+										</div>
+									{/if}
+									-->
+								</svelte:fragment>
+							</DropdownSelect>
                         </div>
                     </div>
                 </div>
