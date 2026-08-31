@@ -1,8 +1,8 @@
 import sharp from 'sharp';
 import fs from 'fs';
 import crypto from 'crypto';
-import { getSafeFilename } from '$lib/server/photouploads';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
+import { getSafeFilename } from '../fsUtils';
 
 export class MediaIngest {
     /**

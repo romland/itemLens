@@ -43,6 +43,21 @@
         url.searchParams.set('sort', sortId);
         goto(url.toString(), { keepFocus: true, noScroll: true });
         if (typeof document !== 'undefined') (document.activeElement as HTMLElement)?.blur();
+
+		try {
+			const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
+			if (!currentPrefs.defaultSorts) currentPrefs.defaultSorts = {};
+			if (currentPrefs.defaultSorts[$page.data.activeInventoryId] !== sortId) {
+				currentPrefs.defaultSorts[$page.data.activeInventoryId] = sortId;
+				const fd = new FormData();
+				fd.append('preferences', JSON.stringify(currentPrefs));
+				fetch('/settings?/updatePreferences', {
+					method: 'POST',
+					body: fd,
+					headers: { 'x-sveltekit-action': 'true' }
+				});
+			}
+		} catch (e) {}
     }
 
     function getFirstProductPhoto(item) {

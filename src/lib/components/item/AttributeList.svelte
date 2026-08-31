@@ -14,10 +14,7 @@
 </script>
 
 <div class="bg-base-100 rounded-3xl border border-base-200 shadow-sm p-4 sm:p-6 mb-6">
-    <div class="flex items-center justify-between mb-4">
-        <div class="font-bold text-lg flex items-center gap-2">
-            <i class="bi bi-list-columns-reverse text-primary"></i> Attributes
-        </div>
+	<div class="flex items-center justify-end mb-2 -mt-2">
         {#if activeSchema.length > 0}
             <button type="button" class="btn btn-xs btn-ghost text-primary gap-1" on:click={() => dispatch('edit')}>
                 <i class="bi bi-pencil-square"></i> Quick Tweak

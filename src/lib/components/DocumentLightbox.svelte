@@ -200,7 +200,7 @@
             });
             
             // === RESTORE READING POSITION ===
-            const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`);
+			const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
             if (cfiToJump) {
                 await rendition.display(cfiToJump);
             } else if (savedCfi) {
@@ -327,6 +327,23 @@
     }
 
     export function close() {
+		// Sync final EPUB reading position to the server before closing
+		if (docType === 'epub' && doc) {
+			try {
+				const cfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`);
+				if (cfi) {
+					const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
+					if (!currentPrefs.epubLocations) currentPrefs.epubLocations = {};
+					if (currentPrefs.epubLocations[doc.id || doc.path] !== cfi) {
+						currentPrefs.epubLocations[doc.id || doc.path] = cfi;
+						const fd = new FormData();
+						fd.append('preferences', JSON.stringify(currentPrefs));
+						fetch('/settings?/updatePreferences', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true' }});
+					}
+				}
+			} catch (e) {}
+		}
+
         isOpen = false;
         showToc = false;
         showSettings = false;

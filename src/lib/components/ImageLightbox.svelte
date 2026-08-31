@@ -249,7 +249,7 @@
 		}
 
         if ($scaleVal === 1) {
-            if (Math.abs(swipeOffsetY) > 100) {
+			if (Math.abs(swipeOffsetY) > 75 || Math.abs(velocityY) > 0.6) {
                 close();
             } else {
                 translateY.set(0);

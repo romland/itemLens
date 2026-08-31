@@ -18,31 +18,34 @@
             <table class="table table-zebra table-sm w-full">
                 <thead>
                     <tr class="bg-base-200/50 text-gray-500">
-                        <th class="w-32 py-4">Timestamp</th>
-                        <th class="w-32">Status</th>
+						<th class="w-32 py-4 hidden sm:table-cell">Timestamp</th>
+						<th class="w-24">Status</th>
                         <th>Action</th>
                         <th>Details</th>
-                        <th class="text-right">Target</th>
+						<th class="text-right hidden sm:table-cell">Target</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each data.logs as log}
                         <tr class="hover">
-                            <td class="text-xs font-mono text-gray-500 whitespace-nowrap">
+							<td class="text-xs font-mono text-gray-500 whitespace-nowrap hidden sm:table-cell">
                                 {new Date(log.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
                             </td>
                             <td>
-                                <span class="badge badge-sm border-none font-bold uppercase tracking-wider text-[10px] w-full
+								<span class="badge badge-sm border-none font-bold uppercase tracking-wider text-[10px] sm:w-full
                                     {log.level === 'success' ? 'bg-success/20 text-success' : 
                                      log.level === 'warning' ? 'bg-warning/20 text-warning' : 
                                      log.level === 'error' ? 'bg-error/20 text-error' : 
                                      'bg-info/20 text-info'}">
-                                    {log.level}
+									<span class="hidden sm:inline">{log.level}</span>
+									<span class="sm:hidden">
+										<i class="bi {log.level === 'success' ? 'bi-check-lg' : log.level === 'warning' ? 'bi-exclamation-triangle' : log.level === 'error' ? 'bi-x-lg' : 'bi-info-circle'}"></i>
+									</span>
                                 </span>
                             </td>
                             <td class="font-semibold text-xs whitespace-nowrap">{log.action}</td>
-                            <td class="text-xs max-w-xs truncate" title={log.message}>{log.message}</td>
-                            <td class="text-right">
+							<td class="text-xs max-w-[150px] sm:max-w-xs truncate" title={log.message}>{log.message}</td>
+							<td class="text-right hidden sm:table-cell">
                                 {#if log.item}
                                     <a href="/{log.item.id}/{log.item.slug}" class="text-xs text-primary hover:underline flex items-center justify-end gap-1">
                                         <i class="bi bi-box"></i> {log.item.id}

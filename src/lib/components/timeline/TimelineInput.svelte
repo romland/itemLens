@@ -98,7 +98,7 @@
     }
 </script>
 
-<div class="fixed bottom-16 md:bottom-20 left-0 w-full bg-base-100/95 backdrop-blur-lg border-t border-base-200 p-2 z-40 box-border">
+<div class="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 w-full bg-base-100/95 backdrop-blur-xl border-t border-base-200 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-40 box-border shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
     {#if showMentions && mentionResults.length > 0}
         <ul class="absolute bottom-full left-0 w-full max-w-2xl mx-auto bg-base-100 shadow-xl border border-base-200 rounded-t-xl max-h-48 overflow-y-auto p-2 m-0 mb-2">
             {#each mentionResults as item}
@@ -139,12 +139,12 @@
         <input type="hidden" name="file.type.0" value="information">
 
         <!-- Tools Column -->
-        <div class="flex flex-col gap-1 pb-1">
+		<div class="flex items-center gap-1 pb-1 shrink-0">
             <button type="button" class="btn btn-circle btn-ghost btn-sm text-gray-500" aria-label="Attach GPS location" title="Attach GPS" on:click={requestLocation}>
-                <i class="bi bi-geo-alt{latitude ? '-fill text-primary' : ''}"></i>
+				<i class="bi bi-geo-alt{latitude ? '-fill text-primary' : ''} text-lg"></i>
             </button>
-            <button type="button" class="btn btn-circle btn-primary btn-sm" aria-label="Attach image" on:click={triggerCamera}>
-                <i class="bi bi-camera"></i>
+			<button type="button" class="btn btn-circle btn-secondary btn-md shadow-sm" aria-label="Attach image" on:click={triggerCamera}>
+				<i class="bi bi-camera-fill text-xl"></i>
             </button>
         </div>
 
@@ -172,12 +172,14 @@
         </FormInput>
 
         <!-- Submit Button -->
-        <button type="submit" class="btn btn-circle btn-primary btn-sm mb-1 shadow-sm" aria-label="Submit note" disabled={isUploading || (!content.trim() && !fileInput?.files?.length)}>
-            {#if isUploading}
-                <span class="loading loading-spinner loading-xs"></span>
-            {:else}
-                <i class="bi bi-arrow-up text-lg{isOffline ? ' text-warning' : ''}"></i>
-            {/if}
-        </button>
+		<div class="pb-1 shrink-0">
+			<button type="submit" class="btn btn-circle btn-primary btn-md shadow-sm" aria-label="Submit note" disabled={isUploading || (!content.trim() && !fileInput?.files?.length)}>
+				{#if isUploading}
+					<span class="loading loading-spinner loading-md"></span>
+				{:else}
+					<i class="bi bi-arrow-up text-xl{isOffline ? ' text-warning' : ''}"></i>
+				{/if}
+			</button>
+		</div>
     </form>
 </div>

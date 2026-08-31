@@ -406,7 +406,7 @@ $:  isDemoMode =
         {#if $page.data.inventories && $page.data.inventories.length > 0}
 			<DropdownSelect
 				dropdownClass="dropdown-bottom ml-4"
-				options={$page.data.inventories.map(inv => ({ value: inv.id, label: inv.name }))}
+				options={$page.data.inventories.slice().sort((a,b) => a.name.localeCompare(b.name)).map(inv => ({ value: inv.id, label: inv.name }))}
 				value={$page.data.activeInventoryId}
 				formAction="/?/switchVault"
 				name="inventoryId"
@@ -501,7 +501,7 @@ $:  isDemoMode =
   </div>
 </div>
 
-<main class="container md:w-[800px] px-8 mx-auto my-8" style="padding-bottom: 100px;">
+<main class="container md:w-[800px] px-4 sm:px-6 md:px-8 mx-auto my-6 md:my-8" style="padding-bottom: 100px;">
     <slot />
 </main>
 
@@ -607,7 +607,7 @@ $:  isDemoMode =
 								buttonClass="btn-sm btn-ghost bg-transparent hover:bg-base-200 font-bold w-full justify-between px-2 -ml-2 h-auto min-h-0 text-lg shadow-none rounded-xl"
                                 menuClass="bg-base-100 rounded-xl w-[calc(100%+2rem)] -ml-4 max-h-[50vh] overflow-y-auto flex-nowrap"
 								chevronClass="bi-chevron-expand text-sm opacity-50"
-								options={$page.data.inventories.map(inv => ({ value: inv.id, label: inv.name }))}
+								options={$page.data.inventories.slice().sort((a,b) => a.name.localeCompare(b.name)).map(inv => ({ value: inv.id, label: inv.name }))}
 								value={$page.data.activeInventoryId}
 								formAction="/?/switchVault"
 								name="inventoryId"

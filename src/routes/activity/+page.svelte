@@ -37,7 +37,7 @@
         const val = (e.target as HTMLSelectElement).value;
         const url = new URL($page.url);
         url.searchParams.set('t', val);
-        goto(url.toString(), { keepFocus: true });
+		goto(url.toString(), { keepFocus: true, noScroll: true });
     }
 
     const fmt = (num: number) => num > 999 ? (num / 1000).toFixed(1) + 'k' : num;
@@ -181,14 +181,14 @@
                             <tr>
                                 <th class="pl-5">Provider</th>
                                 <th class="text-right">Requests</th>
-                                <th class="text-right">Tokens In</th>
-                                <th class="text-right">Tokens Out</th>
+								<th class="text-right hidden sm:table-cell">Tokens In</th>
+								<th class="text-right hidden sm:table-cell">Tokens Out</th>
                                 <th class="text-right pr-5">Compute Time</th>
 
-                                <th class="text-right">1m Rate</th>
-                                <th class="text-right">5m Rate</th>
+								<th class="text-right hidden sm:table-cell">1m Rate</th>
+								<th class="text-right hidden sm:table-cell">5m Rate</th>
                                 <!--th class="text-right">10m Rate</th-->
-                                <th class="text-right">15m Rate</th>
+								<th class="text-right hidden sm:table-cell">15m Rate</th>
                                 <!--th class="text-right">30m Rate</th-->
                             </tr>
                         </thead>
@@ -197,14 +197,14 @@
                                 <tr class="hover:bg-base-50/50 transition-colors">
                                     <td class="pl-5 font-bold capitalize">{m.provider}</td>
                                     <td class="text-right font-mono text-xs">{m._count.id}</td>
-                                    <td class="text-right font-mono text-xs text-info">{fmt(m._sum.count1 || 0)}</td>
-                                    <td class="text-right font-mono text-xs text-success">{fmt(m._sum.count2 || 0)}</td>
+									<td class="text-right font-mono text-xs text-info hidden sm:table-cell">{fmt(m._sum.count1 || 0)}</td>
+									<td class="text-right font-mono text-xs text-success hidden sm:table-cell">{fmt(m._sum.count2 || 0)}</td>
                                     <td class="text-right font-mono text-xs pr-5">{((m._sum.durationMs || 0) / 1000).toFixed(1)}s</td>
 
-                                    <td class="text-right font-mono text-xs text-warning">{data.rpm1m[m.provider] || 0}</td>
-                                    <td class="text-right font-mono text-xs text-warning">{data.rpm5m[m.provider] || 0}</td>
+									<td class="text-right font-mono text-xs text-warning hidden sm:table-cell">{data.rpm1m[m.provider] || 0}</td>
+									<td class="text-right font-mono text-xs text-warning hidden sm:table-cell">{data.rpm5m[m.provider] || 0}</td>
                                     <!--td class="text-right font-mono text-xs text-warning">{data.rpm10m[m.provider] || 0}</td-->
-                                    <td class="text-right font-mono text-xs text-warning">{data.rpm15m[m.provider] || 0}</td>
+									<td class="text-right font-mono text-xs text-warning hidden sm:table-cell">{data.rpm15m[m.provider] || 0}</td>
                                     <!--td class="text-right font-mono text-xs text-warning">{data.rpm30m[m.provider] || 0}</td-->
                                 </tr>
                             {/each}

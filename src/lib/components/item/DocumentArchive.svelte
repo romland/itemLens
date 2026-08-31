@@ -24,18 +24,21 @@
         {@const cleanPath = (doc.path || '').toLowerCase().split('#')[0]}
         <div class="collapse collapse-arrow bg-base-200 border border-base-300 overflow-hidden">
             <input type="radio" name="my-accordion-2" checked={i===0} />
-            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden pr-12">
+			<div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden pr-12">
                 {#if doc.thumbPath}
                     <div class="relative w-8 h-8 shrink-0">
                         <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-full h-full rounded object-cover border border-base-300 shadow-sm bg-base-100" />
-                        <div class="absolute -bottom-1.5 -right-1.5 bg-base-100 {info.color} rounded px-0.5 py-[1px] flex items-center justify-center shadow-sm border border-base-200">
-                            <i class="bi {info.icon} text-[8px]"></i>
-                        </div>
                     </div>
                 {:else}
-                    <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
+					<div class="w-8 h-8 rounded bg-base-200 flex items-center justify-center shrink-0 border border-base-300/50 shadow-sm">
+						<i class="bi {info.icon} {info.color} text-lg"></i>
+					</div>
                 {/if}
-                <span class="truncate flex-1 min-w-0" title={doc.title}>{doc.title}</span>
+				<span class="truncate flex-1 min-w-0" title={doc.title}>{doc.title}</span>
+				<div class="shrink-0 flex items-center gap-1.5 bg-base-200/50 px-2 py-0.5 rounded border border-base-300 shadow-sm text-base-content/70">
+					<i class="bi {info.icon} text-[10px] {info.color}"></i>
+					<span class="text-[9px] uppercase font-bold tracking-wider">{info.label}</span>
+				</div>
             </div>
             <div class="collapse-content prose prose-sm max-w-none break-words overflow-x-auto prose-pre:max-w-full">
                 {@html alterSummary(doc.summary)}

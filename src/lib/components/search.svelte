@@ -5,6 +5,7 @@
      */
     import Items from "$lib/components/items.svelte";
     import DropdownPanel from "$lib/components/DropdownPanel.svelte";
+	import { page } from "$app/stores";
 
     export let q: string = '';
     let resultsAsYouType: HTMLDivElement;
@@ -61,6 +62,9 @@
             links[selectedIndex].focus();
         }
     }
+
+	$: activeVaultName = $page.data.inventories?.find(i => i.id === $page.data.activeInventoryId)?.name;
+	$: searchPlaceholder = activeVaultName ? `Search in ${activeVaultName}` : "Search";
 </script>
 
 <form method="GET" action="/search" class="w-full sm:w-auto relative">
@@ -76,7 +80,7 @@
                 autocomplete="off" 
                 type="text" 
                 name="q" 
-                placeholder="Search" 
+				placeholder={searchPlaceholder} 
                 class="input input-bordered md:w-64 w-full pr-10 bg-base-200/50 focus:bg-base-100 focus:shadow-inner transition-all duration-200 rounded-xl"
             />
             {#if q.length > 0}

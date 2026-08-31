@@ -3,6 +3,15 @@ import { db } from "$lib/server/database";
 import { initFTS } from "$lib/server/fts";
 import { validateAndRefreshSession } from "$lib/server/session";
 
+// Strictly typed JSON structure for User.preferences
+export interface UserPreferences {
+	largeFont?: boolean;
+	documentDarkMode?: boolean;
+	shortcuts?: Record<string, string>;
+	defaultSorts?: Record<string, string>; // Maps inventoryId to sortMode
+	epubLocations?: Record<string, string>; // Maps document path/id to CFI string
+}
+
 // Initialize the SQLite FTS5 engine once on server boot
 initFTS().catch(console.error);
 
@@ -58,7 +67,7 @@ export const handle = (async ({ event, resolve }) => {
             }
 
 				try {
-					const prefs = JSON.parse(user.preferences || '{}');
+			const prefs: UserPreferences = JSON.parse(user.preferences || '{}');
 					if (prefs.largeFont) (event.locals as any).largeFont = true;
 				} catch(e) {}
 
@@ -68,7 +77,13 @@ export const handle = (async ({ event, resolve }) => {
                 event.cookies.set('itemlens_sort_' + event.locals.activeInventoryId, urlSort, { path: '/', maxAge: 60 * 60 * 24 * 365, httpOnly: false });
                 (event.locals as any).activeSort = urlSort;
             } else {
-                (event.locals as any).activeSort = event.cookies.get('itemlens_sort_' + event.locals.activeInventoryId) || 'newest';
+			const cookieSort = event.cookies.get('itemlens_sort_' + event.locals.activeInventoryId);
+			let dbSort = 'newest';
+			try {
+				const currentPrefs: UserPreferences = JSON.parse(user.preferences || '{}');
+				if (currentPrefs.defaultSorts?.[String(event.locals.activeInventoryId)]) dbSort = currentPrefs.defaultSorts[String(event.locals.activeInventoryId)];
+			} catch (e) {}
+			(event.locals as any).activeSort = cookieSort || dbSort || 'newest';
             }
 
             // UI View Modes

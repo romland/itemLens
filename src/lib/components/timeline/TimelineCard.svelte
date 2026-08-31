@@ -112,7 +112,7 @@
                     <button class="absolute -top-1 -right-1 btn btn-xs btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-primary" title="Copy text" on:click={() => { navigator.clipboard.writeText(note.content); notify('success', 'Note copied to clipboard!'); }}>
                         <i class="bi bi-clipboard"></i>
                     </button>
-                    <div class="prose prose-sm max-w-none text-base-content leading-snug break-words pr-6" use:openLinksInNewTab>
+					<div class="prose prose-sm max-w-none text-base-content leading-snug break-words pr-6 whitespace-pre-wrap" use:openLinksInNewTab>
                         {@html marked.parse(note.content, { breaks: true })}
                     </div>
                 </div>
