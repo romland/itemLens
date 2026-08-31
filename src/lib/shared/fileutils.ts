@@ -14,11 +14,11 @@ export function isImage(path: string | null | undefined): boolean {
 }
 
 export function isEpub(path: string | null | undefined): boolean {
-    return getCleanPath(path).endsWith('.epub');
+    return getCleanPath(path).match(/\.epub$/i) !== null;
 }
 
 export function isPdf(path: string | null | undefined): boolean {
-    return getCleanPath(path).endsWith('.pdf');
+    return getCleanPath(path).match(/\.pdf$/i) !== null;
 }
 
 export function isMarkdown(path: string | null | undefined): boolean {

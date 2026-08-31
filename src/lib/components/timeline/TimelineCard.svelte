@@ -7,7 +7,7 @@
     import TextButton from "$lib/components/TextButton.svelte";
     import FormInput from "$lib/components/FormInput.svelte";
 	import { page } from '$app/stores';
-    import { isVideo } from "$lib/shared/fileutils";
+	import { isVideo, isEpub, isMarkdown, isPdf, isHtml, isImage } from "$lib/shared/fileutils";
 
     export let note;
 	const dispatch = createEventDispatcher();
@@ -157,10 +157,16 @@
                                         </TextButton>
                                     {/if}
                                     {#if doc.path}
-                                        {#if doc.path.toLowerCase().split('#')[0].endsWith('.epub')}
+										{#if isEpub(doc.path)}
                                             <TextButton colorClass="text-secondary" icon="bi-book" on:click={() => dispatch('openDoc', doc)}>Read Book</TextButton>
-                                        {:else if doc.path.match(/\.(mp4|webm|mov|mkv)$/i)}
+										{:else if isMarkdown(doc.path) || doc.type === 'note'}
+											<TextButton colorClass="text-secondary" icon="bi-file-text" on:click={() => dispatch('openDoc', doc)}>Read Note</TextButton>
+										{:else if isVideo(doc.path)}
                                             <TextButton colorClass="text-info" icon="bi-play-circle" on:click={() => dispatch('openImage', { orgPath: doc.path, type: 'video' })}>Play Video</TextButton>
+										{:else if isImage(doc.path)}
+											<TextButton colorClass="text-success" icon="bi-image" on:click={() => dispatch('openImage', { orgPath: doc.path, showOriginal: true })}>View Image</TextButton>
+										{:else if isPdf(doc.path) || isHtml(doc.path)}
+											<TextButton colorClass="text-secondary" icon="bi-file-earmark" on:click={() => dispatch('openDoc', doc)}>View Document</TextButton>
 										{:else}
                                             <TextButton colorClass="text-secondary" icon="bi-hdd-network" on:click={() => dispatch('openDoc', doc)}>Local Cache</TextButton>
 										{/if}

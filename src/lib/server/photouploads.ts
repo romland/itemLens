@@ -90,7 +90,7 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     let finalOrgPath = webPath;
     let currentLocalPath = localPath;
     const isVideoFile = isVideo(localPath);
-    if (!isVideoFile && !localPath.endsWith('.webp')) {
+    if (!isVideoFile && !localPath.match(/\.webp$/i)) {
         let newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
         let newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
 
