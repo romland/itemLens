@@ -7,6 +7,7 @@
     import GestureShield from './GestureShield.svelte';
     import { marked } from 'marked';
     import { isEpub, isMarkdown, isHtml } from '$lib/shared/fileutils';
+    import PdfViewer from './PdfViewer.svelte';
 
     export let isOpen = false;
     let doc: any = null;
@@ -14,7 +15,7 @@
     let viewerRef: HTMLDivElement;
     let overlayRef: HTMLDivElement;
     let iframeRef: HTMLIFrameElement;
-    let docType: 'epub' | 'iframe' | 'markdown' | 'none' = 'none';
+	let docType: 'epub' | 'iframe' | 'markdown' | 'pdf-mobile' | 'pdf-inline' | 'none' = 'none';
     let invertIframe = false;
     let markdownContentHtml = '';
     
@@ -45,6 +46,10 @@
     let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
     let isSavingHighlight = false;
 
+	let isMobile = false;
+	let isLargeDocument = false;
+	let docSizeStr = "";
+
     let isMaximized = false;
 
     export async function open(documentRecord: any) {
@@ -62,6 +67,10 @@
         locationsGenerated = false;
         invertIframe = false;
         isMaximized = false;
+
+		isMobile = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+		isLargeDocument = false;
+		docSizeStr = "";
 
         const rawPath = doc.path || doc.source || '';
         let path = rawPath.toLowerCase();
@@ -88,9 +97,26 @@
             } catch (e) {
                 markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
             }
-        } else if (path.match(/\.(pdf|csv)$/i) || isHtml(path)) {
-            docType = 'iframe';
-            clearTimeout(menuTimeout); // Prevent auto-hide so user is never trapped
+		} else if (path.match(/\.pdf$/i)) {
+			try {
+				const res = await fetch(doc.path || doc.source, { method: 'HEAD' });
+				const bytes = res.headers.get('content-length');
+				if (bytes) {
+					const mb = parseInt(bytes) / (1024 * 1024);
+					docSizeStr = mb > 1 ? `${mb.toFixed(2)} MB` : `${(parseInt(bytes) / 1024).toFixed(0)} KB`;
+					if (mb > 25) isLargeDocument = true;
+				}
+			} catch (e) {}
+			
+			if (isMobile && isLargeDocument) {
+				docType = 'pdf-mobile';
+			} else {
+				docType = 'pdf-inline';
+			}
+			clearTimeout(menuTimeout);
+		} else if (path.match(/\.csv$/i) || isHtml(path)) {
+			docType = 'iframe';
+			clearTimeout(menuTimeout);
         } else {
             window.open(doc.path || doc.source, '_blank');
             close();
@@ -494,19 +520,13 @@
             </div>
             
             <div class="flex items-center gap-1">
-            {#if docType === 'iframe'}
-                <a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title="Open Natively">
+			{#if docType === 'iframe' || docType === 'pdf-inline'}
+				<a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" download={doc?.path?.toLowerCase().endsWith('.pdf') ? doc.title || 'document.pdf' : undefined} class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title={doc?.path?.toLowerCase().endsWith('.pdf') ? "Download" : "Open Natively"}>
                     <i class="bi bi-box-arrow-up-right text-lg"></i>
                 </a>
             {/if}
 
-            {#if docType === 'iframe'}
-                <a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title="Open Natively">
-                    <i class="bi bi-box-arrow-up-right text-lg"></i>
-                </a>
-            {/if}
-
-            {#if docType === 'iframe' || docType === 'markdown'}
+			{#if docType === 'iframe' || docType === 'markdown' || docType === 'pdf-inline'}
                 <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
                 </button>
@@ -538,7 +558,26 @@
                     </div>
                 {/if}
                 
-                {#if docType === 'epub'}
+				{#if docType === 'pdf-mobile'}
+					<div class="w-full h-full flex flex-col items-center justify-center p-6 text-center z-10 bg-base-200/50">
+						<i class="bi bi-file-earmark-pdf text-6xl text-error mb-4"></i>
+						<h3 class="font-bold text-lg mb-2">{doc?.title || 'PDF Document'}</h3>
+						{#if isLargeDocument}
+							<p class="text-warning text-sm font-semibold mb-2"><i class="bi bi-exclamation-triangle"></i> Large File ({docSizeStr})</p>
+							<p class="text-xs text-base-content/60 mb-6 max-w-xs">This file is quite large. Opening it directly in the app might cause instability or lag on your device.</p>
+						{:else}
+							<p class="text-sm text-base-content/60 mb-6 max-w-xs">PDF viewing is optimized for native apps on your device.</p>
+						{/if}
+						<div class="flex gap-3">
+							<a class="btn btn-primary shadow-lg rounded-xl flex items-center gap-2" href={doc?.path || doc?.source} download>
+								<i class="bi bi-download text-lg"></i> Download
+							</a>
+							<a class="btn btn-outline border-base-300 bg-base-100 shadow-sm rounded-xl flex items-center gap-2" href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer">
+								<i class="bi bi-box-arrow-up-right text-lg"></i> Open
+							</a>
+						</div>
+					</div>
+				{:else if docType === 'epub'}
                     <GestureShield 
                         active={!showToc && !showSettings && !pendingHighlight} 
                         on:swipeLeft={nextPage}
@@ -561,6 +600,10 @@
                         on:load={handleIframeLoad}
                         title="Document Viewer"
                     ></iframe>
+				{:else if docType === 'pdf-inline'}
+					<div class="w-full h-full relative z-10">
+						<PdfViewer url={doc.path || doc.source} invert={invertIframe} />
+					</div>
                 {:else if docType === 'markdown'}
                     <div class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
                          style={invertIframe ? "filter: invert(1) hue-rotate(180deg);" : ""}
