@@ -37,6 +37,9 @@
 	let dragHasMoved = false;
 
 	let isVideoLoading = true;
+	let showLargeVideoWarning = false;
+	let isMobile = false;
+	let isCheckingVideoSize = false;
 
 	// Momentum (Gliding) Trackers
     let swipeOffsetY = 0;
@@ -55,10 +58,12 @@
         photo = p;
         showOriginal = p.showOriginal || false;
         resetZoom(true);
-		showMenu = false;
-		isVideoLoading = true;
+        showMenu = false;
+        isVideoLoading = true;
+        isMobile = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+		isCheckingVideoSize = isMobile && isVideo(p.orgPath);
         isOpen = true;
-		fetchDetails();
+        fetchDetails();
     }
 
 	async function fetchDetails() {
@@ -73,9 +78,13 @@
 			if (bytes) {
 				const mb = parseInt(bytes) / (1024 * 1024);
 				sizeStr = mb > 1 ? `${mb.toFixed(2)} MB` : `${(parseInt(bytes) / 1024).toFixed(0)} KB`;
+				if (mb > 50 && isVideo(photo.orgPath)) {
+					showLargeVideoWarning = true;
+				}
 			}
 			fileDetails = { ...fileDetails, size: sizeStr, type: type || 'Unknown' };
 		} catch (e) {}
+		isCheckingVideoSize = false;
 
         if (isVideo(photo.orgPath)) {
 			const vid = document.createElement('video');
@@ -250,6 +259,9 @@
 
         if ($scaleVal === 1) {
 			if (Math.abs(swipeOffsetY) > 75 || Math.abs(velocityY) > 0.6) {
+				// Fling the image off-screen using your swipe momentum while fading
+				const throwDir = swipeOffsetY > 0 ? 1 : -1;
+				translateY.set(throwDir * (window.innerHeight || 800), { hard: false });
                 close();
             } else {
                 translateY.set(0);
@@ -499,7 +511,8 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div 
-        class="fixed inset-0 z-[9999] bg-black/90 {photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i) ? '' : 'backdrop-blur-xl'} flex flex-col items-center justify-center overscroll-none touch-none overflow-y-scroll"
+        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center overscroll-none touch-none overflow-hidden {photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i) ? '' : 'backdrop-blur-xl'}"
+        style="background-color: rgba(0,0,0, {Math.max(0, 0.95 - Math.abs($translateY) / 600)}); transition: background-color 0s linear;"
         transition:fade={{ duration: 250, easing: cubicOut }}
 		on:click|self={handleBackgroundClick}
     >
@@ -624,22 +637,36 @@
             <!-- Pure Video Player (Bypasses gesture canvas to prevent Safari iOS freezing bugs) -->
             <div class="w-full h-full flex items-center justify-center p-4 z-10" on:click|self={handleBackgroundClick}>
                 <!-- svelte-ignore a11y-media-has-caption -->
-				{#if isVideoLoading}
+				{#if isCheckingVideoSize}
 					<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
 						<span class="loading loading-spinner loading-lg text-primary drop-shadow-md"></span>
 					</div>
+				{:else if isMobile && showLargeVideoWarning}
+					<div class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 text-white p-6 text-center animate-fade-in backdrop-blur-md">
+						<i class="bi bi-exclamation-triangle text-4xl text-warning mb-3"></i>
+						<h3 class="font-bold text-lg mb-1">Large Video File</h3>
+						<p class="text-xs text-gray-400 mb-6">{fileDetails.size}. Viewing this may cause buffering on mobile networks.</p>
+						<button class="btn btn-primary btn-sm rounded-xl shadow-lg" on:click={() => showLargeVideoWarning = false}>Play Anyway</button>
+					</div>
+                <!-- svelte-ignore a11y-media-has-caption -->
+				{:else}
+					{#if isVideoLoading}
+						<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+							<span class="loading loading-spinner loading-lg text-primary drop-shadow-md"></span>
+						</div>
+					{/if}
+	                <video 
+	                    src="{photo?.orgPath}" 
+						class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none {isVideoLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300" 
+	                    controls playsinline preload="metadata" autoplay
+	                    in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
+						on:waiting={() => isVideoLoading = true}
+						on:playing={() => isVideoLoading = false}
+						on:canplay={() => isVideoLoading = false}
+						on:loadeddata={() => isVideoLoading = false}
+						on:error={() => isVideoLoading = false}
+	                ></video>
 				{/if}
-                <video 
-                    src="{photo?.orgPath}" 
-					class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none {isVideoLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300" 
-                    controls playsinline preload="metadata" autoplay
-                    in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
-					on:waiting={() => isVideoLoading = true}
-					on:playing={() => isVideoLoading = false}
-					on:canplay={() => isVideoLoading = false}
-					on:loadeddata={() => isVideoLoading = false}
-					on:error={() => isVideoLoading = false}
-                ></video>
             </div>
         {:else}
             <!-- Interactive Image Canvas -->

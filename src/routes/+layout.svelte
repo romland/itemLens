@@ -252,6 +252,10 @@
         // snapshot to smoothly handoff without CSS animations jerking it around.
         if (navigation.type === 'popstate') return;
 
+        // Prevent full-page crossfade "refresh" effect when merely updating search parameters (filters/tabs)
+        // TODO: I am not sure how much this will bite me in the ass; this was added LONG after I started development.
+        if (navigation.from?.url.pathname === navigation.to?.url.pathname) return;
+
         // Determine if we're programmatically going backwards
         if (navigation.delta != null && navigation.delta < 0) {
             document.documentElement.classList.add('back-transition');
@@ -363,11 +367,14 @@ $:  isDemoMode =
         showNavProgress = false;
     }
 
+    $: activeVaultName = $page.data.inventories?.find(i => i.id === $page.data.activeInventoryId)?.name || '';
+    $: vaultStr = activeVaultName ? ' | ' + (activeVaultName.length > 25 ? activeVaultName.substring(0, 25).trim() + '...' : activeVaultName) : '';
+
 </script>
 
 <svelte:head> 
   {#if mounted && webManifest}{@html webManifest}{/if}
-  <title>{$pageTitle} | itemLens</title>
+  <title>{$pageTitle}{vaultStr} | itemLens</title>
   <meta name="theme-color" content={themeColor || "#1d232a"} />
 </svelte:head>
 

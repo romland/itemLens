@@ -6,7 +6,7 @@
     import { notify } from '$lib/client/notifications';
     import GestureShield from './GestureShield.svelte';
     import { marked } from 'marked';
-    import { isEpub, isMarkdown, isHtml } from '$lib/shared/fileutils';
+    import { isEpub, isMarkdown, isHtml, isPdf, isCsv } from '$lib/shared/fileutils';
     import PdfViewer from './PdfViewer.svelte';
 
     export let isOpen = false;
@@ -97,7 +97,7 @@
             } catch (e) {
                 markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
             }
-		} else if (path.match(/\.pdf$/i)) {
+		} else if (isPdf(path)) {
 			try {
 				const res = await fetch(doc.path || doc.source, { method: 'HEAD' });
 				const bytes = res.headers.get('content-length');
@@ -114,7 +114,7 @@
 				docType = 'pdf-inline';
 			}
 			clearTimeout(menuTimeout);
-		} else if (path.match(/\.csv$/i) || isHtml(path)) {
+		} else if (isCsv(path) || isHtml(path)) {
 			docType = 'iframe';
 			clearTimeout(menuTimeout);
         } else {

@@ -113,7 +113,7 @@
                         <i class="bi bi-clipboard"></i>
                     </button>
 					<div class="prose prose-sm max-w-none text-base-content leading-snug break-words pr-6 whitespace-pre-wrap" use:openLinksInNewTab>
-                        {@html marked.parse(note.content, { breaks: true })}
+                        {@html marked.parse(note.content.replace(/^( {1,3})(?=\S)/gm, match => '&nbsp;'.repeat(match.length)), { breaks: true })}
                     </div>
                 </div>
             {/if}

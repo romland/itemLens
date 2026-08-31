@@ -46,8 +46,8 @@
 
 <div class="max-w-4xl mx-auto flex flex-col gap-6 animate-fade-in pb-12">
     <!-- Header Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button type="button" on:click={() => activeTab = 'queues'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between items-start relative overflow-hidden h-36 w-full text-left group hover:border-primary transition-colors cursor-pointer">
+    <div class="flex overflow-x-auto md:grid md:grid-cols-3 gap-4 snap-x hide-scrollbar px-2 sm:px-0">
+        <button type="button" on:click={() => activeTab = 'queues'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between items-start relative overflow-hidden h-36 shrink-0 w-[85vw] sm:w-full snap-center text-left group hover:border-primary transition-colors cursor-pointer">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
             <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 relative z-10 w-full">Active Tasks</div>
             <div class="text-5xl font-bold tracking-tight text-base-content flex items-center gap-3">
@@ -61,7 +61,7 @@
             </div>
         </button>
         
-        <button type="button" on:click={() => activeTab = 'llms'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-info transition-colors cursor-pointer relative overflow-hidden h-36 w-full text-left">
+        <button type="button" on:click={() => activeTab = 'llms'} class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-info transition-colors cursor-pointer relative overflow-hidden h-36 shrink-0 w-[85vw] sm:w-full snap-center text-left">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-info/10 rounded-full blur-2xl"></div>
             <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 relative z-10 w-full">LLM Network</div>
             <div class="text-3xl font-bold tracking-tight text-base-content flex items-center gap-2 relative z-10">
@@ -69,7 +69,7 @@
             </div>
         </button>
 
-        <a href="/activity/logs" class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-primary transition-colors cursor-pointer relative overflow-hidden h-36 w-full">
+        <a href="/activity/logs" class="bg-base-100 border border-base-200 shadow-sm rounded-3xl p-6 flex flex-col justify-between group hover:border-primary transition-colors cursor-pointer relative overflow-hidden h-36 shrink-0 w-[85vw] sm:w-full snap-center">
             <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-secondary/10 rounded-full blur-2xl"></div>
             <div class="flex justify-between items-center w-full relative z-10">
                 <div class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-1">System Log</div>

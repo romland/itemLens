@@ -118,14 +118,14 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
 export async function summarizeWebpageExtract(extract, tracking?: TaskContext)
 {
     return apiQueue.add(async () => {
-        const prompt = `Below is an extract of a webpage. Give me a brief view of the important details (it's usually about a product or a guide to do something).
+        const prompt = `Extract the core value of this document into an executive summary. Your response MUST begin immediately with the facts. NEVER begin with introductory filler like 'Here is the summary' or 'TLDR'. Focus on actionable data, specifications, or primary arguments. Be dense and comprehensive. But give some air between sentences.
 Say what product it is about.
 Leave out:
 - user-generated content such as comments
 - navigation elements
 - sale/stock information
 - reviews
-- never give me JSON, I want plain text
+- never give me JSON, I want plain markdown
 and other irrelevant (to the product or guide) stuff that you might find on a webpage.`;
 
         try {

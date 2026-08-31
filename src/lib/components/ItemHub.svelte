@@ -101,6 +101,7 @@
     let isDuplicateWarning = false;
     let duplicateDetails: any = null;
     let duplicateDismissed = false;
+    let showNudgeTip = false;
 
     // Dirty State Reactivity
     $: {
@@ -196,7 +197,9 @@
             }
 
             if (autofilled) {
-                dispatch('success', 'Details are auto-filled!');
+                dispatch('success', 'Details are auto-filled');
+                showNudgeTip = true;
+                setTimeout(() => showNudgeTip = false, 60000);
             }
         }
     }   
@@ -448,7 +451,15 @@
             <ActionCard 
                 title="Item Details" subtitle="Title, qty, tags..." icon="bi-pencil-square" iconColorClass="bg-orange-100 text-orange-600"
                 on:click={() => activeView = 'details'}
-            />
+            >
+                {#if showNudgeTip}
+                    <span role="button" tabindex="0" class="text-primary hover:scale-110 transition-transform animate-bounce cursor-pointer p-1" title="Refine with AI" 
+                          on:click|stopPropagation={(e) => { e.preventDefault(); showNudgeTip = false; aiDialog.showModal(); }} 
+                          on:keydown|stopPropagation={(e) => { if (e.key === 'Enter') { e.preventDefault(); showNudgeTip = false; aiDialog.showModal(); } }}>
+                        <i class="bi bi-stars text-xl"></i>
+                    </span>
+                {/if}
+            </ActionCard>
 
             <ActionCard 
                 title="Documents" subtitle="Manual or scan QR" icon="bi-link-45deg" iconColorClass="bg-emerald-100 text-emerald-600"
@@ -573,9 +584,14 @@
             <div class="flex flex-col gap-5 max-w-lg mx-auto w-full">
                 <FormInput label="Title {isAnalyzing ? '<span class=\'loading loading-spinner loading-xs text-primary ml-2\'></span><span class=\'text-xs text-primary font-normal ml-1\'>Analyzing image...</span>' : ''}" name="title" bind:value={currentTitle} placeholder="Leave blank for auto-fill..." inputClass="pr-12 {isAnalyzing ? 'input-primary' : ''}">
                     {#if previewImagePath}
-                        <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-primary/70 hover:text-primary transition-colors" title="Refine with AI" on:click={() => aiDialog.showModal()}>
-                            <i class="bi bi-stars text-xl"></i>
-                        </button>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {#if showNudgeTip}
+                                <span class="text-[10px] font-bold text-primary uppercase tracking-wider animate-fade-in pointer-events-none drop-shadow-sm">Not quite right?</span>
+                            {/if}
+                            <button type="button" class="text-primary/70 hover:text-primary transition-all {showNudgeTip ? 'animate-bounce' : ''}" title="Refine with AI" on:click={() => { showNudgeTip = false; aiDialog.showModal(); }}>
+                                <i class="bi bi-stars text-xl"></i>
+                            </button>
+                        </div>
                     {/if}
                 </FormInput>
 

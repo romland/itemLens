@@ -33,6 +33,10 @@ export function isMedia(path: string | null | undefined): boolean {
     return isVideo(path) || isImage(path);
 }
 
+export function isCsv(path: string | null | undefined): boolean {
+    return getCleanPath(path).match(/\.csv$/i) !== null;
+}
+
 export function decodeHtmlEntities(str: string): string {
     if (!str) return '';
     const translate_re = /&(nbsp|amp|quot|lt|gt|#39);/g;

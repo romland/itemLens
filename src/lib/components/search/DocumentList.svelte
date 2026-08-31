@@ -9,10 +9,10 @@
     function handleDocumentClick(e: MouseEvent, doc: any) {
         const path = (doc.path || doc.source || '').toLowerCase().split('#')[0];
         
-        if (path.match(/\.(epub|pdf|html|htm|txt|md|csv)$/i)) {
+        if (isPdf(path) || isHtml(path) || isEpub(path) || isMarkdown(path) || path.endsWith('.csv')) {
             e.preventDefault();
             dispatch('openDoc', doc);
-        } else if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
+        } else if (isImage(path)) {
             e.preventDefault();
             dispatch('openImage', { orgPath: doc.path || doc.source, showOriginal: true });
         }
