@@ -54,7 +54,7 @@ export async function getActiveSchema(inventoryId: number, categoryId?: number |
         globalBaseFields.push({ id: undefined, name: 'color_mix', uiLabel: 'Colors (Proportional)', type: 'object', options: BASE_COLORS, matchWeight: 'COLOR_PROPORTION', extractionMethod: 'VISION_STRICT', categoryId: null });
     }
     if (archetype !== 'natural') {
-        globalBaseFields.push({ id: undefined, name: 'distinctive_blemishes_or_wear', uiLabel: 'Condition/Wear (Null if pristine)', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
+        globalBaseFields.push({ id: undefined, name: 'distinctive_blemishes_or_wear', uiLabel: 'Condition/Wear', type: 'string', options: null, matchWeight: 'STRICT_DEDUPE', extractionMethod: 'HYBRID', categoryId: null });
     }
 
     return [
