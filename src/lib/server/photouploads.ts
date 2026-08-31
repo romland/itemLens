@@ -12,6 +12,7 @@ import { autoFill } from '$lib/server/autofill';
 import { taskManager, type TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
 import crypto from 'crypto';
+import { isVideo, isImage } from '$lib/shared/fileutils';
 
 // Global memory lock to synchronize fast-workflow draft uploads with background LLM tasks
 export const activeDrafts = new Map<string, { promise: Promise<any>, draftPath: string }>();
@@ -88,8 +89,8 @@ export async function enrichPhotoData(localPath: string, webPath: string, type: 
     
     let finalOrgPath = webPath;
     let currentLocalPath = localPath;
-    const isVideo = localPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
-    if (!isVideo && !localPath.endsWith('.webp')) {
+    const isVideoFile = isVideo(localPath);
+    if (!isVideoFile && !localPath.endsWith('.webp')) {
         let newLocalPath = localPath.replace(/\.[^/.]+$/, '.webp');
         let newWebPath = webPath.replace(/\.[^/.]+$/, '.webp');
 
@@ -248,7 +249,7 @@ export async function processItemPhotosBackground(item: any) {
             for (const photo of item.photos) {
                 if (!photo.orgPath) continue;
                 
-                if (photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)) continue; // Bypass ML processing for videos
+                if (isVideo(photo.orgPath)) continue; // Bypass ML processing for videos
                 
                 if (photo.thumbPath && photo.ocr && photo.llmAnalysis) {
                     console.log(`[Background Task] Skipping post-save ML for Photo ${photo.id}, pre-processed via draft.`);
@@ -664,7 +665,7 @@ export async function savePhotos(
                 const response = await fetch(url);
                 const arrayBuffer = await response.arrayBuffer();
                 
-                if(!hasImageExtension(url)) {
+                if(!isImage(url) && !isVideo(url)) {
                     throw "Invalid file extension";
                 }
                 
@@ -708,29 +709,17 @@ export async function savePhotos(
     }
 }
 
-// This is _very_ basic, will fail if there are query parameters etc etc etc etc
-function hasImageExtension(url: string)
-{
-    return url.toLowerCase().trim().endsWith(".jpg")
-    || url.toLowerCase().trim().endsWith(".jpeg")
-    || url.toLowerCase().trim().endsWith(".png")
-    || url.toLowerCase().trim().endsWith(".svg")
-    || url.toLowerCase().trim().endsWith(".webp")
-    || url.toLowerCase().trim().endsWith(".mp4")
-    || url.toLowerCase().trim().endsWith(".mov")
-    || url.toLowerCase().trim().endsWith(".webm");
-}
-
 export function getSafeFilename(filename: string, extra: string = ""): string
 {
-    const date = new Date().toISOString()
-    .replaceAll('-', '')
-    .replaceAll(':', '')
-    .replace(/T/, '')
-    .replace(/\..+/, '');
-    
+    // Format: YYYYMMDDHHmmss
+    const date = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
     const uuid = crypto.randomUUID();
-    // Truncate the original filename to prevent DB path bloat on insane PDF titles
-    const truncatedName = filename.substring(0, 30);
-    return date + '-' + extra + "-" + uuid + "-" + slugify(truncatedName.toLowerCase());
+    
+    // Strip directory traversal or null bytes if 'extra' is ever user-controlled
+    const safeExtra = extra.replace(/[^a-zA-Z0-9_-]/g, '');
+    
+    // Truncate to prevent ENAMETOOLONG errors, and strict-slugify to strip all unicode/path chars
+    const safeName = slugify(filename.substring(0, 30), { lower: true, strict: true });
+    
+    return [date, safeExtra, uuid, safeName].filter(Boolean).join('-');
 }

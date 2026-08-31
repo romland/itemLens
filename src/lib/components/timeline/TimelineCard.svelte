@@ -7,6 +7,7 @@
     import TextButton from "$lib/components/TextButton.svelte";
     import FormInput from "$lib/components/FormInput.svelte";
 	import { page } from '$app/stores';
+    import { isVideo } from "$lib/shared/fileutils";
 
     export let note;
 	const dispatch = createEventDispatcher();
@@ -75,7 +76,7 @@
         <div class="flex overflow-x-auto snap-x bg-base-200 border-b border-base-200 max-h-64 hide-scrollbar">
             {#each note.photos as photo}
 				<button type="button" class="shrink-0 w-full h-full snap-center block border-none p-0 bg-transparent cursor-zoom-in relative" aria-label="View Attachment" on:click={() => dispatch('openImage', photo)}>
-                    {#if photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+                    {#if isVideo(photo.orgPath)}
                         <video src="{photo.orgPath}#t=0.1" class="w-full h-full object-cover" muted playsinline></video>
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
                             <i class="bi bi-play-circle-fill text-4xl text-white drop-shadow-md"></i>

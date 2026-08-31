@@ -5,6 +5,7 @@
     import { notify } from "$lib/client/notifications";
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import { getFileInfo } from "$lib/client/utils";
+    import { isPdf, isEpub, isMarkdown, isHtml, isVideo, isImage } from "$lib/shared/fileutils";
 
     export let documents: any[] = [];
     const dispatch = createEventDispatcher();
@@ -15,29 +16,19 @@
         return marked.parse(txt, {gfm:true,breaks:true});
     }
 
-    function getDocIcon(doc: any) {
-        const path = (doc.path || '').toLowerCase().split('#')[0];
-        const source = (doc.source || '').toLowerCase();
-        if (path.endsWith('.pdf')) return 'bi-filetype-pdf text-error';
-        if (path.endsWith('.epub')) return 'bi-book text-secondary';
-        if (path.match(/\.(mp4|webm|mov|mkv)$/i)) return 'bi-filetype-mp4 text-info';
-        if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return 'bi-image text-success';
-        if (path.endsWith('.html') || source.startsWith('http')) return 'bi-globe text-primary';
-        if (doc.type === 'note') return 'bi-sticky text-warning';
-        return 'bi-file-earmark-text text-gray-500';
-    }
 </script>
 
 <div role="tablist" class="tabs tabs-bordered w-full">
     {#each documents as doc, i}
         {@const info = getFileInfo(doc)}
+        {@const cleanPath = (doc.path || '').toLowerCase().split('#')[0]}
         <div class="collapse collapse-arrow bg-base-200 mb-1">
             <input type="radio" name="my-accordion-2" checked={i===0} />
             <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3">
-                <i class="bi {info.icon} {info.color} text-lg"></i>
-                <span class="truncate">{doc.title}</span>
+                <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
+                <span class="truncate flex-1 min-w-0" title={doc.title}>{doc.title}</span>
             </div>
-            <div class="collapse-content prose prose-sm max-w-none"> 
+            <div class="collapse-content prose prose-sm max-w-none break-words overflow-x-auto prose-pre:max-w-full"> 
                 {@html alterSummary(doc.summary)}
 
                 <div class="flex justify-between items-center mt-2">
@@ -46,17 +37,29 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                         </svg>
                         
-                        {#if doc.path.toLowerCase().endsWith('.epub')}
+                        {#if isEpub(cleanPath)}
                             <button type="button" class="btn btn-sm btn-primary rounded-xl shrink-0" on:click={() => dispatch('openDoc', doc)}>
                                 <i class="bi bi-book"></i> Read Book
                             </button>
-                        {:else if doc.path.toLowerCase().match(/\.(md|txt)$/i) || doc.type === 'note'}
+                        {:else if isMarkdown(cleanPath) || doc.type === 'note'}
                             <button type="button" class="btn btn-sm btn-secondary rounded-xl shadow-sm shrink-0" on:click={() => dispatch('openDoc', doc)}>
                                 <i class="bi bi-file-text"></i> Read Note
                             </button>
-                        {:else if doc.path.toLowerCase().match(/\.(pdf|html|htm)$/i)}
+                        {:else if isVideo(cleanPath)}
+                            <button type="button" class="btn btn-sm btn-info text-info-content rounded-xl shadow-sm shrink-0" on:click={() => dispatch('openImage', { orgPath: doc.path, type: 'video' })}>
+                                <i class="bi bi-play-circle"></i> Play Video
+                            </button>
+                        {:else if isImage(cleanPath)}
+                            <button type="button" class="btn btn-sm btn-success text-success-content rounded-xl shadow-sm shrink-0" on:click={() => dispatch('openImage', { orgPath: doc.path, showOriginal: true })}>
+                                <i class="bi bi-image"></i> View Image
+                            </button>
+                        {:else if isPdf(cleanPath) || isHtml(cleanPath)}
                             <button type="button" class="btn btn-sm btn-outline border-base-300 rounded-xl bg-base-100 shadow-sm hover:border-primary shrink-0" on:click={() => dispatch('openDoc', doc)}>
                                 <i class="bi bi-file-earmark"></i> View Document
+                            </button>
+                        {:else if doc.path}
+                            <button type="button" class="btn btn-sm btn-outline border-base-300 rounded-xl bg-base-100 shadow-sm hover:border-primary shrink-0" on:click={() => dispatch('openDoc', doc)}>
+                                <i class="bi bi-hdd-network"></i> Local Cache
                             </button>
                         {:else}
                             <a href="{doc.path || doc.source}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium shrink-0" title="{doc.source}">
@@ -64,7 +67,7 @@
                             </a>
                         {/if}
                             
-                        {#if doc.path && doc.path.match(/\.(epub|md|txt|pdf|html|htm)$/i) && doc.source && doc.source.startsWith('http')}
+                        {#if doc.path && (isEpub(cleanPath) || isMarkdown(cleanPath) || isPdf(cleanPath) || isHtml(cleanPath) || isVideo(cleanPath) || isImage(cleanPath)) && doc.source && doc.source.startsWith('http')}
                             <span class="text-gray-300 shrink-0 hidden sm:inline mx-1">•</span>
                             <a href="{doc.source}" target="_blank" rel="noopener noreferrer" class="text-xs text-gray-500 hover:text-primary hover:underline truncate flex items-center gap-1 min-w-0 max-w-[150px] sm:max-w-[300px]" title="{doc.source}">
                                 <i class="bi bi-link-45deg text-sm shrink-0"></i> <span class="truncate font-mono">{doc.source.replace(/^https?:\/\//, '')}</span>

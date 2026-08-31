@@ -4,6 +4,7 @@
     import Modal from './Modal.svelte';
     import FormInput from './FormInput.svelte';
     import FormSelect from './FormSelect.svelte';
+    import { isMarkdown, isPdf } from '$lib/shared/fileutils';
     
     export let formId = "eltForm";
     export let forcePhotoType: string | null = null;
@@ -43,7 +44,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             pastedType = 'image';
             pasteModal.showModal();
             return true;
-        } else if (file.type === "text/plain" || file.name.toLowerCase().endsWith('.txt')) {
+        } else if (file.type === "text/plain" || isMarkdown(file.name)) {
             if (!isInputFocused) {
                 file.text().then(text => { pastedText = text; pastedType = 'text'; textDocumentTitle = file.name || "Pasted Note"; pasteModal.showModal(); });
                 return true;
@@ -316,7 +317,7 @@ $:  if (forcePhotoType) selectedPhotoType = forcePhotoType;
             {/if}
         {:else if pastedType === 'document'}
             <div class="mb-4 flex flex-col items-center justify-center p-8 bg-base-200 rounded-xl border border-base-300 shadow-inner">
-                {#if pastedFile?.name.toLowerCase().endsWith('.pdf')}
+                {#if isPdf(pastedFile?.name)}
                     <i class="bi bi-file-earmark-pdf text-6xl text-error"></i>
                 {:else}
                     <i class="bi bi-file-earmark-arrow-up text-6xl text-primary"></i>

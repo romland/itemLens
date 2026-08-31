@@ -7,6 +7,7 @@
     import { bodyScrollLock } from '$lib/client/scrollLock';
     import GestureShield from './GestureShield.svelte';
     import { marked } from 'marked';
+    import { isEpub, isMarkdown, isHtml } from '$lib/shared/fileutils';
 
     export let isOpen = false;
     let doc: any = null;
@@ -75,10 +76,10 @@
             doc.path = parts[0]; // Mutate locally so epub.js loads the book correctly
         }
 
-        if (path.endsWith('.epub')) {
+        if (isEpub(path)) {
             docType = 'epub';
             resetMenuTimeout();
-        } else if (path.match(/\.(md|txt)$/i) || doc.type === 'note') {
+        } else if (isMarkdown(path) || doc.type === 'note') {
             docType = 'markdown';
             resetMenuTimeout();
             try {
@@ -88,7 +89,7 @@
             } catch (e) {
                 markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
             }
-        } else if (path.match(/\.(pdf|html|htm|csv)$/i)) {
+        } else if (path.match(/\.(pdf|csv)$/i) || isHtml(path)) {
             docType = 'iframe';
             clearTimeout(menuTimeout); // Prevent auto-hide so user is never trapped
         } else {
@@ -251,7 +252,7 @@
                     // === THE "READING MODE" NUKE ===
                     // Only inject into HTML documents (skip PDFs)
                     const docPath = (doc?.path || doc?.source || '').toLowerCase();
-                    if (docPath.endsWith('.html') || docPath.endsWith('.htm')) {
+                if (isHtml(docPath)) {
                         const style = iframeDoc.createElement('style');
                         style.innerHTML = `
                             /* Annihilate cookie banners, paywalls, and sticky overlays */

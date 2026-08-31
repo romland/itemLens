@@ -6,6 +6,7 @@
     import { invalidateAll } from '$app/navigation';
     import { notify } from "$lib/client/notifications";
 	import PromptModal from "$lib/components/PromptModal.svelte";
+    import { isVideo } from "$lib/shared/fileutils";
 
     export let itemTitle = "";
     export let categories: any[] = [];
@@ -73,8 +74,7 @@
 			fileDetails = { ...fileDetails, size: sizeStr, type: type || 'Unknown' };
 		} catch (e) {}
 
-		const isVideo = photo.orgPath.match(/\.(mp4|webm|mov|ogg|mkv)$/i);
-		if (isVideo) {
+        if (isVideo(photo.orgPath)) {
 			const vid = document.createElement('video');
 			vid.onloadedmetadata = () => {
 				fileDetails = { ...fileDetails, dimensions: `${vid.videoWidth} × ${vid.videoHeight}` };
@@ -617,7 +617,7 @@
 			</div>
         </div>
 
-        {#if photo?.orgPath?.match(/\.(mp4|webm|mov|ogg|mkv)$/i)}
+        {#if isVideo(photo?.orgPath)}
             <!-- Pure Video Player (Bypasses gesture canvas to prevent Safari iOS freezing bugs) -->
             <div class="w-full h-full flex items-center justify-center p-4 z-10" on:click|self={handleBackgroundClick}>
                 <!-- svelte-ignore a11y-media-has-caption -->

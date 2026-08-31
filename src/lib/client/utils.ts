@@ -1,4 +1,5 @@
 import { notify } from '$lib/client/notifications';
+import { isPdf, isEpub, isVideo, isImage, isHtml } from '$lib/shared/fileutils';
 
 // This is very naive. Just one word: Buses.
 export function pluralize(str: string): string {
@@ -55,11 +56,11 @@ export function getFileInfo(doc: any) {
     const path = (doc.path || '').toLowerCase().split('#')[0];
     const source = (doc.source || '').toLowerCase();
     
-    if (path.endsWith('.pdf')) return { icon: 'bi-filetype-pdf', color: 'text-error', label: 'PDF' };
-    if (path.endsWith('.epub')) return { icon: 'bi-book', color: 'text-secondary', label: 'EPUB' };
-    if (path.match(/\.(mp4|webm|mov|mkv)$/i)) return { icon: 'bi-filetype-mp4', color: 'text-info', label: 'VIDEO' };
-    if (path.match(/\.(jpg|jpeg|png|webp|gif)$/i)) return { icon: 'bi-image', color: 'text-success', label: 'IMAGE' };
-    if (path.endsWith('.html') || source.startsWith('http')) return { icon: 'bi-globe', color: 'text-primary', label: 'WEB' };
+    if (isPdf(path)) return { icon: 'bi-filetype-pdf', color: 'text-error', label: 'PDF' };
+    if (isEpub(path)) return { icon: 'bi-book', color: 'text-secondary', label: 'EPUB' };
+    if (isVideo(path)) return { icon: 'bi-filetype-mp4', color: 'text-info', label: 'VIDEO' };
+    if (isImage(path)) return { icon: 'bi-image', color: 'text-success', label: 'IMAGE' };
+    if (isHtml(path) || source.startsWith('http')) return { icon: 'bi-globe', color: 'text-primary', label: 'WEB' };
     if (doc.type === 'note') return { icon: 'bi-sticky', color: 'text-warning', label: 'NOTE' };
     
     const match = path.match(/\.([a-z0-9]+)$/i);

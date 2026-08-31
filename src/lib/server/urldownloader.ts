@@ -12,6 +12,7 @@ import { logActivity } from '$lib/server/logger';
 import { taskManager } from '$lib/server/taskManager';
 import { fetchVideoIfSupported } from './ytdlp';
 import { extractEpubText } from './epub';
+import { isPdf, isEpub } from '$lib/shared/fileutils';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string, depth: number = 0)
 {
@@ -252,12 +253,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 }
 
 async function isPdfUrl(url: string): Promise<boolean> {
-  try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.pathname.toLowerCase().endsWith('.pdf')) return true;
-  } catch (e) {
-    console.warn(`Invalid URL format: ${url}`);
-  }
+  if (isPdf(url)) return true;
 
   try {
     const headRes = await fetch(url, { method: 'HEAD' });
@@ -270,12 +266,8 @@ async function isPdfUrl(url: string): Promise<boolean> {
 }
 
 async function isEpubUrl(url: string): Promise<boolean> {
-  try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.pathname.toLowerCase().endsWith('.epub')) return true;
-  } catch (e) {
-    console.warn(`Invalid URL format: ${url}`);
-  }
+  if (isEpub(url)) return true;
+
   try {
     const headRes = await fetch(url, { method: 'HEAD' });
     const contentType = headRes.headers.get('content-type') || '';
