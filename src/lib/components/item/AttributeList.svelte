@@ -7,8 +7,10 @@
 
     const dispatch = createEventDispatcher();
 
+    const SHOWN_ATTRIBUTES = 10;
+
     let showAll = false;
-    $: visibleAttributes = showAll ? attributes : attributes.slice(0, 6);
+    $: visibleAttributes = showAll ? attributes : attributes.slice(0, SHOWN_ATTRIBUTES);
 </script>
 
 <div class="bg-base-100 rounded-3xl border border-base-200 shadow-sm p-4 sm:p-6 mb-6">
@@ -53,7 +55,7 @@
                     {/if}
                 </div>
             {/each}
-            {#if attributes.length > 6}
+            {#if attributes.length > SHOWN_ATTRIBUTES}
                 <button type="button" class="btn btn-ghost btn-xs text-primary mt-1 self-start" on:click={() => showAll = !showAll}>
                     {showAll ? 'Show Less' : `Show All (${attributes.length})`}
                 </button>
