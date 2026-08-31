@@ -18,17 +18,17 @@
 
 </script>
 
-<div role="tablist" class="tabs tabs-bordered w-full">
+<div class="flex flex-col gap-2 w-full min-w-0">
     {#each documents as doc, i}
         {@const info = getFileInfo(doc)}
         {@const cleanPath = (doc.path || '').toLowerCase().split('#')[0]}
-        <div class="collapse collapse-arrow bg-base-200 mb-1">
+        <div class="collapse collapse-arrow bg-base-200 border border-base-300 overflow-hidden">
             <input type="radio" name="my-accordion-2" checked={i===0} />
-            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3">
+            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden">
                 <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
                 <span class="truncate flex-1 min-w-0" title={doc.title}>{doc.title}</span>
             </div>
-            <div class="collapse-content prose prose-sm max-w-none break-words overflow-x-auto prose-pre:max-w-full"> 
+            <div class="collapse-content prose prose-sm max-w-none break-words overflow-x-auto prose-pre:max-w-full">
                 {@html alterSummary(doc.summary)}
 
                 <div class="flex justify-between items-center mt-2">
@@ -62,7 +62,7 @@
                                 <i class="bi bi-hdd-network"></i> Local Cache
                             </button>
                         {:else}
-                            <a href="{doc.path || doc.source}" target="_blank" class="truncate max-w-[200px] sm:max-w-full block text-primary hover:underline font-medium shrink-0" title="{doc.source}">
+                            <a href="{doc.path || doc.source}" target="_blank" class="truncate flex-1 min-w-0 block text-primary hover:underline font-medium" title="{doc.source}">
                                 {doc.source}
                             </a>
                         {/if}

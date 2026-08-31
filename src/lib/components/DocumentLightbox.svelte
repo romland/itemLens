@@ -4,7 +4,6 @@
     import { tick, onDestroy } from 'svelte';
     import { page } from '$app/stores';
     import { notify } from '$lib/client/notifications';
-    import { bodyScrollLock } from '$lib/client/scrollLock';
     import GestureShield from './GestureShield.svelte';
     import { marked } from 'marked';
     import { isEpub, isMarkdown, isHtml } from '$lib/shared/fileutils';
@@ -121,13 +120,14 @@
         
         if (docType === 'iframe') return; // Iframe handles its own loading state via on:load
 
-        try {
-            // Lazy load the heavy epub.js library ONLY when a book is opened
-            const ePub = (await import('epubjs')).default;
-            
-            book = ePub(doc.path);
-            
-            rendition = book.renderTo(viewerRef, {
+        if (docType === 'epub') {
+            try {
+                // Lazy load the heavy epub.js library ONLY when a book is opened
+                const ePub = (await import('epubjs')).default;
+                
+                book = ePub(doc.path);
+                
+                rendition = book.renderTo(viewerRef, {
                 width: '100%',
                 height: '100%',
                 spread: 'none',
@@ -230,9 +230,12 @@
                 updateProgress(location);
             });
             
-        } catch (e) {
-            console.error("Failed to load EPUB:", e);
-        } finally {
+            } catch (e) {
+                console.error("Failed to load EPUB:", e);
+            } finally {
+                loading = false;
+            }
+        } else {
             loading = false;
         }
     }
@@ -471,10 +474,9 @@
     <!-- Main Background (Dimmed to separate the book from the OS layer) -->
     <div 
         bind:this={overlayRef}
-        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col outline-none"
+        class="fixed inset-0 z-[9999] bg-base-300/95 backdrop-blur-xl flex flex-col outline-none overscroll-none touch-none overflow-y-scroll"
         transition:fade={{ duration: 250, easing: cubicOut }}
         tabindex="-1"
-        use:bodyScrollLock={isOpen}
     >
         <!-- === TOP CHROME === -->
         <div 

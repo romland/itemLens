@@ -153,8 +153,8 @@ $: if (data.duplicateItemDetails?.debugTrace) {
 <article style="padding-bottom: 100px;" class="">
 
     <div class="flex justify-between items-start gap-4 border-b border-base-200/60 pb-3 mb-4 mt-2">
-        <div class="flex flex-col flex-1">
-            <h1 class="text-3xl sm:text-4xl font-bold text-base-content break-words leading-tight tracking-tight">
+        <div class="flex flex-col flex-1 min-w-0">
+            <h1 class="text-3xl sm:text-4xl font-bold text-base-content hyphens-auto overflow-wrap-anywhere break-words leading-tight tracking-tight">
                 {data.item?.title}
             </h1>
             <div class="text-[11px] text-gray-500 font-medium flex flex-wrap items-center gap-1.5 mt-2">

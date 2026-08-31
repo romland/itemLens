@@ -11,7 +11,7 @@
     export function close() { dialogNode?.close(); }
 </script>
 
-<dialog bind:this={dialogNode} class="modal {position === 'bottom' ? 'modal-bottom sm:modal-middle' : 'modal-middle'} {blur ? 'backdrop-blur-sm' : ''}" on:close>
+<dialog bind:this={dialogNode} class="modal {position === 'top' ? 'modal-top sm:modal-middle' : (position === 'bottom' ? 'modal-bottom sm:modal-middle' : 'modal-middle')} {blur ? 'backdrop-blur-sm' : ''}" on:close>
     <div class="modal-box {boxClass}">
         {#if title}
             <h3 class="{titleClass} mb-4">{@html title}</h3>

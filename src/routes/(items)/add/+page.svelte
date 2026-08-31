@@ -17,6 +17,7 @@
 	import { notify } from "$lib/client/notifications";
 	import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import { ambientLocation } from '$lib/client/ambientContext';
+    import { page } from '$app/stores';
 
     const CONTINUOUS_SCANNING = false;
 
@@ -51,6 +52,7 @@
         fd.append('file.type.0', 'product');
         const rClientId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
         fd.append('clientId', rClientId);
+        fd.append('inventoryId', $page.data.activeInventoryId.toString());
         $ambientLocation.forEach(loc => fd.append('containers', loc));
         try {
             await saveToQueue('/add', fd);
@@ -123,6 +125,7 @@
         saving = true;
         hasSubmitted = true;
         formData.append('clientId', clientId);
+        formData.append('inventoryId', $page.data.activeInventoryId.toString());
         try {
             await saveToQueue('/add', formData);
             notify("success", "Item saved in background!");

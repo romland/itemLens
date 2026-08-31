@@ -196,6 +196,7 @@
         clearTimeout(quickNoteTimer);
         quickNoteFired = false;
         quickNoteReady = false;
+
         quickNoteTimer = setTimeout(() => {
             quickNoteFired = true;
             quickNoteReady = true;
@@ -209,11 +210,12 @@
         clearTimeout(quickNoteTimer);
         if (quickNoteFired) {
                 e.preventDefault(); // stops the href from firing if long press was triggered
+                quickNoteReady = false;
+                quickNoteFired = false;
                 quickNoteModal.showModal();
                 const ta = quickNoteModal.querySelector('textarea');
                 if (ta) setTimeout(() => ta.focus(), 50);
                 // Keep the flag true for a split second to swallow the subsequent click event and gracefully hand off the UI
-                setTimeout(() => { quickNoteFired = false; quickNoteReady = false; }, 300);
         } else {
             quickNoteReady = false;
         }
@@ -334,6 +336,20 @@ $:  isDemoMode =
     let navTimer: ReturnType<typeof setTimeout>;
     let slowNavTimer: ReturnType<typeof setTimeout>;
 
+    // Scroll-to-hide Navigation State
+    let scrollY = 0;
+    let lastScrollY = 0;
+    let hideNav = false;
+
+    function handleScroll() {
+        if (scrollY > 60 && scrollY > lastScrollY) {
+            hideNav = true;
+        } else if (scrollY < lastScrollY || scrollY <= 60) {
+            hideNav = false;
+        }
+        lastScrollY = scrollY;
+    }
+
     $: if ($navigating) {
         clearTimeout(navTimer);
         clearTimeout(slowNavTimer);
@@ -361,11 +377,13 @@ $:  isDemoMode =
 
 <TouchIndicator enabled={isDemoMode} />
 
+<svelte:window bind:scrollY on:scroll={handleScroll} />
+
 {#if showNavProgress}
     <progress class="progress progress-primary bg-transparent w-full fixed top-0 left-0 z-[10000] rounded-none h-1"></progress>
 {/if}
 
-<div class="navbar bg-base-100 sticky top-0 z-50">
+<div class="navbar bg-base-100/90 backdrop-blur-xl border-b border-base-200/50 sticky top-0 z-50 transition-transform duration-300 ease-out {hideNav ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}">
   <!-- Mobile menu -->
   <div class="navbar-start pl-3">
     <button on:click={()=>history.back()} class="pt-1" aria-label="Go back">

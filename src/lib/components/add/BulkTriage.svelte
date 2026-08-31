@@ -212,6 +212,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                inventoryId: $page.data.activeInventoryId,
                 draftPath,
                 noteId: draftNoteId,
                 containers: selectedContainers,

@@ -205,8 +205,8 @@
 </script>
 
 <div class="flex justify-between items-center mb-6 px-2">
-	<h1 class="text-2xl font-bold tracking-tight flex items-center gap-3">
-		Results <span class="text-sm text-gray-500 font-medium bg-base-200 px-3 py-1 rounded-full">{data.totalCount} found</span>
+	<h1 class="text-2xl font-bold tracking-tight">
+		Results
 	</h1>
     <div class="flex gap-2">
         <button class="btn btn-ghost btn-sm bg-base-200/50 hover:bg-base-300 shadow-sm rounded-xl border border-base-300" on:click={() => filterModal.showModal()}>

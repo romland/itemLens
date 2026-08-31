@@ -143,7 +143,10 @@ console.log("formData:", orgData);
         });
 
         if (!item) return fail(404, { error: true, message: "Item not found." });
-        if (item.inventoryId !== locals.activeInventoryId) return fail(403, { error: true, message: "Item belongs to a different Collection." });
+
+        const targetInventoryId = item.inventoryId;
+        const hasAccess = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: targetInventoryId, userId: locals.user.id } } });
+        if (!hasAccess || hasAccess.role === 'VIEWER') return fail(403, { error: true, message: "Forbidden. Viewer access only." });
 
         // Holds all image IDs that existed before this item (new photos to be created are not here)
         const preExistingPhotoIds = item.photos.map(p=>p.id);
@@ -193,7 +196,7 @@ console.log("formData:", orgData);
                   create: containers.map((cont) => {
                     return {
                       container : {
-                          connect: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: String(cont) } },
+                          connect: { inventoryId_name: { inventoryId: targetInventoryId, name: String(cont) } },
                       }
                     }
                   }),

@@ -47,7 +47,7 @@
                 {#if formAction}
                     <form action={formAction} method="POST" data-sveltekit-reload={reload ? '' : null} class="w-full m-0 p-0 block">
                         <input type="hidden" {name} value={opt.value}>
-                        <button type="submit" class="w-full justify-between font-medium {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}">
+                        <button type="submit" class="w-full justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}">
                             <span class="truncate">{opt.label}</span>
                             {#if String(opt.value) === String(value)}
                                 <i class="bi bi-check-lg shrink-0"></i>
@@ -55,7 +55,7 @@
                         </button>
                     </form>
                 {:else}
-                    <button type="button" class="w-full justify-between font-medium {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}" on:click={(e) => handleSelect(opt.value, e)}>
+                    <button type="button" class="w-full justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}" on:click={(e) => handleSelect(opt.value, e)}>
                         <span class="truncate">{opt.label}</span>
                         {#if String(opt.value) === String(value)}
                             <i class="bi bi-check-lg shrink-0"></i>

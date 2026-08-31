@@ -32,7 +32,6 @@
                 loadedPages = parsed.loadedPages || [];
                 nextPage = parsed.nextPage || 1;
                 reachedEnd = parsed.reachedEnd || false;
-                scrollY = parsed.scrollY || 0;
                 console.log(`[DEBUG-SCROLL] ✅ Synchronously restored ${loadedPages.length} pages. (This enables scroll restore)`);
             } catch (e) { console.warn("Was a silenced exception", e); }
         }
@@ -52,14 +51,12 @@
                     loadedPages = parsed.loadedPages || [];
                     nextPage = parsed.nextPage || 1;
                     reachedEnd = parsed.reachedEnd || false;
-					scrollY = parsed.scrollY || 0;
                     console.log(`[DEBUG-SCROLL] ✅ Synchronously restored ${loadedPages.length} pages.`);
                 } catch (e) { console.warn("Was a silenced exception", e); }
             } else {
                 // CRITICAL: If URL changed and no cache exists, wipe the old pages out!
                 loadedPages = [];
                 reachedEnd = false;
-				scrollY = 0;
             }
         }
     }
@@ -109,8 +106,7 @@
             sessionStorage.setItem(cacheKey, JSON.stringify({
                 loadedPages,
                 nextPage,
-                reachedEnd,
-                scrollY: window.scrollY
+                reachedEnd
             }));
         }
     });
@@ -161,12 +157,6 @@
 
         // Wait for Svelte to physically draw the restored items into the DOM.
         // This is CRUCIAL so the browser has enough page height to restore your scroll position.
-        await tick();
-
-		if (scrollY > 0) {
-			setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 0);
-			setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 50);
-		}
 
         // Set up the observer
         const el = document.getElementById('postScrollArea');

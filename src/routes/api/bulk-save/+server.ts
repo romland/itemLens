@@ -12,9 +12,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     assertCanMutate(locals);
 
     const { draftPath, noteId, containers, items, globalCategory, tagcsv } = await request.json();
+    const payloadData = await request.json();
     const userId = locals.user.id;
-    const inventoryId = locals.activeInventoryId;
+    const inventoryId = payloadData.inventoryId ? Number(payloadData.inventoryId) : locals.activeInventoryId;
     
+    const hasAccess = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId, userId } } });
+    if (!hasAccess || hasAccess.role === 'VIEWER') return json({ error: 'Forbidden' }, { status: 403 });
+
     // Strict anti-traversal check
     if (draftPath && (draftPath.includes('..') || !draftPath.startsWith('/images/'))) {
         return json({ error: 'Invalid path' }, { status: 400 });

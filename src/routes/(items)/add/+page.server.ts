@@ -27,6 +27,10 @@ export const actions = {
         const tagcsv = (data.tagcsv as string) || '';
         const clientId = data.clientId as string;
 
+        const targetInventoryId = data.inventoryId ? Number(data.inventoryId) : locals.activeInventoryId;
+        const hasAccess = await db.userInventoryAccess.findUnique({ where: { inventoryId_userId: { inventoryId: targetInventoryId, userId: locals.user.id } } });
+        if (!hasAccess || hasAccess.role === 'VIEWER') return fail(403, { error: true, message: 'Forbidden. Viewer access only.' });
+
         /*
         if (title.length == 0) {
             console.warn("Missing required field(s): title");
@@ -49,20 +53,20 @@ export const actions = {
 
         const { photos, extractedAttributes, extractedTitle, extractedDescription, extractedCategoryName, physical_traits, prominent_text_or_graphic, distinctive_blemishes_or_wear, color_mix } = await savePhotos(data, uploadsDiskFolder, uploadsWebFolder, "file.", data.downloadImages as string);
     		const kvps: Prisma.KVPCreateWithoutItemInput[] = formKVPsToDBrows(data);
-        const ids = await getTagIds(tagcsv, locals.activeInventoryId);
+        const ids = await getTagIds(tagcsv, targetInventoryId);
 
         const safeTitle = (title.trim() || extractedTitle || "New Item").trim();
         const finalDesc = (description.trim() || extractedDescription || "").trim();
 
         if (extractedCategoryName && photos.length > 0) {
             const { getOrCreateCategory } = await import('$lib/server/categories');
-            const cat = await getOrCreateCategory(extractedCategoryName, locals.activeInventoryId);
+            const cat = await getOrCreateCategory(extractedCategoryName, targetInventoryId);
             const prodPhoto: any = photos.find((p: any) => p.type === 'product');
             if (prodPhoto) prodPhoto.categoryId = cat.id;
         }
 
         let timelineNoteId = null;
-        const vault = await db.inventory.findUnique({ where: { id: locals.activeInventoryId }, select: { archiveSingleScans: true } });
+        const vault = await db.inventory.findUnique({ where: { id: targetInventoryId }, select: { archiveSingleScans: true } });
         if (vault?.archiveSingleScans && photos.length > 0) {
             const prodPhoto = photos.find((p: any) => p.type === 'product') || photos[0];
             if (prodPhoto && prodPhoto.orgPath) {
@@ -70,7 +74,7 @@ export const actions = {
                     data: {
                         content: `Item captured: ${safeTitle}`,
                         category: 'archive',
-                        inventoryId: locals.activeInventoryId,
+                        inventoryId: targetInventoryId,
                         authorId: locals.user.id,
                         photos: { create: [{ type: 'product', orgPath: prodPhoto.orgPath, showOriginal: true }] }
                     }
@@ -87,7 +91,7 @@ export const actions = {
             clientId,
             reason: data.reason as string || "",
             amount: isNaN(parsedAmount) ? null : parsedAmount,
-            inventoryId: locals.activeInventoryId,
+            inventoryId: targetInventoryId,
             userId: locals.user.id,
             containers,
             tagIds: ids,

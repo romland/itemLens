@@ -326,7 +326,7 @@
         </table>
     </div>
     {:else}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 pb-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 pb-4 px-2 sm:px-0">
             {#each displayItems as item (item.clientId || item.id)}
                 {@const isNavigatingToThis = $navigating?.to?.url.pathname.startsWith(`/${item.id}/`)}
                 {@const mainPhoto = getFirstProductPhoto(item)}
@@ -350,13 +350,13 @@
 								<i class="bi bi-pencil-square text-xs"></i>
 							</a>
 						{/if}
-                        {#if cols.length > 0}
-                            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
-                        {/if}
                         {#if item.hasDuplicate}
                             <div class="absolute top-3 right-3 w-3 h-3 bg-error rounded-full border-2 border-base-100 shadow-sm z-10" title="Potential duplicate detected"></div>
                         {/if}
-                        <div class="relative w-full h-full flex items-center justify-center">
+                        <div class="relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden">
+                            {#if cols.length > 0}
+                                <div class="absolute inset-0 opacity-30 pointer-events-none" style="background: linear-gradient(135deg, {cols[0]}, {cols[1] || cols[0]});"></div>
+                            {/if}
                             {#if localBlob && !isLoaded}
                                 <img src={localBlob} class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-0 opacity-80 animate-pulse transition-opacity duration-700" alt="Preview"/>
                             {/if}
