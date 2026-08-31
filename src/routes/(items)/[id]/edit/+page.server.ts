@@ -9,7 +9,7 @@ import type { Item, Photo, Prisma } from '@prisma/client';
 import { formKVPsToDBrows, getTagIds } from "$lib/server/services";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
-import { savePhotos, getSafeFilename, processItemPhotosBackground } from '$lib/server/photouploads';
+import { savePhotos, processItemPhotosBackground } from '$lib/server/photouploads';
 import { processFormDocuments } from '$lib/server/services';
 import { logActivity } from '$lib/server/logger';
 import { tokenizeAndStem } from '$lib/server/nlp';

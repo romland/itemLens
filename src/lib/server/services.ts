@@ -125,8 +125,11 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                     finally { if (parser) await parser.destroy(); }
                 } else if (ext === 'epub') {
                     try {
-                        const { extractEpubText } = await import('$lib/server/epub');
+                        const { extractEpubText, processEpubCoverToItemPhoto } = await import('$lib/server/epub');
                         extractedText = await extractEpubText(`${diskFolder}/${filename}`);
+                        if (target.itemId) await processEpubCoverToItemPhoto(target.itemId, `${diskFolder}/${filename}`);
+                        const { generateDocumentThumbnail } = await import('$lib/server/thumbExtractor');
+                        generateDocumentThumbnail(docRecord.id, `${diskFolder}/${filename}`, 'epub').catch(console.error);
                     } catch (e) {
                         console.error("Failed to parse local EPUB:", e);
                     }
@@ -135,6 +138,10 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                 }
 
                 if (extractedText.trim()) {
+                    if (ext === 'pdf') {
+                        const { generateDocumentThumbnail } = await import('$lib/server/thumbExtractor');
+                        generateDocumentThumbnail(docRecord.id, `${diskFolder}/${filename}`, 'pdf').catch(console.error);
+                    }
                     const cappedText = extractedText.substring(0, 10000);
                     await db.document.update({ where: { id: docRecord.id }, data: { title: finalTitle, extracts: JSON.stringify([extractedText]) }});
                     if (cappedText.trim().length > 50) {

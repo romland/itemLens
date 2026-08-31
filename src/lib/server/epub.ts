@@ -85,3 +85,76 @@ export async function extractEpubText(filePath: string, maxWords = 100000): Prom
         return '';
     }
 }
+
+export async function extractEpubCoverBuffer(epubPath: string): Promise<Buffer | null> {
+    const JSZip = (await import('jszip')).default;
+    const { load } = await import('cheerio');
+    const fs = await import('fs');
+    const path = await import('path');
+
+    try {
+        const data = fs.readFileSync(epubPath);
+        const zip = await JSZip.loadAsync(data);
+
+        const containerXml = await zip.file('META-INF/container.xml')?.async('string');
+        if (!containerXml) return null;
+        const $container = load(containerXml, { xmlMode: true });
+        const opfPath = $container('rootfile').attr('full-path');
+        if (!opfPath) return null;
+
+        const opfXml = await zip.file(opfPath)?.async('string');
+        if (!opfXml) return null;
+        const $opf = load(opfXml, { xmlMode: true });
+
+        let coverHref: string | undefined;
+
+        const coverItem3 = $opf('manifest item[properties~="cover-image"]');
+        if (coverItem3.length > 0) {
+            coverHref = coverItem3.attr('href');
+        } else {
+            const metaCover = $opf('meta[name="cover"]').attr('content');
+            if (metaCover) {
+                const coverItem2 = $opf(`manifest item[id="${metaCover}"]`);
+                coverHref = coverItem2.attr('href');
+            }
+        }
+
+        if (!coverHref) return null;
+
+        const opfDir = path.dirname(opfPath);
+        let coverZipPath = opfDir === '.' ? coverHref : `${opfDir}/${coverHref}`;
+        coverZipPath = decodeURIComponent(coverZipPath);
+
+        const file = zip.file(coverZipPath);
+        if (!file) return null;
+
+        return await file.async('nodebuffer');
+    } catch (e) {
+        console.error("Error extracting EPUB cover:", e);
+        return null;
+    }
+}
+
+export async function processEpubCoverToItemPhoto(itemId: number, epubLocalPath: string) {
+    const sharp = (await import('sharp')).default;
+    const { db } = await import('$lib/server/database');
+    const { getSafeFilename } = await import('$lib/server/fsUtils');
+    const { uploadsDiskFolder, uploadsWebFolder } = await import('$lib/server/constants');
+    const { generatePhotoDerivatives } = await import('$lib/server/imageProcessor');
+    const { logActivity } = await import('$lib/server/logger');
+
+    const coverBuffer = await extractEpubCoverBuffer(epubLocalPath);
+    if (!coverBuffer) return;
+
+    const existingPrimary = await db.photo.findFirst({ where: { itemId, isPrimary: true } });
+
+    const filename = getSafeFilename(`item-${itemId}-epubcover`) + '.webp';
+    const diskPath = `${uploadsDiskFolder}/${filename}`;
+    const webPath = `${uploadsWebFolder}/${filename}`;
+
+    await sharp(coverBuffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 85 }).toFile(diskPath);
+
+    const photo = await db.photo.create({ data: { itemId, type: 'product', isPrimary: !existingPrimary, orgPath: webPath, showOriginal: true } });
+    await generatePhotoDerivatives(photo, webPath, true, undefined, null, false);
+    await logActivity(itemId, 'EPUB Cover', 'Automatically extracted cover art from EPUB', 'success');
+}

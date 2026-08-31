@@ -145,9 +145,13 @@
                 {#each note.documents as doc}
                     <div class="flex flex-col border border-base-200 bg-base-200/30 rounded-xl p-3">
                         <div class="flex items-start gap-3">
-                            <div class="bg-base-300 text-gray-500 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                                <i class="bi {doc.type === 'note' ? 'bi-file-text' : 'bi-link-45deg'} text-xl"></i>
-                            </div>
+                            {#if doc.thumbPath}
+                                <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-10 h-10 rounded-lg object-cover border border-base-300 shadow-sm bg-base-100 shrink-0" />
+                            {:else}
+                                <div class="bg-base-300 text-gray-500 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                                    <i class="bi {doc.type === 'note' ? 'bi-file-text' : 'bi-link-45deg'} text-xl"></i>
+                                </div>
+                            {/if}
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-bold text-sm text-base-content line-clamp-1 m-0">{doc.title || doc.source}</h4>
                                 <div class="flex items-center gap-3 mt-1.5">

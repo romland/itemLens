@@ -29,9 +29,13 @@
             
             <!-- Icon (Left Column) -->
             <div class="shrink-0 relative z-10 pointer-events-none mt-0.5 sm:mt-0">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-base-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <i class="{info.icon} {info.color} text-xl sm:text-2xl"></i>
-                </div>
+                {#if doc.thumbPath}
+                    <img src={doc.thumbPath} alt={doc.title} class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover border border-base-200 shadow-sm bg-base-100" />
+                {:else}
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-base-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                        <i class="{info.icon} {info.color} text-xl sm:text-2xl"></i>
+                    </div>
+                {/if}
             </div>
 
             <!-- Content (Middle Column) -->

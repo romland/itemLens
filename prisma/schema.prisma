@@ -283,6 +283,7 @@ model Document {
   path        String
   extracts    String   
   summary     String?  
+  thumbPath   String?  
 
   item        Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
   itemId      Int?

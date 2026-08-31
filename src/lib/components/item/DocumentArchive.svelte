@@ -24,8 +24,12 @@
         {@const cleanPath = (doc.path || '').toLowerCase().split('#')[0]}
         <div class="collapse collapse-arrow bg-base-200 border border-base-300 overflow-hidden">
             <input type="radio" name="my-accordion-2" checked={i===0} />
-            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden">
-                <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
+            <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden pr-12">
+                {#if doc.thumbPath}
+                    <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-8 h-8 rounded object-cover border border-base-300 shadow-sm bg-base-100 shrink-0" />
+                {:else}
+                    <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
+                {/if}
                 <span class="truncate flex-1 min-w-0" title={doc.title}>{doc.title}</span>
             </div>
             <div class="collapse-content prose prose-sm max-w-none break-words overflow-x-auto prose-pre:max-w-full">

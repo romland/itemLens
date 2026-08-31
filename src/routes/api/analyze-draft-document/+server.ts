@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import QRUrlDownloader from '$lib/server/urldownloader';
 import { summarizeWebpageExtract } from '$lib/server/llm';
-import { getSafeFilename } from '$lib/server/photouploads';
+import { getSafeFilename } from '$lib/server/fsUtils';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import fs from 'fs';
 
