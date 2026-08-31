@@ -624,7 +624,7 @@
                 <video 
                     src="{photo?.orgPath}" 
                     class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none" 
-                    controls playsinline preload="metadata"
+                    controls playsinline preload="metadata" autoplay
                     in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
                 ></video>
             </div>
