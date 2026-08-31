@@ -235,10 +235,14 @@ On the Jetson on my desktop:
 
 # Latest yt-dlp
 ```
-which yt-dlp
-    > make sure wget puts it here THAT_PATH
-sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O THAT_PATH/yt-dlp
-sudo chmod a+rx THAT_PATH/yt-dlp
+Do this
+  P="$(which yt-dlp)" && sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O "$P" && sudo chmod a+rx "$P"
+
+OR:
+  which yt-dlp
+      > make sure wget puts it here THAT_PATH
+  sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O THAT_PATH/yt-dlp
+  sudo chmod a+rx THAT_PATH/yt-dlp
 ```
 
 # TODO / notes
