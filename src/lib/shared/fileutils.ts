@@ -32,3 +32,11 @@ export function isHtml(path: string | null | undefined): boolean {
 export function isMedia(path: string | null | undefined): boolean {
     return isVideo(path) || isImage(path);
 }
+
+export function decodeHtmlEntities(str: string): string {
+    if (!str) return '';
+    const translate_re = /&(nbsp|amp|quot|lt|gt|#39);/g;
+    const translate: Record<string, string> = { "nbsp":" ", "amp" : "&", "quot": "\"", "lt"  : "<", "gt"  : ">", "#39": "'" };
+    return str.replace(translate_re, (match, entity) => translate[entity])
+              .replace(/&#(\d+);/gi, (match, numStr) => String.fromCharCode(parseInt(numStr, 10)));
+}

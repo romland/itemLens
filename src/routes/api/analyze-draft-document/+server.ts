@@ -5,6 +5,7 @@ import { summarizeWebpageExtract } from '$lib/server/llm';
 import { getSafeFilename } from '$lib/server/fsUtils';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import fs from 'fs';
+import { decodeHtmlEntities } from '$lib/shared/fileutils';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,7 +37,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                     parsed.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
                 }
 
-                title = parsed.title || payload; // Fallback to URL if title is blank
+                title = decodeHtmlEntities(parsed.title || payload); // Fallback to URL if title is blank
                 path = `${uploadsWebFolder}/${docFilename}.html`;
                 console.log(`[Background Task] Saving HTML to ${path}`);
 

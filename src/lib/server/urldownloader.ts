@@ -14,6 +14,7 @@ import { taskManager } from '$lib/server/taskManager';
 import { fetchVideoIfSupported } from './ytdlp';
 import { extractEpubText } from './epub';
 import { isPdf, isEpub } from '$lib/shared/fileutils';
+import { decodeHtmlEntities } from '$lib/shared/fileutils';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string, depth: number = 0)
 {
@@ -170,6 +171,8 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 				const h1Match = pageData.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
 				pageData.title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : (h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : "");
 			}
+
+        pageData.title = decodeHtmlEntities(pageData.title);
 			
 			let extractText = pageData.extracts?.[0] || "";
 			

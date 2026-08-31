@@ -26,7 +26,12 @@
             <input type="radio" name="my-accordion-2" checked={i===0} />
             <div class="collapse-title font-semibold bg-base-300 flex items-center gap-3 overflow-hidden pr-12">
                 {#if doc.thumbPath}
-                    <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-8 h-8 rounded object-cover border border-base-300 shadow-sm bg-base-100 shrink-0" />
+                    <div class="relative w-8 h-8 shrink-0">
+                        <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-full h-full rounded object-cover border border-base-300 shadow-sm bg-base-100" />
+                        <div class="absolute -bottom-1.5 -right-1.5 bg-base-100 {info.color} rounded px-0.5 py-[1px] flex items-center justify-center shadow-sm border border-base-200">
+                            <i class="bi {info.icon} text-[8px]"></i>
+                        </div>
+                    </div>
                 {:else}
                     <i class="bi {info.icon} {info.color} text-lg shrink-0"></i>
                 {/if}

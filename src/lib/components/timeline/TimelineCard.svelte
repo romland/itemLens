@@ -146,7 +146,12 @@
                     <div class="flex flex-col border border-base-200 bg-base-200/30 rounded-xl p-3">
                         <div class="flex items-start gap-3">
                             {#if doc.thumbPath}
-                                <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-10 h-10 rounded-lg object-cover border border-base-300 shadow-sm bg-base-100 shrink-0" />
+                                <div class="relative w-10 h-10 shrink-0">
+                                    <img src={doc.thumbPath} alt={doc.title || 'Document thumbnail'} class="w-full h-full rounded-lg object-cover border border-base-300 shadow-sm bg-base-100" />
+                                    <div class="absolute -bottom-1.5 -right-1.5 bg-base-100 text-gray-500 rounded-md px-1 py-0.5 flex items-center justify-center shadow-sm border border-base-200">
+                                        <i class="bi {doc.type === 'note' ? 'bi-file-text' : 'bi-link-45deg'} text-[10px]"></i>
+                                    </div>
+                                </div>
                             {:else}
                                 <div class="bg-base-300 text-gray-500 w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                                     <i class="bi {doc.type === 'note' ? 'bi-file-text' : 'bi-link-45deg'} text-xl"></i>
@@ -155,25 +160,26 @@
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-bold text-sm text-base-content line-clamp-1 m-0">{doc.title || doc.source}</h4>
                                 <div class="flex items-center gap-3 mt-1.5">
-                                    {#if doc.source && doc.source.startsWith('http')}
-                                        <TextButton href={doc.source} target="_blank" colorClass="text-primary" icon="bi-globe" title={doc.source} isMono={true}>
-                                            {doc.source.replace(/^https?:\/\//, '')}
-                                        </TextButton>
-                                    {/if}
                                     {#if doc.path}
 										{#if isEpub(doc.path)}
-                                            <TextButton colorClass="text-secondary" icon="bi-book" on:click={() => dispatch('openDoc', doc)}>Read Book</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-book" on:click={() => dispatch('openDoc', doc)}>Read Book</TextButton>
 										{:else if isMarkdown(doc.path) || doc.type === 'note'}
-											<TextButton colorClass="text-secondary" icon="bi-file-text" on:click={() => dispatch('openDoc', doc)}>Read Note</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-file-text" on:click={() => dispatch('openDoc', doc)}>Read Note</TextButton>
 										{:else if isVideo(doc.path)}
-                                            <TextButton colorClass="text-info" icon="bi-play-circle" on:click={() => dispatch('openImage', { orgPath: doc.path, type: 'video' })}>Play Video</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-play-circle" on:click={() => dispatch('openImage', { orgPath: doc.path, type: 'video' })}>Play Video</TextButton>
 										{:else if isImage(doc.path)}
-											<TextButton colorClass="text-success" icon="bi-image" on:click={() => dispatch('openImage', { orgPath: doc.path, showOriginal: true })}>View Image</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-image" on:click={() => dispatch('openImage', { orgPath: doc.path, showOriginal: true })}>View Image</TextButton>
 										{:else if isPdf(doc.path) || isHtml(doc.path)}
-											<TextButton colorClass="text-secondary" icon="bi-file-earmark" on:click={() => dispatch('openDoc', doc)}>View Document</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-file-earmark" on:click={() => dispatch('openDoc', doc)}>View Document</TextButton>
 										{:else}
-                                            <TextButton colorClass="text-secondary" icon="bi-hdd-network" on:click={() => dispatch('openDoc', doc)}>Local Cache</TextButton>
+                                            <TextButton colorClass="text-primary" icon="bi-hdd-network" on:click={() => dispatch('openDoc', doc)}>Local Cache</TextButton>
 										{/if}
+                                    {/if}
+                                    
+                                    {#if doc.source && doc.source.startsWith('http')}
+                                        <TextButton href={doc.source} target="_blank" colorClass="text-gray-500 hover:text-base-content" icon="bi-globe" title={doc.source} isMono={true}>
+                                            {doc.source.replace(/^https?:\/\//, '')}
+                                        </TextButton>
                                     {/if}
                                 </div>
                             </div>

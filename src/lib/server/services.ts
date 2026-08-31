@@ -109,8 +109,9 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
             ioQueue.add(async () => {
                 let extractedText = "";
                 let finalTitle = originalTitle;
+                const { isPdf, isEpub } = await import('$lib/shared/fileutils');
 
-                if (ext === 'pdf') {
+                if (isPdf(filename)) {
                     let parser;
                     try {
                         const { PDFParse } = await import('pdf-parse');
@@ -123,7 +124,7 @@ export async function processFormDocuments(formData: FormData, target: { itemId?
                         if (metaTitle && metaTitle.toLowerCase() !== 'untitled') finalTitle = metaTitle;
                     } catch (e) { console.error("Failed to parse local PDF:", e); } 
                     finally { if (parser) await parser.destroy(); }
-                } else if (ext === 'epub') {
+                } else if (isEpub(filename)) {
                     try {
                         const { extractEpubText, processEpubCoverToItemPhoto } = await import('$lib/server/epub');
                         extractedText = await extractEpubText(`${diskFolder}/${filename}`);

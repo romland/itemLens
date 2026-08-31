@@ -494,6 +494,18 @@
             </div>
             
             <div class="flex items-center gap-1">
+            {#if docType === 'iframe'}
+                <a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title="Open Natively">
+                    <i class="bi bi-box-arrow-up-right text-lg"></i>
+                </a>
+            {/if}
+
+            {#if docType === 'iframe'}
+                <a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title="Open Natively">
+                    <i class="bi bi-box-arrow-up-right text-lg"></i>
+                </a>
+            {/if}
+
             {#if docType === 'iframe' || docType === 'markdown'}
                 <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
