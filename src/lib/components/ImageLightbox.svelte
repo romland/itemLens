@@ -36,6 +36,8 @@
     let pinchFocalY = 0;
 	let dragHasMoved = false;
 
+	let isVideoLoading = true;
+
 	// Momentum (Gliding) Trackers
     let swipeOffsetY = 0;
 	let lastDragX = 0;
@@ -54,6 +56,7 @@
         showOriginal = p.showOriginal || false;
         resetZoom(true);
 		showMenu = false;
+		isVideoLoading = true;
         isOpen = true;
 		fetchDetails();
     }
@@ -621,11 +624,21 @@
             <!-- Pure Video Player (Bypasses gesture canvas to prevent Safari iOS freezing bugs) -->
             <div class="w-full h-full flex items-center justify-center p-4 z-10" on:click|self={handleBackgroundClick}>
                 <!-- svelte-ignore a11y-media-has-caption -->
+				{#if isVideoLoading}
+					<div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+						<span class="loading loading-spinner loading-lg text-primary drop-shadow-md"></span>
+					</div>
+				{/if}
                 <video 
                     src="{photo?.orgPath}" 
-                    class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none" 
+					class="max-w-full max-h-full rounded-xl shadow-2xl bg-black outline-none {isVideoLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300" 
                     controls playsinline preload="metadata" autoplay
                     in:scale={{ start: 0.9, duration: 300, easing: cubicOut }}
+					on:waiting={() => isVideoLoading = true}
+					on:playing={() => isVideoLoading = false}
+					on:canplay={() => isVideoLoading = false}
+					on:loadeddata={() => isVideoLoading = false}
+					on:error={() => isVideoLoading = false}
                 ></video>
             </div>
         {:else}
