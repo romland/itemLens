@@ -8,7 +8,7 @@
     import { page } from '$app/stores';
 
     import pageTitle from '$lib/stores';
-    pageTitle.set(":)");
+    pageTitle.set("😀");
 </script>
 
 {#if data.unassignedCount > 0}
