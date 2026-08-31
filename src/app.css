@@ -5,6 +5,9 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+    scrollbar-gutter: stable;
+}
 
 /* Corporate Default */
 body {
