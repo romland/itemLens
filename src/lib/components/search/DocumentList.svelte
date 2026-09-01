@@ -2,16 +2,19 @@
     import { createEventDispatcher } from 'svelte';
     import ItemMiniCard from "$lib/components/ItemMiniCard.svelte";
     import { getFileInfo } from "$lib/client/utils";
+    import { page } from "$app/stores";
+    import { isPdf, isHtml, isEpub, isMarkdown, isImage } from "$lib/shared/fileutils";
     export let documents: any[] = [];
 
     const dispatch = createEventDispatcher();
 
-    function handleDocumentClick(e: MouseEvent, doc: any) {
+    function handleDocumentClick(e: MouseEvent, doc: any, contextMatch: string, exactWord: string) {
         const path = (doc.path || doc.source || '').toLowerCase().split('#')[0];
+        const enhancedDoc = { ...doc, _searchQuery: contextMatch, _rawQuery: exactWord };
         
         if (isPdf(path) || isHtml(path) || isEpub(path) || isMarkdown(path) || path.endsWith('.csv')) {
             e.preventDefault();
-            dispatch('openDoc', doc);
+            dispatch('openDoc', enhancedDoc);
         } else if (isImage(path)) {
             e.preventDefault();
             dispatch('openImage', { orgPath: doc.path || doc.source, showOriginal: true });
@@ -22,10 +25,21 @@
 <div class="flex flex-col gap-2 pb-32 animate-fade-in px-2 sm:px-0">
     {#each documents as doc}
         {@const info = getFileInfo(doc)}
+        {@const rawPath = doc.path || doc.source || ''}
+        {@const rawQuery = $page.url.searchParams.get('q') || $page.url.searchParams.get('doc') || ''}
+        <!-- Extract the exact word for EPUBs, and the broader context sentence for Web/PDFs -->
+        {@const exactWord = doc.excerpt?.match(/<mark[^>]*>(.*?)<\/mark>/i)?.[1] || rawQuery}
+        {@const contextMatch = doc.excerpt ? doc.excerpt.replace(/<[^>]+>/g, '').split('...').map((s) => s.trim()).filter((s) => s.length > 5).sort((a, b) => b.length - a.length)[0] || rawQuery : rawQuery}
+        {@const safeQuery = encodeURIComponent(contextMatch.replace(/"/g, '').trim())}
+        {@const safeExact = encodeURIComponent(exactWord.replace(/"/g, '').trim())}
+        {@const directHref = safeQuery && !rawPath.includes('#') ? (
+            isPdf(rawPath) ? `${rawPath}#search=${safeQuery}&exact=${safeExact}` :
+            (isHtml(rawPath) || rawPath.startsWith('http') || rawPath.endsWith('.csv')) ? `${rawPath}#:~:text=${safeQuery}` :
+            rawPath
+        ) : rawPath}
         <div class="flex flex-row p-3 sm:p-5 hover:bg-base-200/40 rounded-2xl sm:rounded-3xl transition-all border border-base-200 shadow-sm bg-base-100 group relative gap-3 sm:gap-6 items-start sm:items-center">
-            
             <!-- Invisible hit-target -->
-            <a href="{doc.path || doc.source}" target="_blank" rel="noopener noreferrer" class="absolute inset-0 z-0 rounded-2xl sm:rounded-3xl outline-none" aria-label="View Document" on:click={(e) => handleDocumentClick(e, doc)}></a>
+            <a href="{directHref}" target="_blank" rel="noopener noreferrer" class="absolute inset-0 z-0 rounded-2xl sm:rounded-3xl outline-none" aria-label="View Document" on:click={(e) => handleDocumentClick(e, doc, contextMatch, exactWord)}></a>
             
             <!-- Icon (Left Column) -->
             <div class="shrink-0 relative z-10 pointer-events-none mt-0.5 sm:mt-0">

@@ -4,6 +4,7 @@
     export let pdfDoc: any;
     export let pageNum: number;
     export let invert: boolean = false;
+    export let isTarget: boolean = false;
 
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
@@ -59,7 +60,7 @@
     }
 </script>
 
-<div bind:this={container} class="w-full bg-white shadow-md rounded-lg overflow-hidden relative min-h-[400px] flex items-center justify-center" style={invert ? "filter: invert(1) hue-rotate(180deg);" : ""}>
+<div id="pdf-page-{pageNum}" bind:this={container} class="w-full bg-white shadow-md rounded-lg overflow-hidden relative min-h-[400px] flex items-center justify-center transition-all duration-1000 {isTarget ? 'ring-4 ring-primary ring-offset-4 ring-offset-base-300' : ''}" style={invert ? "filter: invert(1) hue-rotate(180deg);" : ""}>
     {#if !isRendered}
         <span class="loading loading-spinner text-base-content/20 absolute"></span>
     {/if}

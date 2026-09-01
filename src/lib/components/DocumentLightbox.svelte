@@ -50,6 +50,8 @@
 	let isLargeDocument = false;
 	let docSizeStr = "";
 
+    let activeDocUrl = "";
+    let activeSearchQuery = "";
     let isMaximized = false;
 
     export async function open(documentRecord: any) {
@@ -76,6 +78,21 @@
         let path = rawPath.toLowerCase();
         let cfiToJump = null;
         
+        activeSearchQuery = documentRecord._searchQuery || $page.url.searchParams.get('q') || $page.url.searchParams.get('doc') || '';
+        const epubSearchQuery = documentRecord._rawQuery || activeSearchQuery;
+        activeDocUrl = rawPath;
+
+        if (activeSearchQuery && !activeDocUrl.includes('#')) {
+            const safeQuery = encodeURIComponent(activeSearchQuery.replace(/"/g, '').trim());
+            const safeExact = encodeURIComponent(epubSearchQuery.replace(/"/g, '').trim());
+            if (isPdf(path)) {
+                activeDocUrl = `${activeDocUrl}#search=${safeQuery}&exact=${safeExact}`;
+            } else if (isHtml(path) || path.endsWith('.csv') || rawPath.startsWith('http')) {
+                // Scroll-to-text fragment (Chromium natively supports this)
+                activeDocUrl = `${activeDocUrl}#:~:text=${safeQuery}`;
+            }
+        }
+
         // Extract CFI anchor if we jumped here from a Search Result highlight
         if (rawPath.includes('#epubcfi(')) {
             const parts = rawPath.split('#');
@@ -93,7 +110,19 @@
             try {
                 const res = await fetch(doc.path || doc.source);
                 const text = await res.text();
-                markdownContentHtml = await marked.parse(text, { breaks: true, gfm: true });
+                const rawHtml = await marked.parse(text, { breaks: true, gfm: true });
+                const q = (doc._rawQuery || activeSearchQuery || '').replace(/"/g, '').trim();
+                if (q) {
+                    // Highlight text safely outside of HTML attributes
+                    const regex = new RegExp(`(?![^<]*>)(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    markdownContentHtml = rawHtml.replace(regex, '<mark class="bg-primary/30 text-primary rounded-sm px-1">$1</mark>');
+                    setTimeout(() => {
+                        const mark = document.querySelector('.prose mark');
+                        if (mark) mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 200);
+                } else {
+                    markdownContentHtml = rawHtml;
+                }
             } catch (e) {
                 markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
             }
@@ -200,8 +229,26 @@
             });
             
             // === RESTORE READING POSITION ===
-			const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
-            if (cfiToJump) {
+            const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
+
+                    if (epubSearchQuery) {
+                        const q = epubSearchQuery.replace(/"/g, '').trim();
+                book.ready.then(async () => {
+                    let foundCfi = null;
+                    for (const item of book.spine.spineItems) {
+                        await item.load(book.load.bind(book));
+                        const results = item.find(q);
+                        item.unload(); // Prevent memory leaks in large books
+                        if (results && results.length > 0) { foundCfi = results[0].cfi; break; }
+                    }
+                    if (foundCfi) {
+                        await rendition.display(foundCfi);
+                        rendition.annotations.highlight(foundCfi, {}, (e: any) => {});
+                    } else {
+                        await rendition.display(cfiToJump || savedCfi || undefined);
+                    }
+                });
+            } else if (cfiToJump) {
                 await rendition.display(cfiToJump);
             } else if (savedCfi) {
                 await rendition.display(savedCfi);
@@ -294,6 +341,13 @@
                             body, html { overflow: auto !important; position: static !important; }
                         `;
                         iframeDoc.head.appendChild(style);
+                    }
+
+                    // Force iframe to scroll to search query, bypassing URL fragment security blocks
+                    if (activeSearchQuery && isHtml(docPath)) {
+                        const script = iframeDoc.createElement('script');
+                        script.innerHTML = `setTimeout(() => { window.find("${activeSearchQuery.replace(/"/g, '').trim()}"); }, 200);`;
+                        iframeDoc.body.appendChild(script);
                     }
                 }
             } catch (err) {
@@ -538,7 +592,7 @@
             
             <div class="flex items-center gap-1">
 			{#if docType === 'iframe' || docType === 'pdf-inline'}
-				<a href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer" download={doc?.path?.toLowerCase().endsWith('.pdf') ? doc.title || 'document.pdf' : undefined} class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title={doc?.path?.toLowerCase().endsWith('.pdf') ? "Download" : "Open Natively"}>
+				<a href={activeDocUrl} target="_blank" rel="noopener noreferrer" download={doc?.path?.toLowerCase().endsWith('.pdf') ? doc.title || 'document.pdf' : undefined} class="btn btn-circle btn-sm btn-ghost bg-base-100/50 hover:bg-base-100 text-base-content shadow-sm mr-1" title={doc?.path?.toLowerCase().endsWith('.pdf') ? "Download" : "Open Natively"}>
                     <i class="bi bi-box-arrow-up-right text-lg"></i>
                 </a>
             {/if}
@@ -589,7 +643,7 @@
 							<a class="btn btn-primary shadow-lg rounded-xl flex items-center gap-2" href={doc?.path || doc?.source} download>
 								<i class="bi bi-download text-lg"></i> Download
 							</a>
-							<a class="btn btn-outline border-base-300 bg-base-100 shadow-sm rounded-xl flex items-center gap-2" href={doc?.path || doc?.source} target="_blank" rel="noopener noreferrer">
+							<a class="btn btn-outline border-base-300 bg-base-100 shadow-sm rounded-xl flex items-center gap-2" href={activeDocUrl} target="_blank" rel="noopener noreferrer">
 								<i class="bi bi-box-arrow-up-right text-lg"></i> Open
 							</a>
 						</div>
@@ -611,7 +665,7 @@
                 {:else if docType === 'iframe'}
                     <iframe 
                         bind:this={iframeRef}
-                        src={doc.path || doc.source} 
+                        src={activeDocUrl} 
                         class="w-full h-full border-none transition-all duration-300 relative z-10"
                         style="background-color: white; filter: {invertIframe ? 'invert(1) hue-rotate(180deg)' : 'none'};"
                         on:load={handleIframeLoad}
@@ -619,7 +673,7 @@
                     ></iframe>
 				{:else if docType === 'pdf-inline'}
 					<div class="w-full h-full relative z-10">
-						<PdfViewer url={doc.path || doc.source} invert={invertIframe} />
+						<PdfViewer url={activeDocUrl} invert={invertIframe} />
 					</div>
                 {:else if docType === 'markdown'}
                     <div class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
