@@ -15,6 +15,7 @@
     import FormInput from "$lib/components/FormInput.svelte";
     import FormSelect from "$lib/components/FormSelect.svelte";
     import Badge from "$lib/components/Badge.svelte";
+    import DropdownSelect from "$lib/components/DropdownSelect.svelte";
 
     export let data: PageServerData;
 
@@ -375,40 +376,61 @@
 		{#if selectedIds.length > 0}
             <div class="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 w-full p-4 bg-base-100/95 backdrop-blur-xl border-t border-base-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 animate-fade-in">
 				<div class="max-w-2xl mx-auto flex flex-col sm:flex-row items-end gap-3">
-					<select name="bulkAction" bind:value={bulkAction} class="select select-bordered w-full sm:w-auto shrink-0 bg-base-200">
-						<option value="addTag">Add Tag</option>
-						<option value="removeTag">Remove Tag</option>
-						<option value="addContainer">Add to Container</option>
-						<option value="removeContainer">Remove Container</option>
-						<option value="setCategory">Set Category</option>
-                        <option value="flagDuplicate">Flag as Duplicate</option>
-                        <option value="dismissDuplicate">Dismiss Duplicate</option>
-                        <option value="clearDuplicate">Clear Duplicate Status</option>
-                        <option value="deleteItems">Delete Items</option>
-                        <option value="exportCSV">Export to CSV</option>
-					</select>
+					<DropdownSelect 
+						name="bulkAction" 
+						bind:value={bulkAction} 
+						options={[
+							{value: 'addTag', label: 'Add Tag'},
+							{value: 'removeTag', label: 'Remove Tag'},
+							{value: 'addContainer', label: 'Add to Container'},
+							{value: 'removeContainer', label: 'Remove Container'},
+							{value: 'setCategory', label: 'Set Category'},
+							{value: 'flagDuplicate', label: 'Flag as Duplicate'},
+							{value: 'dismissDuplicate', label: 'Dismiss Duplicate'},
+							{value: 'clearDuplicate', label: 'Clear Duplicate Status'},
+							{value: 'deleteItems', label: 'Delete Items'},
+							{value: 'exportCSV', label: 'Export to CSV'}
+						]}
+						buttonClass="btn-md btn-ghost bg-base-200 hover:bg-base-300 font-semibold rounded-xl gap-2 shadow-sm border border-base-300 w-full sm:w-auto shrink-0 justify-between"
+						menuClass="w-full sm:w-56 bg-base-100/95 backdrop-blur-xl rounded-xl border border-base-200 mb-2 gap-1 max-h-[60vh] overflow-y-auto flex-nowrap shadow-2xl z-[100]"
+						dropdownClass="dropdown-top w-full sm:w-auto shrink-0"
+					/>
                     {#if bulkAction === 'setCategory' && data.categories}
-                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200 capitalize">
-                            <option value="" disabled selected>Select category...</option>
-                            {#each data.categories as c} <option value={c.name}>{c.name}</option> {/each}
-                        </select>
+						<DropdownSelect 
+							name="bulkValue" 
+							bind:value={bulkValue} 
+							options={data.categories.map(c => ({value: c.name, label: c.name}))}
+							labelPrefix="Category: "
+							buttonClass="btn-md btn-ghost bg-base-200 hover:bg-base-300 font-semibold rounded-xl gap-2 shadow-sm border border-base-300 w-full flex-1 justify-between capitalize"
+							menuClass="w-full bg-base-100/95 backdrop-blur-xl rounded-xl border border-base-200 mb-2 gap-1 max-h-[60vh] overflow-y-auto flex-nowrap shadow-2xl z-[100] capitalize"
+							dropdownClass="dropdown-top w-full flex-1"
+						/>
                     {:else if (bulkAction === 'addContainer' || bulkAction === 'removeContainer') && data.containers}
-                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200">
-                            <option value="" disabled selected>Select container...</option>
-                            {#each data.containers as c} <option value={c.name}>{c.name}</option> {/each}
-                        </select>
+						<DropdownSelect 
+							name="bulkValue" 
+							bind:value={bulkValue} 
+							options={data.containers.map(c => ({value: c.name, label: c.name}))}
+							labelPrefix="Container: "
+							buttonClass="btn-md btn-ghost bg-base-200 hover:bg-base-300 font-semibold rounded-xl gap-2 shadow-sm border border-base-300 w-full flex-1 justify-between"
+							menuClass="w-full bg-base-100/95 backdrop-blur-xl rounded-xl border border-base-200 mb-2 gap-1 max-h-[60vh] overflow-y-auto flex-nowrap shadow-2xl z-[100]"
+							dropdownClass="dropdown-top w-full flex-1"
+						/>
                     {:else if bulkAction === 'removeTag'}
-                        <select name="bulkValue" bind:value={bulkValue} required class="select select-bordered w-full flex-1 bg-base-200">
-                            <option value="" disabled selected>Select tag...</option>
-                            {#each data.tags as t} <option value={t.name}>{t.name}</option> {/each}
-                        </select>
+						<DropdownSelect 
+							name="bulkValue" 
+							bind:value={bulkValue} 
+							options={data.tags.map(t => ({value: t.name, label: t.name}))}
+							labelPrefix="Tag: "
+							buttonClass="btn-md btn-ghost bg-base-200 hover:bg-base-300 font-semibold rounded-xl gap-2 shadow-sm border border-base-300 w-full flex-1 justify-between"
+							menuClass="w-full bg-base-100/95 backdrop-blur-xl rounded-xl border border-base-200 mb-2 gap-1 max-h-[60vh] overflow-y-auto flex-nowrap shadow-2xl z-[100]"
+							dropdownClass="dropdown-top w-full flex-1"
+						/>
                     {:else if bulkAction === 'addTag'}
-                        <input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" />
+                        <input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered input-md rounded-xl w-full flex-1 bg-base-200" autocomplete="off" />
                     {:else}
                         <input type="hidden" name="bulkValue" value="action_only" />
-                        <!--input type="text" name="bulkValue" bind:value={bulkValue} placeholder="Value..." required class="input input-bordered w-full flex-1 bg-base-200" autocomplete="off" /-->
                     {/if}
-                    <button type="submit" class="btn {bulkAction === 'deleteItems' ? 'btn-error' : (bulkAction === 'exportCSV' ? 'btn-secondary' : 'btn-primary')} w-full sm:w-auto shadow-md shrink-0" 
+                    <button type="submit" class="btn btn-md {bulkAction === 'deleteItems' ? 'btn-error' : (bulkAction === 'exportCSV' ? 'btn-secondary' : 'btn-primary')} w-full sm:w-auto shadow-md shrink-0 rounded-xl" 
                             disabled={isSubmitting || (!bulkValue.trim() && !['deleteItems', 'flagDuplicate', 'dismissDuplicate', 'clearDuplicate', 'exportCSV'].includes(bulkAction))}
                             on:click={(e) => {
                                 if (bulkAction === 'deleteItems') {

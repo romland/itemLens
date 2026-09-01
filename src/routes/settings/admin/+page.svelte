@@ -146,6 +146,80 @@
             {/if}
         </div>
 
+        <div class="bg-base-200/50 rounded-xl p-5 border border-base-200 mb-6">
+            <div class="flex items-center gap-2 mb-4">
+                <h4 class="font-bold text-sm uppercase tracking-wider text-gray-500 m-0">System Diagnostics</h4>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Dependencies -->
+                <div>
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Host Dependencies</h5>
+                    <ul class="flex flex-col gap-3">
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.ffmpeg ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-error'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">FFmpeg</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Needed for extracting frames from video files. {$page.data.deps.ffmpeg ? '' : 'Install via `sudo apt-get install ffmpeg`'}</div>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.pdftoppm ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-error'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">Poppler (pdftoppm)</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Needed for generating PDF thumbnails. {$page.data.deps.pdftoppm ? '' : 'Install via `sudo apt-get install poppler-utils`'}</div>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.ytdlp ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-warning'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">yt-dlp</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Optional. Needed to download videos from links (YouTube, Twitter, etc). {$page.data.deps.ytdlp ? '' : 'Install via pip or brew.'}</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Docker Containers -->
+                <div>
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Microservices (Docker)</h5>
+                    <ul class="flex flex-col gap-3">
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.rembg ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-warning'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">RemBG (Background Removal)</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Optional. Runs on port 7000. {$page.data.deps.rembg ? '' : 'Start container for automatic background removal.'}</div>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.paddleocr ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-warning'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">PaddleOCR</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Optional. Runs on port 8000. {$page.data.deps.paddleocr ? '' : 'Start container for local text extraction.'}</div>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="bi {$page.data.deps.singlefile ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-warning'} text-lg mt-0.5"></i>
+                            <div>
+                                <div class="font-bold text-sm leading-tight">SingleFile (Web Scraper)</div>
+                                <div class="text-xs text-gray-500 mt-0.5">Optional. Runs on port 8001. {$page.data.deps.singlefile ? '' : 'Start container to archive full webpages from links.'}</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t border-base-200/50">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="bi bi-key text-primary"></i>
+                    <h5 class="font-bold text-sm">API Keys Configuration</h5>
+                </div>
+                <div class="text-xs text-gray-500">
+                    To use AI features, ensure you have API keys (Gemini, Groq, etc) configured in your <code>.env</code> file. Check the setup guide to get free keys from Google AI Studio and Groq Console.
+                </div>
+            </div>
+        </div>
+
         <div class="flex flex-col gap-3">
             <ActionCard
                 title="System Activity Log"
