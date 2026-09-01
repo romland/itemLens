@@ -4,6 +4,7 @@
 
     export let url: string;
     export let invert: boolean = false;
+    export let saveKey: string = '';
 
     let pdfjsLib: any;
     let pdfDoc: any = null;
@@ -15,6 +16,9 @@
     let searchQuery = "";
     let exactQuery = "";
     let targetPage = -1;
+
+    let observer: IntersectionObserver;
+    let visiblePages = new Map();
 
     // Extract the search query from the URL fragment
     $: {
@@ -30,6 +34,12 @@
                 exactQuery = searchQuery;
             }
             console.log(`[DEBUG-PDF] Context: "${searchQuery}" | Exact: "${exactQuery}"`);
+        } else if (url.includes('#page=')) {
+            const parts = url.split('#page=');
+            cleanUrl = parts[0];
+            targetPage = parseInt(parts[1], 10) || -1;
+            searchQuery = "";
+            exactQuery = "";
         } else {
             cleanUrl = url;
             searchQuery = "";
@@ -45,8 +55,26 @@
         script.onload = initPdf;
         document.head.appendChild(script);
 
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                visiblePages.set(entry.target.id, entry.intersectionRatio);
+            });
+            let bestPage = -1;
+            let bestRatio = 0;
+            visiblePages.forEach((ratio, id) => {
+                if (ratio > bestRatio) {
+                    bestRatio = ratio;
+                    bestPage = parseInt(id.replace('pdf-page-', ''), 10);
+                }
+            });
+            if (bestPage !== -1 && saveKey) {
+                localStorage.setItem(saveKey, bestPage.toString());
+            }
+        }, { threshold: [0.1, 0.3, 0.5, 0.8] });
+
         return () => {
             if (pdfDoc) pdfDoc.destroy();
+            observer?.disconnect();
         };
     });
 
@@ -62,7 +90,16 @@
             if (searchQuery) {
                 console.log(`[DEBUG-PDF] PDF Loaded (${numPages} pages). Starting search for: "${searchQuery}"`);
                 findAndScrollToQuery();
+            } else if (targetPage > 0) {
+                await tick();
+                setTimeout(() => {
+                    const el = document.getElementById(`pdf-page-${targetPage}`);
+                    if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }, 100);
             }
+
+            await tick();
+            document.querySelectorAll('[id^="pdf-page-"]').forEach(el => observer.observe(el));
         } catch (e: any) {
             console.error("PDF Load Error", e);
             errorMsg = e.message || "Failed to load PDF.";

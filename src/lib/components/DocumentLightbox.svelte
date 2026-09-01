@@ -78,6 +78,9 @@
         let path = rawPath.toLowerCase();
         let cfiToJump = null;
         
+        // Hydrate document preferences early so all viewers can access them
+        const userPrefs = JSON.parse($page.data.user?.preferences || '{}');
+
         activeSearchQuery = documentRecord._searchQuery || $page.url.searchParams.get('q') || $page.url.searchParams.get('doc') || '';
         const epubSearchQuery = documentRecord._rawQuery || activeSearchQuery;
         activeDocUrl = rawPath;
@@ -90,6 +93,11 @@
             } else if (isHtml(path) || path.endsWith('.csv') || rawPath.startsWith('http')) {
                 // Scroll-to-text fragment (Chromium natively supports this)
                 activeDocUrl = `${activeDocUrl}#:~:text=${safeQuery}`;
+            }
+        } else if (isPdf(path) && !activeDocUrl.includes('#')) {
+            const savedPdfPage = localStorage.getItem(`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
+            if (savedPdfPage) {
+                activeDocUrl = `${activeDocUrl}#page=${savedPdfPage}`;
             }
         }
 
@@ -152,8 +160,6 @@
             return;
         }
         
-        // Hydrate document dark mode preference
-        const userPrefs = JSON.parse($page.data.user?.preferences || '{}');
         if (docType === 'iframe') invertIframe = userPrefs.documentDarkMode === true;
         
         // Check for specific document override
@@ -381,15 +387,18 @@
     }
 
     export function close() {
-		// Sync final EPUB reading position to the server before closing
-		if (docType === 'epub' && doc) {
+		// Sync final EPUB and PDF reading positions to the server before closing
+		if ((docType === 'epub' || docType === 'pdf-inline') && doc) {
 			try {
-				const cfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`);
-				if (cfi) {
+                const isPdf = docType === 'pdf-inline';
+                const key = `itemlens_${isPdf ? 'pdf_page' : 'epub_cfi'}_${$page.data.user?.id}_${doc.id || doc.path}`;
+                const val = localStorage.getItem(key);
+				if (val) {
 					const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
-					if (!currentPrefs.epubLocations) currentPrefs.epubLocations = {};
-					if (currentPrefs.epubLocations[doc.id || doc.path] !== cfi) {
-						currentPrefs.epubLocations[doc.id || doc.path] = cfi;
+                    const prefsKey = isPdf ? 'pdfLocations' : 'epubLocations';
+					if (!currentPrefs[prefsKey]) currentPrefs[prefsKey] = {};
+					if (currentPrefs[prefsKey][doc.id || doc.path] !== val) {
+						currentPrefs[prefsKey][doc.id || doc.path] = val;
 						const fd = new FormData();
 						fd.append('preferences', JSON.stringify(currentPrefs));
 						fetch('/profile?/updatePreferences', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true' }});
@@ -673,7 +682,7 @@
                     ></iframe>
 				{:else if docType === 'pdf-inline'}
 					<div class="w-full h-full relative z-10">
-						<PdfViewer url={activeDocUrl} invert={invertIframe} />
+						<PdfViewer url={activeDocUrl} invert={invertIframe} saveKey={`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`} />
 					</div>
                 {:else if docType === 'markdown'}
                     <div class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
