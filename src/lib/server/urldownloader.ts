@@ -56,8 +56,10 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 			
 			// Transform GitHub repo URLs to ZIP downloads
 			const githubMatch = line.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/([^\/]+)\/?$/i);
+            let customTitle: string | null = null;
 			if (githubMatch) {
 				line = `https://github.com/${githubMatch[1]}/${githubMatch[2]}/archive/refs/heads/main.zip`;
+                customTitle = `GitHub Repo: ${githubMatch[1]}/${githubMatch[2]} (${new Date().toISOString().split('T')[0]})`;
 			}
 
 			// Enforce strict SSRF protection before any fetch
@@ -125,7 +127,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 			// Divert to ZIP handler if needed
 			if (line.toLowerCase().endsWith('.zip')) {
 				try {
-					await handleGenericFileDownload(line, target, document?.id, diskFolder, webFolder, 'zip');
+					await handleGenericFileDownload(line, target, document?.id, diskFolder, webFolder, 'zip', customTitle);
 					await logActivity(target.itemId, 'File Download', `Successfully downloaded ZIP: ${line}`, 'success');
 				} catch (e) {
 					console.error(`Error downloading ZIP ${line}:`, e);
@@ -454,7 +456,7 @@ async function handleEpubDownload(url: string, target: { itemId?: number, timeli
 	});
 }
 
-async function handleGenericFileDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string, ext: string) {
+async function handleGenericFileDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string, ext: string, customTitle: string | null = null) {
 	return ioQueue.add(async () => {
 		console.log(`Downloading generic file: ${url}`);
 		const res = await fetch(url);
@@ -464,8 +466,10 @@ async function handleGenericFileDownload(url: string, target: { itemId?: number,
 		
 		fs.writeFileSync(`${diskFolder}/${docFilename}.${ext}`, buffer);
 		
-		let title = url.split('/').pop()?.split('?')[0] || `File Document`;
-		try { title = decodeURIComponent(title).replace(/[-_]/g, ' ').trim(); } catch(e) {}
+		let title = customTitle || url.split('/').pop()?.split('?')[0] || `File Document`;
+		if (!customTitle) {
+			try { title = decodeURIComponent(title).replace(/[-_]/g, ' ').trim(); } catch(e) {}
+		}
 		
 		await db.document.update({
 			where: { id: Number(documentId) },
