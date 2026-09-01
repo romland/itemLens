@@ -46,6 +46,9 @@
     let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
     let isSavingHighlight = false;
 
+    let userPrefs: any = {};
+    let markdownContainerRef: HTMLDivElement;
+    let mdScrollTimeout: any;
 	let isMobile = false;
 	let isLargeDocument = false;
 	let docSizeStr = "";
@@ -79,7 +82,7 @@
         let cfiToJump = null;
         
         // Hydrate document preferences early so all viewers can access them
-        const userPrefs = JSON.parse($page.data.user?.preferences || '{}');
+        userPrefs = JSON.parse($page.data.user?.preferences || '{}');
 
         activeSearchQuery = documentRecord._searchQuery || $page.url.searchParams.get('q') || $page.url.searchParams.get('doc') || '';
         const epubSearchQuery = documentRecord._rawQuery || activeSearchQuery;
@@ -130,6 +133,13 @@
                     }, 200);
                 } else {
                     markdownContentHtml = rawHtml;
+                }
+
+                if (!activeSearchQuery) {
+                    setTimeout(() => {
+                        const savedScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+                        if (savedScroll && markdownContainerRef) markdownContainerRef.scrollTop = parseInt(savedScroll, 10);
+                    }, 100);
                 }
             } catch (e) {
                 markdownContentHtml = '<p class="text-error font-bold">Failed to load document.</p>';
@@ -324,6 +334,53 @@
         if (iframeRef) {
             iframeRef.focus();
             iframeRef.contentWindow?.focus();
+
+            // Setup Scroll Restoration for Local HTML Files
+            try {
+                console.log(`[DEBUG-WEB-SCROLL] Iframe loaded. Src: ${iframeRef.src}`);
+                if (!activeSearchQuery && iframeRef.contentWindow) {
+                    const savedScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+                    console.log(`[DEBUG-WEB-SCROLL] Checking restore key: itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}. Found: ${savedScroll}`);
+                    if (savedScroll) {
+                        setTimeout(() => {
+                            const y = parseInt(savedScroll, 10);
+                            if (iframeRef.contentWindow) iframeRef.contentWindow.scrollTo({ top: y, behavior: 'auto' });
+                            if (iframeRef.contentDocument) {
+                                if (iframeRef.contentDocument.documentElement) iframeRef.contentDocument.documentElement.scrollTop = y;
+                                if (iframeRef.contentDocument.body) iframeRef.contentDocument.body.scrollTop = y;
+                            }
+                            console.log(`[DEBUG-WEB-SCROLL] Scroll restored to: ${savedScroll}`);
+                        }, 150); // slight delay to allow layout recalculation
+                    }
+                } else {
+                    console.log(`[DEBUG-WEB-SCROLL] Skipped restore. activeSearchQuery: "${activeSearchQuery}", hasWindow: ${!!iframeRef.contentWindow}`);
+                }
+                
+                if (iframeRef.contentDocument) {
+                    let ifScrollTimeout: any;
+                    iframeRef.contentDocument.addEventListener('scroll', (e) => {
+                        clearTimeout(ifScrollTimeout);
+                        ifScrollTimeout = setTimeout(() => {
+                            let currentScroll = 0;
+                            try {
+                                if (e.target && (e.target as HTMLElement).scrollTop) {
+                                    currentScroll = (e.target as HTMLElement).scrollTop;
+                                } else {
+                                    const win = iframeRef.contentWindow;
+                                    const docRef = iframeRef.contentDocument;
+                                    currentScroll = win?.scrollY || docRef?.documentElement?.scrollTop || docRef?.body?.scrollTop || 0;
+                                }
+                                console.log(`[DEBUG-WEB-SCROLL] Saving new scrollY position: ${currentScroll}`);
+                                localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
+                            } catch(err) {}
+                        }, 150);
+                    }, { capture: true, passive: true });
+                    console.log(`[DEBUG-WEB-SCROLL] Successfully attached scroll listener to iframe.`);
+                }
+            } catch (e) {
+                console.warn(`[DEBUG-WEB-SCROLL] Failed to setup scroll tracking. Likely Cross-Origin restriction:`, e);
+            }
+
             try {
                 const iframeDoc = iframeRef.contentDocument || iframeRef.contentWindow?.document;
                 if (iframeDoc) {
@@ -387,15 +444,30 @@
     }
 
     export function close() {
-		// Sync final EPUB and PDF reading positions to the server before closing
-		if ((docType === 'epub' || docType === 'pdf-inline') && doc) {
+        // Ensure we capture the absolute latest position before saving to DB
+        if (docType === 'iframe') {
+            try {
+                const win = iframeRef?.contentWindow;
+                const docRef = iframeRef?.contentDocument;
+                const currentScroll = win?.scrollY || docRef?.documentElement?.scrollTop || docRef?.body?.scrollTop || 0;
+                if (currentScroll > 0) {
+                    localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
+                }
+            } catch(e) {}
+        } else if (docType === 'markdown' && markdownContainerRef) {
+            localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
+        }
+
+		// Sync final reading positions to the server before closing
+		if ((docType === 'epub' || docType === 'pdf-inline' || docType === 'iframe' || docType === 'markdown') && doc) {
 			try {
                 const isPdf = docType === 'pdf-inline';
-                const key = `itemlens_${isPdf ? 'pdf_page' : 'epub_cfi'}_${$page.data.user?.id}_${doc.id || doc.path}`;
+                const isWeb = docType === 'iframe' || docType === 'markdown';
+                const key = `itemlens_${isPdf ? 'pdf_page' : (isWeb ? 'scroll_y' : 'epub_cfi')}_${$page.data.user?.id}_${doc.id || doc.path}`;
                 const val = localStorage.getItem(key);
 				if (val) {
 					const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
-                    const prefsKey = isPdf ? 'pdfLocations' : 'epubLocations';
+                    const prefsKey = isPdf ? 'pdfLocations' : (isWeb ? 'webLocations' : 'epubLocations');
 					if (!currentPrefs[prefsKey]) currentPrefs[prefsKey] = {};
 					if (currentPrefs[prefsKey][doc.id || doc.path] !== val) {
 						currentPrefs[prefsKey][doc.id || doc.path] = val;
@@ -685,9 +757,16 @@
 						<PdfViewer url={activeDocUrl} invert={invertIframe} saveKey={`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`} />
 					</div>
                 {:else if docType === 'markdown'}
-                    <div class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
+                    <div bind:this={markdownContainerRef} class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
                          style={invertIframe ? "filter: invert(1) hue-rotate(180deg);" : ""}
-                         on:click={(e) => { if(e.target.tagName !== 'A') toggleMenu(); }} role="presentation">
+                         on:click={(e) => { if(e.target.tagName !== 'A') toggleMenu(); }} role="presentation"
+                         on:scroll={() => {
+                             if (!markdownContainerRef) return;
+                             clearTimeout(mdScrollTimeout);
+                             mdScrollTimeout = setTimeout(() => {
+                                 localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
+                             }, 150);
+                         }}>
                         <div class="prose prose-sm sm:prose-base max-w-none prose-p:text-base-content prose-headings:text-base-content prose-strong:text-base-content prose-a:text-primary prose-li:text-base-content">
                             {@html markdownContentHtml}
                         </div>
