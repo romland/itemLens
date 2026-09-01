@@ -53,6 +53,12 @@
                 console.log("[DEBUG-CACHE] User is mid-workflow. Deferring UI invalidation.");
                 return;
             }
+            // CRITICAL FIX: Prevent router deadlock. If SvelteKit is actively routing (like from a sort goto), 
+            // drop the SSE invalidation sledgehammer.
+            if ($navigating) {
+                console.log("[DEBUG-CACHE] Navigation in progress. Dropping redundant invalidation.");
+                return;
+            }
             invalidateAll();
         };
 

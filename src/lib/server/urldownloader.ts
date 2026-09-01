@@ -52,8 +52,14 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 				continue;
 			}
 			
-			const line = validUrl.toString();
+			let line = validUrl.toString();
 			
+			// Transform GitHub repo URLs to ZIP downloads
+			const githubMatch = line.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/([^\/]+)\/?$/i);
+			if (githubMatch) {
+				line = `https://github.com/${githubMatch[1]}/${githubMatch[2]}/archive/refs/heads/main.zip`;
+			}
+
 			// Enforce strict SSRF protection before any fetch
 			if (!QRUrlDownloader.isURL(line)) {
 				console.log(`[Security] Blocked internal SSRF attempt: ${line}`);
@@ -111,6 +117,18 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 				} catch (e) {
 					console.error(`Error downloading EPUB ${line}:`, e);
 					await logActivity(target.itemId, 'EPUB Download', `Failed to download EPUB: ${line}`, 'error');
+					if (document && !document.path) await db.document.delete({ where: { id: document.id } });
+				}
+				continue; // Skip SingleFile logic
+			}
+
+			// Divert to ZIP handler if needed
+			if (line.toLowerCase().endsWith('.zip')) {
+				try {
+					await handleGenericFileDownload(line, target, document?.id, diskFolder, webFolder, 'zip');
+					await logActivity(target.itemId, 'File Download', `Successfully downloaded ZIP: ${line}`, 'success');
+				} catch (e) {
+					console.error(`Error downloading ZIP ${line}:`, e);
 					if (document && !document.path) await db.document.delete({ where: { id: document.id } });
 				}
 				continue; // Skip SingleFile logic
@@ -433,6 +451,26 @@ async function handleEpubDownload(url: string, target: { itemId?: number, timeli
 			});
 			console.log("Have summary of EPUB:", summary);
 		}
+	});
+}
+
+async function handleGenericFileDownload(url: string, target: { itemId?: number, timelineNoteId?: number }, documentId: any, diskFolder: string, webFolder: string, ext: string) {
+	return ioQueue.add(async () => {
+		console.log(`Downloading generic file: ${url}`);
+		const res = await fetch(url);
+		const buffer = Buffer.from(await res.arrayBuffer());
+		const idStr = target.itemId ? `item-${target.itemId}` : `note-${target.timelineNoteId}`;
+		const docFilename = getSafeFilename(`${idStr}-doc`);
+		
+		fs.writeFileSync(`${diskFolder}/${docFilename}.${ext}`, buffer);
+		
+		let title = url.split('/').pop()?.split('?')[0] || `File Document`;
+		try { title = decodeURIComponent(title).replace(/[-_]/g, ' ').trim(); } catch(e) {}
+		
+		await db.document.update({
+			where: { id: Number(documentId) },
+			data: { title, path: `${webFolder}/${docFilename}.${ext}`, extracts: "[]" }
+		});
 	});
 }
 

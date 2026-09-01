@@ -125,10 +125,18 @@
 </div>
 
 <!-- Fixed Input Bar Component -->
-<TimelineInput on:posted={() => { pasteHandler?.clearQueue(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+<div class="timeline-input-wrapper">
+    <TimelineInput on:posted={() => { pasteHandler?.clearQueue(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+</div>
 {/if}
 
 <Notifications bind:notifications />
 
 <ImageLightbox bind:this={imgLightbox} itemTitle="Note Attachment" />
 <DocumentLightbox bind:this={docLightbox} />
+
+<style>
+    :global(.timeline-input-wrapper > *) {
+        bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+    }
+</style>

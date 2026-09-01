@@ -38,26 +38,46 @@
     $: activeSort = $page.url.searchParams.get('sort') || $page.data.activeSort || 'newest';
     $: activeSortLabel = sortOptions.find(o => o.id === activeSort)?.label || 'Newest Added';
 
+    $: {
+        console.log(`[DEBUG-SORT] Reactivity triggered. URL sort: ${$page.url.searchParams.get('sort')}, DB Sort: ${$page.data.activeSort}, Active: ${activeSort}`);
+    }
+
     function applySort(sortId: string) {
+        console.log(`[DEBUG-SORT] 1. applySort() called with: ${sortId}`);
         const url = new URL($page.url);
         url.searchParams.set('sort', sortId);
+        
+        console.log(`[DEBUG-SORT] 2. Firing goto: ${url.toString()}`);
         goto(url.toString(), { keepFocus: true, noScroll: true });
+        console.log(`[DEBUG-SORT] 3. goto dispatched.`);
+        
         if (typeof document !== 'undefined') (document.activeElement as HTMLElement)?.blur();
 
 		try {
+            console.log(`[DEBUG-SORT] 4. Parsing preferences...`);
 			const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
 			if (!currentPrefs.defaultSorts) currentPrefs.defaultSorts = {};
 			if (currentPrefs.defaultSorts[$page.data.activeInventoryId] !== sortId) {
+                console.log(`[DEBUG-SORT] 5. Pref mismatch detected. Updating from ${currentPrefs.defaultSorts[$page.data.activeInventoryId]} to ${sortId}`);
 				currentPrefs.defaultSorts[$page.data.activeInventoryId] = sortId;
 				const fd = new FormData();
 				fd.append('preferences', JSON.stringify(currentPrefs));
+                console.log(`[DEBUG-SORT] 6. Executing fetch to /profile?/updatePreferences`);
 				fetch('/profile?/updatePreferences', {
 					method: 'POST',
 					body: fd,
 					headers: { 'x-sveltekit-action': 'true' }
-				});
+				}).then(async (res) => {
+                    console.log(`[DEBUG-SORT] 7. Fetch resolved. Status: ${res.status}`);
+                }).catch(err => {
+                    console.error(`[DEBUG-SORT] X. Fetch threw error:`, err);
+                });
+			} else {
+                console.log(`[DEBUG-SORT] 5. Prefs already match. Skipping fetch.`);
 			}
-		} catch (e) {}
+		} catch (e) {
+            console.error(`[DEBUG-SORT] X. Exception caught in applySort:`, e);
+        }
     }
 
     function getFirstProductPhoto(item) {
@@ -226,7 +246,7 @@
 													<img src={localBlob} class="absolute inset-0 object-contain w-full h-full p-1 rounded-xl z-0 opacity-80 animate-pulse transition-opacity duration-700" alt="Preview"/>
                                                {/if}
                                                {#if serverSrc}
-                                                   <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
+                                                   <img class="object-contain w-full h-full p-1 rounded-xl drop-shadow-md relative z-10 transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}"
                                                         src="{serverSrc}{cb}"
                                                         loading={imgLoadStrategy}
                                                         on:load={() => markLoaded(serverSrc)}
@@ -376,7 +396,7 @@
                                 <img src={localBlob} class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-0 opacity-80 animate-pulse transition-opacity duration-700" alt="Preview"/>
                             {/if}
                             {#if serverSrc}
-                                <img class="object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal relative z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}" 
+                                <img class="absolute inset-0 object-contain w-full h-full rounded-lg mix-blend-multiply dark:mix-blend-normal z-10 drop-shadow-md transition-opacity duration-700 {localBlob && !isLoaded ? 'opacity-0' : 'opacity-100'}"
                                      src="{serverSrc}{cb}"
                                      loading={imgLoadStrategy}
                                      on:load={() => markLoaded(serverSrc)}

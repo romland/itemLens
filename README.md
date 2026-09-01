@@ -6,11 +6,10 @@ Inventory management (for at home). There are many like it, but this one is mine
 The primary use is:
 `Do I have that, where the heck is it?` and `What does it do and why did I buy it?` [1]
 
-I am no fan of data-entry, so, adding new products/items should be as automated as 
-possible (using any device). Most of the effort of making this app went into making
-a pleasant and fast work-flow. It optionally uses machine learning of various types:
-language and vision models, object classification, OCR, background removal, segmentation,
-TTS.
+I am no fan of data-entry, so adding new products/items should be as automated as 
+possible (using any device). Most of the effort of making this app went into creating
+a pleasant and fast work-flow. To achieve this, itemLens optionally uses various tools 
+like object classification, OCR, background removal, and language models under the hood.
 
 [1]: There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
 
@@ -47,6 +46,8 @@ If feeling particularly ambitious on a day, you can also:
 
 ### Voice Search
 I use Groq's Whisper 3 for TTS in the search field. It is ridiculously good when given context, actually. With ease we handle "USB to TTL", "ESP32 Development board", "Resistors 10k" or "I2C OLED display module" in search. It feels _very_ natural.
+
+You can also ask where something is. Try saying: **"Find my grey jeans"** or **"Where is the USB to TTL converter?"**. Your intent will be parsed, located in your database, and audibly speak the location back to you.
 
 ### Here's a text about taxonomy that will be incorporated naturally in this README one day:
 We’re building a self-organizing inventory app. The basic idea is that you take a photo of any object—from a book to a winter coat to a spark plug—and the app automatically figures out what it is, what details matter, and how to file it away.
@@ -139,6 +140,17 @@ Create a virtual container named **"Digital Library"** and assign tech books, sp
     - Which fields I actually fill in
     - How I search for related links
     - **Note on Terminology:** While itemLens is an *inventory management* system, the UI refers to the top-level databases as "Collections". The bulk camera feature is named "Multi-Scan", and the underlying database schema retains the name "Inventories" for structural stability. I mention this because there is bound to be confusion before all variables are renamed. Especially since there was a "collection" before (which is now multi-scan).
+
+#### Scanning Clothes
+When taking pictures of clothes for your collection, especially if you use the background removal feature, the items will look significantly better if you:
+1. Lay them flat on a contrasting surface (like a bedsheet or clean floor).
+2. Smooth out major wrinkles.
+3. Ensure decent ambient lighting to avoid harsh shadows.
+
+And then you have **The Pool Noodle Hack ($2):** Slit a dense foam pool noodle or foam pipe insulation down the side and slide it over the top bar of a standard wooden hanger. It immediately widens the shoulder profile, preventing limp sleeves and hanger-pokes.
+
+This takes only a couple of seconds per item and drastically improves the visual quality of the resulting cutouts.
+
 # Third parties
 I really dislike it when I have to register for some 3rd party services to try out some software,
 therefore, that is all voluntary. Set the flag `NO_THIRD_PARTY_SERVICES` to `true` in `.env` 

@@ -11,7 +11,7 @@ export const load = (async ({ locals }) => {
     const allInventories = await db.inventory.findMany({ 
         where: inventoryWhere,
         select: { 
-            id: true, name: true, allowNewCategories: true, allowAutoTaxonomy: true,
+            id: true, name: true, allowNewCategories: true, allowAutoTaxonomy: true, archetype: true,
             extractExif: true, deepScanCollections: true, bgRemovalEnabled: true,
             bgRemovalModel: true, bgRemovalPreCrop: true, enablePaddleOCR: true,
             duplicateStrategy: true, containerMode: true, defaultView: true,

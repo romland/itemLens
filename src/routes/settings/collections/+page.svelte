@@ -115,7 +115,7 @@
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <div class="font-bold text-lg {deleteConfirmId === v.id ? 'text-error' : ''}">{v.name}</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5">{v._count?.items || 0} items &bull; {v._count?.notes || 0} notes &bull; {v._count?.containers || 0} containers</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5 capitalize">{v.archetype} collection &bull; {v._count?.items || 0} items &bull; {v._count?.notes || 0} notes &bull; {v._count?.containers || 0} containers</div>
                             </div>
                             
                             <div class="text-right">

@@ -6,6 +6,7 @@ import Groq from 'groq-sdk';
 import { env } from '$env/dynamic/private';
 import { recordLLMLog } from '$lib/server/llmLogger';
 import { logActivity } from '$lib/server/logger';
+import { tokenizeAndStem } from '$lib/server/nlp';
 
 // --- VOICE INTENT MIDDLEWARE ---
 // Easily extensible for multilingual support, new commands, or different collections
@@ -19,16 +20,32 @@ async function evaluateVoiceIntents(transcription: string, inventoryId: number):
     if (locMatch) {
         const subject = locMatch[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
         
-        const item = await db.item.findFirst({
-            where: { inventoryId, title: { contains: subject } },
+        const allItems = await db.item.findMany({
+            where: { inventoryId },
             include: { locations: { include: { container: true } } }
         });
 
-        if (item && item.locations && item.locations.length > 0) {
-            const locs = item.locations.map((l: any) => l.container.name).join(' and ');
-            return { query: subject, spokenReply: `It is in ${locs}.` };
-        } else if (item) {
-            return { query: subject, spokenReply: `I found it, but it doesn't have a location assigned yet.` };
+        const subjectTokens = tokenizeAndStem([subject]);
+        let bestItem = null;
+        let maxScore = 0;
+
+        for (const item of allItems) {
+            if (!item.title) continue;
+            const titleTokens = tokenizeAndStem([item.title]);
+            const matchCount = subjectTokens.filter(t => titleTokens.includes(t)).length;
+            if (matchCount > maxScore) {
+                maxScore = matchCount;
+                bestItem = item;
+            }
+        }
+
+        if (bestItem && maxScore > 0) {
+            if (bestItem.locations && bestItem.locations.length > 0) {
+                const locs = bestItem.locations.map((l: any) => l.container.name).join(' and ');
+                return { query: bestItem.title, spokenReply: `It is in ${locs}.` };
+            } else {
+                return { query: bestItem.title, spokenReply: `I found it, but it doesn't have a location assigned yet.` };
+            }
         }
         
         return { query: subject, spokenReply: null };

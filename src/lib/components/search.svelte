@@ -32,6 +32,13 @@
 
 	async function startVoiceSearch() {
 		try {
+			// Safari PWA Hack: Unlock SpeechSynthesis audio context synchronously on user interaction
+			if ('speechSynthesis' in window) {
+				const silentUtterance = new SpeechSynthesisUtterance('');
+				silentUtterance.volume = 0;
+				window.speechSynthesis.speak(silentUtterance);
+			}
+
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			mediaRecorder = new MediaRecorder(stream);
 			audioChunks = [];
