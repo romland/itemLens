@@ -658,16 +658,27 @@ $:  isDemoMode =
                 {/if}
             </div>
 
-            <!-- Group 2: Sign out -->
+            <!-- Group 2: Account & Settings -->
             <div class="bg-base-200/50 rounded-2xl border border-base-200 overflow-hidden flex flex-col shadow-sm mt-2">
                 <ActionCard 
-                    title="Settings & Profile" 
-                    href="/settings" 
-                    icon="bi-gear-fill" 
-                    iconColorClass="bg-warning/10 text-warning" 
+                    title="Preferences" 
+                    href="/profile" 
+                    icon="bi-person-circle" 
+                    iconColorClass="bg-base-300 text-base-content" 
                     variant="flat" 
                     on:click={() => mobileMenuModal.close()} 
                 />
+
+                {#if $page.data.user?.isAdmin || $page.data.user?.canCreateInventories || ($page.data.inventories && $page.data.inventories.length > 0)}
+                    <ActionCard 
+                        title="Manage Collections" 
+                        href="/settings/collections" 
+                        icon="bi-collection-fill" 
+                        iconColorClass="bg-secondary/10 text-secondary" 
+                        variant="flat" 
+                        on:click={() => mobileMenuModal.close()} 
+                    />
+                {/if}
 
                 <!-- This is currently hidden; press the (by default) "L" keybind to trigger it -->
                 <ActionCard 
@@ -682,6 +693,14 @@ $:  isDemoMode =
                 />
 
 				{#if $page.data.user?.isAdmin}
+                    <ActionCard 
+                        title="System Admin" 
+                        href="/settings/admin" 
+                        icon="bi-shield-lock-fill" 
+                        iconColorClass="bg-error/10 text-error" 
+                        variant="flat" 
+                        on:click={() => mobileMenuModal.close()} 
+                    />
                     <ActionCard 
                         title="Clear Cache" 
                         icon="bi-trash3" 

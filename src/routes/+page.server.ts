@@ -21,18 +21,37 @@ export const load = (async ({ locals, url, fetch }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    setTheme: async ({ url, cookies }) => {
-        const theme = url.searchParams.get('theme');
+    setTheme: async ({ request, url, cookies }) => {
+        console.log('[DEBUG-THEME] setTheme action invoked!');
+
+        let theme = url.searchParams.get('theme');
         const redirectTo = url.searchParams.get('redirectTo');
+
+        try {
+            const fd = await request.formData();
+            if (!theme && fd.has('theme')) theme = fd.get('theme')?.toString() || null;
+        } catch (e) {
+            console.log('[DEBUG-THEME] No formData attached or parse failed.');
+        }
+
+        console.log(`[DEBUG-THEME] Target theme resolved to: ${theme}`);
 
         if (theme) {
             cookies.set('theme', theme, {
                 path: '/',
-                maxAge: 60 * 60 * 24 * 365
+                maxAge: 60 * 60 * 24 * 365,
+                httpOnly: false,
+                sameSite: 'lax'
             });
+            console.log(`[DEBUG-THEME] Server-side cookie 'theme' set successfully.`);
         }
 
-        redirect(303, redirectTo ?? '/');
+        if (redirectTo) {
+            console.log(`[DEBUG-THEME] Redirecting to ${redirectTo}`);
+            redirect(303, redirectTo);
+        }
+        
+        return { success: true, theme };
     },
     switchVault: async ({ request, cookies }) => {
         const data = await request.formData();

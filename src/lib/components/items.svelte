@@ -51,7 +51,7 @@
 				currentPrefs.defaultSorts[$page.data.activeInventoryId] = sortId;
 				const fd = new FormData();
 				fd.append('preferences', JSON.stringify(currentPrefs));
-				fetch('/settings?/updatePreferences', {
+				fetch('/profile?/updatePreferences', {
 					method: 'POST',
 					body: fd,
 					headers: { 'x-sveltekit-action': 'true' }

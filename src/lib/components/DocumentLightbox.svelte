@@ -128,11 +128,11 @@
         if (docType === 'iframe') invertIframe = userPrefs.documentDarkMode === true;
         
         // Check for specific document override
-        const override = localStorage.getItem(`itemlens_invert_${doc?.id}`);
+        const override = localStorage.getItem(`itemlens_invert_${$page.data.user?.id}_${doc?.id}`);
         if (override !== null) invertIframe = override === 'true';
 
         // Load user's persistent reading preferences
-        const savedPrefs = localStorage.getItem('itemlens_epub_prefs');
+        const savedPrefs = localStorage.getItem(`itemlens_epub_prefs_${$page.data.user?.id}`);
         if (savedPrefs) {
             try {
                 const prefs = JSON.parse(savedPrefs);
@@ -200,7 +200,7 @@
             });
             
             // === RESTORE READING POSITION ===
-			const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
+			const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
             if (cfiToJump) {
                 await rendition.display(cfiToJump);
             } else if (savedCfi) {
@@ -251,7 +251,7 @@
             
             rendition.on('relocated', (location: any) => {
                 if (location && location.start && location.start.cfi) {
-                    localStorage.setItem(`itemlens_epub_cfi_${doc.id || doc.path}`, location.start.cfi);
+                        localStorage.setItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`, location.start.cfi);
                 }
                 updateProgress(location);
             });
@@ -330,7 +330,7 @@
 		// Sync final EPUB reading position to the server before closing
 		if (docType === 'epub' && doc) {
 			try {
-				const cfi = localStorage.getItem(`itemlens_epub_cfi_${doc.id || doc.path}`);
+				const cfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`);
 				if (cfi) {
 					const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
 					if (!currentPrefs.epubLocations) currentPrefs.epubLocations = {};
@@ -338,7 +338,7 @@
 						currentPrefs.epubLocations[doc.id || doc.path] = cfi;
 						const fd = new FormData();
 						fd.append('preferences', JSON.stringify(currentPrefs));
-						fetch('/settings?/updatePreferences', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true' }});
+						fetch('/profile?/updatePreferences', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true' }});
 					}
 				}
 			} catch (e) {}
@@ -393,7 +393,7 @@
     }
     
     function savePrefs() {
-        localStorage.setItem('itemlens_epub_prefs', JSON.stringify({ fontSize, fontFamily }));
+        localStorage.setItem(`itemlens_epub_prefs_${$page.data.user?.id}`, JSON.stringify({ fontSize, fontFamily }));
     }
 
     function changeFontSize(delta: number) {
@@ -544,7 +544,7 @@
             {/if}
 
 			{#if docType === 'iframe' || docType === 'markdown' || docType === 'pdf-inline'}
-                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
+                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${$page.data.user?.id}_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
                 </button>
             {:else if docType === 'epub'}

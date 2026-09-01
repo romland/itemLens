@@ -4,6 +4,8 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (!locals.activeInventoryId) return json({ error: 'No Collection' }, { status: 404 });
+
     const containers = await db.container.findMany({
         where: { inventoryId: locals.activeInventoryId, parentId: null },
         include: { children: true },
@@ -14,8 +16,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (!locals.activeInventoryId) return json({ error: 'No Collection' }, { status: 404 });
     if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
-    
+
     try {
         const { name } = await request.json();
         

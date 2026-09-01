@@ -82,9 +82,9 @@
                 break;
             case 'settings':
                 e.preventDefault();
-                goto('/settings');
                 break;
             case 'profile':
+                goto('/profile');
                 e.preventDefault();
                 document.getElementById('profile-menu-btn')?.click();
                 break;

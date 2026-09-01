@@ -114,13 +114,14 @@ export const handle = (async ({ event, resolve }) => {
             path.startsWith('/tag') ||
             path.startsWith('/timeline') ||
             path.startsWith('/add') ||
-			path.startsWith('/settings')
+			path.startsWith('/settings') ||
+			path.startsWith('/profile')
         ) {
             redirect(303, '/login');
         }
-    } else if (event.locals.activeInventoryId === null && !path.startsWith('/settings') && !path.startsWith('/logout') && !path.startsWith('/activity') && !path.startsWith('/api')) {
-        // Prevent access to standard routes if they belong to no inventory, funnel to settings
-        redirect(303, '/settings');
+    } else if (event.locals.activeInventoryId === null && !path.startsWith('/settings') && !path.startsWith('/profile') && !path.startsWith('/logout') && !path.startsWith('/activity') && !path.startsWith('/api')) {
+        // Prevent access to standard routes if they belong to no inventory, funnel to profile
+        redirect(303, '/profile');
     }
 
 	return await resolve(event, {
