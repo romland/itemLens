@@ -26,6 +26,25 @@
 	let silenceAnimFrame: number;
 	let voiceError = '';
 
+    // iOS Safari Hack: Global reference prevents aggressive garbage collection from killing voice mid-sentence
+    let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+	function speak(text: string) {
+		if (!('speechSynthesis' in window)) return;
+         console.log('🗣️ [VOICE-DEBUG] Queueing speech:', text);
+         window.speechSynthesis.resume(); // iOS Safari Hack: Wake up the audio context after an async fetch
+         currentUtterance = new SpeechSynthesisUtterance(text);
+         currentUtterance.volume = 1.0;
+         currentUtterance.onstart = () => console.log('🗣️ [VOICE-DEBUG] Speech started playing.');
+         currentUtterance.onerror = (e) => console.error('🗣️ [VOICE-DEBUG] Speech error:', e);
+		if (userPrefs.voiceURI) {
+			const voices = window.speechSynthesis.getVoices();
+			const voice = voices.find(v => v.voiceURI === userPrefs.voiceURI);
+              if (voice) currentUtterance.voice = voice;
+		}
+         window.speechSynthesis.speak(currentUtterance);
+	}
+
 	function showVoiceError(msg: string) {
 		voiceError = msg;
 		setTimeout(() => voiceError = '', 4000);
@@ -35,11 +54,13 @@
 		try {
 			// Safari PWA Hack: Unlock SpeechSynthesis audio context synchronously on user interaction
 			if ('speechSynthesis' in window) {
-				const silentUtterance = new SpeechSynthesisUtterance('');
-				silentUtterance.volume = 0;
+					// FATAL BUG FIX: Empty strings ('') permanently hang the iOS speech queue! Must be a space.
+					const silentUtterance = new SpeechSynthesisUtterance(' ');
+					silentUtterance.volume = 0.01;
 				window.speechSynthesis.speak(silentUtterance);
 			}
 
+			if (navigator.vibrate) navigator.vibrate(50);
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			mediaRecorder = new MediaRecorder(stream);
 			audioChunks = [];
@@ -72,10 +93,10 @@
 
 			mediaRecorder.onstop = async () => {
 				isListening = false;
+				if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
 				isProcessingAudio = true;
 				
 				cancelAnimationFrame(silenceAnimFrame);
-				if (audioContext) { try { await audioContext.close(); } catch(e) {} }
 				
 				// Turn off the red recording dot instantly
 				stream.getTracks().forEach(track => track.stop());
@@ -101,13 +122,12 @@
 					if (res.ok && data.text) {
 						q = data.text;
 						
-						if (data.spokenReply && 'speechSynthesis' in window) {
-							const utterance = new SpeechSynthesisUtterance(data.spokenReply);
-							window.speechSynthesis.speak(utterance);
-						}
 
 						if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
-						goto(`/search?q=${encodeURIComponent(q)}`);
+						if (data.spokenReply) {
+							speak(data.spokenReply);
+						}
+                             goto(data.route || `/search?q=${encodeURIComponent(q)}`);
 					} else {
 						showVoiceError(data.error || 'Failed to understand audio.');
 					}

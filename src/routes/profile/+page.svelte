@@ -16,6 +16,7 @@
     let confirmModal: ConfirmModal;
 
     // --- Preferences State ---
+    let availableVoices: SpeechSynthesisVoice[] = [];
     let currentTheme = "";
     onMount(() => {
         currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -23,6 +24,15 @@
             currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
         });
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            const populateVoices = () => {
+                availableVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en') || v.lang.startsWith('nl'));
+            };
+            populateVoices();
+            window.speechSynthesis.onvoiceschanged = populateVoices;
+        }
+
         return () => observer.disconnect();
     });
 
@@ -200,6 +210,7 @@
                 </form>
             {/each}
         </div>
+
     </div>
 
     <!-- SHORTCUTS SECTION -->
@@ -233,6 +244,21 @@
             <input type="hidden" name="preferences" value={JSON.stringify({ ...currentPrefs, shortcuts })} />
             <button type="submit" class="btn btn-neutral">Save Shortcuts</button>
         </form>
+
+		{#if currentPrefs.enableVoiceSearch}
+			<form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3 mt-4 mb-6">
+				<input type="hidden" name="preferences" value={JSON.stringify(currentPrefs)} />
+				<select class="select select-sm select-bordered w-full max-w-xs" bind:value={currentPrefs.voiceURI} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }}>
+					<option value="">System Default Voice</option>
+					{#each availableVoices as voice}
+						<option value={voice.voiceURI}>{voice.name} ({voice.lang})</option>
+					{/each}
+				</select>
+				<div class="flex flex-col"><span class="font-semibold text-sm">Assistant Voice</span>
+				<span class="text-[11px] text-gray-500">Choose the voice used for dictation replies.</span></div>
+			</form>
+		{/if}
+
     </div>
 
     <!-- DEVICES SECTION -->
