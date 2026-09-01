@@ -110,6 +110,7 @@
 	// Cleanly build the query string for pagination, omitting blanks
 	$: searchParamsStr = new URLSearchParams(
 		Object.entries({
+            ids: $page.url.searchParams.get('ids') || '',
 			q: data.q, category: data.cat, tag: data.tag, container: data.container,
             title: data.titleStr, desc: data.descStr, doc: data.docStr, reason: data.reasonStr, duplicateStatus: data.duplicateStatus, color: data.color,
 			minAmount: data.minAmount, maxAmount: data.maxAmount,

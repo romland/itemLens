@@ -73,15 +73,27 @@
 			analyser.fftSize = 256;
 			source.connect(analyser);
 			const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let hasSpoken = false;
 			let silenceStart = 0;
+            const recordingStart = Date.now();
 			
 			const checkSilence = () => {
 				if (!isListening) return;
 				analyser.getByteFrequencyData(dataArray);
 				const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-				if (avg > 10) silenceStart = 0; // Reset silence timer if noise detected
-				else if (silenceStart === 0) silenceStart = Date.now();
-				else if (Date.now() - silenceStart > 1200) { if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop(); return; }
+                if (avg > 15) {
+                    hasSpoken = true;
+                    silenceStart = 0;
+                } else if (hasSpoken) {
+                    if (silenceStart === 0) silenceStart = Date.now();
+                    else if (Date.now() - silenceStart > 1300) {
+                        if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
+                        return;
+                    }
+                } else if (Date.now() - recordingStart > 10000) {
+                    if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
+                    return;
+                }
 				silenceAnimFrame = requestAnimationFrame(checkSilence);
 			};
 
@@ -127,7 +139,8 @@
 						if (data.spokenReply) {
 							speak(data.spokenReply);
 						}
-                             goto(data.route || `/search?q=${encodeURIComponent(q)}`);
+                        const destination = data.route || `/search?q=${encodeURIComponent(data.text)}`;
+                        goto(destination);
 					} else {
 						showVoiceError(data.error || 'Failed to understand audio.');
 					}

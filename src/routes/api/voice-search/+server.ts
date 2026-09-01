@@ -58,6 +58,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         const rawTranscription = transcription.text.replace(/[.?!]+$/, '').trim();
         const durationMs = performance.now() - t0;
 
+        const hallucinatedPromptWords = ['tags', 'inventory search context', 'expected vocabulary includes'];
+        if (!rawTranscription || hallucinatedPromptWords.includes(rawTranscription.toLowerCase())) {
+            return json({ error: "Didn't catch that. Please try again." }, { status: 400 });
+        }
+
         // Pass the raw text through the intent middleware
 
         // Extract token usage from Groq's verbose_json response, otherwise estimate so graphs don't flatline
