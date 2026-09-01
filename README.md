@@ -9,7 +9,8 @@ The primary use is:
 I am no fan of data-entry, so, adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into making
 a pleasant and fast work-flow. It optionally uses machine learning of various types:
-language and vision models, object classification, OCR, background removal, segmentation.
+language and vision models, object classification, OCR, background removal, segmentation,
+TTS.
 
 There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
 
@@ -44,6 +45,8 @@ If feeling particularly ambitious on a day, you can also:
 
 **Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run itemLens. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.
 
+### Voice Search
+I use Groq's Whisper 3 for TTS in the search field. It is ridiculously good when given context, actually. With ease we handle "USB to TTL", "ESP32 Development board", "Resistors 10k" or "I2C OLED display module" in search. It feels _very_ natural.
 
 ### Here's a text about taxonomy that will be incorporated naturally in this README one day:
 We’re building a self-organizing inventory app. The basic idea is that you take a photo of any object—from a book to a winter coat to a spark plug—and the app automatically figures out what it is, what details matter, and how to file it away.
