@@ -282,6 +282,16 @@
             return;
         }
 
+        // APPLE WEBKIT BUG: iOS 18 enabled View Transitions, but using them going forward 
+        // destroys Safari's ability to cache the previous page snapshot. 
+        // This results in a black screen when edge-swiping back. We opt Apple devices out to protect the native swipe.
+        const isAppleDevice = typeof navigator !== 'undefined' && (
+            /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+            /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+        );
+        if (isAppleDevice) return;
+
         // Bypassing View Transitions on popstate allows the native iOS swipe-back
         // snapshot to smoothly handoff without CSS animations jerking it around.
         if (navigation.type === 'popstate') return;
