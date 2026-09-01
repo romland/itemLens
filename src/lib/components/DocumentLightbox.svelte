@@ -1,4 +1,18 @@
 <script lang="ts">
+    /*
+     * ARCHITECTURE: Document Rendering & Reading Position State Machine
+     * 
+     * This component serves as the universal viewer for EPUBs, PDFs, Webpages (Iframes), and Markdown.
+     * 
+     * 1. Position Tracking: We aggressively track scrollY (Web/MD), CFI (EPUB), or pageNum (PDF).
+     * 2. The "Resume Reading" Breadcrumb: 
+     *    - If a user opens a document VIA A SEARCH RESULT, we intercept the query.
+     *    - We freeze the position tracker so the search jump doesn't overwrite their saved bookmark.
+     *    - We spawn a "Return to Bookmark" button. Clicking it clears the search state and warps 
+     *      them back to their original reading position, unfreezing the tracker.
+     * 3. Sync: On close, we push the latest position to `localStorage` and SvelteKit's `/profile` backend.
+     */
+
     import { fade, fly } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
     import { tick, onDestroy } from 'svelte';
@@ -40,11 +54,16 @@
     // Settings
     let fontSize = 100;
     let fontFamily = 'system-ui, -apple-system, sans-serif';
+    let lineHeight = 1.6;
+    let pageMargin = 16;
 
     // Highlight state
     let highlightModal: HTMLDialogElement;
     let pendingHighlight: { text: string, cfiRange: string, chapterText: string } | null = null;
     let isSavingHighlight = false;
+
+    let returnToPosition: string | null = null;
+    let returnToLabel = "";
 
     let userPrefs: any = {};
     let markdownContainerRef: HTMLDivElement;
@@ -88,6 +107,9 @@
         const epubSearchQuery = documentRecord._rawQuery || activeSearchQuery;
         activeDocUrl = rawPath;
 
+        returnToPosition = null;
+        returnToLabel = "";
+
         if (activeSearchQuery && !activeDocUrl.includes('#')) {
             const safeQuery = encodeURIComponent(activeSearchQuery.replace(/"/g, '').trim());
             const safeExact = encodeURIComponent(epubSearchQuery.replace(/"/g, '').trim());
@@ -97,6 +119,23 @@
                 // Scroll-to-text fragment (Chromium natively supports this)
                 activeDocUrl = `${activeDocUrl}#:~:text=${safeQuery}`;
             }
+
+            // If we are jumping to a search query, check if there's an existing reading position to protect
+            const savedPdfPage = localStorage.getItem(`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
+            const savedWebScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+            const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
+
+            if (isPdf(path) && savedPdfPage) {
+                returnToPosition = savedPdfPage;
+                returnToLabel = `Back to Page ${savedPdfPage}`;
+            } else if (isEpub(path) && savedCfi) {
+                returnToPosition = savedCfi;
+                returnToLabel = "Return to Bookmark";
+            } else if ((isHtml(path) || isMarkdown(path) || path.endsWith('.csv') || rawPath.startsWith('http')) && savedWebScroll) {
+                returnToPosition = savedWebScroll;
+                returnToLabel = "Return to Reading";
+            }
+
         } else if (isPdf(path) && !activeDocUrl.includes('#')) {
             const savedPdfPage = localStorage.getItem(`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
             if (savedPdfPage) {
@@ -183,6 +222,8 @@
                 const prefs = JSON.parse(savedPrefs);
                 if (prefs.fontSize) fontSize = prefs.fontSize;
                 if (prefs.fontFamily) fontFamily = prefs.fontFamily;
+                if (prefs.lineHeight) lineHeight = prefs.lineHeight;
+                if (prefs.pageMargin) pageMargin = prefs.pageMargin;
             } catch(e) {}
         }
 
@@ -201,7 +242,7 @@
                 rendition = book.renderTo(viewerRef, {
                 width: '100%',
                 height: '100%',
-                spread: 'none',
+                spread: window.innerWidth > 800 ? 'auto' : 'none',
                 manager: 'continuous',
                 flow: 'paginated',
                 snap: true
@@ -222,9 +263,7 @@
                 'body': { 
                     'background': `${themeBg} !important`, 
                     'color': `${themeFg} !important`,
-                    'font-family': 'var(--ep-font) !important',
-                    'line-height': '1.6 !important',
-                    'padding': '10px !important'
+                    'font-family': 'var(--ep-font) !important'
                 }
             });
             rendition.themes.select('itemlens');
@@ -234,8 +273,8 @@
             rendition.hooks.content.register((contents: any) => {
                 const style = contents.document.createElement('style');
                 style.innerHTML = `
-                    :root { --ep-font: ${fontFamily}; }
-                    html, body { background: ${themeBg} !important; background-color: ${themeBg} !important; color: ${themeFg} !important; font-family: var(--ep-font) !important; }
+                    :root { --ep-font: ${fontFamily}; --ep-lh: ${lineHeight}; --ep-pad: ${pageMargin}px; }
+                    html, body { background: ${themeBg} !important; background-color: ${themeBg} !important; color: ${themeFg} !important; font-family: var(--ep-font) !important; line-height: var(--ep-lh) !important; padding-left: var(--ep-pad) !important; padding-right: var(--ep-pad) !important; }
                     * { color: ${themeFg} !important; background-color: transparent !important; font-family: inherit !important; }
                     a { color: ${themeFg} !important; text-decoration: underline !important; }
                     img { max-width: 100% !important; height: auto !important; border-radius: 8px !important; }
@@ -247,8 +286,14 @@
             // === RESTORE READING POSITION ===
             const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
 
-                    if (epubSearchQuery) {
-                        const q = epubSearchQuery.replace(/"/g, '').trim();
+            if (epubSearchQuery) {
+                /* 
+                 * EPUB SEARCH CRAWLER
+                 * EPUB.js renders isolated iframes per chapter. It cannot natively search the whole book.
+                 * We iterate over the book's spine, silently loading and unloading chapters into memory 
+                 * until we find the target CFI, then command the rendition to jump and highlight it.
+                 */
+                const q = epubSearchQuery.replace(/"/g, '').trim();
                 book.ready.then(async () => {
                     let foundCfi = null;
                     for (const item of book.spine.spineItems) {
@@ -311,8 +356,18 @@
                 else if (e.key === 'ArrowLeft') prevPage();
                 else if (e.key === 'Escape') close();
             });
-            
+
+            // Edge-tapping for 1-handed reading
+            rendition.on('click', (e: MouseEvent) => {
+                const width = e.view?.innerWidth || window.innerWidth;
+                const x = e.clientX;
+                if (x < width * 0.25) prevPage();
+                else if (x > width * 0.75) nextPage();
+                else toggleMenu();
+            });
+
             rendition.on('relocated', (location: any) => {
+                if (returnToPosition) return; // Prevent overwriting bookmark while inspecting search result
                 if (location && location.start && location.start.cfi) {
                         localStorage.setItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`, location.start.cfi);
                 }
@@ -359,6 +414,7 @@
                 if (iframeRef.contentDocument) {
                     let ifScrollTimeout: any;
                     iframeRef.contentDocument.addEventListener('scroll', (e) => {
+                        if (returnToPosition) return;
                         clearTimeout(ifScrollTimeout);
                         ifScrollTimeout = setTimeout(() => {
                             let currentScroll = 0;
@@ -417,6 +473,22 @@
                 // Fails silently on secure PDFs or cross-origin URLs
             }
         }
+    }
+
+    async function resumeReading() {
+        if (!returnToPosition) return;
+        
+        if (docType === 'epub' && rendition) {
+            await rendition.display(returnToPosition);
+        } else if (docType === 'iframe' && iframeRef?.contentWindow) {
+            iframeRef.contentWindow.scrollTo({ top: parseInt(returnToPosition, 10), behavior: 'smooth' });
+        } else if (docType === 'markdown' && markdownContainerRef) {
+            markdownContainerRef.scrollTo({ top: parseInt(returnToPosition, 10), behavior: 'smooth' });
+        } else if (docType === 'pdf-inline') {
+            activeDocUrl = `${activeDocUrl.split('#')[0]}#page=${returnToPosition}`;
+        }
+        
+        returnToPosition = null; // Clear breadcrumb, resume tracking
     }
 
     function updateProgress(location: any) {
@@ -528,7 +600,7 @@
     }
     
     function savePrefs() {
-        localStorage.setItem(`itemlens_epub_prefs_${$page.data.user?.id}`, JSON.stringify({ fontSize, fontFamily }));
+        localStorage.setItem(`itemlens_epub_prefs_${$page.data.user?.id}`, JSON.stringify({ fontSize, fontFamily, lineHeight, pageMargin }));
     }
 
     function changeFontSize(delta: number) {
@@ -538,17 +610,24 @@
         resetMenuTimeout();
     }
     
-    function changeFontFamily(family: string) {
-        fontFamily = family;
+    function applyEpubStyles() {
         if (rendition) {
             rendition.getContents().forEach((c: any) => {
-                c.document.documentElement.style.setProperty('--ep-font', family);
+                if (c && c.document && c.document.documentElement) {
+                    c.document.documentElement.style.setProperty('--ep-font', fontFamily);
+                    c.document.documentElement.style.setProperty('--ep-lh', lineHeight.toString());
+                    c.document.documentElement.style.setProperty('--ep-pad', `${pageMargin}px`);
+                }
             });
         }
         savePrefs();
         resetMenuTimeout();
     }
     
+    function changeFontFamily(family: string) { fontFamily = family; applyEpubStyles(); }
+    function changeLineHeight(val: number) { lineHeight = val; applyEpubStyles(); }
+    function changeMargin(val: number) { pageMargin = val; applyEpubStyles(); }
+
     function goToChapter(href: string) {
         if (!rendition || !book) return;
 
@@ -667,8 +746,13 @@
             Done
             </button>
             
-            <div class="flex-1 min-w-0 px-3 text-center">
-            <h2 class="font-bold text-sm tracking-tight truncate">{doc?.title || 'Document'}</h2>
+            <div class="flex-1 min-w-0 px-3 flex flex-col items-center justify-center">
+                <h2 class="font-bold text-sm tracking-tight truncate w-full text-center">{doc?.title || 'Document'}</h2>
+                {#if returnToPosition}
+                    <button type="button" class="badge badge-primary badge-sm font-bold shadow-sm mt-1 animate-fade-in hover:scale-105 transition-transform cursor-pointer border-none" on:click|stopPropagation={resumeReading}>
+                        <i class="bi bi-arrow-return-left mr-1"></i> {returnToLabel}
+                    </button>
+                {/if}
             </div>
             
             <div class="flex items-center gap-1">
@@ -761,7 +845,7 @@
                          style={invertIframe ? "filter: invert(1) hue-rotate(180deg);" : ""}
                          on:click={(e) => { if(e.target.tagName !== 'A') toggleMenu(); }} role="presentation"
                          on:scroll={() => {
-                             if (!markdownContainerRef) return;
+                             if (!markdownContainerRef || returnToPosition) return;
                              clearTimeout(mdScrollTimeout);
                              mdScrollTimeout = setTimeout(() => {
                                  localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
@@ -823,7 +907,7 @@
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="absolute inset-0 bg-base-100/60 backdrop-blur-sm z-[60]" on:click={() => showSettings = false} transition:fade={{duration: 200}}></div>
-            <div class="absolute top-20 right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] bg-base-100 border border-base-300 shadow-2xl rounded-2xl overflow-hidden z-[70] flex flex-col p-4 gap-6" transition:fly={{ y: -20, duration: 200 }}>
+            <div class="absolute top-20 right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-base-100 border border-base-300 shadow-2xl rounded-2xl z-[70] flex flex-col p-4 gap-6 hide-scrollbar" transition:fly={{ y: -20, duration: 200 }}>
                 
                 <div class="flex flex-col gap-2">
                     <div class="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Font Size</div>
@@ -839,6 +923,24 @@
                     <div class="grid grid-cols-2 gap-2">
                         <button class="btn border-base-300 bg-base-200 font-sans normal-case text-base {fontFamily.includes('sans-serif') ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeFontFamily('system-ui, -apple-system, sans-serif')}>Sans-Serif</button>
                         <button class="btn border-base-300 bg-base-200 font-serif normal-case text-base {fontFamily.includes('Georgia') ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeFontFamily('Georgia, serif')}>Serif</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Spacing</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="btn border-base-300 bg-base-200 {lineHeight === 1.2 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeLineHeight(1.2)}><i class="bi bi-list text-lg"></i></button>
+                        <button class="btn border-base-300 bg-base-200 {lineHeight === 1.6 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeLineHeight(1.6)}><i class="bi bi-distribute-vertical text-lg"></i></button>
+                        <button class="btn border-base-300 bg-base-200 {lineHeight === 2.0 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeLineHeight(2.0)}><i class="bi bi-arrows-expand text-lg"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Margins</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="btn border-base-300 bg-base-200 {pageMargin === 4 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeMargin(4)}><i class="bi bi-arrows-collapse text-lg"></i></button>
+                        <button class="btn border-base-300 bg-base-200 {pageMargin === 16 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeMargin(16)}><i class="bi bi-distribute-horizontal text-lg"></i></button>
+                        <button class="btn border-base-300 bg-base-200 {pageMargin === 32 ? 'border-primary text-primary bg-primary/10' : ''}" on:click={() => changeMargin(32)}><i class="bi bi-arrows-expand text-lg" style="transform: rotate(90deg)"></i></button>
                     </div>
                 </div>
 

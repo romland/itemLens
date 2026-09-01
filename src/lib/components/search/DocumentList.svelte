@@ -27,7 +27,17 @@
         {@const info = getFileInfo(doc)}
         {@const rawPath = doc.path || doc.source || ''}
         {@const rawQuery = $page.url.searchParams.get('q') || $page.url.searchParams.get('doc') || ''}
-        <!-- Extract the exact word for EPUBs, and the broader context sentence for Web/PDFs -->
+		<!-- 
+			ARCHITECTURE: Search Query Context Extraction
+			SQLite FTS5 uses stemming (e.g., searching "revolution" matches "revolutionary").
+			If we blindly pass "revolution" to the browser's window.find(), it will fail.
+			
+			1. exactWord: Extracts the EXACT stemmed word the database actually matched (inside <mark>).
+			2. contextMatch: Extracts the surrounding 5+ character sentence. This prevents false positives 
+				where the exact word appears 50 times on a page, ensuring we jump to the correct occurrence.
+			3. We construct a URL with #:~:text= (for Web/Markdown) or #search= (for PDF) so native 
+				browsers can instantly jump to the text if the user Right-Clicks -> "Open in New Tab".
+		-->
         {@const exactWord = doc.excerpt?.match(/<mark[^>]*>(.*?)<\/mark>/i)?.[1] || rawQuery}
         {@const contextMatch = doc.excerpt ? doc.excerpt.replace(/<[^>]+>/g, '').split('...').map((s) => s.trim()).filter((s) => s.length > 5).sort((a, b) => b.length - a.length)[0] || rawQuery : rawQuery}
         {@const safeQuery = encodeURIComponent(contextMatch.replace(/"/g, '').trim())}

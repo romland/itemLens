@@ -67,6 +67,10 @@
                     bestPage = parseInt(id.replace('pdf-page-', ''), 10);
                 }
             });
+
+            // Prevent overwriting the user's saved page if they are just viewing a search result
+            if (searchQuery) return;
+
             if (bestPage !== -1 && saveKey) {
                 localStorage.setItem(saveKey, bestPage.toString());
             }
@@ -117,6 +121,15 @@
         let bestPageByContext = -1;
         let bestPageByExact = -1;
 
+        /*
+         * TWO-PASS PDF TEXT SEARCH
+         * PDF.js extracts text with unpredictable spaces, hyphens, and rendering artifacts.
+         * To guarantee a match, we strip all non-alphanumeric chars from both the PDF text and our queries.
+         * 
+         * 1. Try to find the full contextual sentence (to avoid false positives).
+         * 2. If layout artifacts broke the sentence, fallback to the exact FTS5 matched word.
+         */
+
         // Scan the PDF internally for the target text
         for (let i = 1; i <= numPages; i++) {
             try {
@@ -154,6 +167,14 @@
         } else {
             console.log(`[DEBUG-PDF] ❌ No match found.`);
         }
+    }
+
+    // Reactive scroll for external page jumps (like the Resume Reading Breadcrumb)
+    $: if (targetPage > 0 && !loading && !searchQuery) {
+        tick().then(() => {
+            const el = document.getElementById(`pdf-page-${targetPage}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     }
 </script>
 
