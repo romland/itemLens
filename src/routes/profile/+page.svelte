@@ -40,6 +40,10 @@
         { id: 'coffee', name: 'Coffee', icon: 'bi-cup-hot' },
         { id: 'dark', name: 'Default Dark', icon: 'bi-moon' },
         { id: 'light', name: 'Default Light', icon: 'bi-sun' },
+        { id: 'nord', name: 'Nord Light', icon: 'bi-snow' },
+        { id: 'emerald', name: 'Emerald', icon: 'bi-shield-check' },
+        { id: 'cupcake', name: 'Cupcake', icon: 'bi-cake2' },
+        { id: 'winter', name: 'Winter', icon: 'bi-snow2' },
         { id: 'manhattan', name: 'Manhattan', icon: 'bi-building' }
     ];
 
@@ -256,3 +260,9 @@
 </div>
 
 <ConfirmModal bind:this={confirmModal} />
+
+<style>
+.avatar > div {
+    display: flex;
+}
+</style>

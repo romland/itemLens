@@ -12,6 +12,10 @@ module.exports = {
     themes: [
       "dark", 
       "light", 
+      "nord",        // Crisp Scandinavian light mode
+      "emerald",     // Clean corporate green & crisp white
+      "cupcake",     // Soft pastel cream & teal
+      "winter",      // Cool frosty blue & clean light
       "coffee", 
       "luxury", 
       "black",
