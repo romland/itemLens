@@ -7,6 +7,39 @@ import { env } from '$env/dynamic/private';
 import { recordLLMLog } from '$lib/server/llmLogger';
 import { logActivity } from '$lib/server/logger';
 
+// --- VOICE INTENT MIDDLEWARE ---
+// Easily extensible for multilingual support, new commands, or different collections
+async function evaluateVoiceIntents(transcription: string, inventoryId: number): Promise<{ query: string, spokenReply: string | null }> {
+    const text = transcription.toLowerCase();
+    
+    // Intent 1: Find Location (English & Dutch examples)
+    const locationRegex = /^(?:where is|where's|where are|find|locate|waar is|waar zijn|zoek)(?:\s+(?:the|my|a|an|de|het|een))?\s+(.+)/i;
+    const locMatch = text.match(locationRegex);
+    
+    if (locMatch) {
+        const subject = locMatch[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+        
+        const item = await db.item.findFirst({
+            where: { inventoryId, title: { contains: subject } },
+            include: { locations: { include: { container: true } } }
+        });
+
+        if (item && item.locations && item.locations.length > 0) {
+            const locs = item.locations.map((l: any) => l.container.name).join(' and ');
+            return { query: subject, spokenReply: `It is in ${locs}.` };
+        } else if (item) {
+            return { query: subject, spokenReply: `I found it, but it doesn't have a location assigned yet.` };
+        }
+        
+        return { query: subject, spokenReply: null };
+    }
+
+    // Add more intents here in the future (e.g. "Add 5 to stock for X", "Delete X")
+
+    // Default: Fallback to standard visual search
+    return { query: transcription, spokenReply: null };
+}
+
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -53,18 +86,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             response_format: 'verbose_json'
         });
 
-        const cleanText = transcription.text.replace(/[.?!]+$/, '').trim();
+        const rawTranscription = transcription.text.replace(/[.?!]+$/, '').trim();
         const durationMs = performance.now() - t0;
+
+        // Pass the raw text through the intent middleware
+        const { query: finalQuery, spokenReply } = await evaluateVoiceIntents(rawTranscription, locals.activeInventoryId);
 
         // Extract token usage from Groq's verbose_json response, otherwise estimate so graphs don't flatline
         const groqData = transcription as any;
         const tokensIn = groqData.x_groq?.usage?.prompt_tokens || Math.round(fileSize / 100); 
-        const tokensOut = groqData.x_groq?.usage?.completion_tokens || cleanText.split(' ').length;
+        const tokensOut = groqData.x_groq?.usage?.completion_tokens || rawTranscription.split(' ').length;
 
-        recordLLMLog('Voice Search', 'groq', { prompt: contextPrompt, fileSize }, { text: cleanText, usage: groqData.x_groq?.usage }, durationMs, tokensIn, tokensOut);
-        await logActivity(null, 'Voice Search', `Transcribed audio to query: "${cleanText}"`, 'info');
+        recordLLMLog('Voice Search', 'groq', { prompt: contextPrompt, fileSize }, { text: rawTranscription, finalQuery, spokenReply, usage: groqData.x_groq?.usage }, durationMs, tokensIn, tokensOut);
+        await logActivity(null, 'Voice Search', `Transcribed audio to query: "${finalQuery}"`, 'info');
 
-        return json({ success: true, text: cleanText });
+        return json({ success: true, text: finalQuery, spokenReply });
     } catch (error: any) {
         console.error('Groq Whisper error:', error);
         const durationMs = performance.now() - t0;

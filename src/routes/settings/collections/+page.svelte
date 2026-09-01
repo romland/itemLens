@@ -137,7 +137,7 @@
                         <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleAutoCategories" name="allowNewCategories" checked={v.allowNewCategories} label="Allow automated creation of categories" />
                         <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleAutoTaxonomy" name="allowAutoTaxonomy" checked={v.allowAutoTaxonomy} label="Enable AI Taxonomy & Attribute Extractions" />
                         <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleExtractExif" name="extractExif" checked={v.extractExif} label="Extract EXIF data (including GPS) from photos" />
-                        <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleDeepScan" name="deepScan" checked={v.deepScanCollections} label="Deep-scan collection imports (extracts detailed attributes for all items in collections)" />
+                        <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleDeepScan" name="deepScan" checked={v.deepScanCollections} label="Deep-scan: extract detailed attributes for all items in multi-scans" />
                         <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleBgRemoval" name="bgRemovalEnabled" checked={v.bgRemovalEnabled} label="Remove image backgrounds" />
 
                         <form method="POST" action="?/toggleBgRemovalModel" use:enhance={createEnhancer} class="mt-2 flex flex-col sm:flex-row sm:items-center items-start gap-1 sm:gap-2">
