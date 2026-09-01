@@ -11,6 +11,8 @@ possible (using any device). Most of the effort of making this app went into mak
 a pleasant and fast work-flow. It optionally uses machine learning of various types:
 language and vision models, object classification, OCR, background removal, segmentation.
 
+There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
+
 _This readme is very much a work in progress; it's currently not organized or complete at all._
 _Also: Quite a few of the more recent bits are written by an LLM acting as a sales person, which is very cringe. I will deal with it._
 
@@ -26,6 +28,7 @@ If feeling particularly ambitious on a day, you can also:
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
 - **Fuzzy Search Toggles:** Unhappy with search results? The AI stems words (e.g., "Jeans" -> "Jean") which is great for finding electronics or tools but sometimes too broad for clothes. You can toggle "Fuzzy Word Search" off per-collection in Settings for strict text matching.
+- **Position Persistence:** The reader automatically saves your exact scroll position, PDF page, or EPUB location across sessions. You won't spend half your day scrolling back to where you left off.
 - **Multiple Categories:** Need an item to exist in two categories? Give it multiple photos and assign a different category to each photo. The engine resolves categories at the photo level.
 - **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
@@ -36,6 +39,7 @@ If feeling particularly ambitious on a day, you can also:
 - **Nudge the Vision Model:** Does it sometimes guess wrong? Look for the ✨ Sparkle icon next to the title in the item details or scan preview. Click it to provide a hint (e.g. "It's an IKEA MITTZON desk") to dramatically improve classification accuracy!
 - **Scraper Limits:** itemLens attempts to fetch and summarize documents linked in text automatically, but restricts depth to one level to prevent infinite spidering. Use `httrack` or similar tools for full website archival.
 - **Empty Category Cleanup:** If you delete or move the last item out of a category, itemLens will automatically vaporize the category and its associated taxonomy rules. This facilitates easy cleanup if you import an item into the wrong collection.
+- **System Diagnostics:** Includes a self-diagnostic area in the Admin dashboard (`/settings/admin`) that pings host dependencies, Docker microservices, and API configurations to flag setup errors.
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
 **Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run itemLens. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.
@@ -101,6 +105,9 @@ When it comes to putting that data to work, you can rely on the **Comparison Len
 If bulk import is how you ingest a mountain of data into itemLens in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
 
 It performs set math between what your camera sees (**Set A**) and what your database holds (**Set B**).
+
+#### Digital Books & Documentation
+Create a virtual container named **"Digital Library"** and assign tech books, spec sheets, or EPUBs/PDFs there. When you drop an EPUB or PDF into an item, itemLens automatically extracts the embedded cover art, `og:image`, or first page to use as the primary thumbnail. The item card gives you a direct **"Read"** button to view and study the document inside the browser.
 
 #### Practical Examples & Workflows
 - **Discovery / Flea Market Scan (What do I not own? / $A \setminus B$):** 
@@ -214,24 +221,16 @@ If you want to share things directly into itemLens on an iPhone, the best workar
 4. Add an action to **URL Encode** the shortcut input.
 5. Add an action to **Open URLs**, and construct the URL to point to your app's capture route with the encoded input attached as a query parameter (e.g., `[https://dev.providi.nl/timeline?pasteText=](https://dev.providi.nl/timeline?pasteText=)[Encoded Input]`).
 
-### Dependencies (Optional but highly recommended)
-To enable the automatic downloading and archiving of videos from YouTube, Twitter, and hundreds of other sites, you must install `yt-dlp` on your server host.
-- **Ubuntu/Debian:** `sudo apt install yt-dlp` (or use pip/brew for the latest version)
-- If `yt-dlp` is not found, itemLens will silently fall back to downloading the site as a static HTML page.
-
-It's a bit of a hack, but once you set it up, "Send to itemLens" will sit right there in your iOS share sheet.
-
-Not downloading? `yt-dlp -U`.
 
 
-### External services
-_Notes to self for now_:  
-Start the docker containers in Ubuntu VM if they are not running with:
-containers-start.sh
+### Host Dependencies (Optional)
+All external dependencies are **100% optional**. Everything in itemLens gracefully falls back if a tool isn't installed.
 
-On the Jetson on my desktop:
-    For object classification:
-    ...
+* **PDF Covers:** `sudo apt-get install poppler-utils` (provides `pdftoppm` to extract PDF first pages as thumbnails)
+* **Video Thumbnails:** `sudo apt-get install ffmpeg` (extracts frame grabs from video files)
+* **Video Archiving:** `yt-dlp` (downloads linked videos from YouTube, Twitter, etc. into local storage)
+
+Check `/settings/admin` at any time to run a self-diagnosis on host tools, Docker microservices (RemBG, PaddleOCR, SingleFile), and API keys.
 
 # Latest yt-dlp
 ```
