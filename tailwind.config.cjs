@@ -24,6 +24,9 @@ module.exports = {
       "dracula",     // Classic elegant dark
       "synthwave",   // Outrun 80s neon sci-fi
       "cyberpunk",   // Loud neon dystopia
+      "caramellatte",
+      "dim",
+      "retro",
       {
         rehoboam: {  // Westworld Season 3 / Incite Inc. Aesthetic
           "primary": "#ef4444",      // Ominous anomaly red

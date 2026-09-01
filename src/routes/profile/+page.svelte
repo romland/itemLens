@@ -27,24 +27,27 @@
     });
 
     const themes = [
-        { id: 'rehoboam', name: 'Westworld', icon: 'bi-record-circle' },
-        { id: 'matrix', name: 'The Matrix', icon: 'bi-code-square' },
-        { id: 'abyss', name: 'Abyss (Blue)', icon: 'bi-water' },
-        { id: 'nebula', name: 'Nebula (Purple)', icon: 'bi-stars' },
-        { id: 'forge', name: 'Forge (Ember)', icon: 'bi-fire' },
-        { id: 'black', name: 'OLED Black', icon: 'bi-circle-fill' },
-        { id: 'cyberpunk', name: 'Cyberpunk', icon: 'bi-lightning-charge' },
-        { id: 'synthwave', name: 'Synthwave', icon: 'bi-grid-3x3-gap' },
-        { id: 'dracula', name: 'Dracula', icon: 'bi-droplet' },
-        { id: 'luxury', name: 'Luxury', icon: 'bi-gem' },
-        { id: 'coffee', name: 'Coffee', icon: 'bi-cup-hot' },
-        { id: 'dark', name: 'Default Dark', icon: 'bi-moon' },
-        { id: 'light', name: 'Default Light', icon: 'bi-sun' },
-        { id: 'nord', name: 'Nord Light', icon: 'bi-snow' },
-        { id: 'emerald', name: 'Emerald', icon: 'bi-shield-check' },
-        { id: 'cupcake', name: 'Cupcake', icon: 'bi-cake2' },
-        { id: 'winter', name: 'Winter', icon: 'bi-snow2' },
-        { id: 'manhattan', name: 'Manhattan', icon: 'bi-building' }
+        { id: 'rehoboam', name: 'Westworld', icon: 'bi-record-circle', bright: false },
+        { id: 'matrix', name: 'The Matrix', icon: 'bi-code-square', bright: false },
+        { id: 'abyss', name: 'Abyss (Blue)', icon: 'bi-water', bright: false },
+        { id: 'nebula', name: 'Nebula (Purple)', icon: 'bi-stars', bright: false },
+        { id: 'forge', name: 'Forge (Ember)', icon: 'bi-fire', bright: false },
+        { id: 'black', name: 'OLED Black', icon: 'bi-circle-fill', bright: false },
+        { id: 'caramellatte', name: 'Caramellatte', icon: 'bi-cup', bright: false },
+        { id: 'synthwave', name: 'Synthwave', icon: 'bi-grid-3x3-gap', bright: false },
+        { id: 'dracula', name: 'Dracula', icon: 'bi-droplet', bright: false },
+        { id: 'luxury', name: 'Luxury', icon: 'bi-gem', bright: false },
+        { id: 'coffee', name: 'Coffee', icon: 'bi-cup-hot', bright: false },
+        { id: 'manhattan', name: 'Manhattan', icon: 'bi-building', bright: false },
+        { id: 'dim', name: 'Dim', icon: 'bi-paperclip', bright: false },
+        { id: 'dark', name: 'Default Dark', icon: 'bi-moon', bright: false },
+        { id: 'light', name: 'Default Light', icon: 'bi-sun', bright: true },
+        { id: 'cyberpunk', name: 'Cyberpunk', icon: 'bi-lightning-charge', bright: true },
+        { id: 'nord', name: 'Nord Light', icon: 'bi-snow', bright: true },
+        { id: 'emerald', name: 'Emerald', icon: 'bi-shield-check', bright: true },
+        { id: 'cupcake', name: 'Cupcake', icon: 'bi-cake2', bright: true },
+        { id: 'winter', name: 'Winter', icon: 'bi-snow2', bright: true },
+        { id: 'retro', name: 'Retro', icon: 'bi-telephone', bright: true },
     ];
 
     let currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
@@ -192,7 +195,7 @@
                     <input type="hidden" name="theme" value={theme.id}>
                     <button type="submit" class="btn h-auto py-4 w-full flex flex-col items-center gap-2 rounded-xl border transition-all {currentTheme === theme.id ? 'border-primary ring-2 ring-primary/30 bg-base-300' : 'border-base-300 hover:border-primary/50 bg-base-200 hover:bg-base-300'}">
                         <i class="bi {theme.icon} text-2xl"></i>
-                        <span class="font-semibold text-sm">{theme.name}</span>
+                        <span class="font-semibold text-sm">{theme.name} {theme.bright ? '🔆' : ''}</span>
                     </button>
                 </form>
             {/each}
