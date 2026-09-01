@@ -57,6 +57,26 @@ function normalizeNumeralsAndCompounds(text: string): string[] {
     return Array.from(variants);
 }
 
+function normalizeQuery(text: string): string {
+    const cleaned = text.toLowerCase().replace(/[-_]+/g, ' ');
+    const tokens = cleaned.split(/\s+/).filter(Boolean);
+    const digitReplaced = tokens.map(t => NUM_WORDS[t] || t);
+
+    const folded: string[] = [];
+    for (let i = 0; i < digitReplaced.length; i++) {
+        const curr = digitReplaced[i];
+        const next = digitReplaced[i + 1];
+        if (curr && next && /^[2-9]0$/.test(curr) && /^[1-9]$/.test(next)) {
+            folded.push(String(parseInt(curr, 10) + parseInt(next, 10)));
+            i++;
+        } else {
+            folded.push(curr);
+        }
+    }
+
+    return folded.join(' ');
+}
+
 export interface VoiceIntent {
     name: string;
     match: (text: string) => RegExpMatchArray | null;
@@ -150,7 +170,7 @@ const intents: VoiceIntent[] = [
         name: 'Locate', // e.g., "Where do I have an antenna", "Find the ESP32"
         match: (text) => text.match(/^(?:where is|where's|where are|where do i have|where do we have|find|locate|waar is|waar zijn|zoek)(?:\s+(?:the|my|a|an|de|het|een))?\s+(.+)$/i),
         process: async (match, inventoryId) => {
-            const subject = match[1].trim();
+            const subject = normalizeQuery(match[1].trim());
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `I couldn't find any ${subject} in your collection.` };
             
@@ -172,7 +192,7 @@ const intents: VoiceIntent[] = [
         name: 'Stock', // e.g., "Do I have any e-ink displays?", "How many eink displays i have"
         match: (text) => text.match(/^(?:how many|do i have|do we have|i need)(?:\s+(?:any|a|an|some|een))?\s+(.+?)(?:\s+(?:do i have|do we have|i have|we have|in stock|left))?$/i),
         process: async (match, inventoryId) => {
-            const subject = match[1].trim();
+            const subject = normalizeQuery(match[1].trim());
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `No, I don't see any ${subject} in your collection.` };
             
@@ -184,7 +204,7 @@ const intents: VoiceIntent[] = [
         name: 'List', // e.g., "Which servos do I have?"
         match: (text) => text.match(/^(?:list|list all|which|what)(?:\s+(?:all|types of|kind of))?\s+(.+?)(?:\s+(?:do i have|do we have|are there|is there))?$/i),
         process: async (match, inventoryId) => {
-            const subject = match[1].trim();
+            const subject = normalizeQuery(match[1].trim());
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `You don't have any ${subject}.` };
             
@@ -197,7 +217,7 @@ const intents: VoiceIntent[] = [
         name: 'Fallback', // Standard keyword search
         match: (text) => text.match(/(.*)/),
         process: async (match, inventoryId) => {
-            const subject = match[1].trim();
+            const subject = normalizeQuery(match[1].trim());
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `I couldn't find anything for ${subject}.` };
             return { query: subject, spokenReply: null, route: getDirectRoute(items) }; 
