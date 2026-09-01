@@ -115,7 +115,10 @@
                         {/if}
                     </div>
                     <div class="absolute bottom-0 right-0 bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-base-100">
-                        <i class="bi bi-camera-fill text-xs"></i>
+						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+							<path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+							<path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/>
+						</svg>
                     </div>
                 </div>
                 <input type="file" id="avatarUpload" name="avatar" accept="image/*" class="hidden" on:change={handleFileChange} />
@@ -161,6 +164,13 @@
             <div class="flex flex-col"><span class="font-semibold text-sm">Large Font Mode</span>
             <span class="text-[11px] text-gray-500">Increases base text size for better readability.</span></div>
         </form>
+
+		<form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3 mt-4 mb-6">
+			<input type="hidden" name="preferences" value={JSON.stringify(currentPrefs)} />
+			<input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.enableVoiceSearch} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }} />
+			<div class="flex flex-col"><span class="font-semibold text-sm">Voice Search</span>
+			<span class="text-[11px] text-gray-500">Show a microphone icon in the search bar for voice dictation.</span></div>
+		</form>
 
         <h3 class="font-bold text-lg mb-4">Application Theme</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">

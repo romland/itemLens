@@ -1,0 +1,75 @@
+// src/routes/api/voice-search/+server.ts
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { db } from '$lib/server/database';
+import Groq from 'groq-sdk';
+import { env } from '$env/dynamic/private';
+import { recordLLMLog } from '$lib/server/llmLogger';
+import { logActivity } from '$lib/server/logger';
+
+export const POST: RequestHandler = async ({ request, locals }) => {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+    const t0 = performance.now();
+    let fileSize = 0;
+
+    try {
+        const formData = await request.formData();
+        const audioFile = formData.get('audio') as File;
+        
+        if (audioFile) fileSize = audioFile.size;
+
+        if (!audioFile || audioFile.size === 0) {
+            await logActivity(null, 'Voice Search', 'Received empty audio payload from browser.', 'error');
+            recordLLMLog('Voice Search (Failed)', 'groq', { error: 'Empty audio file' }, { error: 'No audio data' }, performance.now() - t0, 0, 0);
+            return json({ error: 'No audio provided' }, { status: 400 });
+        }
+
+        // Fetch Categories and Tags to build a hyper-specific dictionary cheat sheet
+        const [categories, tags] = await Promise.all([
+            db.category.findMany({
+                where: { inventoryId: locals.activeInventoryId },
+                select: { name: true }
+            }),
+            db.tag.findMany({
+                where: { inventoryId: locals.activeInventoryId },
+                select: { name: true },
+                take: 50 // Limit to avoid overflowing Whisper's 224-token prompt window
+            })
+        ]);
+
+        const categoryNames = categories.map(c => c.name).join(', ');
+        const tagNames = tags.map(t => t.name).join(', ');
+        
+        // We prime the model with the user's exact data to guide unfamiliar spellings
+        const contextPrompt = `Inventory search context. Expected vocabulary includes: ${categoryNames}. Tags: ${tagNames}.`;
+
+        // Transcribe via Groq's lightning-fast Whisper model
+        const groq = new Groq({ apiKey: env.GROQ_API_TOKEN });
+        const transcription = await groq.audio.transcriptions.create({
+            file: audioFile,
+            model: 'whisper-large-v3-turbo',
+            prompt: contextPrompt,
+            response_format: 'verbose_json'
+        });
+
+        const cleanText = transcription.text.replace(/[.?!]+$/, '').trim();
+        const durationMs = performance.now() - t0;
+
+        // Extract token usage from Groq's verbose_json response, otherwise estimate so graphs don't flatline
+        const groqData = transcription as any;
+        const tokensIn = groqData.x_groq?.usage?.prompt_tokens || Math.round(fileSize / 100); 
+        const tokensOut = groqData.x_groq?.usage?.completion_tokens || cleanText.split(' ').length;
+
+        recordLLMLog('Voice Search', 'groq', { prompt: contextPrompt, fileSize }, { text: cleanText, usage: groqData.x_groq?.usage }, durationMs, tokensIn, tokensOut);
+        await logActivity(null, 'Voice Search', `Transcribed audio to query: "${cleanText}"`, 'info');
+
+        return json({ success: true, text: cleanText });
+    } catch (error: any) {
+        console.error('Groq Whisper error:', error);
+        const durationMs = performance.now() - t0;
+        recordLLMLog('Voice Search (Failed)', 'groq', { fileSize }, { error: error.message }, durationMs, 0, 0);
+        await logActivity(null, 'Voice Search', `Audio transcription failed.`, 'error', error.message);
+        return json({ error: 'Transcription failed' }, { status: 500 });
+    }
+};

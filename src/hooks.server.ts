@@ -7,6 +7,7 @@ import { validateAndRefreshSession } from "$lib/server/session";
 export interface UserPreferences {
 	largeFont?: boolean;
 	documentDarkMode?: boolean;
+	enableVoiceSearch?: boolean;
 	shortcuts?: Record<string, string>;
 	defaultSorts?: Record<string, string>; // Maps inventoryId to sortMode
 	epubLocations?: Record<string, string>; // Maps document path/id to CFI string
