@@ -210,7 +210,7 @@
                 message={hasActiveFilters ? "Try adjusting your filters or search terms to find what you're looking for." : "Start digitizing your collection by adding your first item."}
                 actionLabel={hasActiveFilters ? 'Clear Filters' : ''}
                 actionIcon="bi-funnel"
-                on:click={() => { if(hasActiveFilters) window.location.href = window.location.pathname; }}
+                on:click={() => { if(hasActiveFilters) goto(window.location.pathname); }}
             />
         </div>
     {/if}

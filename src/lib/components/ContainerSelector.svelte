@@ -22,14 +22,11 @@
     let activeTab = defaultTab; // 'scan' | 'select'
     let searchQuery = '';
 
-    // Auto-focus search input when it becomes visible (but only on desktop to avoid annoying mobile keyboard popups)
-    function autoFocusSearch(node: HTMLInputElement) {
-        if (typeof window === 'undefined' || !window.IntersectionObserver) return;
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && window.innerWidth >= 768) setTimeout(() => node.focus(), 100);
-        });
-        observer.observe(node);
-        return { destroy() { observer.disconnect(); } };
+    let searchInput: HTMLInputElement;
+    function focusSearch() {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setTimeout(() => searchInput?.focus(), 50);
+        }
     }
 
     // Flatten parent/child hierarchy for easier searching and displaying
@@ -210,7 +207,7 @@
             type="button" 
             role="tab" 
 			class="flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center flex-nowrap whitespace-nowrap {activeTab === 'select' ? 'bg-base-100 shadow text-base-content' : 'text-gray-500 hover:text-gray-700'}"
-            on:click={() => activeTab = 'select'}
+            on:click={() => { activeTab = 'select'; focusSearch(); }}
         >
             <i class="bi bi-list-check mr-2 whitespace-nowrap"></i> <span class="truncate">Manual</span>
         </button>
@@ -264,7 +261,7 @@
             <div class="form-control mb-3">
                 <div class="input input-bordered flex items-center gap-2 rounded-xl shadow-sm">
                     <i class="bi bi-search text-gray-400"></i>
-                    <input type="text" use:autoFocusSearch bind:value={searchQuery} placeholder="Search containers..." class="grow bg-transparent border-none focus:outline-none" />
+                    <input type="text" bind:this={searchInput} autofocus bind:value={searchQuery} placeholder="Search containers..." class="grow bg-transparent border-none focus:outline-none" />
                 </div>
             </div>
 

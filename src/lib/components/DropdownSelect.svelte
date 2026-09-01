@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { enhance } from '$app/forms';
     const dispatch = createEventDispatcher();
 
     export let options: { value: string | number, label: string }[] = [];
@@ -45,7 +46,7 @@
         {#each options as opt}
             <li>
                 {#if formAction}
-                    <form action={formAction} method="POST" data-sveltekit-reload={reload ? '' : null} class="w-full m-0 p-0 block">
+                    <form action={formAction} method="POST" use:enhance data-sveltekit-reload={reload ? '' : null} class="w-full m-0 p-0 block">
                         <input type="hidden" {name} value={opt.value}>
                         <button type="submit" class="w-full justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}">
                             <span class="truncate">{opt.label}</span>

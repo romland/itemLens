@@ -7,6 +7,7 @@
     import DropdownPanel from "$lib/components/DropdownPanel.svelte";
 	import { page } from "$app/stores";
     import { goto } from "$app/navigation";
+    import { enhance } from "$app/forms";
 
     export let q: string = '';
     let resultsAsYouType: HTMLDivElement;
@@ -148,21 +149,21 @@
         items = data.items;
         selectedIndex = -1;
 
-        resultsAsYouType.classList.add("dropdown-open");
+        if (resultsAsYouType) resultsAsYouType.classList.add("dropdown-open");
     }
 
     function focus(ev: Event)
     {
-		resultsAsYouType.classList.add("dropdown-open");
+		if (resultsAsYouType) resultsAsYouType.classList.add("dropdown-open");
     }
 
     function blur(ev: FocusEvent)
     {
         // If focus moved to one of our dropdown links, DO NOT close the dropdown
-        if (resultsAsYouType.contains(ev.relatedTarget as Node)) return;
+        if (resultsAsYouType && resultsAsYouType.contains(ev.relatedTarget as Node)) return;
         
         setTimeout(() => {
-            resultsAsYouType.classList.remove("dropdown-open");
+            if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
 		}, 200);
     }
 
@@ -189,7 +190,10 @@
 	$: searchPlaceholder = activeVaultName ? `Search in ${activeVaultName}` : "Search";
 </script>
 
-<form method="GET" action="/search" class="w-full sm:w-auto relative">
+<form method="GET" action="/search" class="w-full sm:w-auto relative" on:submit|preventDefault={(e) => {
+    if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
+    goto(`/search?q=${encodeURIComponent(q)}`);
+}}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div bind:this={resultsAsYouType} id="resultsAsYouType" class="dropdown dropdown-end w-full md:w-auto" on:keydown={handleKeydown}>
         

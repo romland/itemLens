@@ -46,19 +46,37 @@
     // REALTIME SYNC ENGINE
     if (browser) {
         let evtSource: EventSource | null = null;
+        let pendingInvalidation = false;
 
         const safeInvalidate = () => {
             const path = window.location.pathname;
             if (path === '/add' || path.includes('/edit') || path.includes('/delete')) {
-                console.log("[DEBUG-CACHE] User is mid-workflow. Deferring UI invalidation.");
+                console.log("🕵️‍♂️ [DEBUG-SYNC] User is mid-workflow. Deferring UI invalidation.");
+                pendingInvalidation = true;
                 return;
             }
-            // CRITICAL FIX: Prevent router deadlock. If SvelteKit is actively routing (like from a sort goto), 
-            // drop the SSE invalidation sledgehammer.
             if ($navigating) {
-                console.log("[DEBUG-CACHE] Navigation in progress. Dropping redundant invalidation.");
+                console.log("🕵️‍♂️ [DEBUG-SYNC] Navigation in progress. Dropping redundant invalidation.");
+                pendingInvalidation = true;
                 return;
             }
+
+            // --- THE ROOT CAUSE PROTECTION ---
+            // SvelteKit's invalidateAll() forcibly resets focus to the <body> when it finishes.
+            // If the user has a dropdown open or is typing, this rips focus away and closes their menu.
+            const activeEl = document.activeElement as HTMLElement;
+            const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+            const isDropdownOpen = activeEl && activeEl.closest('.dropdown') !== null;
+            const isDropdownPanelOpen = document.querySelector('.dropdown-open') !== null;
+
+            if (isTyping || isDropdownOpen || isDropdownPanelOpen) {
+                console.warn(`🕵️‍♂️ [DEBUG-SYNC] UI Interaction detected (Typing: ${!!isTyping}, Menu: ${!!(isDropdownOpen || isDropdownPanelOpen)}). Deferring background data sync to prevent focus theft!`);
+                pendingInvalidation = true;
+                return;
+            }
+
+            console.log("🕵️‍♂️ [DEBUG-SYNC] Safe to sync. Executing invalidateAll() now.");
+            pendingInvalidation = false;
             invalidateAll();
         };
 
@@ -104,6 +122,16 @@
                     disconnectSync();
                 }
             });
+
+            // Try to apply pending syncs when the user clicks away or finishes typing
+            const flushSync = () => {
+                if (pendingInvalidation) {
+                    console.log("🕵️‍♂️ [DEBUG-SYNC] User interaction ended. Flushing deferred sync.");
+                    setTimeout(safeInvalidate, 100);
+                }
+            };
+            window.addEventListener('focusout', flushSync);
+            window.addEventListener('click', flushSync);
         });
 
         onDestroy(disconnectSync);
@@ -423,7 +451,7 @@ $:  isDemoMode =
 				value={$page.data.activeInventoryId}
 				formAction="/?/switchVault"
 				name="inventoryId"
-				reload={true}
+				reload={false}
 			>
 				<div slot="header" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">Switch Collection</div>
 				<svelte:fragment slot="footer">
@@ -597,7 +625,7 @@ $:  isDemoMode =
         {/if}
 </Modal>
 
-<CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => { notify('success', e.detail); window.location.reload(); }} on:error={(e) => notify('error', e.detail)} />
+<CreateInventoryModal bind:this={createInventoryModal} on:success={(e) => { notify('success', e.detail); invalidateAll(); }} on:error={(e) => notify('error', e.detail)} />
 
 <!-- Bottom Sheet Menu -->
 <Modal bind:this={mobileMenuModal} boxClass="sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200 !overflow-visible">
@@ -624,7 +652,7 @@ $:  isDemoMode =
 								value={$page.data.activeInventoryId}
 								formAction="/?/switchVault"
 								name="inventoryId"
-								reload={true}
+								reload={false}
 							>
 								<svelte:fragment slot="footer">
 									<!--

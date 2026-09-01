@@ -5,6 +5,7 @@
     import Items from "$lib/components/items.svelte";
     import Search from "$lib/components/search.svelte";
     import { enhance } from "$app/forms";
+    import { goto } from "$app/navigation";
     import InteractiveColorMix from "$lib/components/InteractiveColorMix.svelte";
     import BottomSheet from "$lib/components/BottomSheet.svelte";
     import CompareAttributeSheet from "$lib/components/compare/CompareAttributeSheet.svelte";
@@ -231,7 +232,7 @@
         {@const friendlyKey = schemaField?.uiLabel || k.replace(/_/g, ' ')}
         <Badge color="secondary" class="p-3 font-semibold shadow-sm capitalize" removable on:click={() => removeFilter('attrs', k)}>{COMPACT_PILLS ? v : `${friendlyKey}: ${v}`}</Badge>
     {/each}
-    <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { window.location.href = '/search'; }}>Clear All</button>
+    <button class="btn btn-xs btn-ghost text-gray-400" on:click={() => { goto('/search'); }}>Clear All</button>
 </div>
 {/if}
 
@@ -247,7 +248,11 @@
 {/if}
 
 	<BottomSheet bind:this={filterModal} title="Search Filters">
-        <form bind:this={filterForm} method="GET" action="/search" class="flex flex-col gap-3" on:submit={() => filterModal.close()}>
+        <form bind:this={filterForm} method="GET" action="/search" class="flex flex-col gap-3" on:submit|preventDefault={(e) => {
+            filterModal.close();
+            const params = new URLSearchParams(new FormData(e.currentTarget) as any);
+            goto(`/search?${params.toString()}`);
+        }}>
             <input type="hidden" name="attrs" value={JSON.stringify(filterAttrs)}>
 			
 			<div class="flex gap-4 flex-col sm:flex-row">
