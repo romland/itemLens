@@ -4,7 +4,7 @@
 Inventory management (for at home). There are many like it, but this one is mine.
 
 The primary use is:
-`Do I have that, where the heck is it?` and `What does it do and why did I buy it?`
+`Do I have that, where the heck is it?` and `What does it do and why did I buy it?` [1]
 
 I am no fan of data-entry, so, adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into making
@@ -12,7 +12,7 @@ a pleasant and fast work-flow. It optionally uses machine learning of various ty
 language and vision models, object classification, OCR, background removal, segmentation,
 TTS.
 
-There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
+[1]: There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
 
 _This readme is very much a work in progress; it's currently not organized or complete at all._
 _Also: Quite a few of the more recent bits are written by an LLM acting as a sales person, which is very cringe. I will deal with it._
