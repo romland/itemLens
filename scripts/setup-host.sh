@@ -72,6 +72,19 @@ if [ "$USE_DOCKER" = false ] && [ "$USERLAND_ARCH" != "arm64" ] && [ "$USERLAND_
     USE_DOCKER=true
 fi
 
+# Patch outdated libseccomp2 on 32-bit userlands to prevent SIGSYS (exit code 159) on arm64
+# Very specific for me (romland) since I am trying to get this running on a dirt-old Raspberry Pi already used for other stuff.
+if [ "$USERLAND_ARCH" = "armhf" ] || [ "$USERLAND_ARCH" = "arm" ]; then
+    SECCOMP_VER=$(dpkg-query -W -f='${Version}' libseccomp2 2>/dev/null || echo "0")
+    if [[ "$SECCOMP_VER" < "2.5.0" ]]; then
+        info "Upgrading libseccomp2 for 64-bit container syscall compatibility..."
+        wget -q http://ftp.debian.org/debian/pool/main/libs/libseccomp/libseccomp2_2.5.4-1+deb12u1_armhf.deb -O /tmp/libseccomp2.deb
+        sudo dpkg -i /tmp/libseccomp2.deb && rm -f /tmp/libseccomp2.deb
+        sudo systemctl restart docker
+        success "libseccomp2 upgraded and Docker daemon restarted!"
+    fi
+fi
+
 # ------------------------------------------------------------------------------
 # Pre-Flight Summary
 # ------------------------------------------------------------------------------
