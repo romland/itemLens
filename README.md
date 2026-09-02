@@ -257,6 +257,25 @@ All external dependencies are **100% optional**. Everything in itemLens graceful
 * **Video Thumbnails:** `sudo apt-get install ffmpeg` (extracts frame grabs from video files)
 * **Video Archiving:** `yt-dlp` (downloads linked videos from YouTube, Twitter, etc. into local storage)
 
+### Local LAN HTTPS & PWA (Mobile Access)
+Mobile browsers strictly require **HTTPS** to use the Camera or install the app to your home screen. To access itemLens securely from your phone over your local network:
+
+1. **Run the HTTPS Setup Script:**
+   ```bash
+   bash bin/setup-https.sh
+   ```
+   *(This installs `mkcert`, generates a Root CA, and hosts it temporarily on port `1025`)*
+2. **Trust the CA on your Phone:**
+   Open your phone's browser, navigate to `http://<YOUR_LAN_IP>:1025/rootCA.crt`, download it, and install/trust it in your device's security settings.
+3. **Generate the Server Certificates:**
+   Stop the script (`Ctrl+C`), then generate the application certificates in the root folder. **Replace the IP below with your server's actual LAN IP:**
+   ```bash
+   mkcert -cert-file cert.pem -key-file key.pem localhost 127.0.0.1 192.168.x.x
+   ```
+4. **Restart the app:** (`docker restart itemlens-app`). 
+   
+The Express server will automatically detect the `.pem` files and boot securely on `https://<YOUR_LAN_IP>:3000`.
+
 Check `/settings/admin` at any time to run a self-diagnosis on host tools, Docker microservices (RemBG, PaddleOCR, SingleFile), and API keys.
 
 # Latest yt-dlp

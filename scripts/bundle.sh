@@ -35,6 +35,8 @@ rsync -av \
 cp package.json package-lock.json .env.example server.js dist/
 [ -f Dockerfile ] && cp Dockerfile dist/
 [ -f docker-compose.yml ] && cp docker-compose.yml dist/
+[ -f cert.pem ] && cp cert.pem dist/
+[ -f key.pem ] && cp key.pem dist/
 
 echo "🐳 Copying Docker services (excluding caches & virtualenvs)..."
 rsync -av \
@@ -114,6 +116,16 @@ if [ "$1" = "--native" ]; then
   RUN_DOCKER=false
 fi
 
+# ---------------------------------------------------------
+# Prevent Docker from creating directories for missing certs
+# ---------------------------------------------------------
+if [ "$RUN_DOCKER" = true ] && { [ ! -f cert.pem ] || [ ! -f key.pem ]; }; then
+  echo "⚠️  Missing SSL certificates (cert.pem / key.pem). Generating temporary self-signed certs to prevent Docker mount crashes..."
+  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes -subj "/CN=localhost" 2>/dev/null
+  echo "   💡 For PWA/Camera support on mobile, replace these with valid LAN certificates using mkcert:"
+  echo "      mkcert -cert-file cert.pem -key-file key.pem localhost 127.0.0.1 <YOUR_LAN_IP>"
+fi
+
 if [ "$RUN_DOCKER" = true ]; then
   echo "🐳 Starting itemLens in Full Docker Mode..."
   if [ -f docker-compose.yml ]; then
@@ -147,4 +159,8 @@ echo "🗜️ Creating archive itemlens-${VERSION}.tar.gz..."
 tar -czf "itemlens-${VERSION}.tar.gz" -C dist .
 cp "itemlens-${VERSION}.tar.gz" itemlens-dist.tar.gz
 
+echo "=================================================================="
 echo "✅ Distribution package created successfully!"
+echo "=================================================================="
+echo "💡 NOTE ON HTTPS/PWA: If you generated local certs (cert.pem / key.pem), they were included in the bundle."
+echo "If missing, temporary self-signed certs will be generated on launch to prevent Docker errors."

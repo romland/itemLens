@@ -69,17 +69,15 @@ export default defineConfig(({ command }) => ({
 		// Commented this out in August 2026
 		// https: false,
         // https: true,		
-        allowedHosts: [
-            '192.168.178.104'
-        ]
+        allowedHosts: true
     },
 	ssr: {
-        external: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'pdf-parse', 'bcrypt']
+        external: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'pdf-parse', 'bcrypt', 'sharp', 'exif-reader']
     },
     
     // completely exclude them from Vite's pre-bundler:
     optimizeDeps: {
-        exclude: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'bcrypt']
+        exclude: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'bcrypt', 'sharp', 'exif-reader']
     },
 
 	plugins: [

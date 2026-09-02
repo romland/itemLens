@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+# I need this because I run it on LAN and must have a self-signed cert for PWA features
+
 echo "==> Setting up Ephemeral Local HTTPS (Linux / WSL)..."
 
 ARCH=$(uname -m)

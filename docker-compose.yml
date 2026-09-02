@@ -64,9 +64,11 @@ services:
       - SINGLEFILE_URL=http://singlefile:8001
     volumes:
       - ./prisma:/app/prisma
-        - ./data:/app/data
-        - ./build:/app/build
-        - ./server.js:/app/server.js
+      - ./data:/app/data
+      - ./build:/app/build
+      - ./server.js:/app/server.js
+      - ./cert.pem:/app/cert.pem:ro
+      - ./key.pem:/app/key.pem:ro
     security_opt:
       - seccomp:unconfined
     depends_on:
