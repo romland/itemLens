@@ -12,6 +12,49 @@ info()    { echo -e "\n${BLUE}${BOLD}[INFO]${NC} $1"; }
 success() { echo -e "${GREEN}${BOLD}[SUCCESS]${NC} $1"; }
 warn()    { echo -e "${YELLOW}${BOLD}[WARNING]${NC} $1"; }
 
+# Parse flags for non-interactive execution
+SKIP_PROMPT=false
+if [[ "$1" == "-y" || "$1" == "--yes" ]]; then
+    SKIP_PROMPT=true
+fi
+
+echo -e "${BOLD}🔍 Checking system prerequisites...${NC}"
+
+# Pre-flight check
+WILL_INSTALL=()
+command -v git &>/dev/null || WILL_INSTALL+=("Git & build libraries (APT)")
+command -v ffmpeg &>/dev/null || WILL_INSTALL+=("Media processing (FFmpeg, Poppler)")
+command -v node &>/dev/null || WILL_INSTALL+=("Node.js 22 (via NVM)")
+command -v docker &>/dev/null || WILL_INSTALL+=("Docker Engine & Docker Compose")
+command -v yt-dlp &>/dev/null || WILL_INSTALL+=("yt-dlp (Media downloader)")
+
+echo ""
+echo "itemLens requires the following host adjustments:"
+if [ ${#WILL_INSTALL[@]} -eq 0 ]; then
+    echo "  • All system dependencies are already installed!"
+else
+    for item in "${WILL_INSTALL[@]}"; do
+        echo "  • Will install: $item"
+    done
+fi
+
+TOTAL_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
+TOTAL_SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
+if [ "$TOTAL_RAM_MB" -le 4096 ] && [ "$TOTAL_SWAP_MB" -lt 2048 ]; then
+    echo "  • Will offer to increase Swap file to 2048MB (recommended for OCR)"
+fi
+
+echo ""
+if [ "$SKIP_PROMPT" = false ]; then
+    read -p "Do you want to proceed with host setup? (y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Setup cancelled by user."
+        exit 0
+    fi
+fi
+
+
 echo -e "${BOLD}🚀 Starting itemLens Host Environment Setup...${NC}"
 
 # ------------------------------------------------------------------------------
@@ -120,6 +163,20 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 6. Fetch and Extract Latest Release
+# ------------------------------------------------------------------------------
+info "Downloading latest itemLens release..."
+INSTALL_DIR="${HOME}/itemlens"
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+curl -sL https://github.com/romland/itemLens/releases/latest/download/itemlens-dist.tar.gz -o itemlens-dist.tar.gz
+tar -xzf itemlens-dist.tar.gz
+rm itemlens-dist.tar.gz
+
+success "itemLens unpacked into $INSTALL_DIR"
+
+# ------------------------------------------------------------------------------
 # Setup Summary
 # ------------------------------------------------------------------------------
 echo -e "\n=========================================================================="
@@ -128,4 +185,6 @@ echo "==========================================================================
 echo " - Node.js : $(node -v 2>/dev/null || echo 'Reload shell to activate NVM')"
 echo " - Docker  : $(docker compose version 2>/dev/null || echo 'Installed')"
 echo " - yt-dlp  : $(yt-dlp --version 2>/dev/null || echo 'Installed')"
+echo ""
+echo "🚀 To start itemLens: cd ~/itemlens && ./start.sh"
 echo "=========================================================================="
