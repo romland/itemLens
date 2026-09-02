@@ -82,9 +82,18 @@ fi
 if [ "$(uname -m)" = "aarch64" ] && [ "$(dpkg --print-architecture 2>/dev/null || echo '')" = "armhf" ]; then
   export DOCKER_DEFAULT_PLATFORM=linux/arm64
   echo "⚙️ 64-bit kernel with 32-bit userland detected. Auto-targeting linux/arm64."
-  
-  echo "🛡️ Bypassing 32-bit Docker daemon security mismatch via isolated BuildKit container..."
-  docker buildx inspect franken-builder >/dev/null 2>&1 || docker buildx create --use --name franken-builder --driver docker-container --platform linux/arm64
+
+  # Self-heal outdated host seccomp to prevent SIGSYS (159) during 64-bit builds
+  SECCOMP_VER=$(dpkg-query -W -f='${Version}' libseccomp2 2>/dev/null || echo "0")
+  if dpkg --compare-versions "$SECCOMP_VER" lt "2.5.0"; then
+      echo "🚨 CRITICAL: Host libseccomp2 ($SECCOMP_VER) is too old and will crash 64-bit containers during build."
+      echo "🛠️ Patching libseccomp2 to enable modern syscalls..."
+      wget -q http://ftp.debian.org/debian/pool/main/libs/libseccomp/libseccomp2_2.5.4-1+deb12u1_armhf.deb -O /tmp/libseccomp2.deb
+      sudo dpkg -i /tmp/libseccomp2.deb && rm -f /tmp/libseccomp2.deb
+      sudo systemctl restart docker
+      echo "✅ libseccomp2 patched and Docker daemon restarted!"
+      sleep 3
+  fi
 fi
 
 # Ensure NVM is loaded if running native mode
