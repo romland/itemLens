@@ -208,6 +208,16 @@ else
     success "User $USER already belongs to the 'docker' group."
 fi
 
+# Prevent credential helper DBus crashes on headless OS
+mkdir -p "$HOME/.local/bin"
+cat << 'EOF' > "$HOME/.local/bin/docker-credential-secretservice"
+#!/bin/sh
+if [ "$1" = "get" ]; then
+  echo '{"ServerURL":"","Username":"","Secret":""}'
+  exit 0
+fi
+exit 0
+
 # ------------------------------------------------------------------------------
 # 5. Media Downloader (yt-dlp - Native Mode Only)
 # Override Docker credential store to prevent D-Bus helper crashes on headless hosts
