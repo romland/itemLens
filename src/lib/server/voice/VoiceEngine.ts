@@ -167,6 +167,37 @@ const getContainerSummary = (items: any[]): string => {
 // --- PLUG & PLAY INTENT REGISTRY ---
 const intents: VoiceIntent[] = [
     {
+        name: 'ContainerContents', // e.g., "What's in B 007?", "What is inside A 001", "Wat zit er in B 003"
+        match: (text) => text.match(/^(?:what's in|what's inside|what is in|what is inside|what do i have in|what do we have in|wat zit er in|wat staat er in)\s+(.+)$/i),
+        process: async (match, inventoryId) => {
+            const targetQuery = match[1].trim();
+            const normTarget = normalizeQuery(targetQuery);
+            
+            const containers = await db.container.findMany({
+                where: { inventoryId },
+                include: {
+                    items: {
+                        include: {
+                            item: { select: { id: true, title: true, slug: true } }
+                        }
+                    }
+                }
+            });
+
+            const matched = containers.find(c => {
+                const normC = normalizeQuery(c.name);
+                return normC === normTarget || c.name.toLowerCase().replace(/\s+/g, '') === targetQuery.toLowerCase().replace(/\s+/g, '');
+            });
+            if (!matched) return { query: targetQuery, spokenReply: `I couldn't find a container named ${targetQuery}.` };
+            const items = matched.items.map(i => i.item).filter(i => Boolean(i?.title));
+            const route = `/container/${encodeURIComponent(matched.name)}`;
+            if (items.length === 0) return { query: targetQuery, spokenReply: `${matched.name} is empty.`, route };
+            if (items.length === 1) return { query: targetQuery, spokenReply: `${matched.name} contains ${items[0].title}.`, route };
+            if (items.length === 2) return { query: targetQuery, spokenReply: `${matched.name} contains ${items[0].title} and ${items[1].title}.`, route };
+            return { query: targetQuery, spokenReply: `${matched.name} contains ${items.length} items, including ${items[0].title} and ${items[1].title}.`, route };
+        }
+    },
+    {
         name: 'Locate', // e.g., "Where do I have an antenna", "Find the ESP32"
         match: (text) => text.match(/^(?:where is|where's|where are|where do i have|where do we have|find|locate|waar is|waar zijn|zoek)(?:\s+(?:the|my|a|an|de|het|een))?\s+(.+)$/i),
         process: async (match, inventoryId) => {
