@@ -295,6 +295,27 @@ fi
 success "itemLens unpacked into $INSTALL_DIR"
 
 # ------------------------------------------------------------------------------
+# 7. Local LAN HTTPS & PWA Setup
+# ------------------------------------------------------------------------------
+info "Configuring Local HTTPS for Mobile PWA & Camera access..."
+if ! command -v mkcert &> /dev/null; then
+    MKARCH="amd64"
+    [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ] && MKARCH="arm64"
+    sudo apt-get install -y -qq libnss3-tools 2>/dev/null || true
+    sudo curl -fsSL -o /usr/local/bin/mkcert "https://dl.filippo.io/mkcert/latest?for=linux/${MKARCH}"
+    sudo chmod +x /usr/local/bin/mkcert
+fi
+
+mkcert -install >/dev/null 2>&1
+LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K\S+' || hostname -I | awk '{print $1}')
+
+info "Generating SSL certificates for IP: $LAN_IP..."
+mkcert -cert-file cert.pem -key-file key.pem localhost 127.0.0.1 "$LAN_IP" >/dev/null 2>&1
+
+CA_DIR=$(mkcert -CAROOT)
+[ -f "$CA_DIR/rootCA.pem" ] && cp -f "$CA_DIR/rootCA.pem" ./rootCA.crt
+
+# ------------------------------------------------------------------------------
 # Setup Summary
 # ------------------------------------------------------------------------------
 echo -e "\n=========================================================================="
@@ -305,5 +326,9 @@ echo " - Node.js : $( [ "$USE_DOCKER" = true ] && echo 'Containerized' || node -
 echo " - Docker  : $(docker compose version 2>/dev/null || echo 'Installed')"
 echo " - yt-dlp  : $( [ "$USE_DOCKER" = true ] && echo 'Containerized' || yt-dlp --version 2>/dev/null || echo 'Installed' )"
 echo ""
-echo "🚀 To start itemLens: ./start.sh"
+echo "🔒 To enable mobile access, install the Root CA on your phone:"
+echo "   Run: python3 -m http.server 1025"
+echo "   Then open http://${LAN_IP}:1025/rootCA.crt on your phone."
+echo ""
+echo "🚀 To start itemLens: ./start.sh (App will be at https://${LAN_IP}:3000)"
 echo "=========================================================================="
