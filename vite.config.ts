@@ -197,39 +197,39 @@ export default defineConfig(({ command }) => ({
 		//   })
 
 
-		{
-			// This is to make sure we're not fucking things up.
-			name: 'dump-server-handles',
-			closeBundle() {
-                if (command !== 'build') return;
-				// Delay dump so it runs AFTER adapter-node finishes its work
-				setTimeout(() => {
-				console.log('\n========================================');
-				console.log('   ACTUAL UNCLOSED HANDLES (AFTER ADAPTER)');
-				console.log('========================================');
+		// {
+		// 	// This is to make sure we're not fucking things up.
+		// 	name: 'dump-server-handles',
+		// 	closeBundle() {
+        //         if (command !== 'build') return;
+		// 		// Delay dump so it runs AFTER adapter-node finishes its work
+		// 		setTimeout(() => {
+		// 		console.log('\n========================================');
+		// 		console.log('   ACTUAL UNCLOSED HANDLES (AFTER ADAPTER)');
+		// 		console.log('========================================');
 				
-				const handles = (process as any)._getActiveHandles?.() || [];
-				handles.forEach((h: any, i: number) => {
-					const type = h?.constructor?.name || typeof h;
-					if (type === 'TTY' || type === 'WriteStream' || type === 'ReadStream' || h.fd === 1 || h.fd === 2) return;
+		// 		const handles = (process as any)._getActiveHandles?.() || [];
+		// 		handles.forEach((h: any, i: number) => {
+		// 			const type = h?.constructor?.name || typeof h;
+		// 			if (type === 'TTY' || type === 'WriteStream' || type === 'ReadStream' || h.fd === 1 || h.fd === 2) return;
 					
-					console.log(`[Handle #${i}] Type: ${type}`);
-					if (h.spawnfile) console.log(`   -> Spawned Process: ${h.spawnfile}`);
-					if (h._idleTimeout) console.log(`   -> Active Timer: ${h._idleTimeout}ms`);
-					if (h.filename) console.log(`   -> File: ${h.filename}`);
-				});
-				console.log('========================================\n');
-				}, 2000);
-			}
-		},
-        {
-			// Well, let's kill ourselves after build then, something Rust or C++ is hanging.
-            name: 'terminate-native-threads-after-build',
-            closeBundle() {
-                if (command !== 'build') return;
-                setTimeout(() => process.exit(0), 3000);
-            }
-        }
+		// 			console.log(`[Handle #${i}] Type: ${type}`);
+		// 			if (h.spawnfile) console.log(`   -> Spawned Process: ${h.spawnfile}`);
+		// 			if (h._idleTimeout) console.log(`   -> Active Timer: ${h._idleTimeout}ms`);
+		// 			if (h.filename) console.log(`   -> File: ${h.filename}`);
+		// 		});
+		// 		console.log('========================================\n');
+		// 		}, 2000);
+		// 	}
+		// },
+        // {
+		// 	// Well, let's kill ourselves after build then, something Rust or C++ is hanging.
+        //     name: 'terminate-native-threads-after-build',
+        //     closeBundle() {
+        //         if (command !== 'build') return;
+        //         setTimeout(() => process.exit(0), 3000);
+        //     }
+        // }
 
 	],
 }));
