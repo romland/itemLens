@@ -5,10 +5,12 @@ set -e
 # 0. Architecture & OS Check
 # ------------------------------------------------------------------------------
 ARCH=$(uname -m)
-if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "x86_64" ]; then
+USERLAND_ARCH=$(dpkg --print-architecture 2>/dev/null || uname -m)
+if [ "$USERLAND_ARCH" != "arm64" ] && [ "$USERLAND_ARCH" != "amd64" ] && [ "$USERLAND_ARCH" != "x86_64" ]; then
     echo -e "\033[0;31m\033[1m[ERROR] 64-bit OS Required!\033[0m"
     echo "itemLens, Node 22, and Docker containers require a 64-bit OS (aarch64 or x86_64)."
     echo "Current Architecture: $ARCH"
+    echo "Current Userland Architecture: $USERLAND_ARCH"
     exit 1
 fi
 
