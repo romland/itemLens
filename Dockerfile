@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:22-bullseye-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
@@ -21,7 +21,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --omit=dev && npx prisma generate
+RUN npm ci \
+ && npx prisma generate \
+ && npm prune --omit=dev
 
 COPY build ./build/
 

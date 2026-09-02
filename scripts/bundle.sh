@@ -76,6 +76,18 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
+# ---------------------------------------------------------
+# Auto-adapt to 32-bit userland on 64-bit kernel
+# ---------------------------------------------------------
+if [ "$(uname -m)" = "aarch64" ] && [ "$(dpkg --print-architecture 2>/dev/null || echo '')" = "armhf" ]; then
+  export DOCKER_DEFAULT_PLATFORM=linux/arm64
+  echo "⚙️ 64-bit kernel with 32-bit userland detected. Auto-targeting linux/arm64."
+fi
+
+# Ensure NVM is loaded if running native mode
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 # Determine execution mode from flag or .env file
 RUN_DOCKER=false
 if [ "$1" = "--docker" ] || grep -q "^DOCKER_MODE=true" .env 2>/dev/null; then

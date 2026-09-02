@@ -305,5 +305,5 @@ echo " - Node.js : $( [ "$USE_DOCKER" = true ] && echo 'Containerized' || node -
 echo " - Docker  : $(docker compose version 2>/dev/null || echo 'Installed')"
 echo " - yt-dlp  : $( [ "$USE_DOCKER" = true ] && echo 'Containerized' || yt-dlp --version 2>/dev/null || echo 'Installed' )"
 echo ""
-echo "🚀 To start itemLens: cd ~/itemlens && ./start.sh"
+echo "🚀 To start itemLens: ./start.sh"
 echo "=========================================================================="
