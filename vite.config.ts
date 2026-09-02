@@ -16,6 +16,13 @@ const buildVersion = `v${pkg.version}-${gitHash}`;
 // import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig(({ command }) => ({
+    build: {
+        rollupOptions: {
+            output: {
+                banner: "import { fileURLToPath } from 'url'; import { dirname } from 'path'; const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename);"
+            }
+        }
+    },
     define: {
         'import.meta.env.PUBLIC_APP_VERSION': JSON.stringify(buildVersion)
     },	
