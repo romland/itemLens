@@ -23,8 +23,8 @@
         "services:up": "docker compose up -d",
         "services:down": "docker compose down",
         "services:logs": "docker compose logs -f",
-        "docker:up": "docker compose --profile full up -d --build",
-        "docker:down": "docker compose --profile full down",
+		"docker:build": "docker compose --profile full up -d --build",
+		"docker:up": "docker compose --profile full up -d",
 		"vacuumdb": "sqlite3 prisma/dev.db \"VACUUM;\""
 	},
 	"prisma": {
