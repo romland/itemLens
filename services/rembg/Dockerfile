@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "rembg[cli,cpu]"
+RUN pip install --no-cache-dir "rembg[cpu]"
 
 EXPOSE 7000
 
