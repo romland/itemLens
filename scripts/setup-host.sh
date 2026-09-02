@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
+# ------------------------------------------------------------------------------
+# 0. Architecture & OS Check
+# ------------------------------------------------------------------------------
+ARCH=$(uname -m)
+if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "x86_64" ]; then
+    echo -e "\033[0;31m\033[1m[ERROR] 64-bit OS Required!\033[0m"
+    echo "itemLens, Node 22, and Docker containers require a 64-bit OS (aarch64 or x86_64)."
+    echo "Current Architecture: $ARCH"
+    exit 1
+fi
+
 # Setup color formatting for feedback
 BOLD="\033[1m"
 GREEN="\033[0;32m"
