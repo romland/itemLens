@@ -1,3 +1,4 @@
+import { building } from "$app/environment";
 import { redirect, type Handle } from "@sveltejs/kit";
 import { db } from "$lib/server/database";
 import { initFTS } from "$lib/server/fts";
@@ -13,10 +14,12 @@ export interface UserPreferences {
 	epubLocations?: Record<string, string>; // Maps document path/id to CFI string
 }
 
-// Initialize the SQLite FTS5 engine once on server boot
-initFTS().catch(console.error);
 
 export const handle = (async ({ event, resolve }) => {
+// Initialize the SQLite FTS5 engine once on server boot (skip during build)
+if (!building) {
+    initFTS().catch(console.error);
+}
 	let theme: string = 'coffee';  // default theme
 
 	const session = event.cookies.get('session');
