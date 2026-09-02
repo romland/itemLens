@@ -1,7 +1,8 @@
 services:
   rembg:
     container_name: itemlens-rembg
-    image: danielgatis/rembg
+    build: ./services/rembg
+    image: itemlens-rembg:latest
     command: s --no-ui
     environment:
       - OMP_NUM_THREADS=2
