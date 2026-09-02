@@ -2,7 +2,7 @@ import type { KVP, Prisma } from '@prisma/client';
 import { db } from '$lib/server/database';
 import slugify from 'slugify';
 import fs from 'fs';
-import { getSafeFilename } from '$lib/server/photouploads';
+import { getSafeFilename } from '$lib/server/fsUtils';
 import { logActivity } from '$lib/server/logger';
 
 export const getTagIds = async (tagcsv: string, inventoryId: number) => {

@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { getSafeFilename } from './photouploads';
+import { getSafeFilename } from '$lib/server/fsUtils';
 
 const execFileAsync = promisify(execFile);
 

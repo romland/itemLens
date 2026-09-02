@@ -94,7 +94,11 @@
         {#if isEditing}
             <form action="/timeline?/edit" method="POST" use:enhance={() => { return async ({ update }) => { await update(); isEditing = false; }}}>
                 <input type="hidden" name="id" value={note.id}>
-                <FormInput type="textarea" name="content" bind:value={editContent} inputClass="text-sm leading-snug resize-none min-h-[4rem] max-h-[18rem] [field-sizing:content]" 
+                <FormInput 
+                    type="textarea" 
+                    name="content" 
+                    bind:value={editContent} 
+                    inputClass="text-sm leading-snug resize-none min-h-[4rem] max-h-[18rem] [field-sizing:content]" 
                     on:input={(e) => { e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px'; }}
                     on:keydown={(e) => {
                         if (e.key === 'Escape') isEditing = false;
