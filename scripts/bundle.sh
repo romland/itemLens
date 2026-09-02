@@ -13,26 +13,41 @@ rm -rf dist itemlens-dist.tar.gz itemlens-*.tar.gz
 echo "📦 Building SvelteKit app..."
 npm run build
 
-echo "📋 Copying build output (blocking images/u from entering dist)..."
+echo "📋 Copying build output..."
 mkdir -p dist
 rsync -av \
   --exclude='client/images/u/*' \
+  --exclude='client/images/containers/*' \
   --exclude='client/images/tests/*' \
   build/ dist/build/
 
-# Recreate empty upload folder so SvelteKit/Node won't complain about missing paths
+# Recreate empty image directories so SvelteKit won't throw missing path errors
 mkdir -p dist/build/client/images/u
+mkdir -p dist/build/client/images/containers
 
 echo "${VERSION}" > dist/VERSION
 
-echo "🗄️ Copying Prisma & configuration..."
-cp -r prisma dist/
-cp package.json package-lock.json .env.example dist/
+echo "🗄️ Copying Prisma (excluding local databases)..."
+mkdir -p dist/prisma
+rsync -av \
+  --exclude='*.db' \
+  --exclude='*.db-journal' \
+  --exclude='*.db-wal' \
+  --exclude='*.sqlite' \
+  prisma/ dist/prisma/
 
-echo "🐳 Copying Docker services (skipping .git & permission-locked caches)..."
+cp package.json package-lock.json .env.example dist/
+[ -f Dockerfile ] && cp Dockerfile dist/
+[ -f docker-compose.yml ] && cp docker-compose.yml dist/
+
+echo "🐳 Copying Docker services (excluding caches & virtualenvs)..."
 rsync -av \
   --exclude='.git' \
   --exclude='.gitignore' \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --exclude='.venv' \
+  --exclude='venv' \
   --exclude='singlefile/chrome-data' \
   --exclude='singlefile/node_modules' \
   --exclude='rembg-data' \
@@ -49,6 +64,8 @@ cat << 'EOF' > dist/start.sh
 set -e
 
 mkdir -p build/client/images/u
+mkdir -p build/client/images/containers
+mkdir -p prisma
 mkdir -p services/rembg-data
 mkdir -p services/singlefile/chrome-data
 mkdir -p services/paddleocr/downloads
@@ -59,17 +76,40 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
-echo "🐳 Starting Docker microservices (RemBG, PaddleOCR, SingleFile)..."
-(cd services && docker compose up -d)
+# Determine execution mode from flag or .env file
+RUN_DOCKER=false
+if [ "$1" = "--docker" ] || grep -q "^DOCKER_MODE=true" .env 2>/dev/null; then
+  RUN_DOCKER=true
+fi
+if [ "$1" = "--native" ]; then
+  RUN_DOCKER=false
+fi
 
-echo "📦 Installing production dependencies..."
-npm ci --omit=dev
+if [ "$RUN_DOCKER" = true ]; then
+  echo "🐳 Starting itemLens in Full Docker Mode..."
+  if [ -f docker-compose.yml ]; then
+    docker compose --profile full up -d --build
+  else
+    (cd services && docker compose --profile full up -d --build)
+  fi
+  echo "🚀 itemLens full stack running on http://localhost:${PORT:-3000}"
+else
+  echo "🐳 Starting Docker microservices (RemBG, PaddleOCR, SingleFile)..."
+  if [ -f docker-compose.yml ]; then
+    docker compose up -d
+  else
+    (cd services && docker compose up -d)
+  fi
 
-echo "🗄️ Running database migrations..."
-npx prisma migrate deploy || npx prisma db push
+  echo "📦 Installing production dependencies..."
+  npm ci --omit=dev
 
-echo "🚀 Starting itemLens server on port ${PORT:-3000}..."
-PORT=${PORT:-3000} node build
+  echo "🗄️ Running database migrations..."
+  npx prisma migrate deploy || npx prisma db push
+
+  echo "🚀 Starting itemLens server on port ${PORT:-3000}..."
+  PORT=${PORT:-3000} node build
+fi
 EOF
 
 chmod +x dist/start.sh
