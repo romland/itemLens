@@ -94,6 +94,15 @@ if [ "$(uname -m)" = "aarch64" ] && [ "$(dpkg --print-architecture 2>/dev/null |
       echo "✅ libseccomp2 patched and Docker daemon restarted!"
       sleep 3
   fi
+
+  echo "🛡️ Bootstrapping unconfined 64-bit BuildKit engine to bypass host seccomp poison..."
+  docker rm -f franken-buildkitd 2>/dev/null || true
+  docker buildx rm franken-builder 2>/dev/null || true
+  
+  # Launch an entirely isolated, privileged build engine bound to localhost
+  docker run -d --name franken-buildkitd --privileged -p 127.0.0.1:8338:8338 moby/buildkit:latest --addr tcp://0.0.0.0:8338
+  sleep 3
+  docker buildx create --use --name franken-builder --driver remote tcp://127.0.0.1:8338
 fi
 
 # Ensure NVM is loaded if running native mode
