@@ -64,7 +64,7 @@ info "Checking RAM and Swap allocation..."
 TOTAL_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
 TOTAL_SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
 
-if [ "$TOTAL_RAM_MB" -le 4096 ] && [ "$TOTAL_SWAP_MB" -lt 2048 ]; then
+if [ "$TOTAL_RAM_MB" -le 4096 ] && [ "$TOTAL_SWAP_MB" -lt 1900 ]; then
     warn "Low Swap Configuration Detected (${TOTAL_SWAP_MB}MB Swap on ${TOTAL_RAM_MB}MB RAM)."
     echo "Heavy OCR (PaddleOCR) and Vision AI tasks can crash the server due to OOM kills."
     

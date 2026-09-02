@@ -62,6 +62,11 @@ The other challenge is figuring out if you’ve just photographed an item you al
 
 Ultimately, we're just using modern vision and language models to handle the tedious work of standardizing and deduplicating data. It figures out how much detail is actually needed; like knowing when an item is just a "hammer" versus a "16oz fiberglass handle". Just snap a picture and let this organize it (okay, I also spammed QR-codes on a whole heap of boxes and trays, so maybe _two_ snaps, although the QR-reader does not require a tap, per se).
 
+### Install
+__I only have a Debian based installer, for now__  
+```bash
+curl -fsSL https://raw.githubusercontent.com/romland/itemLens/main/scripts/setup-host.sh -o setup.sh && bash setup.sh
+```
 
 ### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything

@@ -22,3 +22,4 @@ apply-llm.sh
 services/rembg-data/
 dist/
 itemlens-*.tar.gz
+itemlens.tar.gz
