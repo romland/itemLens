@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import mkcert from 'vite-plugin-mkcert';
+import express from 'express';
 
 import { execSync } from 'child_process';
 import pkg from './package.json' with { type: 'json' };
@@ -23,8 +24,7 @@ export default defineConfig(({ command }) => ({
             ignored: [
                 '**/.git/**',
                 '**/node_modules/**',
-                '**/static/images/u/**',
-                '**/static/images/tests/**',
+                '**/data/images/**',
                 '**/services/**',
                 '**/dev-dist/**',
                 '**/dist/**',
@@ -74,15 +74,23 @@ export default defineConfig(({ command }) => ({
         ]
     },
 	ssr: {
-        external: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'pdf-parse']
+        external: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'pdf-parse', 'bcrypt']
     },
     
     // completely exclude them from Vite's pre-bundler:
     optimizeDeps: {
-        exclude: ['canvas', 'crop-node', 'get-pixels/node-pixels']
+        exclude: ['canvas', 'crop-node', 'get-pixels/node-pixels', 'bcrypt']
     },
 
 	plugins: [
+        // Mount our out-of-band data directory during development
+        {
+            name: 'serve-data',
+            configureServer(server) {
+                server.middlewares.use('/images', express.static('data/images'));
+            }
+        },
+
         // Only run mkcert during local dev server
         command === 'serve' && mkcert({
             hosts: ['localhost', '127.0.0.1', '192.168.178.104']

@@ -23,7 +23,7 @@ export async function POST({ request, locals }) {
 
     try {
         const result = await apiQueue.add(
-            () => guessProductDetails(`static${photo.orgPath}`, hint),
+            () => guessProductDetails(`data${photo.orgPath}`, hint),
             { targetType: 'item', targetId: Number(itemId), description: 'Refining product details via LLM' }
         );
         return json(result);

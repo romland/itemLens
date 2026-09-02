@@ -236,7 +236,7 @@
                                         <Badge color="ghost" size="sm" icon="bi-box" class="border-base-300 shadow-sm">Item #{log.itemId}</Badge>
                                     {/if}
                                     {#if log.path}
-                                        <Badge color="ghost" size="sm" icon="bi-file-image" class="border-base-300 shadow-sm max-w-[150px] truncate hover:border-primary cursor-zoom-in transition-colors" title="View {log.path}" on:click={() => lightbox.open({ orgPath: log.path.replace(/^static/, ''), showOriginal: true })}>{log.path.split('/').pop()}</Badge>
+                                        <Badge color="ghost" size="sm" icon="bi-file-image" class="border-base-300 shadow-sm max-w-[150px] truncate hover:border-primary cursor-zoom-in transition-colors" title="View {log.path}" on:click={() => lightbox.open({ orgPath: log.path.replace(/^(static|data)/, ''), showOriginal: true })}>{log.path.split('/').pop()}</Badge>
                                     {/if}
                                     <span class="text-xs text-gray-500">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                 </div>

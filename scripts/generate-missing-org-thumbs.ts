@@ -17,7 +17,7 @@ async function main() {
     for (const photo of photos) {
         if (!photo.orgPath) continue;
 
-        const localOrgPath = `static${photo.orgPath}`;
+        const localOrgPath = `data${photo.orgPath}`;
         
         // Strip the extension and append the clean WebP suffix
         const localOrgThumbPath = localOrgPath.replace(/\.[^/.]+$/, '_org_thumb.webp');

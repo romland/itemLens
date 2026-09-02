@@ -89,7 +89,7 @@ export async function POST({ request, locals }) {
     if (draftPath && boxStr) {
         try {
             const box = JSON.parse(boxStr);
-            const localDraftPath = `static${draftPath}`;
+            const localDraftPath = `data${draftPath}`;
             const extracted = await extractBoundingBox(localDraftPath, box, title);
             if (extracted) finalPathForProduct = extracted;
         } catch (e) {

@@ -26,9 +26,10 @@ RUN npm ci \
  && npm prune --omit=dev
 
 COPY build ./build/
+COPY server.js ./
 
 EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-CMD ["sh", "-c", "npx prisma db push && node build"]
+CMD ["sh", "-c", "npx prisma db push && node server.js"]

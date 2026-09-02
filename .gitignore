@@ -24,3 +24,4 @@ dist/
 itemlens-*.tar.gz
 itemlens.tar.gz
 prompt-installer.txt
+data/

@@ -219,7 +219,7 @@ export async function processDraftPhotoBackground(webPath: string, type: string,
 	const heavyPromise = (async () => {
 		try {
 			const tracking = { targetType: 'global' as const, targetId: 0 };
-			const localPath = `static${webPath}`;
+            const localPath = `data${webPath}`;
 			const box = precomputedAi?.foregroundBox || precomputedAi?.box || null;
 			const data = await enrichPhotoData(localPath, webPath, type, inventoryId, tracking, !!precomputedAi, box);
 			
@@ -262,7 +262,7 @@ export async function processItemPhotosBackground(item: any) {
                 }
                 
                 const webPath = photo.orgPath;
-                const localPath = `static${webPath}`;
+                const localPath = `data${webPath}`;
                 const tracking = { targetType: 'item' as const, targetId: item.id };
                 
                 let skipEnrichPhotoData = false;
@@ -271,7 +271,7 @@ export async function processItemPhotosBackground(item: any) {
                 // FAST WORKFLOW FIX: Event-Driven Background Synchronization
                 // If this photo is a draft, processDraftPhotoBackground might still be generating the heavy ML derivatives.
                 if (photo.orgPath.includes('-draft-') && (!photo.thumbPath || !photo.ocr)) {
-                    const jsonPath = `static${photo.orgPath}.json`;
+                    const jsonPath = `data${photo.orgPath}.json`;
                     console.log(`\n[Background Task] ⏳ Photo is a draft but missing ML data. Checking for sidecar...`);
                     
                     let sidecar = readValidSidecar(jsonPath);
@@ -369,7 +369,7 @@ export async function processItemPhotosBackground(item: any) {
                         try {
                             if (!aiTitle) {
                                 await logActivity(item.id, 'Analysis', `Attempting to auto-generate missing Item title...`);
-                                const currentLocalPath = `static${enriched.orgPath || photo.orgPath}`;
+                                const currentLocalPath = `data${enriched.orgPath || photo.orgPath}`;
                                 const { guessProductDetails } = await import('$lib/server/gemini-classification');
                                 const details = await apiQueue.add(() => guessProductDetails(currentLocalPath, "", item.id));
                                 aiTitle = details?.title;
@@ -474,11 +474,11 @@ export async function processItemPhotosBackground(item: any) {
 }
 
 async function processQRcodeThenDownload(webFilePath: string, photo: Photo, item: Item) {
-    const targetPath = photo.thumbPath ? `static${photo.thumbPath}` : `static${webFilePath.replace(/\.[^/.]+$/, '_thumb.webp')}`;
+    const targetPath = photo.thumbPath ? `data${photo.thumbPath}` : `data${webFilePath.replace(/\.[^/.]+$/, '_thumb.webp')}`;
     const page = await QRUrlDownloader.fetchQRCodeDocument(targetPath);
     if (page !== null) {
         const pageData = JSON.parse(page);
-        await fsPromises.writeFile(`static${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
+        await fsPromises.writeFile(`data${webFilePath}_thumb.html`, pageData.html, { encoding: "utf8" });
         try {
             await db.document.create({
                 data: {
@@ -608,7 +608,7 @@ export async function savePhotos(
                     finalOrgPath = `${webPath}/${filename}`;
                 } else {
                     console.log(`[DEBUG FAST-SAVE] Reusing existing draft path: ${finalOrgPath}. Checking for sidecar...`);
-                    const jsonPath = `static${finalOrgPath}.json`;
+                    const jsonPath = `data${finalOrgPath}.json`;
                     if (fs.existsSync(jsonPath)) {
                         console.log(`[DEBUG FAST-SAVE] Sidecar found at ${jsonPath}. Parsing...`);
                         try {

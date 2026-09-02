@@ -59,26 +59,26 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
         let t0 = performance.now();
         
         try {
-            const orgThumbnail = await sharp(`static${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toBuffer();
-            fs.writeFileSync(`static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_org_thumb.webp`, orgThumbnail);
+            const orgThumbnail = await sharp(`data${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toBuffer();
+            fs.writeFileSync(`data${photo.orgPath?.replace(/\.[^/.]+$/, '')}_org_thumb.webp`, orgThumbnail);
             timings.push(`OrgThumb: ${(performance.now() - t0).toFixed(0)}ms`);
         } catch (ex) { console.error("Error generating original thumbnail", ex); }
 
-        const outputFileNoBkg = `static${photo.orgPath}_crop.png`;
-        const finalCropPath = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
-        const finalThumbPath = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
+        const outputFileNoBkg = `data${photo.orgPath}_crop.png`;
+        const finalCropPath = `data${photo.orgPath?.replace(/\.[^/.]+$/, '')}_crop.webp`;
+        const finalThumbPath = `data${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
 
         try {
             if (bgRemovalEnabled) {
-                let pathForRembg = `static${photo.orgPath}`;
+                let pathForRembg = `data${photo.orgPath}`;
                 let tempBoxCrop = null;
                 
                 if (foregroundBox && foregroundBox.length === 4) {
-                    tempBoxCrop = `static${photo.orgPath?.replace(/\.[^/.]+$/, '')}_temp_box.webp`;
+                    tempBoxCrop = `data${photo.orgPath?.replace(/\.[^/.]+$/, '')}_temp_box.webp`;
                     t0 = performance.now();
-                    const extracted = await extractBoundingBox(`static${photo.orgPath}`, foregroundBox, 'temp_box');
+                    const extracted = await extractBoundingBox(`data${photo.orgPath}`, foregroundBox, 'temp_box');
                     if (extracted) {
-                        pathForRembg = `static${extracted}`;
+                        pathForRembg = `data${extracted}`;
                     }
                     timings.push(`BoxCrop: ${(performance.now() - t0).toFixed(0)}ms`);
                 }
@@ -123,7 +123,7 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
             } else {
                 // Fallback: Just generate thumbnails and colors from the original un-cropped image
                 t0 = performance.now();
-                await sharp(`static${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath);
+                await sharp(`data${photo.orgPath}`).rotate().resize({ width: 256 }).webp({ quality: 80 }).toFile(finalThumbPath);
                 updates.thumbPath = `${photo.orgPath?.replace(/\.[^/.]+$/, '')}_thumb.webp`;
                 updates.cropPath = photo.orgPath; // No cutout created
                 timings.push(`Thumb(NoBG): ${(performance.now() - t0).toFixed(0)}ms`);
@@ -131,7 +131,7 @@ export async function generatePhotoDerivatives(photo: Partial<Photo>, imgUrl: st
                 if (getColors) {
                     t0 = performance.now();
                     const colors = await new Promise((resolve, reject) => {
-                        getTopColorsNamed(`static${photo.orgPath}`, (err: any, res: any) => err ? reject(err) : resolve(res));
+                        getTopColorsNamed(`data${photo.orgPath}`, (err: any, res: any) => err ? reject(err) : resolve(res));
                     });
                     updates.colors = JSON.stringify(colors);
                     timings.push(`Colors(NoBG): ${(performance.now() - t0).toFixed(0)}ms`);

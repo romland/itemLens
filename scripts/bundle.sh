@@ -16,14 +16,10 @@ npm run build
 echo "📋 Copying build output..."
 mkdir -p dist
 rsync -av \
-  --exclude='client/images/u/*' \
-  --exclude='client/images/containers/*' \
-  --exclude='client/images/tests/*' \
   build/ dist/build/
 
-# Recreate empty image directories so SvelteKit won't throw missing path errors
-mkdir -p dist/build/client/images/u
-mkdir -p dist/build/client/images/containers
+mkdir -p dist/data/images/u
+mkdir -p dist/data/images/containers
 
 echo "${VERSION}" > dist/VERSION
 
@@ -36,7 +32,7 @@ rsync -av \
   --exclude='*.sqlite' \
   prisma/ dist/prisma/
 
-cp package.json package-lock.json .env.example dist/
+cp package.json package-lock.json .env.example server.js dist/
 [ -f Dockerfile ] && cp Dockerfile dist/
 [ -f docker-compose.yml ] && cp docker-compose.yml dist/
 
@@ -63,8 +59,8 @@ cat << 'EOF' > dist/start.sh
 #!/usr/bin/env bash
 set -e
 
-mkdir -p build/client/images/u
-mkdir -p build/client/images/containers
+mkdir -p data/images/u
+mkdir -p data/images/containers
 mkdir -p prisma
 mkdir -p services/rembg-data
 mkdir -p services/singlefile/chrome-data
@@ -141,7 +137,7 @@ else
   npx prisma migrate deploy || npx prisma db push
 
   echo "🚀 Starting itemLens server on port ${PORT:-3000}..."
-  PORT=${PORT:-3000} node build
+  PORT=${PORT:-3000} node server.js
 fi
 EOF
 

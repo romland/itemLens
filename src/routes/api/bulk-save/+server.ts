@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 });
             }
 
-            const localDraftPath = `static${draftPath}`;
+            const localDraftPath = `data${draftPath}`;
             
             // 3. Process approved items
             for (const item of items) {

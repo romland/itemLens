@@ -159,7 +159,7 @@ export async function downloadAndStoreDocuments(target: { itemId?: number, timel
 					
 					// Fire and forget thumbnail extraction
 					import('$lib/server/thumbExtractor').then(({ generateDocumentThumbnail }) => {
-						generateDocumentThumbnail(document.id, videoData.path.replace('/images/u', 'static/images/u'), 'video');
+                        generateDocumentThumbnail(document.id, videoData.path.replace('/images/u', 'data/images/u'), 'video');
 					});
 					
 					continue; // Skip SingleFile logic

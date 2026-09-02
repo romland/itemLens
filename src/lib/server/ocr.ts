@@ -13,7 +13,7 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       try {
         const parsedUrl = new URL(imageUrl);
-        localPath = `static${parsedUrl.pathname}`;
+        localPath = `data${parsedUrl.pathname}`;
       } catch (e) {}
     }
     

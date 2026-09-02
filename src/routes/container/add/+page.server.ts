@@ -27,9 +27,9 @@ export const actions = {
             filename = date + '-' + slugify(file.name.toLowerCase()).replace(/\.[^/.]+$/, '') + '.webp';
 
 			try {
-				await sharp(buffer).webp({ quality: 85 }).toFile(`static/images/containers/${filename}`);
+                await sharp(buffer).webp({ quality: 85 }).toFile(`data/images/containers/${filename}`);
 				const thumbFilename = filename.replace(/\.[^/.]+$/, "_thumb.webp");
-				await sharp(buffer).resize({ width: 256 }).webp({ quality: 80 }).toFile(`static/images/containers/${thumbFilename}`);
+                await sharp(buffer).resize({ width: 256 }).webp({ quality: 80 }).toFile(`data/images/containers/${thumbFilename}`);
 			} catch (e) { console.error("Failed to generate container thumbnail", e); }
 
             filename = "/images/containers/" + filename;

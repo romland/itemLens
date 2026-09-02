@@ -63,7 +63,7 @@ USER QUESTION: ${question}
             const primaryPhoto = item.photos.find(p => p.type === 'product' && p.orgPath);
             if (primaryPhoto) {
                 try {
-                    const localFilePath = `static${primaryPhoto.orgPath}`;
+                    const localFilePath = `data${primaryPhoto.orgPath}`;
                     const fileBuffer = fs.readFileSync(localFilePath);
                     const ext = path.extname(localFilePath).toLowerCase();
                     let mimeType = 'image/jpeg';

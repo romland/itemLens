@@ -31,7 +31,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             throw new Error('Invalid image path');
         }
         
-        const localPath = `static${cleanWebPath}`;
+        const localPath = `data${cleanWebPath}`;
         if (!fs.existsSync(localPath)) return cleanWebPath;
 
         const buffer = fs.readFileSync(localPath);
@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // Rotate the implicitly derived org_thumb
         if (cleanOrg) {
             const oldOrgThumb = cleanOrg.replace(/\.[^/.]+$/, '_org_thumb.webp');
-            const localOldOrgThumb = `static${oldOrgThumb}`;
+            const localOldOrgThumb = `data${oldOrgThumb}`;
             
             if (fs.existsSync(localOldOrgThumb)) {
                  const buffer = fs.readFileSync(localOldOrgThumb);
