@@ -10,6 +10,8 @@ services:
       - "7000:7000"
     volumes:
       - ./services/rembg-data:/root/.rembg
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
 
   paddleocr:
@@ -28,6 +30,8 @@ services:
     volumes:
       - ./services/paddleocr/downloads:/root/.paddleocr
       - ./services/paddleocr/paddlex_cache:/root/.paddlex
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
 
   singlefile:
@@ -39,6 +43,8 @@ services:
     volumes:
       - ./services/singlefile:/opt/app
       - /opt/app/node_modules
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
 
   app:
@@ -59,6 +65,8 @@ services:
     volumes:
       - ./prisma:/app/prisma
       - ./build/client/images/u:/app/build/client/images/u
+    security_opt:
+      - seccomp:unconfined
     depends_on:
       - rembg
       - paddleocr

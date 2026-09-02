@@ -82,6 +82,9 @@ fi
 if [ "$(uname -m)" = "aarch64" ] && [ "$(dpkg --print-architecture 2>/dev/null || echo '')" = "armhf" ]; then
   export DOCKER_DEFAULT_PLATFORM=linux/arm64
   echo "⚙️ 64-bit kernel with 32-bit userland detected. Auto-targeting linux/arm64."
+  
+  echo "🛡️ Bypassing 32-bit Docker daemon security mismatch via isolated BuildKit container..."
+  docker buildx inspect franken-builder >/dev/null 2>&1 || docker buildx create --use --name franken-builder --driver docker-container --platform linux/arm64
 fi
 
 # Ensure NVM is loaded if running native mode
