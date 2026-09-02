@@ -210,6 +210,13 @@ fi
 
 # ------------------------------------------------------------------------------
 # 5. Media Downloader (yt-dlp - Native Mode Only)
+# Override Docker credential store to prevent D-Bus helper crashes on headless hosts
+mkdir -p "$HOME/.docker"
+cat << 'EOF' > "$HOME/.docker/config.json"
+{
+  "credsStore": ""
+}
+EOF
 # ------------------------------------------------------------------------------
 if [ "$USE_DOCKER" = false ]; then
     info "Checking yt-dlp status..."
