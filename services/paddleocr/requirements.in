@@ -1,5 +1,5 @@
 fastapi>=0.135.0
-paddlepaddle>=3.0.0
+paddlepaddle>=3.0.0,<=3.2.2
 paddleocr
 uvicorn
 numpy

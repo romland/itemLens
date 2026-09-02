@@ -121,9 +121,9 @@ fi
 if [ "$RUN_DOCKER" = true ]; then
   echo "🐳 Starting itemLens in Full Docker Mode..."
   if [ -f docker-compose.yml ]; then
-    docker compose --profile full up -d --build
+    docker compose --profile full up -d
   else
-    (cd services && docker compose --profile full up -d --build)
+    (cd services && docker compose --profile full up -d)
   fi
   echo "🚀 itemLens full stack running on http://localhost:${PORT:-3000}"
 else
