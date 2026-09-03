@@ -25,3 +25,6 @@ itemlens-*.tar.gz
 itemlens.tar.gz
 prompt-installer.txt
 data/
+
+# Local Compose overrides
+docker-compose.override.yml

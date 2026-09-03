@@ -1,8 +1,7 @@
 services:
   rembg:
     container_name: itemlens-rembg
-    build: ./services/rembg
-    image: itemlens-rembg:latest
+    image: ghcr.io/romland/itemlens-rembg:latest
     command: s --no-ui
     environment:
       - OMP_NUM_THREADS=2
@@ -18,8 +17,7 @@ services:
 
   paddleocr:
     container_name: itemlens-paddleocr
-    build: ./services/paddleocr
-    image: paddleocrfastapi:paddlejr
+    image: ghcr.io/romland/itemlens-paddleocr:latest
     environment:
       - TZ=Europe/Amsterdam
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
@@ -40,7 +38,7 @@ services:
 
   singlefile:
     container_name: itemlens-singlefile
-    build: ./services/singlefile
+    image: ghcr.io/romland/itemlens-singlefile:latest
     command: node webserver.js 8001
     mem_limit: 768m
     cpus: 1.5
@@ -56,10 +54,7 @@ services:
   app:
     profiles: ["full"]
     container_name: itemlens-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: itemlens-app:latest
+    image: ghcr.io/romland/itemlens-app:latest
     restart: unless-stopped
     mem_limit: 768m
     cpus: 2.0
