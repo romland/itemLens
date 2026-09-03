@@ -1,9 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { db } from '$lib/server/database';
-import bcrypt from 'bcrypt';
 import { checkRateLimit } from '$lib/server/security';
 import { createSession, setSessionCookie } from '$lib/server/session';
+import bcrypt from 'bcryptjs';
+    import crypto from 'crypto';
+
+    bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
 
 export const actions = {
     default: async ({ request, getClientAddress, cookies }) => {
@@ -35,7 +38,7 @@ export const actions = {
         const newUser = await db.user.create({
             data: {
                 username: username.trim(),
-                password: await bcrypt.hash(password, 10)
+                password: await bcrypt.hash(password, await bcrypt.genSalt(10))
             }
         });
 

@@ -15,6 +15,7 @@ import { fetchVideoIfSupported } from './ytdlp';
 import { extractEpubText } from './epub';
 import { isPdf, isEpub } from '$lib/shared/fileutils';
 import { decodeHtmlEntities } from '$lib/shared/fileutils';
+    import { env } from '$env/dynamic/private';
 
 export async function downloadAndStoreDocuments(target: { itemId?: number, timelineNoteId?: number }, remoteSite: string, data: any, diskFolder: string, webFolder: string, formPrefix: string, depth: number = 0)
 {
@@ -503,6 +504,8 @@ export default class QRUrlDownloader
 	static async fetchQRCodeDocument(imagePath : string) : Promise<string|null>
 	{
 		const imageData = await QRUrlDownloader.getImageData(imagePath);
+        if (!imageData) return null;
+
 		const qrData = await QRUrlDownloader.decodeQR(imageData);
 		// console.log("QR DATA:", qrData);
 		
@@ -526,7 +529,8 @@ export default class QRUrlDownloader
 				// Allow SingleFile its full 240s internal max buffer timeout + 10s grace
 				const timeoutId = setTimeout(() => controller.abort(), 250000); 
 				
-				const response = await fetch("http://localhost:8001", {
+                const singlefileUrl = env.SINGLEFILE_URL || 'http://localhost:8001';
+                const response = await fetch(singlefileUrl, {
 					method: 'POST',
 					body: `url=${encodeURIComponent(url)}`,
 					headers: {

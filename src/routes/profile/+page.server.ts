@@ -1,9 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import sharp from 'sharp';
+    import crypto from 'crypto';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import type { PageServerLoad, Actions } from './$types';
+
+    bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
 
 export const load = (async ({ locals, cookies }) => {
     if (!locals.user) throw redirect(303, '/login');
@@ -59,7 +62,7 @@ export const actions = {
 
         await db.user.update({
             where: { id: locals.user.id },
-            data: { password: await bcrypt.hash(password, 10) }
+            data: { password: await bcrypt.hash(password, await bcrypt.genSalt(10)) }
         });
 
         return { success: true, message: 'Password changed successfully.' };

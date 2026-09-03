@@ -5,6 +5,7 @@ import { lightMlQueue } from './queue/index';
 import type { TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
 import path from 'path';
+import { env } from '$env/dynamic/private';
 
 export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Promise<any>
 {
@@ -17,8 +18,9 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
       } catch (e) {}
     }
     
+    const paddleUrl = env.PADDLE_URL || 'http://localhost:8000';
     if (fs.existsSync(localPath)) {
-      const url = 'http://localhost:8000/ocr/predict-by-file';
+      const url = `${paddleUrl}/ocr/predict-by-file`;
 
       const ext = path.extname(localPath).toLowerCase();
       const unsupportedMLFormats = ['.webp', '.avif', '.heic'];
@@ -59,7 +61,7 @@ export async function getOCRdata(imageUrl : string, tracking?: TaskContext): Pro
       }
     }
     
-    const url = 'http://localhost:8000/ocr/predict-by-url';
+    const url = `${paddleUrl}/ocr/predict-by-url`;
     try {
       const response = await fetch(url + "?imageUrl=" + encodeURIComponent(imageUrl), {
         method: 'GET',

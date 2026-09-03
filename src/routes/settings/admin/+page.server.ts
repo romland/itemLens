@@ -1,10 +1,13 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import type { PageServerLoad, Actions } from './$types';
+import bcrypt from 'bcryptjs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+    import { env } from '$env/dynamic/private';
+
+    bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
 
 const execAsync = promisify(exec);
 
@@ -37,9 +40,9 @@ export const load = (async ({ locals }) => {
         ffmpeg: await checkCommand('ffmpeg'),
         pdftoppm: await checkCommand('pdftoppm'),
         ytdlp: await checkCommand('yt-dlp'),
-        rembg: await checkService('http://localhost:7000/api/remove'),
-        paddleocr: await checkService('http://localhost:8000/'),
-        singlefile: await checkService('http://localhost:8001/')
+        rembg: await checkService(`${env.REMBG_URL || 'http://localhost:7000'}/api/remove`),
+        paddleocr: await checkService(`${env.PADDLE_URL || 'http://localhost:8000'}/`),
+        singlefile: await checkService(`${env.SINGLEFILE_URL || 'http://localhost:8001'}/`)
     };
 
     return { allUsers, deps };
@@ -59,7 +62,7 @@ export const actions = {
             await db.user.create({
                 data: {
                     username: username.trim(),
-                    password: await bcrypt.hash(password, 10),
+                    password: await bcrypt.hash(password, await bcrypt.genSalt(10)),
                     token: crypto.randomUUID()
                 }
             });
@@ -88,7 +91,7 @@ export const actions = {
 
         let updateData: any = { name: name.trim(), email: email.trim(), isAdmin, canCreateInventories };
         if (password && password.trim().length >= 6) {
-            updateData.password = await bcrypt.hash(password, 10);
+            updateData.password = await bcrypt.hash(password, await bcrypt.genSalt(10));
         }
 
         await db.user.update({ where: { id }, data: updateData });

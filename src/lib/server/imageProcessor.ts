@@ -7,6 +7,7 @@ import { heavyMlQueue } from './queue/index';
 import type { Photo } from '@prisma/client';
 import type { TaskContext } from '$lib/server/taskManager';
 import sharp from 'sharp';
+import { env } from '$env/dynamic/private';
 
 export async function removeBackground(imgUrl: string, outputFileNoBkg: string, tracking?: TaskContext, inputLocalPath?: string, model: string = 'bria-rmbg'): Promise<string> {
     // Allow an explicit input path so we can feed it pre-cropped images, 
@@ -16,12 +17,13 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
     
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout to prevent silent queue death
+    const rembgUrl = env.REMBG_URL || 'http://localhost:7000';
 
     try {
         if (fs.existsSync(localPath)) {
             const form = new FormData();
             form.append('file', fs.createReadStream(localPath));
-            response = await fetch(`http://localhost:7000/api/remove?model=${model}`, {
+            response = await fetch(`${rembgUrl}/api/remove?model=${model}`, {
                 method: 'POST',
                 body: form as any,
                 headers: form.getHeaders(),
@@ -29,7 +31,7 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
             });
         } else {
             console.log(`Local file not found for rembg: ${localPath}, falling back to URL: ${imgUrl}`);
-            response = await fetch(`http://localhost:7000/api/remove?url=${encodeURIComponent(imgUrl)}&model=${model}`, { signal: controller.signal as any });
+            response = await fetch(`${rembgUrl}/api/remove?url=${encodeURIComponent(imgUrl)}&model=${model}`, { signal: controller.signal as any });
         }
     } catch (e: any) {
         if (e.name === 'AbortError') throw new Error(`RemBG HTTP Error: Request timed out after 60 seconds.`);

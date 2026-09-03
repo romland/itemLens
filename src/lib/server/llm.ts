@@ -10,12 +10,23 @@ import { withRetry } from './retry';
 //  export APIKEY=gsk-...
 //  curl -s -H"Authorization: Bearer ${APIKEY}" https://api.groq.com/v1/model_manager/models | jq
 
-const openai = new OpenAI({
-    apiKey: env['OPENAI_API_TOKEN'],
-});
-const groq = new Groq({
-    apiKey:  env.GROQ_API_TOKEN
-});
+let _openai: OpenAI;
+function getOpenAI() {
+    if (!_openai) {
+        if (!env.OPENAI_API_TOKEN) throw new Error("OPENAI_API_TOKEN is missing");
+        _openai = new OpenAI({ apiKey: env.OPENAI_API_TOKEN });
+    }
+    return _openai;
+}
+
+let _groq: Groq;
+function getGroq() {
+    if (!_groq) {
+        if (!env.GROQ_API_TOKEN) throw new Error("GROQ_API_TOKEN is missing");
+        _groq = new Groq({ apiKey: env.GROQ_API_TOKEN });
+    }
+    return _groq;
+}
 
 
 export async function extractInvoiceData(ocrData, tracking?: TaskContext)
@@ -42,7 +53,7 @@ async function extractInvoiceDataOpenAI(ocrData)
 
     // TODO: ChatGPT 3.5 is trash for this task. I want Mixtral@Groq for it!
     try {
-        const chatCompletion = await withRetry(() => openai.chat.completions.create({
+        const chatCompletion = await withRetry(() => getOpenAI().chat.completions.create({
             messages: [
                 {
                     role: 'user',
@@ -82,7 +93,7 @@ async function extractInvoiceDataGroq(ocrData, tracking?: TaskContext)
         const refined = toTextDocument(ocrData);
 
         try {
-            const chatCompletion = await withRetry(() => groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => getGroq().chat.completions.create({
                 messages: [
                     {
                         role: 'system',
@@ -129,7 +140,7 @@ Leave out:
 and other irrelevant (to the product or guide) stuff that you might find on a webpage.`;
 
         try {
-            const chatCompletion = await withRetry(() => groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => getGroq().chat.completions.create({
                 messages: [
                     {
                         role: 'system',
@@ -183,7 +194,7 @@ Give me the result as JSON like this (if you cannot find one product, put the ex
         // };
 
         try {
-            const chatCompletion = await withRetry(() => groq.chat.completions.create({
+            const chatCompletion = await withRetry(() => getGroq().chat.completions.create({
                 messages: [
                     {
                         role: 'system',

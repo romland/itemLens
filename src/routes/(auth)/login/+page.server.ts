@@ -1,9 +1,9 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { db } from '$lib/server/database';
-import bcrypt from 'bcrypt';
 import { checkRateLimit } from '$lib/server/security';
 import { createSession, setSessionCookie } from '$lib/server/session';
+import bcrypt from 'bcryptjs';
 
 export const actions = {
     default: async ({ cookies, request, getClientAddress }) => {

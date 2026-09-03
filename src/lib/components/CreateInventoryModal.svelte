@@ -51,7 +51,7 @@
 		<button type="button" class="btn btn-sm btn-circle btn-ghost" on:click={() => modal.close()}><i class="bi bi-x-lg"></i></button>
 	</div>
 	
-	<form method="POST" action="?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
+    <form method="POST" action="/settings/collections?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
 		<div class="p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 bg-base-50">
 			<FormInput label="Name your Collection" labelClass="font-semibold text-lg" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar..." required autocomplete="off" inputClass="input-lg rounded-2xl shadow-inner focus:border-primary" />
 			

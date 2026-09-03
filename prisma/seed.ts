@@ -1,9 +1,9 @@
 import { Item, User, Inventory, Container, PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import slugify from 'slugify';
-import bcrypt from 'bcrypt';
 import crypto from "crypto";
 
+import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function addUser() {

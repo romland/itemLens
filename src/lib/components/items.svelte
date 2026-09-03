@@ -206,7 +206,7 @@
             <ContentUnavailable 
                 type="default"
                 icon={hasActiveFilters ? 'bi-search' : 'bi-box-seam'} 
-                title={hasActiveFilters ? 'No Results Found' : 'Vault is Empty'} 
+                title={hasActiveFilters ? 'No Results Found' : 'It\'s empty in here'} 
                 message={hasActiveFilters ? "Try adjusting your filters or search terms to find what you're looking for." : "Start digitizing your collection by adding your first item."}
                 actionLabel={hasActiveFilters ? 'Clear Filters' : ''}
                 actionIcon="bi-funnel"

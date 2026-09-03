@@ -1,9 +1,11 @@
 // scripts/create-user.ts
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import * as readline from 'readline';
 import { Writable } from 'stream';
+
+    bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
 
 const prisma = new PrismaClient();
 
@@ -71,7 +73,7 @@ async function main() {
 
         console.log("\n⏳ Creating user...");
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10));
         const token = crypto.randomUUID();
 
         const user = await prisma.user.create({

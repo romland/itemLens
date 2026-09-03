@@ -62,6 +62,9 @@ services:
       - REMBG_URL=http://rembg:7000
       - PADDLE_URL=http://paddleocr:8000
       - SINGLEFILE_URL=http://singlefile:8001
+      - BODY_SIZE_LIMIT=52428800
+    env_file:
+      - .env
     volumes:
       - ./prisma:/app/prisma
       - ./data:/app/data
