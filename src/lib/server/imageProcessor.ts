@@ -22,11 +22,19 @@ export async function removeBackground(imgUrl: string, outputFileNoBkg: string, 
     try {
         if (fs.existsSync(localPath)) {
             const form = new FormData();
-            form.append('file', fs.createReadStream(localPath));
+            const fileBuffer = await sharp(localPath)
+                .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+                .toBuffer();
+            
+            form.append('file', fileBuffer, { filename: 'upload.png' });
+            const headers = {
+                ...form.getHeaders(),
+                'Content-Length': form.getLengthSync().toString()
+            };
             response = await fetch(`${rembgUrl}/api/remove?model=${model}`, {
                 method: 'POST',
                 body: form as any,
-                headers: form.getHeaders(),
+                headers: headers,
                 signal: controller.signal as any
             });
         } else {

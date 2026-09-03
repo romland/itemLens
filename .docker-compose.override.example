@@ -1,0 +1,15 @@
+services:
+  rembg:
+    build: ./services/rembg
+    ports:
+      - "7000:7000"
+
+  paddleocr:
+    build: ./services/paddleocr
+    ports:
+      - "8000:8000"
+
+  singlefile:
+    build: ./services/singlefile
+    ports:
+      - "8001:8001"

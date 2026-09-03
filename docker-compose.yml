@@ -6,7 +6,8 @@ services:
     command: s --no-ui
     environment:
       - OMP_NUM_THREADS=2
-    mem_limit: 1024m
+      - MALLOC_ARENA_MAX=2
+    mem_limit: 8g
     cpus: 2.0
     expose:
       - "7000"
