@@ -65,15 +65,8 @@ Ultimately, we're just using modern vision and language models to handle the ted
 ### Install
 __I only have a Debian based installer, for now__  
 ```bash
-mkdir itemlens && cd itemlens && curl -fsSL https://raw.githubusercontent.com/romland/itemLens/main/scripts/setup-host.sh -o setup.sh && bash setup.sh
+mkdir itemlens && cd itemlens && curl -fsSL https://raw.githubusercontent.com/romland/itemLens/main/bin/setup-host.sh -o setup.sh && bash setup.sh
 ```
-
-### ...install note to self:
-to get it running on my Frankenbuild:
-```bash
-DOCKER_DEFAULT_PLATFORM=linux/arm64 ./start.sh
-```
-
 
 ### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything
