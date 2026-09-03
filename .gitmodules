@@ -1,3 +1,0 @@
-[submodule "services/singlefile"]
-	path = services/singlefile
-	url = https://github.com/romland/singlefile-api-docker
