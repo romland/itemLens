@@ -21,6 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fixes exit code 128 by fetching complete git history
+          submodules: false
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
