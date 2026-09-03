@@ -1,4 +1,21 @@
-FROM node:22-bullseye-slim
+# --- STAGE 1: Build Application ---
+FROM node:22-bullseye-slim AS builder
+
+WORKDIR /app
+
+COPY .npmrc package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci && npx prisma generate
+
+COPY postcss.config.cjs tailwind.config.cjs svelte.config.js tsconfig.json vite.config.ts ./
+COPY src ./src
+COPY static ./static
+
+RUN npm run build
+
+# --- STAGE 2: Production Runtime ---
+FROM node:22-bullseye-slim AS runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
@@ -18,15 +35,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY package*.json ./
-COPY prisma ./prisma/
-
-RUN npm ci \
- && npx prisma generate \
- && npm prune --omit=dev
-
-COPY build ./build/
-COPY server.js ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/prisma ./prisma
+COPY package*.json server.js ./
 
 EXPOSE 3000
 ENV NODE_ENV=production
