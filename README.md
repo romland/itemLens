@@ -146,6 +146,23 @@ Create a virtual container named **"Digital Library"** and assign tech books, sp
     - How I search for related links
     - **Note on Terminology:** While itemLens is an *inventory management* system, the UI refers to the top-level databases as "Collections". The bulk camera feature is named "Multi-Scan", and the underlying database schema retains the name "Inventories" for structural stability. I mention this because there is bound to be confusion before all variables are renamed. Especially since there was a "collection" before (which is now multi-scan).
 
+### Voice Search & NLP Engine
+The search field supports voice dictation parsed by a custom NLP engine. You can ask natural questions like *"Where is my multimeter?"*, *"How many BNCQ9 connectors do I have?"*, or *"List my microcontrollers."* 
+
+To make this actually work for hardware, electronics, and tools, the matching engine relies on a few specific mechanics under the hood:
+
+* **Hardware-Aware Tokenization:** Standard NLP stemmers destroy alphanumeric model numbers. The engine explicitly rescues tokens containing digits, ensuring terms like `ESP32`, `LM317`, or `1k` survive the matching process.
+* **Bidirectional Unit Translation:** Text-to-speech engines and database records disagree on formatting. The engine uses digit-anchored translations to bridge compound engineering units and shorthands (e.g., `10µF` ↔ `10 microfarad`, `2×4` ↔ `2 by 4`) so spoken queries perfectly match stored symbols.
+* **Strict Intent Routing:** The engine parses conversational filler ("show me", "how many") into discrete intents (Locate, Stock, List). It scores matches against item titles, descriptions, categories, and AI-extracted physical traits, using a high-water mark filter to drop loose partial matches.
+* **Text Debug Mode:** You can test the intent parser and see exactly how it tokenizes queries without a microphone by prefixing your search with `/v ` (e.g., `/v where are my 10k ohm resistors?`).
+
+#### Extending to Other Domains (Apparel, Wine, etc.)
+Because the Voice Engine relies on dictionaries and regular expressions rather than rigid database schemas, extending it to entirely different collections—like a wardrobe or a wine cellar—only requires expanding the pre-processing maps in `VoiceEngine.ts`.
+
+* **Domain-Specific Phonetics:** You add new regex rules to `preprocessText` and `phoneticizeForTTS` to bridge domain shorthands. For clothes, `XL` expands to `extra large` and `32x34` (pants) to `waist 32 length 34`. For wine, `750ml` becomes `750 milliliter`, `Cab Sauv` maps to `Cabernet Sauvignon`, and notoriously difficult French varietals get phonetic spellings specifically for the TTS output.
+* **Custom Intents:** While standard triggers ("Where is", "How many") work globally, you can add custom intent regexes to catch domain-specific phrasing, such as *"Which red wines do I have from 2015?"* or *"List all my size medium jackets."*
+* **Zero Database Changes:** Because the NLP engine already dumps all dynamically generated attributes (like Vintage, Grape, Fabric, or Size) into the searchable `semanticTokens` pool, the underlying matching algorithm requires zero structural changes to accurately score these new domains.
+
 #### Scanning Clothes
 When taking pictures of clothes for your collection, especially if you use the background removal feature, the items will look significantly better if you:
 1. Lay them flat on a contrasting surface (like a bedsheet or clean floor).
