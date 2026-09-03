@@ -8,9 +8,9 @@ import express from 'express';
 import { execSync } from 'child_process';
 import pkg from './package.json' with { type: 'json' };
 
-let gitHash = process.env.VITE_GIT_HASH || 'dev';
+let gitHash = process.env.VITE_GIT_HASH || process.env.GITHUB_SHA?.substring(0, 7) || 'dev';
 try {
-    if (gitHash === 'dev') {
+    if (gitHash === 'dev' && !process.env.CI) {
         gitHash = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
     }
 } catch {
