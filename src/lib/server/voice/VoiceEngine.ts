@@ -33,9 +33,62 @@ const NUM_WORDS: Record<string, string> = {
     hundred: '100', honderd: '100'
 };
 
-function normalizeNumeralsAndCompounds(text: string): string[] {
-    const cleaned = text.toLowerCase().replace(/[-_]+/g, ' ');
-    const tokens = cleaned.split(/\s+/).filter(Boolean);
+const SYMBOL_MAP: Record<string, string> = {
+	// Hardware & Science
+	'Ω': 'ohm',
+	'μ': 'micro',
+	'µ': 'micro',
+	'ø': 'diameter',
+	'²': 'squared',
+	'³': 'cubed',
+	'°': 'degree',
+	// General & Math
+	'%': 'percent',
+	'&': 'and',
+	'+': 'plus',
+	'=': 'equals',
+	'@': 'at',
+	'#': 'number', // often spoken as "number" (e.g., "#2 pencil")
+	'½': 'half',
+	'¼': 'quarter',
+	'¾': 'three quarters',
+	// Currency
+	'$': 'dollar',
+	'€': 'euro',
+	'£': 'pound'
+};
+
+// Shared text pre-processor that catches symbols before the tokenizer strips them
+function preprocessText(text: string): string[] {
+	let expanded = text;
+	
+	// Handle inches and feet shorthand if immediately following a digit
+	expanded = expanded.replace(/(\d+)"/g, '$1 inch');
+	expanded = expanded.replace(/(\d+)'/g, '$1 foot');
+
+	// Expand compound units so the Database's "10MHz" matches the User's spoken "10 megahertz"
+	// Anchored to digits (\d+) so we don't accidentally replace normal words (e.g. "Obama" -> "Obamilliamp")
+	expanded = expanded.replace(/(\d+)\s*kΩ/gi, '$1 kilo ohm');
+	expanded = expanded.replace(/(\d+)\s*mΩ/gi, '$1 mega ohm');
+	expanded = expanded.replace(/(\d+)\s*[µμ]f/gi, '$1 microfarad');
+	expanded = expanded.replace(/(\d+)\s*pf/gi, '$1 picofarad');
+	expanded = expanded.replace(/(\d+)\s*nf/gi, '$1 nanofarad');
+	expanded = expanded.replace(/(\d+)\s*µa/gi, '$1 microamp');
+	expanded = expanded.replace(/(\d+)\s*ma\b/gi, '$1 milliamp');
+	expanded = expanded.replace(/(\d+)\s*ghz/gi, '$1 gigahertz');
+	expanded = expanded.replace(/(\d+)\s*mhz/gi, '$1 megahertz');
+	expanded = expanded.replace(/(\d+)\s*khz/gi, '$1 kilohertz');
+	expanded = expanded.replace(/(\d+)\s*hz\b/gi, '$1 hertz');
+	expanded = expanded.replace(/(\d+)\s*°c/gi, '$1 degrees celsius');
+	expanded = expanded.replace(/(\d+)\s*°f/gi, '$1 degrees fahrenheit');
+
+	// Translate symbols into spoken words
+	for (const [sym, word] of Object.entries(SYMBOL_MAP)) {
+		expanded = expanded.split(sym).join(` ${word} `);
+	}
+
+	const cleaned = expanded.toLowerCase().replace(/[-_]+/g, ' ');
+	const tokens = cleaned.split(/\s+/).filter(Boolean);
     const digitReplaced = tokens.map(t => NUM_WORDS[t] || t);
 
     // Fold compound tens + units (e.g., ["60", "4"] -> "64")
@@ -50,31 +103,53 @@ function normalizeNumeralsAndCompounds(text: string): string[] {
             folded.push(curr);
         }
     }
+	return folded;
+}
 
-    const variants = new Set<string>();
-    variants.add(folded.join(' '));
-    variants.add(folded.join('')); // "pine" + "64" -> "pine64"
-    return Array.from(variants);
+function normalizeNumeralsAndCompounds(text: string): string[] {
+	const folded = preprocessText(text);
+	const variants = new Set<string>();
+	variants.add(folded.join(' '));
+	variants.add(folded.join('')); // "pine" + "64" -> "pine64"
+	return Array.from(variants);
 }
 
 function normalizeQuery(text: string): string {
-    const cleaned = text.toLowerCase().replace(/[-_]+/g, ' ');
-    const tokens = cleaned.split(/\s+/).filter(Boolean);
-    const digitReplaced = tokens.map(t => NUM_WORDS[t] || t);
+	return preprocessText(text).join(' ');
+}
 
-    const folded: string[] = [];
-    for (let i = 0; i < digitReplaced.length; i++) {
-        const curr = digitReplaced[i];
-        const next = digitReplaced[i + 1];
-        if (curr && next && /^[2-9]0$/.test(curr) && /^[1-9]$/.test(next)) {
-            folded.push(String(parseInt(curr, 10) + parseInt(next, 10)));
-            i++;
-        } else {
-            folded.push(curr);
-        }
-    }
+// Translates hardware/math symbols into phonetic words specifically for the TTS engine
+function phoneticizeForTTS(text: string): string {
+	let phonetic = text;
+	phonetic = phonetic.replace(/µf/gi, ' microfarad ');
+	
+	// 1. Electronics & Engineering (Digit-Anchored Compound Units)
+	phonetic = phonetic.replace(/(\d+)\s*kΩ/gi, '$1 kilo-ohm ');
+	phonetic = phonetic.replace(/(\d+)\s*mΩ/gi, '$1 mega-ohm '); 
+	phonetic = phonetic.replace(/(\d+)\s*[µμ]f/gi, '$1 microfarad ');
+	phonetic = phonetic.replace(/(\d+)\s*pf/gi, '$1 picofarad ');
+	phonetic = phonetic.replace(/(\d+)\s*nf/gi, '$1 nanofarad ');
+	phonetic = phonetic.replace(/(\d+)\s*µa/gi, '$1 microamp ');
+	phonetic = phonetic.replace(/(\d+)\s*ma\b/gi, '$1 milliamp ');
+	phonetic = phonetic.replace(/(\d+)\s*ghz/gi, '$1 gigahertz ');
+	phonetic = phonetic.replace(/(\d+)\s*mhz/gi, '$1 megahertz ');
+	phonetic = phonetic.replace(/(\d+)\s*khz/gi, '$1 kilohertz ');
+	phonetic = phonetic.replace(/(\d+)\s*hz\b/gi, '$1 hertz ');
+	
+	// 2. Hardware, Dimensions & Temperatures
+	phonetic = phonetic.replace(/(\d+)\s*°c/gi, '$1 degrees Celsius ');
+	phonetic = phonetic.replace(/(\d+)\s*°f/gi, '$1 degrees Fahrenheit ');
+	phonetic = phonetic.replace(/±/g, ' plus or minus ');
+	phonetic = phonetic.replace(/(\d+)\s*×\s*(\d+)/g, '$1 by $2'); // "2×4" -> "2 by 4"
+	phonetic = phonetic.replace(/w\//gi, ' with ');
+	phonetic = phonetic.replace(/w\/o/gi, ' without ');
 
-    return folded.join(' ');
+	for (const [sym, word] of Object.entries(SYMBOL_MAP)) {
+		// TTS engines handle everyday symbols ($ % &) perfectly, but choke on hardware ones
+		if (['$', '€', '£', '%', '&', '+', '=', '@', '#'].includes(sym)) continue;
+		phonetic = phonetic.split(sym).join(` ${word} `);
+	}
+	return phonetic.replace(/\s+/g, ' ').trim();
 }
 
 export interface VoiceIntent {
@@ -86,27 +161,101 @@ export interface VoiceIntent {
 export const findItems = async (subject: string, inventoryId: number) => {
     const allItems = await db.item.findMany({
         where: { inventoryId },
-        select: { id: true, title: true, slug: true, amount: true, tags: { select: { name: true } }, locations: { include: { container: { select: { name: true } } } } }
+		select: { 
+			id: true, 
+			title: true, 
+			slug: true, 
+			amount: true, 
+			semanticTokens: true,
+			tags: { select: { name: true } }, 
+			locations: { include: { container: { select: { name: true } } } },
+			photos: { include: { category: { select: { name: true } } } }
+		}
     });
     
-    const textVariants = normalizeNumeralsAndCompounds(subject);
-    const subjectTokens = Array.from(new Set(textVariants.flatMap(v => tokenizeAndStem([v]))));
+		const rawSubjTokens = preprocessText(subject);
+		const rescuedSubjTokens = rawSubjTokens.filter(t => /\d/.test(t)); // Rescue alphanumerics dropped by stemmers
+		const textVariants = normalizeNumeralsAndCompounds(subject);
+		const subjectTokens = Array.from(new Set([
+			...rescuedSubjTokens,
+			...textVariants.flatMap(v => tokenizeAndStem([v]))
+		]));
+
     if (subjectTokens.length === 0) return [];
     
+	const cleanSubj = normalizeQuery(subject);
+	
     const scoredItems = allItems.map(item => {
         const itemTitle = item.title || '';
+			const rescuedTitleTokens = preprocessText(itemTitle).filter(t => /\d/.test(t));
         const titleVariants = normalizeNumeralsAndCompounds(itemTitle);
-        const titleTokens = Array.from(new Set(titleVariants.flatMap(v => tokenizeAndStem([v]))));
-        const tagTokens = item.tags ? item.tags.flatMap((t: any) => tokenizeAndStem([t.name])) : [];
-        const matches = subjectTokens.filter(t => titleTokens.includes(t) || tagTokens.includes(t)).length;
-        const cleanSubj = subject.toLowerCase();
-        const cleanTitle = itemTitle.toLowerCase();
+			const titleTokens = [...rescuedTitleTokens, ...titleVariants.flatMap(v => tokenizeAndStem([v]))];
+			
+			const tagTokens = item.tags ? item.tags.flatMap((t: any) => {
+				return [...preprocessText(t.name).filter(x => /\d/.test(x)), ...tokenizeAndStem([t.name])];
+			}) : [];
+		
+			const locTokens = item.locations ? item.locations.flatMap((l: any) => {
+				return [...preprocessText(l.container.name).filter(x => /\d/.test(x)), ...tokenizeAndStem([l.container.name])];
+			}) : [];
+			
+		let semanticTokens: string[] = [];
+		if (item.semanticTokens) {
+			try { semanticTokens = JSON.parse(item.semanticTokens); } catch(e) {}
+		}
+
+		const catTokens = item.photos ? item.photos.flatMap((p: any) => {
+			return p.category && p.category.name ? tokenizeAndStem([p.category.name]) : [];
+		}) : [];
+		
+		const allItemTokens = new Set([...titleTokens, ...tagTokens, ...locTokens, ...semanticTokens, ...catTokens]);
+		const matches = subjectTokens.filter(t => allItemTokens.has(t)).length;
+		
+		const cleanTitle = normalizeQuery(itemTitle);
         const exactTitleBonus = (cleanTitle.includes(cleanSubj) || textVariants.some(v => cleanTitle.replace(/\s+/g, '').includes(v.replace(/\s+/g, '')))) ? 5 : 0;
         const score = matches + exactTitleBonus;
-        return { item, score };
+		return { item, score, matches, allTokens: Array.from(allItemTokens) };
     }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
 
-    return scoredItems.map(x => x.item);
+	console.group(`🎙️ [VOICE MATCH DEBUG] Query: "${subject}"`);
+	console.log(`Tokens required (${subjectTokens.length}):`, subjectTokens);
+
+	if (scoredItems.length === 0) {
+		console.log(`❌ No items scored above 0.`);
+		console.groupEnd();
+		return [];
+	}
+
+	console.log(`Top partial/full matches:`);
+	scoredItems.slice(0, 5).forEach(x => {
+		const matchedTokens = x.allTokens.filter(t => subjectTokens.includes(t));
+		console.log(` - [ID: ${x.item.id}] "${x.item.title}": Score ${x.score} | Matches (${x.matches}/${subjectTokens.length}) | Matched tokens:`, matchedTokens);
+	});
+
+	// Strict AND matching: if any items contain ALL requested words, return ONLY those items.
+	const perfectMatches = scoredItems.filter(x => x.matches === subjectTokens.length);
+	if (perfectMatches.length > 0) {
+		console.log(`🎯 Found ${perfectMatches.length} perfect matches!`);
+		console.groupEnd();
+		return perfectMatches.sort((a, b) => b.score - a.score).map(x => x.item);
+	}
+
+	// Drop-off filter: If no perfect matches exist, isolate the absolute best partial matches
+	const topScore = scoredItems[0].score;
+	const topMatches = scoredItems[0].matches;
+
+	// Strict Fallback Guard: Don't return random 38 items just because they matched "10" and "capacitor"
+	const requiredMatches = subjectTokens.length <= 2 ? subjectTokens.length : subjectTokens.length - 1;
+	if (topMatches < requiredMatches) {
+		console.log(`🚫 Rejecting fallback: Best match hit ${topMatches}/${subjectTokens.length} tokens. Required: ${requiredMatches}. Returning 0.`);
+		console.groupEnd();
+		return [];
+	}
+
+	console.log(`⚠️ No perfect matches found. Falling back to highest partial score (${topScore}). Returning ${scoredItems.filter(x => x.score === topScore).length} items.`);
+	console.groupEnd();
+
+	return scoredItems.filter(x => x.score === topScore).map(x => x.item);
 };
 
 const getDirectRoute = (items: any[]) => items.length === 1 ? `/${items[0].id}/${items[0].slug}` : undefined;
@@ -199,11 +348,11 @@ const intents: VoiceIntent[] = [
     },
     {
         name: 'Locate', // e.g., "Where do I have an antenna", "Find the ESP32"
-        match: (text) => text.match(/^(?:where is|where's|where are|where do i have|where do we have|find|locate|waar is|waar zijn|zoek)(?:\s+(?:the|my|a|an|de|het|een))?\s+(.+)$/i),
+		match: (text) => text.match(/^(?:where is|where's|where are|where do i have|where do we have|find|locate|show me|search for|look for|i'm looking for|i am looking for|waar is|waar zijn|zoek|ik zoek|toon)(?:\s+(?:the|my|a|an|de|het|een|some))?\s+(.+)$/i),
         process: async (match, inventoryId) => {
-            const subject = normalizeQuery(match[1].trim());
+			const subject = match[1].trim();
             const items = await findItems(subject, inventoryId);
-            if (items.length === 0) return { query: subject, spokenReply: `I couldn't find any ${subject} in your collection.` };
+            if (items.length === 0) return { query: subject, spokenReply: `I couldn't find any ${subject}.` };
             
             if (items.length === 1) {
                 const bestItem = items[0];
@@ -223,7 +372,7 @@ const intents: VoiceIntent[] = [
         name: 'Stock', // e.g., "Do I have any e-ink displays?", "How many eink displays i have"
         match: (text) => text.match(/^(?:how many|do i have|do we have|i need)(?:\s+(?:any|a|an|some|een))?\s+(.+?)(?:\s+(?:do i have|do we have|i have|we have|in stock|left))?$/i),
         process: async (match, inventoryId) => {
-            const subject = normalizeQuery(match[1].trim());
+			const subject = match[1].trim();
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `No, I don't see any ${subject} in your collection.` };
             
@@ -235,7 +384,7 @@ const intents: VoiceIntent[] = [
         name: 'List', // e.g., "Which servos do I have?"
         match: (text) => text.match(/^(?:list|list all|which|what)(?:\s+(?:all|types of|kind of))?\s+(.+?)(?:\s+(?:do i have|do we have|are there|is there))?$/i),
         process: async (match, inventoryId) => {
-            const subject = normalizeQuery(match[1].trim());
+			const subject = match[1].trim();
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `You don't have any ${subject}.` };
             
@@ -248,7 +397,7 @@ const intents: VoiceIntent[] = [
         name: 'Fallback', // Standard keyword search
         match: (text) => text.match(/(.*)/),
         process: async (match, inventoryId) => {
-            const subject = normalizeQuery(match[1].trim());
+			const subject = match[1].trim();
             const items = await findItems(subject, inventoryId);
             if (items.length === 0) return { query: subject, spokenReply: `I couldn't find anything for ${subject}.` };
             return { query: subject, spokenReply: null, route: getDirectRoute(items) }; 
@@ -260,7 +409,11 @@ export const processVoiceQuery = async (transcription: string, inventoryId: numb
     const cleanText = transcription.toLowerCase().replace(/[.?!]+$/, '').trim();
     for (const intent of intents) {
         const match = intent.match(cleanText);
-        if (match) return await intent.process(match, inventoryId);
+		if (match) {
+			const result = await intent.process(match, inventoryId);
+			if (result.spokenReply) result.spokenReply = phoneticizeForTTS(result.spokenReply);
+			return result;
+		}
     }
     return { query: cleanText, spokenReply: null };
 };

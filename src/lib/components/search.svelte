@@ -24,7 +24,11 @@
 	let audioChunks: Blob[] = [];
 	let audioContext: any = null;
 	let silenceAnimFrame: number;
-	let voiceError = '';
+	let voiceFeedback: { type: 'error' | 'success', query?: string, reply?: string, message?: string } | null = null;
+	let voiceFeedbackTimer: ReturnType<typeof setTimeout>;
+	
+	// Reactive flag to trigger our hidden Voice Intent Debug UI
+	$: isVoiceTestMode = q.startsWith('/v ');
 
     // iOS Safari Hack: Global reference prevents aggressive garbage collection from killing voice mid-sentence
     let currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -45,9 +49,10 @@
          window.speechSynthesis.speak(currentUtterance);
 	}
 
-	function showVoiceError(msg: string) {
-		voiceError = msg;
-		setTimeout(() => voiceError = '', 4000);
+	function showVoiceFeedback(type: 'error' | 'success', query?: string, reply?: string, message?: string) {
+		voiceFeedback = { type, query, reply, message };
+		clearTimeout(voiceFeedbackTimer);
+		voiceFeedbackTimer = setTimeout(() => voiceFeedback = null, type === 'error' ? 5000 : 8000);
 	}
 
 	async function startVoiceSearch() {
@@ -139,13 +144,14 @@
 						if (data.spokenReply) {
 							speak(data.spokenReply);
 						}
+						showVoiceFeedback('success', data.text, data.spokenReply || "Routing to search results...");
                         const destination = data.route || `/search?q=${encodeURIComponent(data.text)}`;
                         goto(destination);
 					} else {
-						showVoiceError(data.error || 'Failed to understand audio.');
+						showVoiceFeedback('error', undefined, undefined, data.error || 'Failed to understand audio.');
 					}
 				} catch (err) {
-					showVoiceError('Network error during voice search.');
+					showVoiceFeedback('error', undefined, undefined, 'Network error during voice search.');
 				} finally {
 					isProcessingAudio = false;
 				}
@@ -157,7 +163,7 @@
 
 		} catch (err) {
 			console.error("Microphone access denied or unavailable", err);
-			showVoiceError('Microphone access is required for voice search.');
+			showVoiceFeedback('error', undefined, undefined, 'Microphone access is required for voice search.');
 		}
 	}
 
@@ -168,16 +174,59 @@
 			startVoiceSearch();
 		}
 	}
-    
+
+	async function testVoiceCommand(text: string) {
+		if (!text.trim()) return;
+		try {
+			isProcessingAudio = true;
+			const formData = new FormData();
+			formData.append('textQuery', text);
+
+			const res = await fetch('/api/voice-search', { method: 'POST', body: formData });
+			const data = await res.json();
+			
+			if (res.ok && data.text) {
+				q = data.text;
+				if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
+				if (data.spokenReply) {
+					speak(data.spokenReply);
+				}
+
+				// Show the transcript and response right under the search box
+				showVoiceFeedback('success', data.text, data.spokenReply || "Routing to search results...");
+
+				const destination = data.route || `/search?q=${encodeURIComponent(data.text)}`;
+				goto(destination);
+			} else {
+				showVoiceFeedback('error', undefined, undefined, data.error || 'Failed to process voice command test.');
+			}
+		} catch (err) {
+			showVoiceFeedback('error', undefined, undefined, 'Network error during voice test.');
+		} finally {
+			isProcessingAudio = false;
+		}
+	}
+
     async function query(ev: Event, q: string)
     {
-        if(!q || q.length === 0) {
+		// [VOICE DEBUGGER] Intercept the query if it starts with the test prefix
+		// We clear standard items but FORCE the dropdown open to show the debug UI.
+		if (q.startsWith('/v ')) {
             items = [];
             selectedIndex = -1;
+			if (resultsAsYouType) resultsAsYouType.classList.add("dropdown-open");
             return;
         }
 
         const res = await fetch(`/api/items?q=${encodeURIComponent(q)}&c=8&sort=newest`);
+
+		// [STANDARD SEARCH]
+		if(!q || q.length === 0) {
+			items = [];
+			selectedIndex = -1;
+			if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
+			return;
+		}
         const data = await res.json();
         items = data.items;
         selectedIndex = -1;
@@ -223,8 +272,12 @@
 	$: searchPlaceholder = activeVaultName ? `Search in ${activeVaultName}` : "Search";
 </script>
 
-<form method="GET" action="/search" class="w-full sm:w-auto relative" on:submit|preventDefault={(e) => {
+<form method="GET" action="/search" class="w-full sm:w-auto relative" on:submit|preventDefault={() => {
     if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
+	if (q.startsWith('/v ')) {
+		testVoiceCommand(q.substring(3).trim());
+		return;
+	}
     goto(`/search?q=${encodeURIComponent(q)}`);
 }}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -265,25 +318,56 @@
 			</div>
         </div>
 
-		{#if voiceError}
-			<div class="absolute top-full mt-2 right-0 w-64 bg-base-100 text-error text-xs font-bold p-3 rounded-xl shadow-2xl border border-error/30 z-[100] flex items-start gap-2 animate-fade-in text-left">
-				<i class="bi bi-exclamation-triangle-fill mt-0.5"></i>
-				<span class="flex-1 leading-tight">{voiceError}</span>
-				<button type="button" class="text-error/60 hover:text-error" on:click={() => voiceError = ''}><i class="bi bi-x-lg"></i></button>
+		{#if voiceFeedback}
+			<div class="absolute top-full mt-3 right-0 w-72 bg-base-100/95 backdrop-blur-xl text-xs p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border z-[100] flex items-start gap-3 animate-fade-in text-left {voiceFeedback.type === 'error' ? 'border-error/40' : 'border-primary/20'}">
+				<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center {voiceFeedback.type === 'error' ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'}">
+					<i class="bi {voiceFeedback.type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-robot'} text-lg"></i>
+				</div>
+				<div class="flex-1 leading-tight flex flex-col gap-1.5 min-w-0">
+					{#if voiceFeedback.type === 'error'}
+						<span class="font-bold text-error">{voiceFeedback.message}</span>
+					{:else}
+						<span class="font-medium text-gray-500 italic truncate">"{voiceFeedback.query}"</span>
+						<span class="font-bold text-base-content text-sm">{voiceFeedback.reply}</span>
+					{/if}
+				</div>
+				<button type="button" class="text-gray-400 hover:text-base-content shrink-0 p-1" on:click={() => voiceFeedback = null} aria-label="Dismiss"><i class="bi bi-x-lg"></i></button>
 			</div>
 		{/if}
 
         <DropdownPanel>
-            {#if items?.length > 0}
+			{#if isVoiceTestMode}
+				<!-- 🛠️ PREMIUM DEBUG UI FOR VOICE COMMANDS -->
+				<div class="p-6 text-center bg-base-200/50 rounded-xl border border-primary/20 m-2 animate-fade-in">
+					<div class="w-12 h-12 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+						<i class="bi bi-robot text-2xl"></i>
+					</div>
+					<h3 class="font-bold text-base-content mb-1">Voice Intent Debugger</h3>
+					<p class="text-xs text-gray-500 mb-4">Simulates speech-to-text. Hit <kbd class="kbd kbd-xs shadow-sm bg-base-100">Enter</kbd> to test.</p>
+					
+					{#if q.length > 3}
+						<div class="bg-base-100 p-3 rounded-lg border border-base-300 font-mono text-sm text-primary shadow-inner">
+							"{q.substring(3).trim()}"
+						</div>
+					{:else}
+						<div class="bg-base-100 p-3 rounded-lg border border-base-300 font-mono text-sm text-gray-400 shadow-inner italic">
+							Waiting for input...
+						</div>
+					{/if}
+				</div>
+			{:else if items?.length > 0}
 				<div class="max-h-[35vh] sm:max-h-[50vh] overflow-y-auto rounded-xl overscroll-contain">
                     <Items items={items} brief={true} showControls={false} forceListView={true} />
                 </div>
             {/if}
-            <div class="{(items?.length > 0) ? 'mt-1 pt-1 border-t border-base-200/60' : ''} flex flex-col gap-1 sticky bottom-0 bg-base-100 z-10 pb-1">
-                <a href="/search{q ? `?q=${encodeURIComponent(q)}` : ''}" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
-                    <i class="bi bi-search"></i> {q ? `See all results for "${q.replace(/^"|"$/g, '')}"` : 'Advanced Search & Bulk Edit'}
-                </a>
-            </div>
+			
+			{#if !isVoiceTestMode}
+				<div class="{(items?.length > 0) ? 'mt-1 pt-1 border-t border-base-200/60' : ''} flex flex-col gap-1 sticky bottom-0 bg-base-100 z-10 pb-1">
+					<a href="/search{q ? `?q=${encodeURIComponent(q)}` : ''}" class="btn btn-ghost btn-sm w-full text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-xl" on:click={() => resultsAsYouType.classList.remove("dropdown-open")}>
+						<i class="bi bi-search"></i> {q ? `See all results for "${q.replace(/^"|"$/g, '')}"` : 'Advanced Search & Bulk Edit'}
+					</a>
+				</div>
+			{/if}
         </DropdownPanel>
     </div>
 </form>

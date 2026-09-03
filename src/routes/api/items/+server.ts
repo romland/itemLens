@@ -136,10 +136,10 @@ export async function GET({ url, setHeaders, locals }) {
     let match;
     while ((match = termRegex.exec(ftsQuery)) !== null) {
         if (match[1]) {
-            const cleanPhrase = match[1].replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+			const cleanPhrase = match[1].replace(/[^\p{L}\p{N}\sµΩ°²³½¼¾$€£%&+#ø@-]/gu, '').replace(/\s+/g, ' ').trim();
             if (cleanPhrase) parsedTerms.push({ text: cleanPhrase, isPhrase: true });
         } else if (match[2]) {
-            const cleanWord = match[2].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+			const cleanWord = match[2].replace(/[^\p{L}\p{N}\sµΩ°²³½¼¾$€£%&+#ø@-]/gu, '').trim();
             if (cleanWord) parsedTerms.push({ text: cleanWord, isPhrase: false });
         }
     }
