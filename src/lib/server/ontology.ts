@@ -1,12 +1,12 @@
 import { db } from '$lib/server/database';
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { apiQueue } from '$lib/server/queue/index';
 import { withRetry } from './retry';
 import { taskManager } from './taskManager';
 import { BASE_COLORS } from './colors';
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
 
 const eavResponseSchema = {

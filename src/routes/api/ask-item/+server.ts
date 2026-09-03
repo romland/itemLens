@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/database';
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import fs from 'fs';
 import path from 'path';
@@ -10,7 +10,7 @@ import { logActivity } from '$lib/server/logger';
 import { withRetry } from '$lib/server/retry';
 import { getSafeFilename } from '$lib/server/fsUtils';
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });

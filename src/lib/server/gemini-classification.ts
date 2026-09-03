@@ -1,12 +1,11 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { GEMINI_API_KEY } from '$env/static/private';
 import fs from 'fs';
 import path from 'path';
 import { withRetry } from './retry';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
 export interface ImageAnalysisResult {
   photoType: 'product' | 'invoice' | 'information' | 'other';

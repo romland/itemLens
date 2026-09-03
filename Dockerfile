@@ -4,6 +4,7 @@ FROM node:22-bullseye-slim AS builder
 WORKDIR /app
 
 COPY .npmrc package*.json ./
+COPY .env.example .env
 COPY prisma ./prisma/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

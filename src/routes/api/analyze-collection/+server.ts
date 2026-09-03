@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI, Type } from '@google/genai';
-import { GEMINI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { processDraftPhotoBackground } from '$lib/server/photouploads';
 import { apiQueue } from '$lib/server/queue/index';
 import { db } from '$lib/server/database';
@@ -14,9 +14,9 @@ import { MediaIngest } from '$lib/server/services/MediaIngest';
 import fs from 'fs';
 import { analyzeBulkCollection } from '$lib/server/gemini-classification';
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
     if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
     if (locals.role !== 'EDITOR' && locals.role !== 'OWNER' && !locals.user.isAdmin) return json({ error: 'Forbidden. Viewer access only.' }, { status: 403 });
 
