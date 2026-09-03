@@ -8,11 +8,13 @@ import express from 'express';
 import { execSync } from 'child_process';
 import pkg from './package.json' with { type: 'json' };
 
-let gitHash = 'dev';
+let gitHash = process.env.VITE_GIT_HASH || 'dev';
 try {
-    gitHash = process.env.VITE_GIT_HASH || execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'dev';
+    if (gitHash === 'dev') {
+        gitHash = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    }
 } catch {
-    gitHash = 'dev';
+    // Safe fallback if git command or repository directory is restricted
 }
 const buildVersion = `v${pkg.version}-${gitHash}`;
 
