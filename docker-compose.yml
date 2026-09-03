@@ -6,8 +6,10 @@ services:
     command: s --no-ui
     environment:
       - OMP_NUM_THREADS=2
-    ports:
-      - "7000:7000"
+    mem_limit: 1024m
+    cpus: 2.0
+    expose:
+      - "7000"
     volumes:
       - ./services/rembg-data:/root/.rembg
     security_opt:
@@ -25,8 +27,10 @@ services:
       - PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0
       - OMP_WAIT_POLICY=PASSIVE
       - OMP_NUM_THREADS=2
-    ports:
-      - "8000:8000"
+    mem_limit: 1024m
+    cpus: 2.0
+    expose:
+      - "8000"
     volumes:
       - ./services/paddleocr/downloads:/root/.paddleocr
       - ./services/paddleocr/paddlex_cache:/root/.paddlex
@@ -38,8 +42,10 @@ services:
     container_name: itemlens-singlefile
     build: ./services/singlefile
     command: node webserver.js 8001
-    ports:
-      - "8001:8001"
+    mem_limit: 768m
+    cpus: 1.5
+    expose:
+      - "8001"
     volumes:
       - ./services/singlefile:/opt/app
       - /opt/app/node_modules
@@ -55,8 +61,10 @@ services:
       dockerfile: Dockerfile
     image: itemlens-app:latest
     restart: unless-stopped
+    mem_limit: 768m
+    cpus: 2.0
     ports:
-      - "3000:3000"
+      - "${ITEMLENS_PORT:-3000}:3000"
     environment:
       - PORT=3000
       - REMBG_URL=http://rembg:7000

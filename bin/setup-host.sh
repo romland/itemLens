@@ -7,6 +7,7 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 BLUE="\033[0;34m"
 RED="\033[0;31m"
+CYAN="\033[0;36m"
 NC="\033[0m"
 
 info()    { echo -e "\n${BLUE}${BOLD}[INFO]${NC} $1"; }
@@ -15,7 +16,7 @@ warn()    { echo -e "${YELLOW}${BOLD}[WARNING]${NC} $1"; }
 error()   { echo -e "${RED}${BOLD}[ERROR]${NC} $1"; }
 
 # ------------------------------------------------------------------------------
-# 0. Flag Parsing & Architecture Check
+# 0. Reconnaissance & OS Detection
 # ------------------------------------------------------------------------------
 SKIP_PROMPT=false
 USE_DOCKER=""
@@ -30,8 +31,66 @@ done
 
 ARCH=$(uname -m)
 USERLAND_ARCH=$(dpkg --print-architecture 2>/dev/null || uname -m)
+KERNEL_VER=$(uname -r)
 
-# Interactive deployment mode selection if no flag was provided
+# Fast-bail for Synology DSM: point directly to Container Manager UI
+if [ -f /etc/synoinfo.conf ]; then
+    info "Synology DSM detected!"
+    echo "itemLens runs containerized via DSM Container Manager."
+    echo ""
+    echo "Quick setup via DSM web interface:"
+    echo "  1. Download the production compose file:"
+    echo "     https://raw.githubusercontent.com/romland/itemLens/main/docker-compose.yml"
+    echo "  2. Open DSM -> Container Manager -> Project -> Create"
+    echo "  3. Select 'Create docker-compose.yml' and load the file"
+    echo "  4. Set your API keys in the environment settings and click 'Done'"
+    exit 0
+fi
+
+OS_NAME=$(grep -E '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "Linux (Generic)")
+
+echo -e "${CYAN}${BOLD}"
+echo "========================================="
+echo "        SYSTEM RECONNAISSANCE            "
+echo "========================================="
+echo -e "${NC}"
+echo -e "  ${BOLD}Host OS${NC}          : $OS_NAME"
+echo -e "  ${BOLD}Kernel${NC}           : $KERNEL_VER ($ARCH)"
+echo -e "  ${BOLD}Userland Arch${NC}    : $USERLAND_ARCH"
+
+TOTAL_RAM_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo "Unknown")
+TOTAL_SWAP_MB=$(free -m 2>/dev/null | awk '/^Swap:/{print $2}' || echo "Unknown")
+echo -e "  ${BOLD}Memory & Swap${NC}    : ${TOTAL_RAM_MB}MB RAM / ${TOTAL_SWAP_MB}MB Swap"
+
+# Detect Docker Compose
+COMPOSE_CMD=""
+if docker compose version &>/dev/null; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose &>/dev/null; then
+    COMPOSE_CMD="docker-compose"
+fi
+
+COMPOSE_VERSION="NOT FOUND"
+if [ -n "$COMPOSE_CMD" ]; then
+    COMPOSE_VERSION=$($COMPOSE_CMD version 2>/dev/null | head -n1 || echo "Found ($COMPOSE_CMD)")
+fi
+
+# Tool inventory
+echo ""
+echo -e "  ${BOLD}--- Detected Toolchain ---${NC}"
+echo -e "  Docker           : $(command -v docker &>/dev/null && docker --version 2>/dev/null || echo 'NOT FOUND')"
+echo -e "  Docker Compose   : $COMPOSE_VERSION"
+echo -e "  FFmpeg           : $(command -v ffmpeg &>/dev/null && ffmpeg -version 2>/dev/null | head -n1 || echo 'NOT FOUND')"
+echo -e "  pdftoppm         : $(command -v pdftoppm &>/dev/null && echo 'Available' || echo 'NOT FOUND')"
+echo -e "  yt-dlp           : $(command -v yt-dlp &>/dev/null && yt-dlp --version 2>/dev/null || echo 'NOT FOUND')"
+echo -e "  Node.js          : $(command -v node &>/dev/null && node -v 2>/dev/null || echo 'NOT FOUND')"
+echo -e "  SQLite3          : $(command -v sqlite3 &>/dev/null && sqlite3 --version | awk '{print $1}' || echo 'NOT FOUND')"
+echo ""
+echo -e "${CYAN}=========================================${NC}\n"
+
+# ------------------------------------------------------------------------------
+# Interactive deployment mode selection
+# ------------------------------------------------------------------------------
 if [ -z "$USE_DOCKER" ]; then
     echo -e "${BOLD}🚀 itemLens Host Setup${NC}"
     echo "Select your deployment mode:"
@@ -88,7 +147,9 @@ fi
 # ------------------------------------------------------------------------------
 # Pre-Flight Summary
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}🔍 Checking system prerequisites (${USE_DOCKER:+Full Docker Mode}${USE_DOCKER:-Native Mode})...${NC}"
+MODE_LABEL="Native Host Mode"
+[ "$USE_DOCKER" = true ] && MODE_LABEL="Full Docker Mode"
+echo -e "\n${BOLD}🔍 Checking system prerequisites (${MODE_LABEL})...${NC}"
 
 WILL_INSTALL=()
 if [ "$USE_DOCKER" = false ]; then
@@ -205,7 +266,7 @@ fi
 # 4. Docker & Docker Compose (Required for both modes)
 # ------------------------------------------------------------------------------
 info "Checking Docker installation..."
-if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+if command -v docker &> /dev/null && [ -n "$COMPOSE_CMD" ]; then
     success "Docker and Docker Compose are already installed."
 else
     info "Installing Docker via official convenience script..."
@@ -213,7 +274,7 @@ else
     success "Docker installed."
 fi
 
-if ! groups "$USER" | grep -q "\bdocker\b"; then
+if ! groups "$USER" 2>/dev/null | grep -q "\bdocker\b"; then
     info "Adding $USER to the 'docker' user group..."
     sudo usermod -aG docker "$USER"
     warn "User added to group 'docker'. Log out and back in (or run 'exec su - \$USER') to refresh permissions."
@@ -221,7 +282,7 @@ else
     success "User $USER already belongs to the 'docker' group."
 fi
 
-# Prevent credential helper DBus crashes on headless OS
+# Prevent credential helper DBus crashes on headless Linux
 mkdir -p "$HOME/.local/bin"
 cat << 'EOF' > "$HOME/.local/bin/docker-credential-secretservice"
 #!/bin/sh
@@ -230,9 +291,9 @@ if [ "$1" = "get" ]; then
   exit 0
 fi
 exit 0
+EOF
+chmod +x "$HOME/.local/bin/docker-credential-secretservice" 2>/dev/null || true
 
-# ------------------------------------------------------------------------------
-# 5. Media Downloader (yt-dlp - Native Mode Only)
 # Override Docker credential store to prevent D-Bus helper crashes on headless hosts
 mkdir -p "$HOME/.docker"
 cat << 'EOF' > "$HOME/.docker/config.json"
@@ -240,6 +301,9 @@ cat << 'EOF' > "$HOME/.docker/config.json"
   "credsStore": ""
 }
 EOF
+
+# ------------------------------------------------------------------------------
+# 5. Media Downloader (yt-dlp - Native Mode Only)
 # ------------------------------------------------------------------------------
 if [ "$USE_DOCKER" = false ]; then
     info "Checking yt-dlp status..."
