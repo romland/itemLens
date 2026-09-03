@@ -1,93 +1,88 @@
-name: Build and Publish Containers
+services:
+  rembg:
+    container_name: itemlens-rembg
+    build: ./services/rembg
+    image: itemlens-rembg:latest
+    command: s --no-ui
+    environment:
+      - OMP_NUM_THREADS=2
+    mem_limit: 1024m
+    cpus: 2.0
+    expose:
+      - "7000"
+    volumes:
+      - ./services/rembg-data:/root/.rembg
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
 
-on:
-  push:
-    branches: [ "main" ]
-    tags: [ 'v*.*.*' ]
+  paddleocr:
+    container_name: itemlens-paddleocr
+    build: ./services/paddleocr
+    image: paddleocrfastapi:paddlejr
+    environment:
+      - TZ=Europe/Amsterdam
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - FLAGS_use_mkldnn=0
+      - PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=0
+      - OMP_WAIT_POLICY=PASSIVE
+      - OMP_NUM_THREADS=2
+    mem_limit: 1024m
+    cpus: 2.0
+    expose:
+      - "8000"
+    volumes:
+      - ./services/paddleocr/downloads:/root/.paddleocr
+      - ./services/paddleocr/paddlex_cache:/root/.paddlex
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/itemlens
+  singlefile:
+    container_name: itemlens-singlefile
+    build: ./services/singlefile
+    command: node webserver.js 8001
+    mem_limit: 768m
+    cpus: 1.5
+    expose:
+      - "8001"
+    volumes:
+      - ./services/singlefile:/opt/app
+      - /opt/app/node_modules
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Extract Git SHA
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies, generate Prisma, and build SvelteKit
-        run: |
-          npm ci
-          npx prisma generate
-          npm run build
-        env:
-          VITE_GIT_HASH: ${{ steps.vars.outputs.sha_short }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # 1. Build & Push App
-      - name: Build and push App
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}-app:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 2. Build & Push RemBG
-      - name: Build and push RemBG
-        uses: docker/build-push-action@v6
-        with:
-          context: ./services/rembg
-          file: ./services/rembg/Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}-rembg:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 3. Build & Push SingleFile
-      - name: Build and push SingleFile
-        uses: docker/build-push-action@v6
-        with:
-          context: ./services/singlefile
-          file: ./services/singlefile/Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}-singlefile:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 4. Build & Push PaddleOCR
-      - name: Build and push PaddleOCR
-        uses: docker/build-push-action@v6
-        with:
-          context: ./services/paddleocr
-          file: ./services/paddleocr/Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}-paddleocr:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  app:
+    profiles: ["full"]
+    container_name: itemlens-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: itemlens-app:latest
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 2.0
+    ports:
+      - "${ITEMLENS_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - REMBG_URL=http://rembg:7000
+      - PADDLE_URL=http://paddleocr:8000
+      - SINGLEFILE_URL=http://singlefile:8001
+      - BODY_SIZE_LIMIT=52428800
+    env_file:
+      - .env
+    volumes:
+      - ./prisma:/app/prisma
+      - ./data:/app/data
+      - ./build:/app/build
+      - ./server.js:/app/server.js
+      - ./cert.pem:/app/cert.pem:ro
+      - ./key.pem:/app/key.pem:ro
+    security_opt:
+      - seccomp:unconfined
+    depends_on:
+      - rembg
+      - paddleocr
+      - singlefile

@@ -19,21 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fixes exit code 128 by fetching complete git history
-          submodules: false
-
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install dependencies, generate Prisma, and build SvelteKit
-        run: |
-          npm ci
-          npx prisma generate
-          npm run build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,7 +32,7 @@ jobs:
 
       # 1. Build & Push App
       - name: Build and push App
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
@@ -58,7 +43,7 @@ jobs:
 
       # 2. Build & Push RemBG
       - name: Build and push RemBG
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: ./services/rembg
           file: ./services/rembg/Dockerfile
@@ -69,7 +54,7 @@ jobs:
 
       # 3. Build & Push SingleFile
       - name: Build and push SingleFile
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: ./services/singlefile
           file: ./services/singlefile/Dockerfile
@@ -80,7 +65,7 @@ jobs:
 
       # 4. Build & Push PaddleOCR
       - name: Build and push PaddleOCR
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: ./services/paddleocr
           file: ./services/paddleocr/Dockerfile
