@@ -26,9 +26,10 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Install dependencies & build SvelteKit
+      - name: Install dependencies, generate Prisma, and build SvelteKit
         run: |
           npm ci
+          npx prisma generate
           npm run build
 
       - name: Set up Docker Buildx
@@ -41,7 +42,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 1. Build & Push App (build/ directory is now present)
+      # 1. Build & Push App
       - name: Build and push App
         uses: docker/build-push-action@v6
         with:

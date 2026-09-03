@@ -8,7 +8,12 @@ import express from 'express';
 import { execSync } from 'child_process';
 import pkg from './package.json' with { type: 'json' };
 
-const gitHash = execSync('git rev-parse --short HEAD 2>/dev/null || echo "dev"').toString().trim();
+let gitHash = 'dev';
+try {
+    gitHash = process.env.VITE_GIT_HASH || execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'dev';
+} catch {
+    gitHash = 'dev';
+}
 const buildVersion = `v${pkg.version}-${gitHash}`;
 
 
