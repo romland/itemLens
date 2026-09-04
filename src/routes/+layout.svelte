@@ -386,6 +386,15 @@
     
     <svelte:window bind:scrollY on:scroll={handleScroll} />
     
+<!-- Premium Static Ambient Wash (Disabled on Auth/Setup to avoid clashing with animated versions) -->
+{#if !['/login', '/setup', '/register'].includes($page.url.pathname)}
+    <div class="fixed inset-0 z-[-1] overflow-hidden bg-base-100 pointer-events-none transition-colors duration-500">
+        <div class="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] md:w-[40vw] md:h-[40vw] rounded-full bg-primary/10 blur-[100px] md:blur-[150px]"></div>
+        <div class="absolute top-[10%] right-[-10%] w-[60vw] h-[60vw] md:w-[35vw] md:h-[35vw] rounded-full bg-secondary/10 blur-[100px] md:blur-[150px]"></div>
+        <div class="absolute bottom-[-10%] left-[10%] w-[80vw] h-[80vw] md:w-[50vw] md:h-[50vw] rounded-full bg-accent/10 blur-[100px] md:blur-[150px]"></div>
+    </div>
+{/if}
+
     {#if showNavProgress}
         <progress class="progress progress-primary bg-transparent w-full fixed top-0 left-0 z-[10000] rounded-none h-1"></progress>
     {/if}
