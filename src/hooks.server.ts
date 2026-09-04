@@ -14,8 +14,21 @@ export interface UserPreferences {
 	epubLocations?: Record<string, string>; // Maps document path/id to CFI string
 }
 
+let isSetupComplete = false;
 
 export const handle = (async ({ event, resolve }) => {
+
+	// 1. Initial Setup Guard: Route new installations directly to the Setup Wizard
+	if (!building && !isSetupComplete) {
+		const userCount = await db.user.count();
+		if (userCount > 0) {
+			isSetupComplete = true;
+		} else if (!event.url.pathname.startsWith('/setup')) {
+			throw redirect(307, '/setup');
+		}
+	}
+	if (isSetupComplete && event.url.pathname.startsWith('/setup')) throw redirect(303, '/login');
+
 // Initialize the SQLite FTS5 engine once on server boot (skip during build)
 if (!building) {
     initFTS().catch(console.error);

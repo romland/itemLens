@@ -289,6 +289,16 @@
                 on:focus={focus} 
                 on:blur={blur} 
                 on:input={(ev)=>query(ev, q)}
+				on:keydown={(ev) => {
+					if (ev.key === 'Escape') {
+						resultsAsYouType?.classList.remove('dropdown-open');
+						ev.currentTarget.blur();
+					}
+					if (ev.key === 'Enter') {
+						ev.preventDefault();
+						ev.currentTarget.form?.requestSubmit();
+					}
+				}}
                 autocomplete="off" 
                 type="text" 
                 name="q" 

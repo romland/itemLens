@@ -3,31 +3,9 @@ import { db } from '$lib/server/database';
 import crypto from 'crypto';
 import type { PageServerLoad, Actions } from './$types';
 import bcrypt from 'bcryptjs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-    import { env } from '$env/dynamic/private';
+import { getSystemDiagnostics } from '$lib/server/diagnostics';
 
     bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
-
-const execAsync = promisify(exec);
-
-async function checkCommand(cmd: string) {
-    try {
-        await execAsync(`command -v ${cmd}`);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function checkService(url: string) {
-    try {
-        await fetch(url, { method: 'GET', signal: AbortSignal.timeout(2000) });
-        return true;
-    } catch {
-        return false;
-    }
-}
 
 export const load = (async ({ locals }) => {
     if (!locals.user?.isAdmin) throw redirect(303, '/profile');
@@ -36,16 +14,7 @@ export const load = (async ({ locals }) => {
         select: { id: true, username: true, name: true, email: true, isAdmin: true, canCreateInventories: true } 
     });
 
-    const deps = {
-        ffmpeg: await checkCommand('ffmpeg'),
-        pdftoppm: await checkCommand('pdftoppm'),
-        ytdlp: await checkCommand('yt-dlp'),
-        rembg: await checkService(`${env.REMBG_URL || 'http://localhost:7000'}/api/remove`),
-        paddleocr: await checkService(`${env.PADDLE_URL || 'http://localhost:8000'}/`),
-        singlefile: await checkService(`${env.SINGLEFILE_URL || 'http://localhost:8001'}/`)
-    };
-
-    return { allUsers, deps };
+    return { allUsers, diagnostics: await getSystemDiagnostics() };
 }) satisfies PageServerLoad;
 
 export const actions = {

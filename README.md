@@ -29,6 +29,7 @@ If feeling particularly ambitious on a day, you can also:
 - paste in a list of attributes (weight/color/size/etc)
 - **Fuzzy Search Toggles:** Unhappy with search results? The AI stems words (e.g., "Jeans" -> "Jean") which is great for finding electronics or tools but sometimes too broad for clothes. You can toggle "Fuzzy Word Search" off per-collection in Settings for strict text matching.
 - **Position Persistence:** The reader automatically saves your exact scroll position, PDF page, or EPUB location across sessions. You won't spend half your day scrolling back to where you left off.
+- **Complete AI Transparency:** itemLens offers full transparency over what is being sent to external APIs. In the `/activity` dashboard, you can view the exact JSON prompts sent to the Vision model, the raw JSON responses, execution times, and token usage limits.
 - **Multiple Categories:** Need an item to exist in two categories? Give it multiple photos and assign a different category to each photo. The engine resolves categories at the photo level.
 - **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
 - **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
@@ -269,6 +270,9 @@ All external dependencies are **100% optional**. Everything in itemLens graceful
 
 ### Local LAN HTTPS & PWA (Mobile Access)
 Mobile browsers strictly require **HTTPS** to use the Camera or install the app to your home screen. To access itemLens securely from your phone over your local network:
+
+> **Why go through this hassle instead of a Cloudflare Tunnel or external proxy?**
+> Because of the "trombone effect." If you use an external tunnel, taking a photo of an item on your phone sends the image out over your internet connection to a remote datacenter, just to bounce it right back to the server sitting 5 feet away from you. It bottlenecks your fast LAN down to your internet upload speed. Furthermore, proxies like Cloudflare impose hard limits (like 100MB max uploads) and aggressive timeouts that will break large PDF uploads or bulk photo syncs. Local certs keep your traffic lightning-fast, restriction-free, and completely offline.
 
 1. **Run the HTTPS Setup Script:**
    ```bash

@@ -1,0 +1,37 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { env } from '$env/dynamic/private';
+import os from 'os';
+
+const execAsync = promisify(exec);
+
+async function checkCommand(cmd: string) {
+    try { await execAsync(`command -v ${cmd}`); return true; } catch { return false; }
+}
+
+async function checkService(url: string) {
+    try { await fetch(url, { method: 'GET', signal: AbortSignal.timeout(2000) }); return true; } catch { return false; }
+}
+
+export async function getSystemDiagnostics() {
+    const totalRamGB = os.totalmem() / (1024 ** 3);
+
+    const deps = {
+        ffmpeg: await checkCommand('ffmpeg'),
+        pdftoppm: await checkCommand('pdftoppm'),
+        ytdlp: await checkCommand('yt-dlp')
+    };
+
+    const microservices = [
+        { id: 'rembg', name: 'RemBG', ram: 8, desc: 'Image background removal', port: 7000, running: await checkService(`${env.REMBG_URL || 'http://localhost:7000'}/api/remove`) },
+        { id: 'paddleocr', name: 'PaddleOCR', ram: 2, desc: 'Local text extraction', port: 8000, running: await checkService(`${env.PADDLE_URL || 'http://localhost:8000'}/`) },
+        { id: 'singlefile', name: 'SingleFile', ram: 1, desc: 'Webpage archiver', port: 8001, running: await checkService(`${env.SINGLEFILE_URL || 'http://localhost:8001'}/`) }
+    ];
+
+    const apis = {
+        groq: !!env.GROQ_API_TOKEN,
+        gemini: !!env.GEMINI_API_KEY
+    };
+
+    return { totalRamGB, deps, microservices, apis };
+}

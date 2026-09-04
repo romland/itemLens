@@ -41,6 +41,7 @@
     let rapidScanCount = 0;
     let rapidFileInput: HTMLInputElement;
     let isRapidSaving = false;
+    let wakeLock: any = null;
 
     async function handleRapidFileSelect(e: Event) {
         const file = (e.target as HTMLInputElement).files?.[0];
@@ -97,6 +98,11 @@
             if (mode !== match[1]) mode = match[1] as any;
         }
 
+        // Request screen wake lock to prevent phone from sleeping while scanning
+        if ('wakeLock' in navigator) {
+            (navigator as any).wakeLock.request('screen').then((lock: any) => wakeLock = lock).catch(() => console.warn("WakeLock not supported or denied."));
+        }
+
 		const handleShortcutMode = async (e: CustomEvent) => {
             const newMode = e.detail;
             console.log('[Add Hub] Received shortcut event:', newMode);
@@ -110,7 +116,10 @@
             }
         };
         window.addEventListener('shortcut:addMode', handleShortcutMode as EventListener);
-        return () => window.removeEventListener('shortcut:addMode', handleShortcutMode as EventListener);
+        return () => {
+            window.removeEventListener('shortcut:addMode', handleShortcutMode as EventListener);
+            if (wakeLock) wakeLock.release().catch(() => {});
+        };
     });
 
     const onSubmit: SubmitFunction = async ({ cancel, formData }) => {

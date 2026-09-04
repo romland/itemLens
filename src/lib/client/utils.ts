@@ -48,7 +48,8 @@ export async function nukeAllCaches(skipConfirm: boolean = false) {
 				for (const r of regs) await r.unregister();
 			}
 		} catch(e) { console.warn("SW clear blocked:", e); }
-		window.location.reload();
+		// Force a completely fresh page load bypassing all service worker caches
+		window.location.href = window.location.pathname + '?nocache=' + Date.now();
 	}
 }
 
