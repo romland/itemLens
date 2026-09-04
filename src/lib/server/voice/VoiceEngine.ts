@@ -268,28 +268,31 @@ const getContainerSummary = (items: any[]): string => {
     const list = Array.from(containerNames);
     if (list.length === 0) return 'unassigned locations';
 
-    const groups = new Map<string, number[]>();
+    const groups = new Map<string, { displayPrefix: string, padding: number, nums: number[] }>();
     const others: string[] = [];
 
     for (const name of list) {
-        const match = name.trim().match(/^([A-Za-z]+)\s*0*(\d+)$/);
-        if (match) {
-            const prefix = match[1].toUpperCase();
-            const num = parseInt(match[2], 10);
-            if (!groups.has(prefix)) groups.set(prefix, []);
-            groups.get(prefix)!.push(num);
+        const match = name.trim().match(/^(.*?)(?:[-\s]*)(\d+)$/);
+        if (match && match[1].trim().length > 0) {
+            const prefix = match[1].trim();
+            const numStr = match[2];
+            const num = parseInt(numStr, 10);
+            const lowerPrefix = prefix.toLowerCase();
+            if (!groups.has(lowerPrefix)) groups.set(lowerPrefix, { displayPrefix: prefix, padding: numStr.length, nums: [] });
+            groups.get(lowerPrefix)!.nums.push(num);
         } else {
-            others.push(name);
+            others.push(name.trim());
         }
     }
 
     const formattedGroups: string[] = [];
-    for (const [prefix, nums] of groups.entries()) {
-        nums.sort((a, b) => a - b);
+    for (const data of groups.values()) {
+        const nums = data.nums.sort((a, b) => a - b);
+
         if (nums.length === 1) {
-            formattedGroups.push(`${prefix} ${nums[0].toString().padStart(3, '0')}`);
+            formattedGroups.push(`${data.displayPrefix} ${nums[0].toString().padStart(data.padding, '0')}`);
         } else {
-            const first = `${prefix} ${nums[0].toString().padStart(3, '0')}`;
+            const first = `${data.displayPrefix} ${nums[0].toString().padStart(data.padding, '0')}`;
             const remainingNums = nums.slice(1);
             const visible = remainingNums.slice(0, 3).map(n => n.toString());
             const overflowCount = remainingNums.length - visible.length;

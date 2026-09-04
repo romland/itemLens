@@ -2,6 +2,8 @@
     import QRreader from "$lib/components/QRreader.svelte";
     import { createEventDispatcher, tick } from 'svelte'
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+    import { page } from "$app/stores";
+    import { speak } from "$lib/client/utils";
     const dispatch = createEventDispatcher();
 
     export let values = [];
@@ -17,6 +19,9 @@
 	let isCreatingContainer = false;
 	let explicitNewName = "";
 	let confirmModal: ConfirmModal;
+
+    $: userPrefs = (() => { try { return JSON.parse($page.data.user?.preferences || '{}'); } catch(e) { return {}; } })();
+    $: enableScannerVoiceFeedback = userPrefs.enableScannerVoiceFeedback === true;
 
     // View state for tabs
     let activeTab = defaultTab; // 'scan' | 'select'
@@ -77,6 +82,12 @@
         dispatchUserChange();
     }
 
+    function announce(text: string) {
+        if (enableScannerVoiceFeedback) {
+            speak(text, userPrefs.voiceURI);
+        }
+    }
+
     function isValidContainer(txt)
     {
         // const containerRegExp = /(^[A-Z])|(\s[0-9]{3})/g
@@ -90,37 +101,22 @@
 
     function scannedContainer(ev: any, inputEltName: string, notify = true)
     {
-        /*
-        const form = document.getElementById("eltForm");
-        if (!form) return;
-        
-        const elt = (form as any).elements[inputEltName];
-        const options = Array.from(elt.querySelectorAll('option')) as HTMLOptionElement[];
-        const option = options.find(c => c.value === ev.detail);
-
-        if(!option) {
-            console.warn("Undefined container: ", ev.detail);
-            return;
-        }
-
-        if(option.selected === false) {
-            addedContainers = [...addedContainers, ev.detail];
-        */
-
         const exists = flatContainers.some(c => c.name === ev.detail);
         if (!exists) {
             scanningContainers = false;
 			confirmModal.ask('Container Not Found', `Container "${ev.detail}" not found in this Collection. Create it now?`, 'Create', 'Cancel').then(res => {
-			if (res) {
-                createContainer(ev.detail);
-            }
+                if (res) {
+                    createContainer(ev.detail);
+                }
 			});
+            announce("Container not found.");
             return;
         }
 
         if(!addedContainers.includes(ev.detail) && !manualSelected.includes(ev.detail)) {
             addedContainers = [...addedContainers, ev.detail];
             dispatchUserChange();
+            announce("Added to " + ev.detail);
         }
 
         // option.selected = true;
@@ -155,6 +151,7 @@
 				manualSelected = [...manualSelected, newC.name];
                 dispatchUserChange();
 				dispatch('success', `Created location: ${newC.name}`);
+                announce("Created " + newC.name);
 				if (searchQuery === nameToCreate) searchQuery = '';
 				explicitNewName = '';
 			} else {

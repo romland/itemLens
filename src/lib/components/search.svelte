@@ -8,6 +8,7 @@
 	import { page } from "$app/stores";
     import { goto } from "$app/navigation";
     import { enhance } from "$app/forms";
+	import { speak } from "$lib/client/utils";
 
     export let q: string = '';
     let resultsAsYouType: HTMLDivElement;
@@ -29,25 +30,6 @@
 	
 	// Reactive flag to trigger our hidden Voice Intent Debug UI
 	$: isVoiceTestMode = q.startsWith('/v ');
-
-    // iOS Safari Hack: Global reference prevents aggressive garbage collection from killing voice mid-sentence
-    let currentUtterance: SpeechSynthesisUtterance | null = null;
-
-	function speak(text: string) {
-		if (!('speechSynthesis' in window)) return;
-         console.log('🗣️ [VOICE-DEBUG] Queueing speech:', text);
-         window.speechSynthesis.resume(); // iOS Safari Hack: Wake up the audio context after an async fetch
-         currentUtterance = new SpeechSynthesisUtterance(text);
-         currentUtterance.volume = 1.0;
-         currentUtterance.onstart = () => console.log('🗣️ [VOICE-DEBUG] Speech started playing.');
-         currentUtterance.onerror = (e) => console.error('🗣️ [VOICE-DEBUG] Speech error:', e);
-		if (userPrefs.voiceURI) {
-			const voices = window.speechSynthesis.getVoices();
-			const voice = voices.find(v => v.voiceURI === userPrefs.voiceURI);
-              if (voice) currentUtterance.voice = voice;
-		}
-         window.speechSynthesis.speak(currentUtterance);
-	}
 
 	function showVoiceFeedback(type: 'error' | 'success', query?: string, reply?: string, message?: string) {
 		voiceFeedback = { type, query, reply, message };
@@ -142,7 +124,7 @@
 
 						if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
 						if (data.spokenReply) {
-							speak(data.spokenReply);
+                            speak(data.spokenReply, userPrefs.voiceURI);
 						}
 						showVoiceFeedback('success', data.text, data.spokenReply || "Routing to search results...");
                         const destination = data.route || `/search?q=${encodeURIComponent(data.text)}`;
@@ -189,7 +171,7 @@
 				q = data.text;
 				if (resultsAsYouType) resultsAsYouType.classList.remove("dropdown-open");
 				if (data.spokenReply) {
-					speak(data.spokenReply);
+                    speak(data.spokenReply, userPrefs.voiceURI);
 				}
 
 				// Show the transcript and response right under the search box

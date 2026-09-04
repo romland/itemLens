@@ -189,6 +189,13 @@
 			<span class="text-[11px] text-gray-500">Show a microphone icon in the search bar for voice dictation.</span></div>
 		</form>
 
+        <form method="POST" action="?/updatePreferences" use:enhance={createEnhancer} class="flex items-center gap-3 mt-4 mb-6">
+            <input type="hidden" name="preferences" value={JSON.stringify(currentPrefs)} />
+            <input type="checkbox" class="toggle toggle-primary" bind:checked={currentPrefs.enableScannerVoiceFeedback} on:change={(e) => { e.currentTarget.form?.requestSubmit(); }} />
+            <div class="flex flex-col"><span class="font-semibold text-sm">Scanner Voice Feedback</span>
+            <span class="text-[11px] text-gray-500">Audibly announce when a container or item is successfully scanned.</span></div>
+        </form>
+
         <h3 class="font-bold text-lg mb-4">Application Theme</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {#each themes as theme}

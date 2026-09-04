@@ -1,6 +1,27 @@
 import { notify } from '$lib/client/notifications';
 import { isPdf, isEpub, isVideo, isImage, isHtml } from '$lib/shared/fileutils';
 
+// To fix iOS Safari GC issue with SpeechSynthesis, keep a global reference
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+export function speak(text: string, voiceURI?: string) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    console.log('🗣️ [VOICE] Queueing speech:', text);
+    window.speechSynthesis.resume(); // iOS Safari Hack
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    currentUtterance.volume = 1.0;
+    currentUtterance.onstart = () => console.log('🗣️ [VOICE] Speech started playing.');
+    currentUtterance.onerror = (e) => console.error('🗣️ [VOICE] Speech error:', e);
+    
+    if (voiceURI) {
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find(v => v.voiceURI === voiceURI);
+        if (voice) currentUtterance.voice = voice;
+    }
+    
+    window.speechSynthesis.speak(currentUtterance);
+}
+
 // This is very naive. Just one word: Buses.
 export function pluralize(str: string): string {
     if (!str) return '';

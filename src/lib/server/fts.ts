@@ -18,6 +18,8 @@ export async function initFTS() {
         if (needsRebuild) {
             console.log("[FTS] Schema mismatch or missing index. Rebuilding tables...");
             
+            // Note: Dropping is required here because Prisma `db push` may have left fragments,
+            // or the schema drifted. We recreate it entirely to ensure FTS5 integrity.
             await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS Document_ai;`);
             await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS Document_ad;`);
             await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS Document_au;`);
@@ -55,9 +57,11 @@ export async function initFTS() {
 
             // 3. Populate existing data
             console.log("[FTS] Populating Document Search Index...");
-            await db.$executeRawUnsafe(`INSERT INTO DocumentIndex(DocumentIndex) VALUES('rebuild');`);
-            
-            await logActivity(null, 'System Search', 'Successfully initialized and built the Full-Text Search index.', 'success');
+            // Run the heavy rebuild asynchronously so it doesn't block server boot time
+            db.$executeRawUnsafe(`INSERT INTO DocumentIndex(DocumentIndex) VALUES('rebuild');`).then(async () => {
+                await logActivity(null, 'System Search', 'Successfully initialized and built the Full-Text Search index.', 'success');
+                console.log("[FTS] Document Search Index fully populated in background.");
+            }).catch(console.error);
         }
 
         initialized = true;

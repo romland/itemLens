@@ -3,9 +3,12 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 /**
- * Prisma does not support SQLite Virtual Tables (FTS5) or custom triggers.
- * This script safely removes them before `prisma db push` runs, preventing crashes.
- * The application will automatically rebuild them on boot via `initFTS()`.
+ * EXPLANATION (Why do we drop tables?):
+ * Prisma's schema engine fundamentally does not support SQLite Virtual Tables (FTS5) 
+ * or custom triggers. If they exist in the DB but not the schema, running `prisma db push`
+ * causes a "schema drift" panic and crashes.
+ * This script safely removes them immediately before `db push`. The application 
+ * will automatically and safely rebuild the FTS index on boot via `initFTS()`.
  */
 try {
     const dbPath = path.resolve(process.cwd(), 'prisma/dev.db');

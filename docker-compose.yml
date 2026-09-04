@@ -1,5 +1,6 @@
 services:
   rembg:
+    profiles: ["rembg", "full"]
     container_name: itemlens-rembg
     build: ./services/rembg
     image: itemlens-rembg:latest
@@ -18,6 +19,7 @@ services:
     restart: unless-stopped
 
   paddleocr:
+    profiles: ["paddleocr", "full"]
     container_name: itemlens-paddleocr
     build: ./services/paddleocr
     image: paddleocrfastapi:paddlejr
@@ -40,6 +42,7 @@ services:
     restart: unless-stopped
 
   singlefile:
+    profiles: ["singlefile", "full"]
     container_name: itemlens-singlefile
     build: ./services/singlefile
     command: node webserver.js 8001

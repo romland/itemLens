@@ -114,20 +114,26 @@ if [ "$1" = "--native" ]; then
   RUN_DOCKER=false
 fi
 
+# Dynamic profiles based on user settings
+COMPOSE_PROFILES=""
+grep -q "^ENABLE_REMBG=true" .env && COMPOSE_PROFILES="$COMPOSE_PROFILES --profile rembg"
+grep -q "^ENABLE_PADDLEOCR=true" .env && COMPOSE_PROFILES="$COMPOSE_PROFILES --profile paddleocr"
+grep -q "^ENABLE_SINGLEFILE=true" .env && COMPOSE_PROFILES="$COMPOSE_PROFILES --profile singlefile"
+
 if [ "$RUN_DOCKER" = true ]; then
   echo "🐳 Starting itemLens in Full Docker Mode..."
   if [ -f docker-compose.yml ]; then
-    docker compose --profile full up -d
+    docker compose --profile full $COMPOSE_PROFILES up -d
   else
-    (cd services && docker compose --profile full up -d)
+    (cd services && docker compose --profile full $COMPOSE_PROFILES up -d)
   fi
   echo "🚀 itemLens full stack running on http://localhost:${PORT:-3000}"
 else
   echo "🐳 Starting Docker microservices (RemBG, PaddleOCR, SingleFile)..."
   if [ -f docker-compose.yml ]; then
-    docker compose up -d
+    docker compose $COMPOSE_PROFILES up -d
   else
-    (cd services && docker compose up -d)
+    (cd services && docker compose $COMPOSE_PROFILES up -d)
   fi
 
   echo "📦 Installing production dependencies..."

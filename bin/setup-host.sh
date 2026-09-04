@@ -348,6 +348,24 @@ curl -fsSL "$DOWNLOAD_URL" -o itemlens-dist.tar.gz
 tar -xzf itemlens-dist.tar.gz
 rm -f itemlens-dist.tar.gz
 
+info "Microservice Configuration"
+echo "itemLens uses Docker containers for optional heavy lifting."
+if [ "$SKIP_PROMPT" = false ]; then
+    read -p "Enable Background Removal (RemBG)? (Y/n): " -n 1 -r; echo ""
+    [[ $REPLY =~ ^[Nn]$ ]] && ENABLE_REMBG=false || ENABLE_REMBG=true
+
+    read -p "Enable local text extraction (PaddleOCR)? (Y/n): " -n 1 -r; echo ""
+    [[ $REPLY =~ ^[Nn]$ ]] && ENABLE_PADDLEOCR=false || ENABLE_PADDLEOCR=true
+
+    read -p "Enable offline webpage downloading (SingleFile)? (Y/n): " -n 1 -r; echo ""
+    [[ $REPLY =~ ^[Nn]$ ]] && ENABLE_SINGLEFILE=false || ENABLE_SINGLEFILE=true
+else
+    ENABLE_REMBG=true
+    ENABLE_PADDLEOCR=true
+    ENABLE_SINGLEFILE=true
+fi
+
+
 # Persist user choice into .env so start.sh knows how to boot
 touch .env
 if [ "$USE_DOCKER" = true ]; then
@@ -355,6 +373,10 @@ if [ "$USE_DOCKER" = true ]; then
 else
     grep -q "^DOCKER_MODE=" .env && sed -i 's/^DOCKER_MODE=.*/DOCKER_MODE=false/' .env || echo "DOCKER_MODE=false" >> .env
 fi
+
+grep -q "^ENABLE_REMBG=" .env && sed -i "s/^ENABLE_REMBG=.*/ENABLE_REMBG=$ENABLE_REMBG/" .env || echo "ENABLE_REMBG=$ENABLE_REMBG" >> .env
+grep -q "^ENABLE_PADDLEOCR=" .env && sed -i "s/^ENABLE_PADDLEOCR=.*/ENABLE_PADDLEOCR=$ENABLE_PADDLEOCR/" .env || echo "ENABLE_PADDLEOCR=$ENABLE_PADDLEOCR" >> .env
+grep -q "^ENABLE_SINGLEFILE=" .env && sed -i "s/^ENABLE_SINGLEFILE=.*/ENABLE_SINGLEFILE=$ENABLE_SINGLEFILE/" .env || echo "ENABLE_SINGLEFILE=$ENABLE_SINGLEFILE" >> .env
 
 success "itemLens unpacked into $INSTALL_DIR"
 
