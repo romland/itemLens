@@ -4,6 +4,7 @@
     import { notify } from "$lib/client/notifications";
     import ActionCard from "$lib/components/ActionCard.svelte";
     import SystemDiagnostics from "$lib/components/SystemDiagnostics.svelte";
+    import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import pageTitle from '$lib/stores';
 
     pageTitle.set("System Administration");
@@ -11,6 +12,7 @@
     let editUserId: number | null = null;
     let storageMetrics: any = null;
     let loadingStorage = false;
+    let confirmModal: ConfirmModal;
 
     function createEnhancer() {
         return async ({ result, update }: any) => {
@@ -45,6 +47,7 @@
         <form method="POST" action="?/createUser" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2 mb-6">
             <input type="text" name="username" placeholder="Username" class="input input-bordered w-full" required autocomplete="off">
             <input type="password" name="password" placeholder="Password" class="input input-bordered w-full" required autocomplete="new-password">
+            <input type="password" name="passwordConfirm" placeholder="Repeat Password" class="input input-bordered w-full" required autocomplete="new-password">
             <button type="submit" class="btn btn-error text-white">Create User</button>
         </form>
 
@@ -68,8 +71,12 @@
                                                 <input type="email" name="email" value={u.email || ''} class="input input-sm input-bordered bg-base-100" />
                                             </div>
                                             <div class="form-control">
-                                                <label class="label"><span class="label-text">New Password (leave blank to keep)</span></label>
-                                                <input type="password" name="password" class="input input-sm input-bordered bg-base-100" placeholder="******" />
+                                                <label class="label"><span class="label-text">New Password</span></label>
+                                                <input type="password" name="password" class="input input-sm input-bordered bg-base-100" placeholder="Leave blank to keep" />
+                                            </div>
+                                            <div class="form-control">
+                                                <label class="label"><span class="label-text">Repeat Password</span></label>
+                                                <input type="password" name="passwordConfirm" class="input input-sm input-bordered bg-base-100" placeholder="Leave blank to keep" />
                                             </div>
                                             <div class="form-control justify-end pb-1">
                                                 <label class="label cursor-pointer justify-start gap-3 w-fit">
@@ -97,7 +104,15 @@
                                     {#if u.isAdmin}<span class="badge badge-error badge-sm text-white">Admin</span>{:else}<span class="badge badge-ghost badge-sm">User</span>{/if}
                                 </td>
                                 <td class="text-right">
-                                    <button type="button" class="btn btn-ghost btn-xs" on:click={() => editUserId = u.id}><i class="bi bi-pencil"></i> Edit</button>
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button type="button" class="btn btn-ghost btn-xs" on:click={() => editUserId = u.id}><i class="bi bi-pencil"></i> Edit</button>
+                                        {#if u.id !== $page.data.user?.id}
+                                            <form method="POST" action="?/deleteUser" use:enhance={async ({ cancel }) => { const res = await confirmModal.ask('Delete User?', `Permanently delete user "${u.username}" and all their data?`, 'Delete', 'Cancel', true); if (!res) { cancel(); return; } return createEnhancer(); }} class="m-0 p-0 inline-block">
+                                                <input type="hidden" name="id" value={u.id}>
+                                                <button type="submit" class="btn btn-ghost btn-xs text-error hover:bg-error/10" title="Delete User"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        {/if}
+                                    </div>
                                 </td>
                             </tr>
                         {/if}
@@ -177,3 +192,5 @@
         </div>
     </div>
 </div>
+
+<ConfirmModal bind:this={confirmModal} />

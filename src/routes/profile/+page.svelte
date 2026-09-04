@@ -157,7 +157,8 @@
         <div class="divider my-6">Password</div>
         <form method="POST" action="?/updatePassword" use:enhance={createEnhancer} class="flex flex-col gap-4">
             <div class="flex flex-col sm:flex-row gap-2">
-                <input type="password" name="password" placeholder="New Password" class="input input-bordered w-full bg-base-100">
+                <input type="password" name="password" placeholder="New Password" class="input input-bordered w-full bg-base-100" required>
+                <input type="password" name="passwordConfirm" placeholder="Repeat Password" class="input input-bordered w-full bg-base-100" required>
                 <button type="submit" class="btn btn-neutral sm:w-auto">Update Password</button>
             </div>
         </form>

@@ -19,12 +19,16 @@ export const actions = {
         
         const username = data.get('username') as string;
         const password = data.get('password') as string;
+        const passwordConfirm = data.get('passwordConfirm') as string;
 
         if (!username || !password) {
             return fail(400, { error: true, message: "Username and Password are required." });
         }
 
         // 1. Create the Master Admin User
+        if (password !== passwordConfirm) {
+            return fail(400, { error: true, message: "Passwords do not match." });
+        }
         const adminUser = await db.user.create({
             data: {
                 username: username.trim(),

@@ -15,7 +15,7 @@ export const actions = {
             return fail(429, { error: true, message: 'Registration rate limited. Try again later.' });
         }
 
-        const { username, password } = Object.fromEntries(await request.formData()) as Record<string, string>;
+        const { username, password, passwordConfirm } = Object.fromEntries(await request.formData()) as Record<string, string>;
 
         if (!username || !password) {
             return fail(400, {
@@ -32,6 +32,13 @@ export const actions = {
             return fail(400, {
                 error: true,
                 message: '<strong>Username</strong> already exists.'
+            });
+        }
+
+        if (password !== passwordConfirm) {
+            return fail(400, {
+                error: true,
+                message: '<strong>Passwords</strong> do not match.'
             });
         }
 

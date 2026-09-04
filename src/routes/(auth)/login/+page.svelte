@@ -18,7 +18,7 @@
     <div class="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] md:w-[45vw] md:h-[45vw] rounded-full bg-accent/20 blur-[80px] md:blur-[120px] animate-blob animation-delay-4000"></div>
 </div>
 
-<div class="min-h-[75vh] flex items-center justify-center p-4 relative z-10">
+<div class="min-h-[75vh] flex flex-col items-center justify-center p-4 relative z-10 gap-8">
     <!-- Centered Frosted Glass Card -->
     <div class="w-full max-w-sm bg-base-100/60 backdrop-blur-3xl border border-base-200/50 shadow-2xl rounded-[2.5rem] p-8 sm:p-10" 
          in:fly={{ y: 30, duration: 800, delay: 100 }}>
@@ -69,6 +69,10 @@
                 </div>
             </form>
         </div>
+
+        <a href="https://github.com/romland/itemLens" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium mt-6" in:fly={{ y: 20, duration: 600, delay: 550 }}>
+            <i class="bi bi-github text-lg"></i> itemLens on GitHub
+        </a>
     </div>
 </div>
 

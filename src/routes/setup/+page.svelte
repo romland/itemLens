@@ -53,7 +53,7 @@
 
 <!-- Main UI (Revealed after intro) -->
 {#if !showIntro}
-    <div class="min-h-[85vh] flex items-center justify-center p-4 relative z-10">
+    <div class="min-h-[85vh] flex flex-col items-center justify-center p-4 relative z-10 gap-8">
         <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
             
             <!-- LEFT: Setup Wizard Flow -->
@@ -100,6 +100,7 @@
                                 <div class="flex flex-col gap-4">
                                     <FormInput autocomplete="username" icon="bi-person" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="username" placeholder="Username" required/>
                                     <FormInput autocomplete="new-password" icon="bi-shield-lock" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="password" placeholder="Password" required type="password"/>
+                                    <FormInput autocomplete="new-password" icon="bi-shield-check" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="passwordConfirm" placeholder="Repeat Password" required type="password"/>
                                 </div>
                             </div>
 
@@ -146,6 +147,10 @@
             </div>
             
         </div>
+
+        <a href="https://github.com/romland/itemLens" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+            <i class="bi bi-github text-lg"></i> itemLens on GitHub
+        </a>
     </div>
 {/if}
 

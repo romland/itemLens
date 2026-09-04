@@ -2,11 +2,11 @@ import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 import bcrypt from 'bcryptjs';
 import sharp from 'sharp';
-    import crypto from 'crypto';
+import crypto from 'crypto';
 import { uploadsDiskFolder, uploadsWebFolder } from '$lib/server/constants';
 import type { PageServerLoad, Actions } from './$types';
 
-    bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
+bcrypt.setRandomFallback((len) => Array.from(crypto.randomBytes(len)));
 
 export const load = (async ({ locals, cookies }) => {
     if (!locals.user) throw redirect(303, '/login');
@@ -55,9 +55,14 @@ export const actions = {
         if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
         const data = await request.formData();
         const password = data.get('password') as string;
+        const passwordConfirm = data.get('passwordConfirm') as string;
 
         if (!password || password.length < 6) {
             return fail(400, { error: true, message: 'Password must be at least 6 characters.' });
+        }
+
+        if (password !== passwordConfirm) {
+            return fail(400, { error: true, message: 'Passwords do not match.' });
         }
 
         await db.user.update({

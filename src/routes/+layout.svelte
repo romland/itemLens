@@ -422,7 +422,8 @@
                         formAction="/?/switchVault"
                         name="inventoryId"
                         reload={false}
-                        >
+                        on:submit={() => mobileMenuModal.close()}
+                    >
                         <div slot="header" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">Switch Collection</div>
                         <svelte:fragment slot="footer"></svelte:fragment>
                     </DropdownSelect>
@@ -570,7 +571,7 @@
     <!-- Bottom Sheet Menu -->
     <Modal bind:this={mobileMenuModal} boxClass="sm:rounded-[2.5rem] p-4 sm:p-6 bg-base-100/95 shadow-2xl border border-base-200 !overflow-visible">
         <div class="flex justify-between items-center mb-6 px-2 mt-[-10px]">
-            <h3 class="font-bold text-2xl tracking-tight">Menu <span class="text-xs text-slate-500"><a target="_blank" href="https://github.com/romland/itemLens">{import.meta.env.PUBLIC_APP_VERSION}</a></span></h3>
+            <h3 class="font-bold text-2xl tracking-tight">Menu <span class="text-xs text-slate-500">{import.meta.env.PUBLIC_APP_VERSION}</span></h3>
             <button type="button" class="btn btn-sm btn-circle btn-ghost bg-base-200/50" on:click={() => mobileMenuModal.close()}>✕</button>
         </div>
         
@@ -593,6 +594,7 @@
                                 formAction="/?/switchVault"
                                 name="inventoryId"
                                 reload={false}
+                                on:submit={() => mobileMenuModal.close()}
                             >
                                 <svelte:fragment slot="footer"></svelte:fragment>
                             </DropdownSelect>

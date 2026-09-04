@@ -24,8 +24,10 @@ export const actions = {
         const data = await request.formData();
         const username = data.get('username') as string;
         const password = data.get('password') as string;
+        const passwordConfirm = data.get('passwordConfirm') as string;
         
         if (!username || !password) return fail(400, { error: true, message: "Username and password required." });
+        if (password !== passwordConfirm) return fail(400, { error: true, message: "Passwords do not match." });
 
         try {
             await db.user.create({
@@ -51,6 +53,7 @@ export const actions = {
         const name = data.get('name') as string;
         const email = data.get('email') as string;
         const password = data.get('password') as string;
+        const passwordConfirm = data.get('passwordConfirm') as string;
         const isAdmin = data.get('isAdmin') === 'true';
         const canCreateInventories = data.get('canCreateInventories') === 'true';
 
@@ -59,12 +62,33 @@ export const actions = {
         }
 
         let updateData: any = { name: name.trim(), email: email.trim(), isAdmin, canCreateInventories };
-        if (password && password.trim().length >= 6) {
+        if (password) {
+            if (password !== passwordConfirm) return fail(400, { error: true, message: "Passwords do not match." });
+            if (password.trim().length < 6) return fail(400, { error: true, message: "Password must be at least 6 characters." });
             updateData.password = await bcrypt.hash(password, await bcrypt.genSalt(10));
         }
 
         await db.user.update({ where: { id }, data: updateData });
 
         return { success: true, message: "User updated successfully." };
+    },
+
+    deleteUser: async ({ request, locals }) => {
+        if (!locals.user?.isAdmin) return fail(403, { error: true, message: "Forbidden. Admins only." });
+
+        const data = await request.formData();
+        const id = Number(data.get('id'));
+        if (!id) return fail(400, { error: true, message: "Invalid User ID." });
+
+        if (id === locals.user.id) {
+            return fail(400, { error: true, message: "You cannot delete yourself." });
+        }
+
+        const userToDelete = await db.user.findUnique({ where: { id } });
+        if (!userToDelete) return fail(404, { error: true, message: "User not found." });
+
+        await db.user.delete({ where: { id } });
+
+        return { success: true, message: `User '${userToDelete.username}' deleted successfully.` };
     }
 } satisfies Actions;
