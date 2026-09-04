@@ -1,53 +1,88 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
+    import { fade, fly } from "svelte/transition";
     import type { ActionData } from "./$types";
-    import pageTitle from '$lib/stores';
     import FormInput from "$lib/components/FormInput.svelte";
+    import pageTitle from '$lib/stores';
 
     export let form: ActionData;
-
-	let isLoggingIn = false;
+    let isLoggingIn = false;
 
     pageTitle.set("Log in");
 </script>
 
-<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
-    <div class="max-w-sm w-full bg-base-100/90 backdrop-blur-2xl border border-base-200 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 animate-fade-in">
-        <div class="flex justify-center mb-6">
-            <img src="/itemlens-512-white-outline.webp" alt="itemLens Logo" class="w-16 h-16 rounded-2xl object-contain shadow-sm bg-base-300 p-2" />
+<!-- The Ambient Mesh Gradient -->
+<div class="fixed inset-0 z-[-1] overflow-hidden bg-base-100" in:fade={{ duration: 1000 }}>
+    <div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] md:w-[40vw] md:h-[40vw] rounded-full bg-primary/20 blur-[80px] md:blur-[120px] animate-blob"></div>
+    <div class="absolute top-[20%] right-[-10%] w-[50vw] h-[50vw] md:w-[35vw] md:h-[35vw] rounded-full bg-secondary/20 blur-[80px] md:blur-[120px] animate-blob animation-delay-2000"></div>
+    <div class="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] md:w-[45vw] md:h-[45vw] rounded-full bg-accent/20 blur-[80px] md:blur-[120px] animate-blob animation-delay-4000"></div>
+</div>
+
+<div class="min-h-[75vh] flex items-center justify-center p-4 relative z-10">
+    <!-- Centered Frosted Glass Card -->
+    <div class="w-full max-w-sm bg-base-100/60 backdrop-blur-3xl border border-base-200/50 shadow-2xl rounded-[2.5rem] p-8 sm:p-10" 
+         in:fly={{ y: 30, duration: 800, delay: 100 }}>
+        
+        <!-- Animated Logo -->
+        <div class="flex justify-center mb-6" in:fly={{ y: 20, duration: 600, delay: 250 }}>
+            <img src="/pwa-512x512.png" alt="itemLens Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
         </div>
         
-        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-center text-base-content mb-2">Welcome back</h1>
-        <p class="text-sm text-gray-500 text-center mb-8 font-medium">Enter your details to sign in to your collections.</p>
+        <!-- Animated Titles -->
+        <div class="text-center mb-8" in:fly={{ y: 20, duration: 600, delay: 350 }}>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-base-content mb-2">Welcome back</h1>
+            <p class="text-sm text-base-content/60 font-medium">Enter your details to sign in.</p>
+        </div>
 
         {#if form?.error}
-            <div class="mb-4 text-center animate-fade-in">
-                <span class="text-[13px] font-medium text-error bg-error/10 px-4 py-2 rounded-xl inline-flex items-center gap-2">
-                    <i class="bi bi-exclamation-circle-fill"></i> {@html form?.message}
+            <div class="mb-6" in:fly={{ y: -10, duration: 300 }}>
+                <span class="text-sm font-medium text-error bg-error/10 px-4 py-3 rounded-xl inline-flex items-center justify-center gap-2 w-full">
+                    <i class="bi bi-shield-exclamation"></i> {@html form.message}
                 </span>
             </div>
         {/if}
 
-        <form method="post" class="flex flex-col gap-4" use:enhance={() => {
-            isLoggingIn = true;
-            return async ({ update }) => {
-                await update();
-                isLoggingIn = false;
-            };
-        }}>
-            <FormInput icon="bi-person" name="username" placeholder="Username" required autocomplete="username" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" />
-            
-            <FormInput type="password" icon="bi-lock" name="password" placeholder="Password" required autocomplete="current-password" inputClass="bg-base-200/50 focus:bg-base-100 transition-colors shadow-inner" class="mb-2" />
+        <!-- Animated Form -->
+        <div in:fly={{ y: 20, duration: 600, delay: 450 }}>
+            <form method="post" class="flex flex-col gap-4" use:enhance={() => {
+                isLoggingIn = true;
+                return async ({ update }) => { 
+                    await update(); 
+                    isLoggingIn = false; 
+                };
+            }}>
+                <FormInput autocomplete="username" icon="bi-person" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md text-base" name="username" placeholder="Username" required/>
+                
+                <FormInput autocomplete="current-password" icon="bi-lock" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md text-base" name="password" placeholder="Password" required type="password" class="mb-2"/>
 
-            <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg text-base h-12" disabled={isLoggingIn}>
-                {#if isLoggingIn}<span class="loading loading-spinner loading-sm"></span>{/if}
-                Sign In
-            </button>
+                <button type="submit" class="btn btn-primary w-full rounded-xl shadow-lg shadow-primary/20 text-base h-12 mt-2 transition-all active:scale-[0.98]" disabled={isLoggingIn}>
+                    {#if isLoggingIn}
+                        <span class="loading loading-spinner loading-sm"></span>
+                    {/if}
+                    Sign In
+                </button>
 
-            <div class="text-center mt-6">
-                <span class="text-sm text-gray-500">Don't have an account?</span>
-                <a href="/register" class="text-sm text-primary font-bold hover:underline ml-1">Create one</a>
-            </div>
-        </form>
+                <!-- Restored Register Link -->
+                <div class="text-center mt-6">
+                    <span class="text-sm text-base-content/60">Don't have an account?</span>
+                    <a href="/register" class="text-sm text-primary font-bold hover:underline ml-1">Create one</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<style>
+    @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+    }
+    .animate-blob {
+        animation: blob 15s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+    .animation-delay-2000 { animation-delay: 2s; }
+    .animation-delay-4000 { animation-delay: 4s; }
+</style>
