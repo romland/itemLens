@@ -11,7 +11,7 @@ possible (using any device). Most of the effort of making this app went into cre
 a pleasant and fast work-flow. To achieve this, itemLens optionally uses various tools 
 like object classification, OCR, background removal, and language models under the hood.
 
-[1]: There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. itemLens is the digital equivalent: a way to inspect and appreciate your entire collection without having to drag 20 boxes out of the attic.
+[1]: There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. This is the digital equivalent: inspect and appreciate your sh*t without having to drag 20 boxes out of the attic.
 
 _This readme is very much a work in progress; it's currently not organized or complete at all._
 _Also: Quite a few of the more recent bits are written by an LLM acting as a sales person, which is very cringe. I will deal with it._
