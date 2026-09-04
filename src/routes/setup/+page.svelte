@@ -96,7 +96,7 @@
                             };
                         }}>
                             <div class="space-y-4">
-                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40">1. Create Master Account</h3>
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40">1. Create Administrator Account</h3>
                                 <div class="flex flex-col gap-4">
                                     <FormInput autocomplete="username" icon="bi-person" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="username" placeholder="Username" required/>
                                     <FormInput autocomplete="new-password" icon="bi-shield-lock" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="password" placeholder="Password" required type="password"/>
@@ -116,7 +116,7 @@
                 {:else if step === 2}
                     <div class="flex flex-col gap-4 py-4" in:fly={{ x: 20, duration: 600, delay: 100 }}>
                         <div class="flex items-center gap-3 text-success font-bold text-lg mb-2">
-                            <i class="bi bi-shield-check text-2xl"></i> Admin account added
+                            <i class="bi bi-shield-check text-2xl"></i> Administrator added
                         </div>
                         <p class="text-base-content/70 text-sm">Before you can start adding items, you need to create your first collection. Click below to configure it.</p>
                         
