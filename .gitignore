@@ -26,3 +26,4 @@ itemlens.tar.gz
 prompt-installer.txt
 data/
 docker-compose.override.yml
+prisma/dev.db.bak
