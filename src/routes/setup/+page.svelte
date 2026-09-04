@@ -61,14 +61,20 @@
                  in:fly={{ y: 40, duration: 1000, delay: 200 }}>
                 
                 <div class="flex justify-start mb-6">
-                    <img src="/itemlens-512-white-outline.webp" alt="itemLens Logo" class="w-16 h-16 rounded-2xl object-contain shadow-sm bg-base-100/50 p-2 border border-base-200/50" />
+                    <img src="/pwa-512x512.png" 
+                        alt="itemLens Logo" 
+                        class="w-48 h-48 rounded-2xl object-contain shadow-sm bg-base-100/50 p-2 border border-base-200/50" />
                 </div>
                 
-                <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-base-content mb-2">Get Started</h1>
+                <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-base-content mb-3">itemLens</h1>
                 
                 {#if step === 1}
                     <div in:fade={{ duration: 400 }}>
-                        <p class="text-sm text-base-content/60 mb-8 font-medium">Create your master administrator account to initialize the vault.</p>
+                        <p class="text-sm text-base-content/70 mb-8 font-medium leading-relaxed">
+                            A self-hosted, offline-first inventory system for your physical items. It automatically 
+                            builds a growing taxonomy, archives related media, and stays fully searchable, even 
+                            when you drop offline.
+                        </p>
 
                         {#if form?.error}
                             <div class="mb-6" in:fly={{ y: -10, duration: 300 }}>
@@ -90,7 +96,7 @@
                             };
                         }}>
                             <div class="space-y-4">
-                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40">Master Account</h3>
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40">1. Create Master Account</h3>
                                 <div class="flex flex-col gap-4">
                                     <FormInput autocomplete="username" icon="bi-person" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="username" placeholder="Username" required/>
                                     <FormInput autocomplete="new-password" icon="bi-shield-lock" inputClass="bg-base-200/40 focus:bg-base-100 shadow-inner backdrop-blur-md" name="password" placeholder="Password" required type="password"/>
@@ -110,9 +116,9 @@
                 {:else if step === 2}
                     <div class="flex flex-col gap-4 py-4" in:fly={{ x: 20, duration: 600, delay: 100 }}>
                         <div class="flex items-center gap-3 text-success font-bold text-lg mb-2">
-                            <i class="bi bi-shield-check text-2xl"></i> Account Secured
+                            <i class="bi bi-shield-check text-2xl"></i> Admin account added
                         </div>
-                        <p class="text-base-content/70 text-sm">Before you can start adding items, you need to create your first collection. Click below to configure your default settings.</p>
+                        <p class="text-base-content/70 text-sm">Before you can start adding items, you need to create your first collection. Click below to configure it.</p>
                         
                         <button type="button" class="btn btn-primary w-full rounded-xl shadow-lg shadow-primary/20 h-14 mt-2" on:click={() => createModal.showModal()}>
                             Open Collection Creator
