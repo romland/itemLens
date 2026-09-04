@@ -7,7 +7,7 @@ COPY .npmrc package*.json ./
 COPY .env.example .env
 COPY prisma ./prisma/
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     python3 \
     build-essential \
     pkg-config \
@@ -30,7 +30,7 @@ RUN npm run build
 # --- STAGE 2: Production Runtime ---
 FROM node:22-bullseye-slim AS runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     poppler-utils \
     ffmpeg \
     python3 \
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     libgif-dev \
     librsvg2-dev \
- && wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
+ && wget -q --tries=3 https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
  && chmod a+rx /usr/local/bin/yt-dlp \
  && rm -rf /var/lib/apt/lists/*
 
