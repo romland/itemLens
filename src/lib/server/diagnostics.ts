@@ -16,11 +16,12 @@ async function checkService(url: string) {
 export async function getSystemDiagnostics() {
     const totalRamGB = os.totalmem() / (1024 ** 3);
 
-    const deps = {
-        ffmpeg: await checkCommand('ffmpeg'),
-        pdftoppm: await checkCommand('pdftoppm'),
-        ytdlp: await checkCommand('yt-dlp')
-    };
+    const deps = [
+        { id: 'ffmpeg', name: 'FFmpeg', desc: 'Extracts frames from video files.', cmd: 'apt-get install ffmpeg', installed: await checkCommand('ffmpeg') },
+        { id: 'pdftoppm', name: 'Poppler (pdftoppm)', desc: 'Generates PDF thumbnails.', cmd: 'apt-get install poppler-utils', installed: await checkCommand('pdftoppm') },
+        { id: 'ytdlp', name: 'yt-dlp', desc: 'Downloads linked videos natively.', cmd: 'pip install yt-dlp', installed: await checkCommand('yt-dlp') },
+        { id: 'docker', name: 'Docker', desc: 'Microservice management.', cmd: 'apt-get install docker', installed: await checkCommand('docker') },
+    ];
 
     const microservices = [
         { id: 'rembg', name: 'RemBG', ram: 8, desc: 'Image background removal', port: 7000, running: await checkService(`${env.REMBG_URL || 'http://localhost:7000'}/api/remove`) },

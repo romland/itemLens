@@ -12,13 +12,13 @@
         </div>
         <div class="text-right">
             <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Host Memory</div>
-            <div class="text-lg font-bold text-base-content leading-none mt-1">{diagnostics.totalRamGB.toFixed(1)} GB</div>
+            <div class="text-lg font-bold text-base-content leading-none mt-1 text-nowrap">{diagnostics.totalRamGB.toFixed(1)} GB</div>
         </div>
     </div>
 
     <!-- Microservices (Docker) -->
     <div>
-        <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Microservices (Docker)</h5>
+        <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Microservices</h5>
         <ul class="flex flex-col gap-3">
             {#each diagnostics.microservices as ms}
                 <li class="flex items-start gap-3">
@@ -34,7 +34,7 @@
                         <div class="font-bold text-sm leading-tight">{ms.name} <span class="font-normal opacity-50 text-xs">({ms.ram}GB req)</span></div>
                         <div class="text-xs mt-0.5 {ms.running ? 'text-gray-500' : (diagnostics.totalRamGB >= ms.ram ? 'text-gray-500' : 'text-error')}">
                             {#if ms.running}
-                                Running on port {ms.port}.
+                                {ms.desc}.
                             {:else if diagnostics.totalRamGB >= ms.ram}
                                 Offline. Host meets memory requirement.
                             {:else}
@@ -49,20 +49,20 @@
 
     <!-- AI Providers -->
     <div>
-        <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">AI Providers</h5>
+        <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Model Providers</h5>
         <ul class="flex flex-col gap-3">
             <li class="flex items-start gap-3">
                 <i class="bi {diagnostics.apis.gemini ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-error'} text-lg mt-0.5"></i>
                 <div>
-                    <div class="font-bold text-sm leading-tight">Gemini API Key</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Required for Vision Classification & Deduplication.</div>
+                    <div class="font-bold text-sm leading-tight">Gemini API Key (free plan)</div>
+                    <div class="text-xs text-gray-500 mt-0.5">Optional but highly recommended for Vision Classification & Deduplication.</div>
                 </div>
             </li>
             <li class="flex items-start gap-3">
                 <i class="bi {diagnostics.apis.groq ? 'bi-check-circle-fill text-success' : 'bi-dash-circle-fill text-warning'} text-lg mt-0.5"></i>
                 <div>
-                    <div class="font-bold text-sm leading-tight">Groq API Key</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Optional. Powers lightning-fast Voice Search.</div>
+                    <div class="font-bold text-sm leading-tight">Groq API Key (free plan)</div>
+                    <div class="text-xs text-gray-500 mt-0.5">Optional. But highly recommended for document summaries. Also used for voice search.</div>
                 </div>
             </li>
         </ul>
@@ -72,27 +72,17 @@
     <div>
         <h5 class="text-xs font-bold uppercase tracking-wider text-base-content/50 mb-3">Host Dependencies</h5>
         <ul class="flex flex-col gap-3">
-            <li class="flex items-start gap-3">
-                <i class="bi {diagnostics.deps.ffmpeg ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-error'} text-lg mt-0.5"></i>
-                <div>
-                    <div class="font-bold text-sm leading-tight">FFmpeg</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Extracts frames from video files. {diagnostics.deps.ffmpeg ? '' : 'Install via `apt-get install ffmpeg`'}</div>
-                </div>
-            </li>
-            <li class="flex items-start gap-3">
-                <i class="bi {diagnostics.deps.pdftoppm ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-error'} text-lg mt-0.5"></i>
-                <div>
-                    <div class="font-bold text-sm leading-tight">Poppler (pdftoppm)</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Generates PDF thumbnails. {diagnostics.deps.pdftoppm ? '' : 'Install via `apt-get install poppler-utils`'}</div>
-                </div>
-            </li>
-            <li class="flex items-start gap-3">
-                <i class="bi {diagnostics.deps.ytdlp ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-warning'} text-lg mt-0.5"></i>
-                <div>
-                    <div class="font-bold text-sm leading-tight">yt-dlp</div>
-                    <div class="text-xs text-gray-500 mt-0.5">Downloads linked videos. {diagnostics.deps.ytdlp ? '' : 'Install via pip or brew.'}</div>
-                </div>
-            </li>
+                {#each diagnostics.deps as dep}
+                    <li class="flex items-start gap-3">
+                        <i class="bi {dep.installed ? 'bi-check-circle-fill text-success' : (dep.id === 'ytdlp' ? 'bi-x-circle-fill text-warning' : 'bi-x-circle-fill text-error')} text-lg mt-0.5"></i>
+                        <div>
+                            <div class="font-bold text-sm leading-tight">{dep.name}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">
+                                {dep.desc} {#if !dep.installed}Install via <code class="bg-base-200 px-1 rounded">{dep.cmd}</code>{/if}
+                            </div>
+                        </div>
+                    </li>
+                {/each}
         </ul>
     </div>
 </div>
