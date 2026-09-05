@@ -114,56 +114,6 @@
         </div>
     {/if}
 
-    <!-- PROFILE SECTION -->
-    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6">
-        <h2 class="text-2xl font-bold mb-6">Profile Details</h2>
-        <form method="POST" action="?/updateProfile" enctype="multipart/form-data" class="flex flex-col gap-5" use:enhance={createEnhancer}>
-            <div class="flex items-center gap-6 mb-2">
-                <div class="avatar relative group cursor-pointer" on:click={() => document.getElementById('avatarUpload')?.click()} role="button" tabindex="0">
-                    <div class="w-20 rounded-full border-4 border-base-100 shadow-md bg-base-200">
-                        {#if avatarPreview}
-                            <img src={avatarPreview} alt="Preview" class="object-cover" />
-                        {:else if $page.data.user?.avatar}
-                            <img src={$page.data.user.avatar} alt="Current avatar" class="object-cover" />
-                        {:else}
-                            <div class="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
-                                {$page.data.user?.name ? $page.data.user.name.charAt(0).toUpperCase() : '?'}
-                            </div>
-                        {/if}
-                    </div>
-                    <div class="absolute bottom-0 right-0 bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-base-100">
-						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-							<path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
-							<path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/>
-						</svg>
-                    </div>
-                </div>
-                <input type="file" id="avatarUpload" name="avatar" accept="image/*" class="hidden" on:change={handleFileChange} />
-                <div class="text-sm text-gray-500">Tap to upload a new profile picture.</div>
-            </div>
-            
-            <div class="form-control w-full">
-                <label class="label"><span class="label-text font-semibold">Display Name</span></label>
-                <input type="text" name="name" value={$page.data.user?.name || ''} class="input input-bordered w-full bg-base-100" />
-            </div>
-            
-            <div class="form-control w-full">
-                <label class="label"><span class="label-text font-semibold">Email Address</span></label>
-                <input type="email" name="email" value={$page.data.user?.email || ''} class="input input-bordered w-full bg-base-100" />
-            </div>
-            <button type="submit" class="btn btn-primary mt-2">Save Profile</button>
-        </form>
-        
-        <div class="divider my-6">Password</div>
-        <form method="POST" action="?/updatePassword" use:enhance={createEnhancer} class="flex flex-col gap-4">
-            <div class="flex flex-col sm:flex-row gap-2">
-                <input type="password" name="password" placeholder="New Password" class="input input-bordered w-full bg-base-100" required>
-                <input type="password" name="passwordConfirm" placeholder="Repeat Password" class="input input-bordered w-full bg-base-100" required>
-                <button type="submit" class="btn btn-neutral sm:w-auto">Update Password</button>
-            </div>
-        </form>
-    </div>
-
     <!-- APPEARANCE SECTION -->
     <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6">
         <h2 class="text-2xl font-bold mb-1">Appearance</h2>
@@ -267,6 +217,56 @@
 			</form>
 		{/if}
 
+    </div>
+
+    <!-- PROFILE SECTION -->
+    <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6">
+        <h2 class="text-2xl font-bold mb-6">Profile Details</h2>
+        <form method="POST" action="?/updateProfile" enctype="multipart/form-data" class="flex flex-col gap-5" use:enhance={createEnhancer}>
+            <div class="flex items-center gap-6 mb-2">
+                <div class="avatar relative group cursor-pointer" on:click={() => document.getElementById('avatarUpload')?.click()} role="button" tabindex="0">
+                    <div class="w-20 rounded-full border-4 border-base-100 shadow-md bg-base-200">
+                        {#if avatarPreview}
+                            <img src={avatarPreview} alt="Preview" class="object-cover" />
+                        {:else if $page.data.user?.avatar}
+                            <img src={$page.data.user.avatar} alt="Current avatar" class="object-cover" />
+                        {:else}
+                            <div class="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
+                                {$page.data.user?.name ? $page.data.user.name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                        {/if}
+                    </div>
+                    <div class="absolute bottom-0 right-0 bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-base-100">
+						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+							<path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+							<path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/>
+						</svg>
+                    </div>
+                </div>
+                <input type="file" id="avatarUpload" name="avatar" accept="image/*" class="hidden" on:change={handleFileChange} />
+                <div class="text-sm text-gray-500">Tap to upload a new profile picture.</div>
+            </div>
+            
+            <div class="form-control w-full">
+                <label class="label"><span class="label-text font-semibold">Display Name</span></label>
+                <input type="text" name="name" value={$page.data.user?.name || ''} class="input input-bordered w-full bg-base-100" />
+            </div>
+            
+            <div class="form-control w-full">
+                <label class="label"><span class="label-text font-semibold">Email Address</span></label>
+                <input type="email" name="email" value={$page.data.user?.email || ''} class="input input-bordered w-full bg-base-100" />
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">Save Profile</button>
+        </form>
+        
+        <div class="divider my-6">Password</div>
+        <form method="POST" action="?/updatePassword" use:enhance={createEnhancer} class="flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="password" name="password" placeholder="New Password" class="input input-bordered w-full bg-base-100" required>
+                <input type="password" name="passwordConfirm" placeholder="Repeat Password" class="input input-bordered w-full bg-base-100" required>
+                <button type="submit" class="btn btn-neutral sm:w-auto">Update Password</button>
+            </div>
+        </form>
     </div>
 
     <!-- DEVICES SECTION -->

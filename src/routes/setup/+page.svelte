@@ -61,7 +61,7 @@
                  in:fly={{ y: 40, duration: 1000, delay: 200 }}>
                 
                 <div class="flex justify-start mb-6">
-                    <img src="/pwa-512x512.png" 
+                    <img src="/troves512.png" 
                         alt="Troves Logo" 
                         class="w-48 h-48 rounded-2xl object-contain shadow-sm bg-base-100/50 p-2 border border-base-200/50" />
                 </div>

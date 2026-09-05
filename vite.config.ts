@@ -123,12 +123,12 @@ export default defineConfig(({ command }) => ({
 					  "type": "image/png"
 					},
 					{
-					  "src": "images/pwa-512x512.png",
+					  "src": "images/troves512.png",
 					  "sizes": "512x512",
 					  "type": "image/png"
 					},
 					{
-					  "src": "images/maskable-icon-512x512.png",
+					  "src": "images/troves512.png",
 					  "sizes": "512x512",
 					  "type": "image/png",
 					  "purpose": "maskable"

@@ -25,7 +25,7 @@
         
         <!-- Animated Logo -->
         <div class="flex justify-center mb-6" in:fly={{ y: 20, duration: 600, delay: 250 }}>
-            <img src="/pwa-512x512.png" alt="Troves Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
+            <img src="/troves512.webp" alt="Troves Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
         </div>
         
         <!-- Animated Titles -->
