@@ -55,7 +55,7 @@
             case 'newSingle':
                 e.preventDefault();
                 console.log('[Keybind] Shortcut pressed: New Single');
-                document.cookie = `itemlens_add_mode=single; path=/; max-age=31536000`;
+                document.cookie = `troves_add_mode=single; path=/; max-age=31536000`;
                 if ($page.url.pathname === '/add') {
                     window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'single' }));
                 } else {
@@ -67,7 +67,7 @@
             case 'newCollection':
                 e.preventDefault();
                 console.log('[Keybind] Shortcut pressed: New Multi-Scan');
-                document.cookie = `itemlens_add_mode=collection; path=/; max-age=31536000`;
+                document.cookie = `troves_add_mode=collection; path=/; max-age=31536000`;
                 if ($page.url.pathname === '/add') {
                     window.dispatchEvent(new CustomEvent('shortcut:addMode', { detail: 'collection' }));
                 } else {

@@ -121,9 +121,9 @@
             }
 
             // If we are jumping to a search query, check if there's an existing reading position to protect
-            const savedPdfPage = localStorage.getItem(`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
-            const savedWebScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
-            const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
+            const savedPdfPage = localStorage.getItem(`troves_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
+            const savedWebScroll = localStorage.getItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+            const savedCfi = localStorage.getItem(`troves_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
 
             if (isPdf(path) && savedPdfPage) {
                 returnToPosition = savedPdfPage;
@@ -137,7 +137,7 @@
             }
 
         } else if (isPdf(path) && !activeDocUrl.includes('#')) {
-            const savedPdfPage = localStorage.getItem(`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
+            const savedPdfPage = localStorage.getItem(`troves_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.pdfLocations?.[doc.id || doc.path];
             if (savedPdfPage) {
                 activeDocUrl = `${activeDocUrl}#page=${savedPdfPage}`;
             }
@@ -176,7 +176,7 @@
 
                 if (!activeSearchQuery) {
                     setTimeout(() => {
-                        const savedScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+                        const savedScroll = localStorage.getItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
                         if (savedScroll && markdownContainerRef) markdownContainerRef.scrollTop = parseInt(savedScroll, 10);
                     }, 100);
                 }
@@ -212,11 +212,11 @@
         if (docType === 'iframe') invertIframe = userPrefs.documentDarkMode === true;
         
         // Check for specific document override
-        const override = localStorage.getItem(`itemlens_invert_${$page.data.user?.id}_${doc?.id}`);
+        const override = localStorage.getItem(`troves_invert_${$page.data.user?.id}_${doc?.id}`);
         if (override !== null) invertIframe = override === 'true';
 
         // Load user's persistent reading preferences
-        const savedPrefs = localStorage.getItem(`itemlens_epub_prefs_${$page.data.user?.id}`);
+        const savedPrefs = localStorage.getItem(`troves_epub_prefs_${$page.data.user?.id}`);
         if (savedPrefs) {
             try {
                 const prefs = JSON.parse(savedPrefs);
@@ -258,7 +258,7 @@
             document.body.removeChild(dummy);
 
             // 2. Register base theme
-            rendition.themes.register('itemlens', {
+            rendition.themes.register('troves', {
                 'html': { 'background': `${themeBg} !important` },
                 'body': { 
                     'background': `${themeBg} !important`, 
@@ -266,7 +266,7 @@
                     'font-family': 'var(--ep-font) !important'
                 }
             });
-            rendition.themes.select('itemlens');
+            rendition.themes.select('troves');
             rendition.themes.fontSize(`${fontSize}%`);
 
             // 3. Brute-force override any publisher styles embedded in the EPUB html
@@ -284,7 +284,7 @@
             });
             
             // === RESTORE READING POSITION ===
-            const savedCfi = localStorage.getItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
+            const savedCfi = localStorage.getItem(`troves_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.epubLocations?.[doc.id || doc.path];
 
             if (epubSearchQuery) {
                 /* 
@@ -369,7 +369,7 @@
             rendition.on('relocated', (location: any) => {
                 if (returnToPosition) return; // Prevent overwriting bookmark while inspecting search result
                 if (location && location.start && location.start.cfi) {
-                        localStorage.setItem(`itemlens_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`, location.start.cfi);
+                        localStorage.setItem(`troves_epub_cfi_${$page.data.user?.id}_${doc.id || doc.path}`, location.start.cfi);
                 }
                 updateProgress(location);
             });
@@ -394,8 +394,8 @@
             try {
                 console.log(`[DEBUG-WEB-SCROLL] Iframe loaded. Src: ${iframeRef.src}`);
                 if (!activeSearchQuery && iframeRef.contentWindow) {
-                    const savedScroll = localStorage.getItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
-                    console.log(`[DEBUG-WEB-SCROLL] Checking restore key: itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}. Found: ${savedScroll}`);
+                    const savedScroll = localStorage.getItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`) || userPrefs.webLocations?.[doc.id || doc.path];
+                    console.log(`[DEBUG-WEB-SCROLL] Checking restore key: troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}. Found: ${savedScroll}`);
                     if (savedScroll) {
                         setTimeout(() => {
                             const y = parseInt(savedScroll, 10);
@@ -427,7 +427,7 @@
                                     currentScroll = win?.scrollY || docRef?.documentElement?.scrollTop || docRef?.body?.scrollTop || 0;
                                 }
                                 console.log(`[DEBUG-WEB-SCROLL] Saving new scrollY position: ${currentScroll}`);
-                                localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
+                                localStorage.setItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
                             } catch(err) {}
                         }, 150);
                     }, { capture: true, passive: true });
@@ -523,11 +523,11 @@
                 const docRef = iframeRef?.contentDocument;
                 const currentScroll = win?.scrollY || docRef?.documentElement?.scrollTop || docRef?.body?.scrollTop || 0;
                 if (currentScroll > 0) {
-                    localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
+                    localStorage.setItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, currentScroll.toString());
                 }
             } catch(e) {}
         } else if (docType === 'markdown' && markdownContainerRef) {
-            localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
+            localStorage.setItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
         }
 
 		// Sync final reading positions to the server before closing
@@ -535,7 +535,7 @@
 			try {
                 const isPdf = docType === 'pdf-inline';
                 const isWeb = docType === 'iframe' || docType === 'markdown';
-                const key = `itemlens_${isPdf ? 'pdf_page' : (isWeb ? 'scroll_y' : 'epub_cfi')}_${$page.data.user?.id}_${doc.id || doc.path}`;
+                const key = `troves_${isPdf ? 'pdf_page' : (isWeb ? 'scroll_y' : 'epub_cfi')}_${$page.data.user?.id}_${doc.id || doc.path}`;
                 const val = localStorage.getItem(key);
 				if (val) {
 					const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');
@@ -600,7 +600,7 @@
     }
     
     function savePrefs() {
-        localStorage.setItem(`itemlens_epub_prefs_${$page.data.user?.id}`, JSON.stringify({ fontSize, fontFamily, lineHeight, pageMargin }));
+        localStorage.setItem(`troves_epub_prefs_${$page.data.user?.id}`, JSON.stringify({ fontSize, fontFamily, lineHeight, pageMargin }));
     }
 
     function changeFontSize(delta: number) {
@@ -763,7 +763,7 @@
             {/if}
 
 			{#if docType === 'iframe' || docType === 'markdown' || docType === 'pdf-inline'}
-                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`itemlens_invert_${$page.data.user?.id}_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
+                <button class="btn btn-circle btn-sm btn-ghost" on:click={() => { invertIframe = !invertIframe; localStorage.setItem(`troves_invert_${$page.data.user?.id}_${doc?.id}`, String(invertIframe)); }} title="Toggle Appearance">
                     <i class="bi {invertIframe ? 'bi-sun-fill text-warning' : 'bi-moon-fill'} text-lg"></i>
                 </button>
             {:else if docType === 'epub'}
@@ -838,7 +838,7 @@
                     ></iframe>
 				{:else if docType === 'pdf-inline'}
 					<div class="w-full h-full relative z-10">
-						<PdfViewer url={activeDocUrl} invert={invertIframe} saveKey={`itemlens_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`} />
+						<PdfViewer url={activeDocUrl} invert={invertIframe} saveKey={`troves_pdf_page_${$page.data.user?.id}_${doc.id || doc.path}`} />
 					</div>
                 {:else if docType === 'markdown'}
                     <div bind:this={markdownContainerRef} class="w-full h-full overflow-y-auto p-6 sm:p-10 relative z-10 bg-base-100 text-base-content transition-all duration-300"
@@ -848,7 +848,7 @@
                              if (!markdownContainerRef || returnToPosition) return;
                              clearTimeout(mdScrollTimeout);
                              mdScrollTimeout = setTimeout(() => {
-                                 localStorage.setItem(`itemlens_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
+                                 localStorage.setItem(`troves_scroll_y_${$page.data.user?.id}_${doc.id || doc.path}`, markdownContainerRef.scrollTop.toString());
                              }, 150);
                          }}>
                         <div class="prose prose-sm sm:prose-base max-w-none prose-p:text-base-content prose-headings:text-base-content prose-strong:text-base-content prose-a:text-primary prose-li:text-base-content">

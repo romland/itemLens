@@ -1,7 +1,7 @@
 #!/bin/bash
 
 HOST="pi@192.168.178.101"
-CONTAINER="itemlens-app"
+CONTAINER="troves-app"
 
 echo "📜 Tailing logs for $CONTAINER (Survives restarts. Ctrl+C to quit)..."
 

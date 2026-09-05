@@ -6,9 +6,9 @@ GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 BUILD_DATE=$(date +'%Y%m%d')
 VERSION="${PKG_VERSION}-${BUILD_DATE}-${GIT_HASH}"
 
-echo "🏷️ Packaging itemLens ${VERSION}..."
+echo "🏷️ Packaging Troves ${VERSION}..."
 echo "🧹 Clearing old dist files..."
-rm -rf dist itemlens-dist.tar.gz itemlens-*.tar.gz
+rm -rf dist troves-dist.tar.gz troves-*.tar.gz
 
 echo "📦 Building SvelteKit app..."
 npm run build
@@ -121,13 +121,13 @@ grep -q "^ENABLE_PADDLEOCR=true" .env && COMPOSE_PROFILES="$COMPOSE_PROFILES --p
 grep -q "^ENABLE_SINGLEFILE=true" .env && COMPOSE_PROFILES="$COMPOSE_PROFILES --profile singlefile"
 
 if [ "$RUN_DOCKER" = true ]; then
-  echo "🐳 Starting itemLens in Full Docker Mode..."
+  echo "🐳 Starting Troves in Full Docker Mode..."
   if [ -f docker-compose.yml ]; then
     docker compose --profile full $COMPOSE_PROFILES up -d
   else
     (cd services && docker compose --profile full $COMPOSE_PROFILES up -d)
   fi
-  echo "🚀 itemLens full stack running on http://localhost:${PORT:-3000}"
+  echo "🚀 Troves full stack running on http://localhost:${PORT:-3000}"
 else
   echo "🐳 Starting Docker microservices (RemBG, PaddleOCR, SingleFile)..."
   if [ -f docker-compose.yml ]; then
@@ -142,16 +142,16 @@ else
   echo "🗄️ Running database migrations..."
   npx prisma migrate deploy || npx prisma db push
 
-  echo "🚀 Starting itemLens server on port ${PORT:-3000}..."
+  echo "🚀 Starting Troves server on port ${PORT:-3000}..."
   PORT=${PORT:-3000} node server.js
 fi
 EOF
 
 chmod +x dist/start.sh
 
-echo "🗜️ Creating archive itemlens-${VERSION}.tar.gz..."
-tar -czf "itemlens-${VERSION}.tar.gz" -C dist .
-cp "itemlens-${VERSION}.tar.gz" itemlens-dist.tar.gz
+echo "🗜️ Creating archive troves-${VERSION}.tar.gz..."
+tar -czf "troves-${VERSION}.tar.gz" -C dist .
+cp "troves-${VERSION}.tar.gz" troves-dist.tar.gz
 
 echo "=================================================================="
 echo "✅ Distribution package created successfully!"

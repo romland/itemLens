@@ -26,7 +26,7 @@
 
     onMount(() => {
         if (typeof sessionStorage !== 'undefined') {
-            const cached = sessionStorage.getItem('itemlens_compare_state');
+            const cached = sessionStorage.getItem('troves_compare_state');
             if (cached) {
                 try {
                     const parsed = JSON.parse(cached);
@@ -40,9 +40,9 @@
     beforeNavigate(() => {
         if (typeof sessionStorage !== 'undefined') {
             if (compareResults) {
-                sessionStorage.setItem('itemlens_compare_state', JSON.stringify({ compareResults, scanHint }));
+                sessionStorage.setItem('troves_compare_state', JSON.stringify({ compareResults, scanHint }));
             } else {
-                sessionStorage.removeItem('itemlens_compare_state');
+                sessionStorage.removeItem('troves_compare_state');
             }
         }
     });
@@ -52,7 +52,7 @@
         if (!file) return;
 
         isScanning = true;
-        dispatch('processingStart', { message: 'Comparing with your Collection...', taskId: 'compare' });
+        dispatch('processingStart', { message: 'Comparing with your Trove...', taskId: 'compare' });
 
         let wakeLock: any = null;
         try { if ('wakeLock' in navigator) wakeLock = await (navigator as any).wakeLock.request('screen'); } catch (err) {}
@@ -87,7 +87,7 @@
 
     export function reset() {
         compareResults = null;
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('itemlens_compare_state');
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('troves_compare_state');
     }
 </script>
 
@@ -97,7 +97,7 @@
             <div class="bg-primary/10 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
                 <i class="bi bi-search-heart text-3xl"></i>
             </div>
-            <h2 class="text-xl font-bold tracking-tight">Compare with Collection</h2>
+            <h2 class="text-xl font-bold tracking-tight">Compare with Trove</h2>
             <p class="text-gray-500 text-xs mt-1">Snap a photo of shelves, crates, or groceries to see what you own and what you're missing.</p>
         </div>
 

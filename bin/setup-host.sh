@@ -36,11 +36,11 @@ KERNEL_VER=$(uname -r)
 # Fast-bail for Synology DSM: point directly to Container Manager UI
 if [ -f /etc/synoinfo.conf ]; then
     info "Synology DSM detected!"
-    echo "itemLens runs containerized via DSM Container Manager."
+    echo "Troves runs containerized via DSM Container Manager."
     echo ""
     echo "Quick setup via DSM web interface:"
     echo "  1. Download the production compose file:"
-    echo "     https://raw.githubusercontent.com/romland/itemLens/main/docker-compose.yml"
+    echo "     https://raw.githubusercontent.com/romland/troves/main/docker-compose.yml"
     echo "  2. Open DSM -> Container Manager -> Project -> Create"
     echo "  3. Select 'Create docker-compose.yml' and load the file"
     echo "  4. Set your API keys in the environment settings and click 'Done'"
@@ -92,7 +92,7 @@ echo -e "${CYAN}=========================================${NC}\n"
 # Interactive deployment mode selection
 # ------------------------------------------------------------------------------
 if [ -z "$USE_DOCKER" ]; then
-    echo -e "${BOLD}🚀 itemLens Host Setup${NC}"
+    echo -e "${BOLD}🚀 Troves Host Setup${NC}"
     echo "Select your deployment mode:"
     echo "  1) Native Host Mode (Node 22 on host + microservices in Docker)"
     echo "  2) Full Docker Mode (App + microservices all in Docker containers)"
@@ -161,7 +161,7 @@ fi
 command -v docker &>/dev/null || WILL_INSTALL+=("Docker Engine & Docker Compose")
 
 echo ""
-echo "itemLens requires the following host adjustments:"
+echo "Troves requires the following host adjustments:"
 if [ ${#WILL_INSTALL[@]} -eq 0 ]; then
     echo "  • All system dependencies for this mode are already installed!"
 else
@@ -323,12 +323,12 @@ fi
 # ------------------------------------------------------------------------------
 # 6. Fetch and Extract Latest Release
 # ------------------------------------------------------------------------------
-info "Downloading latest itemLens release..."
-INSTALL_DIR="${HOME}/itemlens"
+info "Downloading latest Troves release..."
+INSTALL_DIR="${HOME}/troves"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-RELEASE_API="https://api.github.com/repos/romland/itemLens/releases/latest"
+RELEASE_API="https://api.github.com/repos/romland/troves/releases/latest"
 DOWNLOAD_URL=$(curl -s "$RELEASE_API" | python3 -c "
 import sys, json
 try:
@@ -341,15 +341,15 @@ except Exception: pass
 " 2>/dev/null || echo "")
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    DOWNLOAD_URL="https://github.com/romland/itemLens/releases/latest/download/itemlens-dist.tar.gz"
+    DOWNLOAD_URL="https://github.com/romland/troves/releases/latest/download/troves-dist.tar.gz"
 fi
 
-curl -fsSL "$DOWNLOAD_URL" -o itemlens-dist.tar.gz
-tar -xzf itemlens-dist.tar.gz
-rm -f itemlens-dist.tar.gz
+curl -fsSL "$DOWNLOAD_URL" -o troves-dist.tar.gz
+tar -xzf troves-dist.tar.gz
+rm -f troves-dist.tar.gz
 
 info "Microservice Configuration"
-echo "itemLens uses Docker containers for optional heavy lifting."
+echo "Troves uses Docker containers for optional heavy lifting."
 if [ "$SKIP_PROMPT" = false ]; then
     read -p "Enable Background Removal (RemBG)? (Y/n): " -n 1 -r; echo ""
     [[ $REPLY =~ ^[Nn]$ ]] && ENABLE_REMBG=false || ENABLE_REMBG=true
@@ -378,7 +378,7 @@ grep -q "^ENABLE_REMBG=" .env && sed -i "s/^ENABLE_REMBG=.*/ENABLE_REMBG=$ENABLE
 grep -q "^ENABLE_PADDLEOCR=" .env && sed -i "s/^ENABLE_PADDLEOCR=.*/ENABLE_PADDLEOCR=$ENABLE_PADDLEOCR/" .env || echo "ENABLE_PADDLEOCR=$ENABLE_PADDLEOCR" >> .env
 grep -q "^ENABLE_SINGLEFILE=" .env && sed -i "s/^ENABLE_SINGLEFILE=.*/ENABLE_SINGLEFILE=$ENABLE_SINGLEFILE/" .env || echo "ENABLE_SINGLEFILE=$ENABLE_SINGLEFILE" >> .env
 
-success "itemLens unpacked into $INSTALL_DIR"
+success "Troves unpacked into $INSTALL_DIR"
 
 # ------------------------------------------------------------------------------
 # 7. Local LAN HTTPS & PWA Setup
@@ -416,5 +416,5 @@ echo "🔒 To enable mobile access, install the Root CA on your phone:"
 echo "   Run: python3 -m http.server 1025"
 echo "   Then open http://${LAN_IP}:1025/rootCA.crt on your phone."
 echo ""
-echo "🚀 To start itemLens: ./start.sh (App will be at https://${LAN_IP}:3000)"
+echo "🚀 To start Troves: ./start.sh (App will be at https://${LAN_IP}:3000)"
 echo "=========================================================================="

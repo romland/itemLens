@@ -94,9 +94,9 @@
                     {#if item.matchedItem?.dbTotalAmount === item.count}
                         All accounted for.
                     {:else if item.matchedItem?.dbTotalAmount > item.count}
-                        Collection expects {item.matchedItem.dbTotalAmount} total.
+                        Trove expects {item.matchedItem.dbTotalAmount} total.
                     {:else if item.matchedItem?.dbTotalAmount < item.count}
-                        Scanned extra (Collection expects {item.matchedItem.dbTotalAmount}).
+                        Scanned extra (Trove expects {item.matchedItem.dbTotalAmount}).
                     {/if}
                 </span>
             {:else if item.subtitle}
@@ -118,7 +118,7 @@
             
             <div class="flex items-center gap-2 mt-2">
                 {#if type === 'unregistered'}
-                    <Badge color="ghost" size="xs" class="text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Collection</Badge>
+                    <Badge color="ghost" size="xs" class="text-[10px] uppercase font-bold w-max text-primary/80 bg-primary/10 border-none">Not in Trove</Badge>
                 {:else if type === 'missing'}
                     <Badge color="error" variant="outline" size="sm" class="text-[10px] uppercase font-bold">Missing</Badge>
                     {#if item.locationName}

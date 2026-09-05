@@ -43,7 +43,7 @@ function askQuestion(query: string, isSecret: boolean = false): Promise<string> 
 }
 
 async function main() {
-    console.log("=== Create New ItemLens User ===\n");
+    console.log("=== Create New Troves User ===\n");
 
     const username = await askQuestion("Username: ");
     if (!username.trim()) {

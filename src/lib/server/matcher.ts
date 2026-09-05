@@ -720,7 +720,7 @@ export function findBestMatchesForBatch(
     }
     
     console.log(`[MATCH-DEBUG] 🏁 findBestMatchesForBatch COMPLETED`);
-    console.log(`[MATCH-DEBUG] 🏁 In Collection: ${inCollection.length} | New: ${newToYou.length}`);
+    console.log(`[MATCH-DEBUG] 🏁 In Trove: ${inCollection.length} | New: ${newToYou.length}`);
     console.log(`[MATCH-DEBUG] 🚀 ========================================================\n`);
 
     return { inCollection, newToYou, annotatedScannedItems, idUsage };

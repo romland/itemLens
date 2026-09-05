@@ -135,7 +135,7 @@ export const actions = {
 		
         // CRITICAL SECURITY FIX: Ensure the item belongs to the active inventory before allowing uploads
         const existingItem = await db.item.findFirst({ where: { id: itemId, inventoryId: locals.activeInventoryId } });
-        if (!existingItem) return fail(404, { error: 'Item not found in current collection.' });
+        if (!existingItem) return fail(404, { error: 'Item not found in current trove.' });
 
 		const { photos } = await savePhotos(Object.fromEntries(orgData), uploadsDiskFolder, uploadsWebFolder, "file.", "");
 		

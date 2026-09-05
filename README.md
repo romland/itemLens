@@ -1,5 +1,5 @@
-# itemLens
-<img src="static/itemlens-512.webp" align="right" width="40%" alt="itemLens Logo" />
+# Troves
+<img src="static/troves512.webp" align="right" width="40%" alt="Troves Logo" />
 
 Inventory management (for at home). There are many like it, but this one is mine.
 
@@ -8,7 +8,7 @@ The primary use is:
 
 I am no fan of data-entry, so adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into creating
-a pleasant and fast work-flow. To achieve this, itemLens optionally uses various tools 
+a pleasant and fast work-flow. To achieve this, Troves optionally uses various tools 
 like object classification, OCR, background removal, and language models under the hood.
 
 [1]: There's also a primal satisfaction in simply admiring my stuff; swimming through a hoard of tools, books, and components like Scrooge McDuck. This is the digital equivalent: inspect and appreciate your sh*t without having to drag 20 boxes out of the attic.
@@ -23,27 +23,27 @@ to place it in and that's it.
 But wait... there's more.
 
 If feeling particularly ambitious on a day, you can also:
-- take a picture of an invoice/receipt (itemLens will use image classification/OCR/LLM to get the juicy bits)
+- take a picture of an invoice/receipt (Troves will use image classification/OCR/LLM to get the juicy bits)
 - add additional photos (using camera or just paste in links)
 - scan QR-codes containing URLs to relevant documents
 - paste in a list of attributes (weight/color/size/etc)
-- **Fuzzy Search Toggles:** Unhappy with search results? The AI stems words (e.g., "Jeans" -> "Jean") which is great for finding electronics or tools but sometimes too broad for clothes. You can toggle "Fuzzy Word Search" off per-collection in Settings for strict text matching.
+- **Fuzzy Search Toggles:** Unhappy with search results? The AI stems words (e.g., "Jeans" -> "Jean") which is great for finding electronics or tools but sometimes too broad for clothes. You can toggle "Fuzzy Word Search" off per-inventory in Settings for strict text matching.
 - **Position Persistence:** The reader automatically saves your exact scroll position, PDF page, or EPUB location across sessions. You won't spend half your day scrolling back to where you left off.
-- **Complete AI Transparency:** itemLens offers full transparency over what is being sent to external APIs. In the `/activity` dashboard, you can view the exact JSON prompts sent to the Vision model, the raw JSON responses, execution times, and token usage limits.
+- **Complete AI Transparency:** Troves offers full transparency over what is being sent to external APIs. In the `/activity` dashboard, you can view the exact JSON prompts sent to the Vision model, the raw JSON responses, execution times, and token usage limits.
 - **Multiple Categories:** Need an item to exist in two categories? Give it multiple photos and assign a different category to each photo. The engine resolves categories at the photo level.
 - **Changing Categories:** Changing the category of an item is awkward at the moment; go into the image lightbox, use the "..." menu and change the category of the item there (historically it comes from the fact that it's the *photo* that is categorized, not the item).
-- **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhereitemLens!
+- **Just Paste Anything:** The global PasteHandler instantly detects images in your clipboard (uploading them to the current item), raw URLs (fetching the webpage/PDF), and text blocks (creating local Markdown notes analyzed by LLMs). Hit `Ctrl+V` anywhere!
 - Fire-and-Forget Outbox Workflow: Never wait for a progress bar. Tapping 'Save' pushes the item to an offline-tolerant IndexedDB queue and resets the UI for next scan. A background worker handles the upload, meaning you can rapidly scan items in a deep garage or basement and the app will flawlessly sync whenever your Wi-Fi reconnects.
-- **Knowledge Base / Second Brain:** itemLens isn't just for physical objects. Because it downloads, parses, and indexes linked articles, EPUBs, and PDFs, it doubles as a localized knowledge base for your topics and projects. The bookmark feature and making it searchable is the knowledge base version of "where is it" (entity knows how often I've gone: where did I read that...).
+- **Knowledge Base / Second Brain:** Troves isn't just for physical objects. Because it downloads, parses, and indexes linked articles, EPUBs, and PDFs, it doubles as a localized knowledge base for your topics and projects. The bookmark feature and making it searchable is the knowledge base version of "where is it" (entity knows how often I've gone: where did I read that...).
 - never run into a dead link again, all pages you link to are downloaded and stored locally on your disk
-- **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, itemLens uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
+- **Video Archiving:** If you paste a link to YouTube, Twitter, Reddit, TikTok or any other media site, Troves uses `yt-dlp` in the background to physically download the video and archive it forever alongside your item!
 - **Nudge the Vision Model:** Does it sometimes guess wrong? Look for the ✨ Sparkle icon next to the title in the item details or scan preview. Click it to provide a hint (e.g. "It's an IKEA MITTZON desk") to dramatically improve classification accuracy!
-- **Scraper Limits:** itemLens attempts to fetch and summarize documents linked in text automatically, but restricts depth to one level to prevent infinite spidering. Use `httrack` or similar tools for full website archival.
-- **Empty Category Cleanup:** If you delete or move the last item out of a category, itemLens will automatically vaporize the category and its associated taxonomy rules. This facilitates easy cleanup if you import an item into the wrong collection.
+- **Scraper Limits:** Troves attempts to fetch and summarize documents linked in text automatically, but restricts depth to one level to prevent infinite spidering. Use `httrack` or similar tools for full website archival.
+- **Empty Category Cleanup:** If you delete or move the last item out of a category, Troves will automatically vaporize the category and its associated taxonomy rules. This facilitates easy cleanup if you import an item into the wrong trove.
 - **System Diagnostics:** Includes a self-diagnostic area in the Admin dashboard (`/settings/admin`) that pings host dependencies, Docker microservices, and API configurations to flag setup errors.
 - add tags, amount, description, etc (but then you are obviously _very_ ambitious as it might require typing)
 
-**Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run itemLens. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.
+**Note:** You do not need expensive subscriptions (OR ANY AT ALL) to run Troves. The free tiers for Google Gemini (15 requests/min) and Groq are generous and completely sufficient for a normal household. I have not paid a single cent during my use nor during development. Groq is utilized free analysis like in `summarizeWebpageExtract`, `extractInvoiceDataGroq`, and reverse image search parsing.
 
 ### Voice Search
 I use Groq's Whisper 3 for TTS in the search field. It is ridiculously good when given context, actually. With ease we handle "USB to TTL", "ESP32 Development board", "Resistors 10k" or "I2C OLED display module" in search. It feels _very_ natural.
@@ -66,21 +66,21 @@ Ultimately, we're just using modern vision and language models to handle the ted
 ### Install
 __I only have a Debian based installer, for now__  
 ```bash
-mkdir itemlens && cd itemlens && curl -fsSL https://raw.githubusercontent.com/romland/itemLens/main/bin/setup-host.sh -o setup.sh && bash setup.sh
+mkdir troves && cd troves && curl -fsSL https://raw.githubusercontent.com/romland/troves/main/bin/setup-host.sh -o setup.sh && bash setup.sh
 ```
 
 ### Screenshot(s)
 I've been waiting couple of years to actually show a screenshot because I never really did anything
 about the visuals ... But, let's get the ball rolling in 2026, the first screenshot:
 
-<img src="./.github/screenshots/itemlens-screenshot-001.png" align="center" width="80%" alt="List of items" />
+<img src="./.github/screenshots/001.png" align="center" width="80%" alt="List of items" />
 
 
 ...and only mere days after that, a second and a third one! (whoop!):
 
 <div>
-  <img src="./.github/screenshots/itemlens-screenshot-002.webp" align="left" width="40%" alt="Add new item" />
-  <img src="./.github/screenshots/itemlens-screenshot-003.webp" width="40%" alt="Search result" />
+  <img src="./.github/screenshots/002.webp" align="left" width="40%" alt="Add new item" />
+  <img src="./.github/screenshots/003.webp" width="40%" alt="Search result" />
 </div>
 
 
@@ -92,7 +92,7 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 - LLM Summaries (Llama3, Groq)
 - Invoice/receipt data extraction
 - Download-and-store documents (link-rot no more). **EPUB books are supported** and can be read inside the browser using built-in reader. You can bookmark pages or highlight text inside EPUBs, which syncs the surrounding chapter text to Notebook. This makes the exact sections of books fully searchable via Full Text Search (alongside the physical items.
-- **Token & Cost Tracking:** itemLens tracks backend AI operations and token counts so you can monitor exactly how much it interacts with external APIs (visible in System Activity).
+- **Token & Cost Tracking:** Troves tracks backend AI operations and token counts so you can monitor exactly how much it interacts with external APIs (visible in System Activity).
 - Image processing (background removal, thumbnail, etc)
 - Color extraction
 - Collection (bulk) import of CDs, DVDs, books, what have you
@@ -109,21 +109,21 @@ about the visuals ... But, let's get the ball rolling in 2026, the first screens
 __this is so cringe -- I the human should rewrite this -- now here as reminder__ 
 ### Bulk Import & The Comparison Lens (Set Operations) *[ALPHA/TESTING]*
 
-The **Entity-Attribute-Value (EAV) Taxonomy** automatically tailors schemas based on your collection's archetype. It intuitively knows that a t-shirt needs a "Garment Style" and "Fabric", while a drill requires a "Form Factor" and "Power Delivery". It enforces strict vocabulary to eliminate search friction.
+The **Entity-Attribute-Value (EAV) Taxonomy** automatically tailors schemas based on your troves' archetype. It intuitively knows that a t-shirt needs a "Garment Style" and "Fabric", while a drill requires a "Form Factor" and "Power Delivery". It enforces strict vocabulary to eliminate search friction.
 
 When it comes to putting that data to work, you can rely on the **Comparison Lens**.
-If bulk import is how you ingest a mountain of data into itemLens in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
+If bulk import is how you ingest a mountain of data into Troves in one go, the **Comparison Lens** is how you actually use that data out in the real world against physical shelves, crates, and stores without having to pick up items and scan barcodes one-by-one.
 
 It performs set math between what your camera sees (**Set A**) and what your database holds (**Set B**).
 
 #### Digital Books & Documentation
-Create a virtual container named **"Digital Library"** and assign tech books, spec sheets, or EPUBs/PDFs there. When you drop an EPUB or PDF into an item, itemLens automatically extracts the embedded cover art, `og:image`, or first page to use as the primary thumbnail. The item card gives you a direct **"Read"** button to view and study the document inside the browser.
+Create a virtual container named **"Digital Library"** and assign tech books, spec sheets, or EPUBs/PDFs there. When you drop an EPUB or PDF into an item, Troves automatically extracts the embedded cover art, `og:image`, or first page to use as the primary thumbnail. The item card gives you a direct **"Read"** button to view and study the document inside the browser.
 
 #### Practical Examples & Workflows
 - **Discovery / Flea Market Scan (What do I not own? / $A \setminus B$):** 
   - *Scenario:* You're at a record store or thrift shop looking at a crate of 40 CDs or John Sandford paperbacks. 
   - *Action:* Snap one photo of the shelf.
-  - *Result:* The app cross-references your database and splits the items into **✨ New to You** (stuff you don't own yet) and **✓ In Your Collection** (stuff you already own, complete with its exact storage container).
+  - *Result:* The app cross-references your database and splits the items into **✨ New to You** (stuff you don't own yet) and **✓ In Your Trove** (stuff you already own, complete with its exact storage container).
 - **Audit / Kit Check (What am I missing from my baseline? / $B \setminus A$):** 
   - *Scenario:* You're packing for a camping trip or checking your electronics workbench. 
   - *Action:* Scope the comparison to tag `#camping-gear` or container `A 001`, dump your gear on the table, and snap a photo. 
@@ -134,9 +134,9 @@ Create a virtual container named **"Digital Library"** and assign tech books, sp
 - **Triage Actions:** When you spot something missing that you want to track, the **Add** menu lets you route it straight to **Collection**, your **Shopping List**, or **To-Do List** in the Notebook (for current Collection).
 
 ### Random note to refine in the future
-**The Knowledge Base of Your Stuff:** We've blurred the lines between a strict inventory tracker and a personal knowledge base. By integrating an overarching Notebook and automatically downloading linked articles/manuals, itemLens isn't just about *where* an item is, but capturing the ideas, projects, and context surrounding it.
+**The Knowledge Base of Your Stuff:** We've blurred the lines between a strict inventory tracker and a personal knowledge base. By integrating an overarching Notebook and automatically downloading linked articles/manuals, Troves isn't just about *where* an item is, but capturing the ideas, projects, and context surrounding it.
 
-### Info how I use itemLens
+### Info how I use Troves
 - TODO: 
     - Which label printer
     - Which cabinets
@@ -145,7 +145,7 @@ Create a virtual container named **"Digital Library"** and assign tech books, sp
     - I use it for electronics/components
     - Which fields I actually fill in
     - How I search for related links
-    - **Note on Terminology:** While itemLens is an *inventory management* system, the UI refers to the top-level databases as "Collections". The bulk camera feature is named "Multi-Scan", and the underlying database schema retains the name "Inventories" for structural stability. I mention this because there is bound to be confusion before all variables are renamed. Especially since there was a "collection" before (which is now multi-scan).
+    - **Note on Terminology:** While Troves is an *inventory management* system, the UI refers to the top-level databases as "Troves". The bulk camera feature is named "Multi-Scan", and the underlying database schema retains the name "Inventories" for structural stability. I mention this because there is bound to be confusion before all variables are renamed. Especially since there was a "collection" before (which is now multi-scan). Since then it's gotten even more confusing: collection nee inventory is now called a Trove, collection is not used in UI any more, but it refers to multi-scan in the code.
 
 ### Voice Search & NLP Engine
 The search field supports voice dictation parsed by a custom NLP engine. You can ask natural questions like *"Where is my multimeter?"*, *"How many BNCQ9 connectors do I have?"*, or *"List my microcontrollers."* 
@@ -158,14 +158,14 @@ To make this actually work for hardware, electronics, and tools, the matching en
 * **Text Debug Mode:** You can test the intent parser and see exactly how it tokenizes queries without a microphone by prefixing your search with `/v ` (e.g., `/v where are my 10k ohm resistors?`).
 
 #### Extending to Other Domains (Apparel, Wine, etc.)
-Because the Voice Engine relies on dictionaries and regular expressions rather than rigid database schemas, extending it to entirely different collections—like a wardrobe or a wine cellar—only requires expanding the pre-processing maps in `VoiceEngine.ts`.
+Because the Voice Engine relies on dictionaries and regular expressions rather than rigid database schemas, extending it to entirely different trove, like a wardrobe or a wine cellar—only requires expanding the pre-processing maps in `VoiceEngine.ts`.
 
 * **Domain-Specific Phonetics:** You add new regex rules to `preprocessText` and `phoneticizeForTTS` to bridge domain shorthands. For clothes, `XL` expands to `extra large` and `32x34` (pants) to `waist 32 length 34`. For wine, `750ml` becomes `750 milliliter`, `Cab Sauv` maps to `Cabernet Sauvignon`, and notoriously difficult French varietals get phonetic spellings specifically for the TTS output.
 * **Custom Intents:** While standard triggers ("Where is", "How many") work globally, you can add custom intent regexes to catch domain-specific phrasing, such as *"Which red wines do I have from 2015?"* or *"List all my size medium jackets."*
 * **Zero Database Changes:** Because the NLP engine already dumps all dynamically generated attributes (like Vintage, Grape, Fabric, or Size) into the searchable `semanticTokens` pool, the underlying matching algorithm requires zero structural changes to accurately score these new domains.
 
 #### Scanning Clothes
-When taking pictures of clothes for your collection, especially if you use the background removal feature, the items will look significantly better if you:
+When taking pictures of clothes for your trove, especially if you use the background removal feature, the items will look significantly better if you:
 1. Lay them flat on a contrasting surface (like a bedsheet or clean floor).
 2. Smooth out major wrinkles.
 3. Ensure decent ambient lighting to avoid harsh shadows.
@@ -204,13 +204,7 @@ SvelteKit 2, PWA, Prisma, SQLite, Tailwind CSS, TypeScript, LLMs + various ML mo
 
 ### Get it:
 ```bash
-npx degit romland/itemLens itemLens
-```
-
-### Create some directories
-```bash
-mkdir `static/images`
-mkdir `static/images/u`
+npx degit romland/troves troves
 ```
 
 ### Fill in your details in .env
@@ -235,12 +229,6 @@ npx prisma migrate dev --name init
 npx prisma db seed
 ```
 
-### Use default user:
-```
-Username: admin
-Password: password
-```
-
 ### Build for production
 ```bash
 npm run build
@@ -252,7 +240,7 @@ Apple only allows PWAs to *send* shares out, not *receive* them natively via the
 
 ### The Workaround: iOS Shortcuts
 
-If you want to share things directly into itemLens on an iPhone, the best workaround is to build a quick iOS Shortcut:
+If you want to share things directly into Troves on an iPhone, the best workaround is to build a quick iOS Shortcut:
 1. Open the **Shortcuts** app on your iPhone and create a new shortcut.
 2. Tap the **(i)** icon at the bottom and turn on **Show in Share Sheet**.
 3. Set it to accept **URLs, Text, and Images**.
@@ -262,14 +250,14 @@ If you want to share things directly into itemLens on an iPhone, the best workar
 
 
 ### Host Dependencies (Optional)
-All external dependencies are **100% optional**. Everything in itemLens gracefully falls back if a tool isn't installed.
+All external dependencies are **100% optional**. Everything in Troves gracefully falls back if a tool isn't installed.
 
 * **PDF Covers:** `sudo apt-get install poppler-utils` (provides `pdftoppm` to extract PDF first pages as thumbnails)
 * **Video Thumbnails:** `sudo apt-get install ffmpeg` (extracts frame grabs from video files)
 * **Video Archiving:** `yt-dlp` (downloads linked videos from YouTube, Twitter, etc. into local storage)
 
 ### Local LAN HTTPS & PWA (Mobile Access)
-Mobile browsers strictly require **HTTPS** to use the Camera or install the app to your home screen. To access itemLens securely from your phone over your local network:
+Mobile browsers strictly require **HTTPS** to use the Camera or install the app to your home screen. To access Troves securely from your phone over your local network:
 
 > **Why go through this hassle instead of a Cloudflare Tunnel or external proxy?**
 > Because of the "trombone effect." If you use an external tunnel, taking a photo of an item on your phone sends the image out over your internet connection to a remote datacenter, just to bounce it right back to the server sitting 5 feet away from you. It bottlenecks your fast LAN down to your internet upload speed. Furthermore, proxies like Cloudflare impose hard limits (like 100MB max uploads) and aggressive timeouts that will break large PDF uploads or bulk photo syncs. Local certs keep your traffic lightning-fast, restriction-free, and completely offline.
@@ -286,7 +274,7 @@ Mobile browsers strictly require **HTTPS** to use the Camera or install the app 
    ```bash
    mkcert -cert-file cert.pem -key-file key.pem localhost 127.0.0.1 192.168.x.x
    ```
-4. **Restart the app:** (`docker restart itemlens-app`). 
+4. **Restart the app:** (`docker restart troves-app`). 
    
 The Express server will automatically detect the `.pem` files and boot securely on `https://<YOUR_LAN_IP>:3000`.
 

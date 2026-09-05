@@ -37,7 +37,7 @@
 </script>
 
 <div class="title font-bold mb-3 flex items-center gap-2">
-    <i class="bi bi-robot text-primary"></i> Ask itemLens
+    <i class="bi bi-robot text-primary"></i> Ask Troves
 </div>
 <div class="mb-6 bg-base-200/50 p-4 rounded-2xl border border-base-200">
     <p class="text-xs text-gray-500 mb-3">Ask questions about this item based on its photos, OCR text, and downloaded manuals.</p>

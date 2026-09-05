@@ -21,10 +21,9 @@ rootCA.crt
 apply-llm.sh
 services/rembg-data/
 dist/
-itemlens-*.tar.gz
-itemlens.tar.gz
+troves-*.tar.gz
+troves.tar.gz
 prompt-installer.txt
 data/
 docker-compose.override.yml
 prisma/dev.db.bak
-c.diff

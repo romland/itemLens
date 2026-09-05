@@ -10,7 +10,7 @@ export async function POST({ request, locals }) {
     if (!photoId || !itemId) return json({ error: 'Missing parameters' }, { status: 400 });
 
     const item = await db.item.findFirst({ where: { id: itemId, inventoryId: locals.activeInventoryId } });
-    if (!item) return json({ error: 'Item not found in current collection' }, { status: 404 });
+    if (!item) return json({ error: 'Item not found in current trove' }, { status: 404 });
 
     await db.photo.updateMany({
         where: { itemId },

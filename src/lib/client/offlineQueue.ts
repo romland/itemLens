@@ -13,7 +13,7 @@ export interface OutboxItem {
 export const outboxStore = writable<OutboxItem[]>([]);
 export const completedOutboxStore = writable<OutboxItem[]>([]);
 
-const DB_NAME = 'ItemLensOutbox';
+const DB_NAME = 'TrovesOutbox';
 const STORE_NAME = 'outboxQueue';
 
 export async function initDB() {

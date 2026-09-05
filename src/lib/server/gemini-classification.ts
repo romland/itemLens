@@ -288,7 +288,7 @@ For each item:
   }
 
   if (hint && hint.trim()) {
-      promptText += `\n\nUSER HINT: The user noted this collection is: "${hint.trim()}". Prioritize identifying the items within this context.`;
+      promptText += `\n\nUSER HINT: The user noted this inventory is: "${hint.trim()}". Prioritize identifying the items within this context.`;
   }
 
   const response = await withRetry(() => ai.models.generateContent({

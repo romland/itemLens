@@ -1,5 +1,5 @@
 {
-	"name": "itemlens",
+	"name": "Troves",
 	"version": "0.9.0",
 	"private": true,
 	"scripts": {
@@ -18,7 +18,7 @@
 		"migrate:webp": "npx tsx scripts/convert-to-webp.ts",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 static/itemlens-512.webp",
+		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 static/troves512.webp",
 		"paddleocr:build": "docker compose up -d --build paddleocr",
 		"singlefile:build": "docker compose up -d --build singlefile",
 		"services:build": "docker compose up -d --build",

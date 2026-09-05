@@ -102,7 +102,7 @@
     // GLOBAL SYNC ENGINE (Outbox)
     async function processOutbox() {
         if (typeof navigator !== 'undefined' && navigator.locks) {
-            await navigator.locks.request('itemlens-outbox-sync', { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+            await navigator.locks.request('troves-outbox-sync', { mode: 'exclusive', ifAvailable: true }, async (lock) => {
                 if (lock) await doProcessOutbox();
             });
         } else {
@@ -117,7 +117,7 @@
         try {
             const queue = await getQueue();
             for (const item of queue) {
-                // Since we obtained the exclusive 'itemlens-outbox-sync' Web Lock, we know for a fact 
+                // Since we obtained the exclusive 'troves-outbox-sync' Web Lock, we know for a fact 
                 // that no other tab is currently syncing. If an item is stuck in 'syncing' status, 
                 // it's a zombie from a browser crash or closed tab. We should process it.
                 // if (item.status === 'syncing') continue; 
@@ -374,7 +374,7 @@
         <svelte:head> 
         {#if mounted && webManifest}{@html webManifest}{/if}
 
-        <title>{$pageTitle}{vaultStr} | itemLens</title>
+        <title>{$pageTitle}{vaultStr} | Troves</title>
         <meta name="theme-color" content={themeColor || "#1d232a"} />
     </svelte:head>
     
@@ -410,8 +410,8 @@
             
             <div class="hidden lg:flex items-center ml-1">
                 <a href="/" class="btn btn-ghost normal-case text-xl flex items-center gap-3 px-2 hover:bg-base-200 transition-colors rounded-xl">
-                    <img src="/itemlens-512-white-outline.webp" alt="itemLens Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
-                    <span class="font-bold tracking-tight">itemLens</span>
+                    <img src="/troves512.webp" alt="Troves Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
+                    <span class="font-bold tracking-tight">Troves</span>
                 </a>
                 
                 {#if $page.data.inventories && $page.data.inventories.length > 0}
@@ -424,12 +424,12 @@
                         reload={false}
                         on:submit={() => mobileMenuModal.close()}
                     >
-                        <div slot="header" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">Switch Collection</div>
+                        <div slot="header" class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">Switch Trove</div>
                         <svelte:fragment slot="footer"></svelte:fragment>
                     </DropdownSelect>
                 {:else if $page.data.user && ($page.data.user.isAdmin || $page.data.user.canCreateInventories)}
                     <button class="btn btn-sm btn-primary ml-4 rounded-xl shadow-sm" on:click={() => createInventoryModal.showModal()}>
-                        <i class="bi bi-plus-lg"></i> Create Collection
+                        <i class="bi bi-plus-lg"></i> Create Trove
                     </button>
                 {/if}
             </div>
@@ -583,7 +583,7 @@
                             <i class="bi bi-safe2-fill text-xl"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Collection</div>
+                            <div class="text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Active Trove</div>
                             <DropdownSelect
                                 dropdownClass="dropdown-bottom w-full"
                                 buttonClass="btn-sm btn-ghost bg-transparent hover:bg-base-200 font-bold w-full justify-between px-2 -ml-2 h-auto min-h-0 text-lg shadow-none rounded-xl"
@@ -638,8 +638,8 @@
                 
                 {#if $page.data.user?.isAdmin || $page.data.user?.canCreateInventories || ($page.data.inventories && $page.data.inventories.length > 0)}
                     <ActionCard 
-                        title="Manage Collections" 
-                        href="/settings/collections" 
+                        title="Manage Troves" 
+                        href="/settings/troves" 
                         icon="bi-collection-fill" 
                         iconColorClass="bg-secondary/10 text-secondary" 
                         variant="flat" 

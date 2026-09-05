@@ -87,12 +87,12 @@
     
     function setMode(newMode: 'single' | 'collection' | 'compare' | 'rapid') {
         mode = newMode;
-        document.cookie = `itemlens_add_mode=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
+        document.cookie = `troves_add_mode=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
     }
 
     onMount(() => {
         // FIX: Bypass SvelteKit layout caching staleness by reading the real browser cookie.
-        const match = document.cookie.match(/(?:^|;\s*)itemlens_add_mode=([^;]*)/);
+        const match = document.cookie.match(/(?:^|;\s*)troves_add_mode=([^;]*)/);
         if (match && match[1] && ['single', 'collection', 'compare', 'rapid'].includes(match[1])) {
             console.log('[Add Hub] Cookie sync on mount:', match[1]);
             if (mode !== match[1]) mode = match[1] as any;
@@ -163,9 +163,8 @@
 
     }
     
-    
     pageTitle.set("Add new product");
-    $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Add Collection" : mode === 'compare' ? "Compare Collection" : "Rapid Intake");
+    $:  pageTitle.set(mode === 'single' ? "Add new product" : mode === 'collection' ? "Multi-scan" : mode === 'compare' ? "Compare Collection" : "Rapid Intake");
     
 </script>
 

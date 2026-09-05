@@ -25,7 +25,7 @@ export const GET: RequestHandler = async ({ locals }) => {
     return new Response(fileBuffer, {
         headers: {
             'Content-Type': 'application/vnd.sqlite3',
-            'Content-Disposition': `attachment; filename="itemLens_backup_${Date.now()}.db"`
+            'Content-Disposition': `attachment; filename="troves_backup_${Date.now()}.db"`
         }
     });
 };

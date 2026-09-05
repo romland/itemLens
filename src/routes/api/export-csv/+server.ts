@@ -106,7 +106,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return new Response(csvContent, {
         headers: {
             'Content-Type': 'text/csv; charset=utf-8',
-            'Content-Disposition': `attachment; filename="itemlens_export_${new Date().toISOString().split('T')[0]}.csv"`
+            'Content-Disposition': `attachment; filename="troves_export_${new Date().toISOString().split('T')[0]}.csv"`
         }
     });
 };

@@ -102,8 +102,8 @@ export default defineConfig(({ command }) => ({
 			base: '/',
 			selfDestroying: process.env.SELF_DESTROYING_SW === 'true',
 			manifest: {
-				short_name: 'ItemLens',
-				name: 'ItemLens',
+				short_name: 'Troves',
+				name: 'Troves',
 				start_url: '/',
 				scope: '/',
 				display: 'standalone',
@@ -149,7 +149,7 @@ export default defineConfig(({ command }) => ({
 				}				  
 			},
 			workbox: {
-				globIgnores: ['**/client/images/u/**', '**/client/images/tests/**', '**/itemlens.png'],
+				globIgnores: ['**/client/images/u/**', '**/client/images/tests/**', '**/troves.png'],
 				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
                 navigateFallback: null, // CRITICAL: Stop SW from serving poisoned HTML shells on Ctrl+R
 				cleanupOutdatedCaches: true,

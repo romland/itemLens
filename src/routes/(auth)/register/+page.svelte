@@ -19,7 +19,7 @@
         </div>
         
         <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-center text-base-content mb-2">Create an account</h1>
-        <p class="text-sm text-gray-500 text-center mb-8 font-medium">Set up your personal collections.</p>
+        <p class="text-sm text-gray-500 text-center mb-8 font-medium">Set up your personal troves.</p>
 
         {#if form?.error}
             <div class="mb-4 text-center animate-fade-in">
@@ -49,8 +49,8 @@
             </div>
 
             <div class="mt-8 flex w-full justify-center">
-                <a href="https://github.com/romland/itemLens" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">
-                    <i class="bi bi-github text-lg"></i> itemLens on GitHub
+                <a href="https://github.com/romland/troves" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">
+                    <i class="bi bi-github text-lg"></i> Troves on GitHub
                 </a>
             </div>            
         </form>

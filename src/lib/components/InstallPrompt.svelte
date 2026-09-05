@@ -10,7 +10,7 @@
     onMount(() => {
         // Detect standalone PWA mode so we never nag users who already installed it
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-        const dismissed = localStorage.getItem('itemlens_hide_install');
+        const dismissed = localStorage.getItem('troves_hide_install');
 
         if (isStandalone || dismissed) return;
 
@@ -40,7 +40,7 @@
 
     function dismiss() {
         show = false;
-        localStorage.setItem('itemlens_hide_install', 'true');
+        localStorage.setItem('troves_hide_install', 'true');
     }
 </script>
 
@@ -51,10 +51,10 @@
     <div class="bg-base-100/80 backdrop-blur-3xl border border-base-200 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] rounded-3xl p-4 flex gap-4 items-center pointer-events-auto relative overflow-hidden ring-1 ring-white/10">
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
         <div class="w-12 h-12 bg-base-100 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-base-200/50 z-10">
-            <img src="/itemlens-512-white-outline.webp" alt="itemLens" class="w-8 h-8 rounded-lg" on:error={(e) => e.currentTarget.style.display='none'}/>
+            <img src="/troves512.webp" alt="Troves" class="w-8 h-8 rounded-lg" on:error={(e) => e.currentTarget.style.display='none'}/>
         </div>
         <div class="flex-1 z-10">
-            <h3 class="text-sm font-bold text-base-content leading-tight tracking-tight">Install itemLens</h3>
+            <h3 class="text-sm font-bold text-base-content leading-tight tracking-tight">Install Troves</h3>
             <p class="text-[11px] text-base-content/60 leading-snug mt-0.5 pr-2">
                 {#if isIOS}Tap <span class="bg-base-200 px-1 py-0.5 rounded text-base-content mx-0.5 border border-base-300 shadow-sm"><i class="bi bi-box-arrow-up text-[10px]"></i></span> then <strong class="text-base-content/80">Add to Home Screen</strong>.{:else}Add to your home screen for the full native experience.{/if}
             </p>

@@ -7,7 +7,7 @@
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
     import pageTitle from '$lib/stores';
 
-    pageTitle.set("Manage Collections");
+    pageTitle.set("Manage Troves");
 
     let deleteConfirmId: number | null = null;
     let deleteConfirmText: string = "";
@@ -30,11 +30,11 @@
     {#if $page.data.user?.isAdmin || $page.data.user?.canCreateInventories}
         <div class="bg-base-100 border border-base-200 shadow-sm rounded-xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h3 class="font-bold text-lg mb-1">Create New Collection</h3>
+                <h3 class="font-bold text-lg mb-1">Create New Trove</h3>
                 <p class="text-sm text-gray-500">Set up a new isolated space for a specific group of items.</p>
             </div>
             <button type="button" class="btn btn-primary shadow-sm shrink-0 w-full sm:w-auto" on:click={() => createInventoryModal.showModal()}>
-                <i class="bi bi-plus-lg"></i> Create Collection
+                <i class="bi bi-plus-lg"></i> Create Trove
             </button>
         </div>
     {/if}
@@ -43,7 +43,7 @@
         <div class="bg-base-100 border border-warning/20 shadow-sm rounded-xl p-6 mb-8 relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-warning text-warning-content text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Owner Actions</div>
             
-            <h3 class="font-bold text-lg mb-4 text-warning"><i class="bi bi-shield-check"></i> Collection Access</h3>
+            <h3 class="font-bold text-lg mb-4 text-warning"><i class="bi bi-shield-check"></i> Trove Access</h3>
             {#if $page.data.user?.isAdmin}
                 <form method="POST" action="?/assignAccess" use:enhance={createEnhancer} class="flex flex-col sm:flex-row gap-2 mb-6">
                     <select name="userId" class="select select-bordered w-full" required>
@@ -53,7 +53,7 @@
                         {/each}
                     </select>
                     <select name="inventoryId" class="select select-bordered w-full" required>
-                        <option value="" disabled selected>Select Collection</option>
+                        <option value="" disabled selected>Select Trove</option>
                         {#each $page.data.allInventories || [] as v}
                             <option value={v.id}>{v.name}</option>
                         {/each}
@@ -69,7 +69,7 @@
 
             <div class="overflow-x-auto bg-base-200 rounded-lg mb-8">
                 <table class="table table-sm">
-                    <thead><tr><th>User</th><th>Collection</th><th>Role</th><th></th></tr></thead>
+                    <thead><tr><th>User</th><th>Trove</th><th>Role</th><th></th></tr></thead>
                     <tbody>
                         {#each $page.data.accessMap || [] as access}
                             <tr>
@@ -107,7 +107,7 @@
                 </table>
             </div>
 
-            <div class="divider my-6">Manage Settings per Collection</div>
+            <div class="divider my-6">Manage Settings per Trove</div>
 
             <div class="flex flex-col gap-6">
                 {#each $page.data.allInventories || [] as v}
@@ -115,12 +115,12 @@
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <div class="font-bold text-lg {deleteConfirmId === v.id ? 'text-error' : ''}">{v.name}</div>
-                                <div class="text-[10px] text-gray-500 mt-0.5 capitalize">{v.archetype} collection &bull; {v._count?.items || 0} items &bull; {v._count?.notes || 0} notes &bull; {v._count?.containers || 0} containers</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5 capitalize">{v.archetype} trove &bull; {v._count?.items || 0} items &bull; {v._count?.notes || 0} notes &bull; {v._count?.containers || 0} containers</div>
                             </div>
                             
                             <div class="text-right">
                                 {#if deleteConfirmId === v.id}
-                                    <form method="POST" action="?/deleteInventory" use:enhance={() => { return async ({ result, update }) => { if(result.type === 'success') notify('success', 'Collection deleted'); deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
+                                    <form method="POST" action="?/deleteInventory" use:enhance={() => { return async ({ result, update }) => { if(result.type === 'success') notify('success', 'Trove deleted'); deleteConfirmId = null; deleteConfirmText = ''; update(); }; }} class="flex items-center gap-2 justify-end">
                                         <input type="hidden" name="id" value={v.id}>
                                         <input type="text" name="confirmName" bind:value={deleteConfirmText} class="input input-xs input-bordered border-error focus:border-error w-32 bg-base-100" placeholder="Type name..." autocomplete="off">
                                         <button type="submit" class="btn btn-error btn-xs" disabled={deleteConfirmText !== v.name}>Delete</button>
@@ -159,7 +159,7 @@
                         <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableAskAi', 'Enable Ask ItemLens AI'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
+                                {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableAskAi', 'Enable Ask Troves'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
                                     <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                 {/each}
                             </div>
@@ -223,7 +223,7 @@
                             </form>
 
                             <form method="POST" action="?/rebuildDuplicates" use:enhance={async ({ cancel }) => {
-                                const res = await confirmModal.ask('Re-scan Duplicates?', 'Re-scan the entire collection for duplicates? This runs in the background and may take a few moments.', 'Re-scan', 'Cancel');
+                                const res = await confirmModal.ask('Re-scan Duplicates?', 'Re-scan the entire trove for duplicates? This runs in the background and may take a few moments.', 'Re-scan', 'Cancel');
                                 if (!res) { cancel(); return; }
                                 return createEnhancer();
                             }}>

@@ -1,9 +1,9 @@
 services:
   rembg:
     profiles: ["rembg", "full"]
-    container_name: itemlens-rembg
+    container_name: troves-rembg
     build: ./services/rembg
-    image: itemlens-rembg:latest
+    image: troves-rembg:latest
     command: s --no-ui
     environment:
       - OMP_NUM_THREADS=2
@@ -20,7 +20,7 @@ services:
 
   paddleocr:
     profiles: ["paddleocr", "full"]
-    container_name: itemlens-paddleocr
+    container_name: troves-paddleocr
     build: ./services/paddleocr
     image: paddleocrfastapi:paddlejr
     environment:
@@ -43,7 +43,7 @@ services:
 
   singlefile:
     profiles: ["singlefile", "full"]
-    container_name: itemlens-singlefile
+    container_name: troves-singlefile
     build: ./services/singlefile
     command: node webserver.js 8001
     mem_limit: 768m
@@ -59,16 +59,16 @@ services:
 
   app:
     profiles: ["full"]
-    container_name: itemlens-app
+    container_name: troves-app
     build:
       context: .
       dockerfile: Dockerfile
-    image: itemlens-app:latest
+    image: troves-app:latest
     restart: unless-stopped
     mem_limit: 768m
     cpus: 2.0
     ports:
-      - "${ITEMLENS_PORT:-3000}:3000"
+      - "${TROVES_PORT:-3000}:3000"
     environment:
       - PORT=3000
       - REMBG_URL=http://rembg:7000

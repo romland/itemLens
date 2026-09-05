@@ -95,7 +95,7 @@
         if (!txt || txt.trim() === '') return "Empty QR code";
 
         // const exists = flatContainers.some(c => c.name === txt);
-        // if (!exists) return `Container "${txt}" not found in this Collection.`;
+        // if (!exists) return `Container "${txt}" not found in this Trove.`;
         return true;
     }
 
@@ -104,7 +104,7 @@
         const exists = flatContainers.some(c => c.name === ev.detail);
         if (!exists) {
             scanningContainers = false;
-			confirmModal.ask('Container Not Found', `Container "${ev.detail}" not found in this Collection. Create it now?`, 'Create', 'Cancel').then(res => {
+			confirmModal.ask('Container Not Found', `Container "${ev.detail}" not found in this Trove. Create it now?`, 'Create', 'Cancel').then(res => {
                 if (res) {
                     createContainer(ev.detail);
                 }
@@ -290,7 +290,7 @@
                     {:else}
                         <div class="p-6 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
                             <i class="bi bi-inbox text-2xl"></i>
-                            No containers found in this collection.
+                            No containers found in this Trove.
                         </div>
                     {/each}
                 </div>

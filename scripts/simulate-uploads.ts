@@ -25,7 +25,7 @@ const CLOTHES_PATH2 = "/mnt/k/development/2024/inventory/USE_WSL_itemlens/static
 
 // Provide the absolute or relative paths to the images on your disk
 // Batch 1 - a mix 1
-const _singleImages: string[] = [
+const singleImages: string[] = [
     CLOTHES_PATH+"/6695.jpg",
     CLOTHES_PATH+"/6857.jpg",
     CLOTHES_PATH+"/6878.jpg",
@@ -320,7 +320,7 @@ async function uploadCollection(filePath: string, headers: Record<string, string
 
 async function run() {
     try {
-        console.log("=== ITEMLENS UPLOAD SIMULATOR ===");
+        console.log("=== TROVES UPLOAD SIMULATOR ===");
         const headers = await getAuthHeaders();
         console.log("🔓 Authentication successful.");
 

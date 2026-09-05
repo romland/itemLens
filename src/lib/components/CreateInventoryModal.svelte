@@ -20,7 +20,7 @@
 	// - Media/Books needs deep scanning but NOT background removal (boxes/covers are flat).
 	//
 	// If you add new archetypes or tweak defaults below, ensure they are mirrored in:
-	// 1. Backend creation (src/routes/settings/collections/+page.server.ts -> createInventory)
+	// 1. Backend creation (src/routes/troves/collections/+page.server.ts -> createInventory)
 	// 2. The LLM prompts (src/lib/server/ontology.ts)
 	// =============================================================================
 	let selectedArchetype = 'hardware';
@@ -28,14 +28,14 @@
 	function handleEnhance({ formElement }: any) {
 		return async ({ result, update }: any) => {
 			if (result.type === 'success' || result.type === 'redirect') {
-				dispatch('success', result.data?.message || 'Collection created successfully!');
+				dispatch('success', result.data?.message || 'Trove created successfully!');
 				modal.close();
 				name = '';
 				contentsHint = '';
 				selectedArchetype = 'hardware';
 				formElement.reset();
 			} else {
-				dispatch('error', result.data?.message || 'An error occurred while creating collection.');
+				dispatch('error', result.data?.message || 'An error occurred while creating Trove.');
 			}
 			await update({ reset: false });
 		};
@@ -45,16 +45,16 @@
 <Modal bind:this={modal} boxClass="p-0 overflow-hidden sm:rounded-[2.5rem] max-w-[90vw] lg:max-w-6xl flex flex-col max-h-[90vh]">
 	<div class="p-6 pb-4 border-b border-base-200 bg-base-100/90 sticky top-0 z-10 flex justify-between items-center">
 		<div>
-			<h3 class="font-bold text-xl leading-tight">Create New Collection</h3>
+			<h3 class="font-bold text-xl leading-tight">Create New Trove</h3>
 			<p class="text-xs text-gray-500 mt-1">Select an archetype to automatically configure optimal system defaults.</p>
             <p class="text-xs font-bold text-warning mt-1">⚠️ Important: Archetype and the "what will be in it" choice fundamentally changes how we extract data and which tools are active. Choose with care!</p>
 		</div>
 		<button type="button" class="btn btn-sm btn-circle btn-ghost" on:click={() => modal.close()}><i class="bi bi-x-lg"></i></button>
 	</div>
 	
-    <form method="POST" action="/settings/collections?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
+    <form method="POST" action="/settings/troves?/createInventory" use:enhance={handleEnhance} class="flex flex-col overflow-hidden">
 		<div class="p-4 sm:p-6 overflow-y-auto flex flex-col gap-6 bg-base-50">
-			<FormInput label="Name your Collection" labelClass="font-semibold text-lg" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar, Electronics, Shed..." required autocomplete="off" inputClass="input-lg rounded-2xl shadow-inner focus:border-primary" />
+			<FormInput label="Name your Trove" labelClass="font-semibold text-lg" name="name" bind:value={name} placeholder="e.g., Garage Workbench, Wine Cellar, Electronics, Shed..." required autocomplete="off" inputClass="input-lg rounded-2xl shadow-inner focus:border-primary" />
 			
 			<FormInput label="What will be in it? (1-3 words)" labelClass="font-semibold text-lg" name="contentsHint" bind:value={contentsHint} placeholder="e.g. vintage stamps, lego, cables, electronics, whiskey, clothes..." required inputClass="rounded-2xl shadow-inner focus:border-primary" class="-mt-2" />
 			
@@ -88,7 +88,7 @@
 			</div>
 		</div>
 		<div class="p-4 bg-base-100 border-t border-base-200 sticky bottom-0 z-10">
-			<button type="submit" class="btn btn-primary btn-lg w-full rounded-2xl shadow-lg" disabled={!name.trim()}>Create "{name.trim() || 'Collection'}"</button>
+			<button type="submit" class="btn btn-primary btn-lg w-full rounded-2xl shadow-lg" disabled={!name.trim()}>Create "{name.trim() || 'Trove'}"</button>
 		</div>
 	</form>
 </Modal>

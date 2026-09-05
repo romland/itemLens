@@ -24,7 +24,7 @@ model User {
   name     String?
   avatar   String?
   isAdmin  Boolean @default(false) // Determines if user can create other local accounts
-  canCreateInventories Boolean @default(true) // Determines if user can create new collections
+  canCreateInventories Boolean @default(true) // Determines if user can create new Troves
   preferences String? // JSON object storing keymaps and UI prefs
 
   // Auditing: Who created what
@@ -75,30 +75,30 @@ model Inventory {
   id                  Int      @id @unique @default(autoincrement())
   name                String
   description         String
-  classes             String   // JSON array of ML classes, e.g. ["shoes", "clothes"]
-  archetype           String   @default("generic") // "media", "apparel", "hardware", "consumables", "collectibles", "natural", "generic"
+  classes             String  // JSON array of ML classes, e.g. ["shoes", "clothes"]
+  archetype           String  @default("generic") // "media", "apparel", "hardware", "consumables", "collectibles", "natural", "generic"
   allowNewCategories  Boolean @default(true) // Whether AI is allowed to invent new sub-categories
   allowAutoTaxonomy   Boolean @default(false) // Whether AI is allowed to auto-generate taxonomy/EAV rules
   extractExif         Boolean @default(true) // Whether to extract EXIF data from uploaded photos in this vault
-  deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via bulk collection
+  deepScanCollections Boolean @default(false) // Whether to run individual AI analysis on items imported via multi-scan
   bgRemovalEnabled    Boolean @default(true) // Whether to run background removal
   bgRemovalModel      String  @default("bria-rmbg") // Which model to use: "bria-rmbg", "u2net", etc
   bgRemovalPreCrop    Boolean @default(false) // Whether to crop to foreground box BEFORE background removal
   enablePaddleOCR     Boolean @default(false) // Whether to extract text from images using local PaddleOCR container
-  duplicateStrategy   String @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
+  duplicateStrategy   String  @default("PROMPT") // "PROMPT", "AUTO_BUMP", "AUTO_IGNORE"
   archiveSingleScans  Boolean @default(false) // Whether to automatically archive single scans to the Notebook
-  trackQuantity       Boolean @default(true) // Whether this collection uses quantities/stock
+  trackQuantity       Boolean @default(true) // Whether this trove uses quantities/stock
   showExif            Boolean @default(false) // Show EXIF data in item details
   showColors          Boolean @default(false) // Show extracted colors in item details
   showOcr             Boolean @default(true) // Show OCR text blocks in item details
-  enableAskAi         Boolean @default(true) // Whether the ItemLens AI is enabled
+  enableAskAi         Boolean @default(true) // Whether the Ask Troves is enabled
   enableNotebook      Boolean @default(true) // Whether the Notebook/Timeline is enabled
- showNoteContextUrl  Boolean @default(true) // Show the context URL captured with quick notes
+  showNoteContextUrl  Boolean @default(true) // Show the context URL captured with quick notes
   enableDocuments     Boolean @default(true) // Whether Documents/Links are enabled for items
   notebookCategories  String  @default("[\"idea\", \"todo\", \"to buy\", \"to read\", \"other\", \"archive\"]")
   enableFuzzySearch   Boolean @default(true) // Whether to use NLP stemming/fuzzy matching in search
-  containerMode       String @default("scan") // "scan" or "select" - defaults selector to camera or list
-  defaultView         String @default("grid") // "grid" or "list"
+  containerMode       String  @default("scan") // "scan" or "select" - defaults selector to camera or list
+  defaultView         String  @default("grid") // "grid" or "list"
   templateFields      TemplateField[]
 
   users               UserInventoryAccess[]

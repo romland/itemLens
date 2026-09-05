@@ -377,7 +377,7 @@ const intents: VoiceIntent[] = [
         process: async (match, inventoryId) => {
 			const subject = match[1].trim();
             const items = await findItems(subject, inventoryId);
-            if (items.length === 0) return { query: subject, spokenReply: `No, I don't see any ${subject} in your collection.` };
+            if (items.length === 0) return { query: subject, spokenReply: `No, I don't see any ${subject} in your Trove.` };
             
             const totalStock = items.reduce((sum, item) => sum + (item.amount === null ? 1 : item.amount), 0);
             return { query: subject, spokenReply: `You have ${totalStock} of them.`, route: getDirectRoute(items) };

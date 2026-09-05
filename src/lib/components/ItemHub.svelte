@@ -154,7 +154,7 @@
             if (data.aiData.isDuplicate && !item) {
                 isDuplicateWarning = true;
                 duplicateDetails = data.aiData.duplicateItemDetails;
-                dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in collection!' });
+                dispatch('notify', { status: 'warning', message: 'Potential duplicate detected in Trove!' });
                 if (duplicateDetails.debugTrace) {
                     console.group(`🔍 Match Trace for: ${data.aiData.title}`);
                     duplicateDetails.debugTrace.forEach((line: string) => console.log(line));
@@ -279,7 +279,7 @@
             <h2 class="text-2xl font-bold">{currentTitle || (item ? 'Edit Item' : 'New Item')}</h2>
             {#if !item && $page.data.inventories}
                 <div class="text-[10px] uppercase tracking-wider font-bold text-primary mt-1 mb-1">
-                    Adding to: {$page.data.inventories.find(i => i.id === $page.data.activeInventoryId)?.name || 'Collection'}
+                    Adding to: {$page.data.inventories.find(i => i.id === $page.data.activeInventoryId)?.name || 'Trove'}
                 </div>
             {/if}
             <p class="text-gray-500 text-sm">

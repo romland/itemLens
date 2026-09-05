@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-const CACHE_KEY = 'itemlens_ambient_location';
+const CACHE_KEY = 'troves_ambient_location';
 const TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface AmbientLocation {

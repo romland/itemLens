@@ -11,7 +11,7 @@
     export let form;
     
     let isSubmitting = false;
-    let step = 1; // 1: Admin, 2: Collection Prompt, 3: Done
+    let step = 1; // 1: Admin, 2: Trove Prompt, 3: Done
     let createModal: CreateInventoryModal;
 
     // Cinematic Intro State
@@ -20,7 +20,7 @@
 
     onMount(() => {
         // Step 1: "Hello." stays for 1.8s, then swaps.
-        setTimeout(() => greeting = "Welcome to itemLens.", 1800);
+        setTimeout(() => greeting = "Welcome to Troves.", 1800);
         
         // Step 2: The entire intro curtain lifts at 3.8s.
         setTimeout(() => showIntro = false, 3800);
@@ -62,11 +62,11 @@
                 
                 <div class="flex justify-start mb-6">
                     <img src="/pwa-512x512.png" 
-                        alt="itemLens Logo" 
+                        alt="Troves Logo" 
                         class="w-48 h-48 rounded-2xl object-contain shadow-sm bg-base-100/50 p-2 border border-base-200/50" />
                 </div>
                 
-                <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-base-content mb-3">itemLens</h1>
+                <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-base-content mb-3">Troves</h1>
                 
                 {#if step === 1}
                     <div in:fade={{ duration: 400 }}>
@@ -119,10 +119,10 @@
                         <div class="flex items-center gap-3 text-success font-bold text-lg mb-2">
                             <i class="bi bi-shield-check text-2xl"></i> Administrator added
                         </div>
-                        <p class="text-base-content/70 text-sm">Before you can start adding items, you need to create your first collection. Click below to configure it.</p>
+                        <p class="text-base-content/70 text-sm">Before you can start adding items, you need to create your first trove. Click below to configure it.</p>
                         
                         <button type="button" class="btn btn-primary w-full rounded-xl shadow-lg shadow-primary/20 h-14 mt-2" on:click={() => createModal.showModal()}>
-                            Open Collection Creator
+                            Open Trove Creator
                         </button>
                     </div>
 
@@ -134,7 +134,7 @@
                         <p class="text-base-content/70 text-sm">Everything is configured. Welcome to your new inventory.</p>
                         
                         <button type="button" class="btn btn-success text-white w-full rounded-xl shadow-lg shadow-success/20 h-14 mt-2" on:click={() => window.location.href = '/'}>
-                            Enter itemLens <i class="bi bi-arrow-right"></i>
+                            Enter Troves <i class="bi bi-arrow-right"></i>
                         </button>
                     </div>
                 {/if}
@@ -148,13 +148,12 @@
             
         </div>
 
-        <a href="https://github.com/romland/itemLens" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium" in:fly={{ y: 20, duration: 600, delay: 600 }}>
-            <i class="bi bi-github text-lg"></i> itemLens on GitHub
+        <a href="https://github.com/romland/troves" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+            <i class="bi bi-github text-lg"></i> Troves on GitHub
         </a>
     </div>
 {/if}
 
-<!-- The DRY Collection Modal -->
 <CreateInventoryModal bind:this={createModal} on:success={() => step = 3} />
 
 <style>

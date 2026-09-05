@@ -91,10 +91,10 @@ if (!building) {
             // Sort Routing Logic (Remembered per inventory)
             const urlSort = event.url.searchParams.get('sort');
             if (urlSort) {
-                event.cookies.set('itemlens_sort_' + event.locals.activeInventoryId, urlSort, { path: '/', maxAge: 60 * 60 * 24 * 365, httpOnly: false });
+                event.cookies.set('troves_sort_' + event.locals.activeInventoryId, urlSort, { path: '/', maxAge: 60 * 60 * 24 * 365, httpOnly: false });
                 (event.locals as any).activeSort = urlSort;
             } else {
-			const cookieSort = event.cookies.get('itemlens_sort_' + event.locals.activeInventoryId);
+			const cookieSort = event.cookies.get('troves_sort_' + event.locals.activeInventoryId);
 			let dbSort = 'newest';
 			try {
 				const currentPrefs: UserPreferences = JSON.parse(user.preferences || '{}');
@@ -104,7 +104,7 @@ if (!building) {
             }
 
             // UI View Modes
-            const cookieViewMode = event.cookies.get('itemlens_viewmode_' + event.locals.activeInventoryId);
+            const cookieViewMode = event.cookies.get('troves_viewmode_' + event.locals.activeInventoryId);
             if (cookieViewMode) {
                 (event.locals as any).activeViewMode = cookieViewMode;
             } else if (event.locals.activeInventoryId) {
@@ -113,7 +113,7 @@ if (!building) {
             } else {
                 (event.locals as any).activeViewMode = 'grid';
             }
-            (event.locals as any).activeAddMode = event.cookies.get('itemlens_add_mode') || 'single';
+            (event.locals as any).activeAddMode = event.cookies.get('troves_add_mode') || 'single';
 
         } else {
             // Destroy the invalid cookie so we don't keep querying a dead token

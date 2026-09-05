@@ -249,7 +249,7 @@
             </div>
             <h2 class="text-2xl font-bold mb-3 tracking-tight">
                 {#if $page.data.inventories}
-                    Add to {$page.data.inventories.find(i => i.id ===$page.data.activeInventoryId)?.name || 'Collection'}
+                    Add to {$page.data.inventories.find(i => i.id ===$page.data.activeInventoryId)?.name || 'Trove'}
                 {:else}
                     Multiple Items
                 {/if}

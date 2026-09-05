@@ -25,7 +25,7 @@
         
         <!-- Animated Logo -->
         <div class="flex justify-center mb-6" in:fly={{ y: 20, duration: 600, delay: 250 }}>
-            <img src="/pwa-512x512.png" alt="itemLens Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
+            <img src="/pwa-512x512.png" alt="Troves Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
         </div>
         
         <!-- Animated Titles -->
@@ -70,8 +70,8 @@
             </form>
         </div>
 
-        <a href="https://github.com/romland/itemLens" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium mt-6" in:fly={{ y: 20, duration: 600, delay: 550 }}>
-            <i class="bi bi-github text-lg"></i> itemLens on GitHub
+        <a href="https://github.com/romland/troves" target="_blank" rel="noopener noreferrer" class="flex w-full justify-center items-center gap-2 text-sm text-base-content/40 hover:text-base-content/80 transition-colors font-medium mt-6" in:fly={{ y: 20, duration: 600, delay: 550 }}>
+            <i class="bi bi-github text-lg"></i> Troves on GitHub
         </a>
     </div>
 </div>

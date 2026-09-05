@@ -114,7 +114,7 @@
 
     function toggleViewMode(mode: string) {
         $sharedViewMode = mode;
-        document.cookie = `itemlens_viewmode_${$page.data.activeInventoryId}=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
+        document.cookie = `troves_viewmode_${$page.data.activeInventoryId}=${mode}; path=/; max-age=${60 * 60 * 24 * 365}`;
     }
 
     // --- Unified Reactive Projection ---
@@ -207,7 +207,7 @@
                 type="default"
                 icon={hasActiveFilters ? 'bi-search' : 'bi-box-seam'} 
                 title={hasActiveFilters ? 'No Results Found' : 'It\'s empty in here'} 
-                message={hasActiveFilters ? "Try adjusting your filters or search terms to find what you're looking for." : "Start digitizing your collection by adding your first item."}
+                message={hasActiveFilters ? "Try adjusting your filters or search terms to find what you're looking for." : "Start digitizing your trove by adding your first item."}
                 actionLabel={hasActiveFilters ? 'Clear Filters' : ''}
                 actionIcon="bi-funnel"
                 on:click={() => { if(hasActiveFilters) goto(window.location.pathname); }}

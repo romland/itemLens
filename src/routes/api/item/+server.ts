@@ -156,7 +156,7 @@ export async function PATCH({ request, locals }) {
     
     // IDOR Check: Ensure the item actually belongs to the active inventory
     const itemBelongsToVault = await db.item.findFirst({ where: { id: itemId, inventoryId: locals.activeInventoryId } });
-    if (!itemBelongsToVault) return json({ error: 'Item not found in current collection' }, { status: 404 });
+    if (!itemBelongsToVault) return json({ error: 'Item not found in current trove' }, { status: 404 });
 
     const exists = await db.container.findUnique({ where: { inventoryId_name: { inventoryId: locals.activeInventoryId, name: newContainer } }});
     

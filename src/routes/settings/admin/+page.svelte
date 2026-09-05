@@ -85,7 +85,7 @@
                                                 </label>
                                                 <label class="label cursor-pointer justify-start gap-3 w-fit mt-[-10px]">
                                                     <input type="checkbox" name="canCreateInventories" value="true" checked={u.canCreateInventories} class="checkbox checkbox-sm checkbox-primary" />
-                                                    <span class="label-text font-bold text-primary">Can Create Collections</span>
+                                                    <span class="label-text font-bold text-primary">Can Create Troves</span>
                                                 </label>
                                             </div>
                                         </div>

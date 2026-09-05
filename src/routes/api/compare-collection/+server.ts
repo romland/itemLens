@@ -34,7 +34,7 @@ const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
         const parsed = await apiQueue.add(
             () => analyzeBulkCollection(localDiskPath, mimeType, activeSchema, hint, { targetType: 'global', targetId: 0 }),
-            { targetType: 'global', targetId: 0, description: 'Matching physical items against Collection database' }
+            { targetType: 'global', targetId: 0, description: 'Matching physical items against Trove' }
         );
 
         const detected = parsed.items || [];

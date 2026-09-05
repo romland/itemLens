@@ -68,7 +68,7 @@ export async function bootstrapInventorySchema(inventoryId: number, domainName: 
     if (!(inv as any)?.allowAutoTaxonomy) return false;
 
     const taskId = taskManager.start('global', inventoryId, `Bootstrapping taxonomy rules for "${domainName}"`);
-    console.log(`[Taxonomy Engine] 🚀 Starting schema generation for Collection ID ${inventoryId}: "${domainName}"`);
+    console.log(`[Taxonomy Engine] 🚀 Starting schema generation for Trove ID ${inventoryId}: "${domainName}"`);
     
     const archetype = (inv as any)?.archetype || 'generic';
     let archetypeGuidance = "";
@@ -118,12 +118,12 @@ CRITICAL BANS:
 - 'matchWeight' MUST be "STRICT_DEDUPE", "FUZZY_SECONDARY", "SUBJECTIVE_TEXT", or "METADATA_ONLY".
 - For ALL enums, provide a HIGHLY EXHAUSTIVE 'options' array. Format the options nicely (e.g. 'Athletic Fit' instead of 'athletic'). For item types/forms, generate at least 15-25 common values to prevent cold-start issues. For sizes, include a full standard range.
 
-ADAPT TO USER INTENT: Adjust your specificity based on the user's description and archetype. If it's a generic collection, keep fields broad. If the description implies a highly specific sub-niche (e.g., "Vintage Belts"), generate hyper-specific fields (e.g., "Buckle Type", "Notch Count").`;
+ADAPT TO USER INTENT: Adjust your specificity based on the user's description and archetype. If it's a generic inventory, keep fields broad. If the description implies a highly specific sub-niche (e.g., "Vintage Belts"), generate hyper-specific fields (e.g., "Buckle Type", "Notch Count").`;
             const res = await withRetry(() => ai.models.generateContent({
                 model: 'gemini-3.1-flash-lite',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 config: { responseMimeType: 'application/json', responseSchema: eavResponseSchema as any }
-            }), 3, 2000, `Collection Bootstrap: ${domainName}`, { prompt });
+            }), 3, 2000, `Trove Bootstrap: ${domainName}`, { prompt });
             
             const fields = JSON.parse(res.text!);
             console.log(`[Taxonomy Engine] 🟢 Received ${fields.length} schema fields for "${domainName}". Saving to DB:`, JSON.stringify(fields, null, 2));
@@ -142,7 +142,7 @@ ADAPT TO USER INTENT: Adjust your specificity based on the user's description an
             return true;
         });
     } catch (e) {
-        console.error(`[Taxonomy Engine] 🔴 Collection schema bootstrap failed for ${domainName}:`, e);
+        console.error(`[Taxonomy Engine] 🔴 Trove schema bootstrap failed for ${domainName}:`, e);
         throw e;
     } finally {
         taskManager.end(taskId);

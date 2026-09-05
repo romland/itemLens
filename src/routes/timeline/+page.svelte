@@ -89,7 +89,7 @@
             <i class="bi bi-journal-x text-4xl"></i>
         </div>
         <h2 class="text-2xl font-bold mb-3 tracking-tight">Notebook Disabled</h2>
-        <p class="text-gray-500 mb-8">The notebook module has been turned off for this collection.</p>
+        <p class="text-gray-500 mb-8">The notebook module has been turned off for this trove.</p>
     </div>
 {:else}
 <div class="flex flex-col h-full max-w-2xl mx-auto pb-32 box-border overflow-x-hidden">

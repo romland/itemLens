@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     // Fire and forget background worker
     ioQueue.add(async () => {
-        const taskId = taskManager.start('global', 0, `Saving ${items.length} items from collection...`);
+        const taskId = taskManager.start('global', 0, `Saving ${items.length} items from trove...`);
         try {
             // Pre-process tags
             const tagIds = tagcsv ? await getTagIds(tagcsv, inventoryId) : [];

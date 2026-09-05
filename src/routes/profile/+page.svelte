@@ -110,7 +110,7 @@
                 <i class="bi bi-hourglass-split text-3xl"></i>
             </div>
             <h3 class="font-bold text-lg mb-2">Pending Approval</h3>
-            <p class="text-gray-500 text-sm">Your account is created, but you need an administrator to grant you access to an existing collection or permission to create your own.</p>
+            <p class="text-gray-500 text-sm">Your account is created, but you need an administrator to grant you access to an existing trove or permission to create your own.</p>
         </div>
     {/if}
 

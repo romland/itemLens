@@ -46,7 +46,7 @@ export const load = (async ({ locals }) => {
 export const actions = {
     createInventory: async ({ request, locals }) => {
         if (!locals.user) return fail(401, { error: true, message: "Unauthorized" });
-        if (!locals.user.isAdmin && !locals.user.canCreateInventories) return fail(403, { error: true, message: "No permission to create new collections." });
+        if (!locals.user.isAdmin && !locals.user.canCreateInventories) return fail(403, { error: true, message: "No permission to create new troves." });
         
         const data = await request.formData();
         const name = data.get('name') as string;

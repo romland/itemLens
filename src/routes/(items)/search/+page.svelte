@@ -40,8 +40,8 @@
     let imgLightbox: ImageLightbox;
 
     // Hydrate tab state from session memory safely
-    let searchTab: 'items' | 'documents' = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('itemlens_search_tab')) as any || 'items';
-    $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('itemlens_search_tab', searchTab);
+    let searchTab: 'items' | 'documents' = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('troves_search_tab')) as any || 'items';
+    $: if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('troves_search_tab', searchTab);
 
     // Smart Tab Auto-Selection: If the current tab has no hits, but the other does, flip to the one with hits
     $: {
