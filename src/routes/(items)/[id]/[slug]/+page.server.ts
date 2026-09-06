@@ -10,7 +10,7 @@ import { downloadAndStoreDocuments } from "$lib/server/urldownloader";
 import { uploadsDiskFolder, uploadsRemoteSite, uploadsWebFolder } from '$lib/server/constants';
 import { taskManager } from '$lib/server/taskManager';
 import { getActiveSchema } from '$lib/server/ontology';
-import { findBestMatch, buildDuplicateDetails, computeIdfMap, buildScanContextFromDbItem } from '$lib/server/matcher';
+import { findBestMatch, buildDuplicateDetails, computeIdfMap, buildScanContextFromDbItem, findRelatedItems } from '$lib/server/matcher';
 import { dev } from '$app/environment';
 
 export const load = (async ({ locals, params }) => {
@@ -48,7 +48,7 @@ export const load = (async ({ locals, params }) => {
 	
 	const window = new JSDOM('').window;
 	const purify = DOMPurify(window);
-   purify.setConfig({ USE_PROFILES: { html: true } }); // Explicitly disable SVG/MathML to prevent XSS bypasses
+   	purify.setConfig({ USE_PROFILES: { html: true } }); // Explicitly disable SVG/MathML to prevent XSS bypasses
 	
 	const categories = await db.category.findMany({
 		where: { inventoryId: locals.activeInventoryId },
@@ -60,19 +60,26 @@ export const load = (async ({ locals, params }) => {
 	const activeSchema = await getActiveSchema(locals.activeInventoryId, item.photos[0]?.categoryId, false);
     
 	let duplicateItemDetails = null;
-    if (item.duplicateStatus === 'FLAGGED') {
+    let relatedItems: any[] = [];
+    if (item.duplicateStatus === 'FLAGGED' || item.inventory.showRelatedItems) {
         const allItems = await db.item.findMany({
             where: { inventoryId: locals.activeInventoryId },
-            include: { attributes: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
+            include: { attributes: true, tags: true, locations: { include: { container: true } }, photos: { include: { category: true } } }
         });
         const idfMap = computeIdfMap(allItems);
         const existingItems = allItems.filter(i => i.id !== parsedId);
 
-        const scanCtx = buildScanContextFromDbItem(item, item.inventory.archetype);
-        const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
-		if (bestMatch) {
-			duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);
-		}
+        if (item.duplicateStatus === 'FLAGGED') {
+            const scanCtx = buildScanContextFromDbItem(item, item.inventory.archetype);
+            const bestMatch = findBestMatch(scanCtx, existingItems, idfMap);
+            if (bestMatch) {
+                duplicateItemDetails = buildDuplicateDetails(bestMatch.dbItem, bestMatch.match);
+            }
+        }
+
+        if (item.inventory.showRelatedItems) {
+            relatedItems = findRelatedItems(item, existingItems, idfMap, item.inventory.archetype, 4);
+        }
 	}
 	
 	return {
@@ -84,6 +91,7 @@ export const load = (async ({ locals, params }) => {
 		activeTasks: taskManager.getTasks('item', item.id),
 		categories,
 		duplicateItemDetails,
+        relatedItems,
         activeSchema,
 		canEdit: locals.role === 'EDITOR' || locals.role === 'OWNER' || locals.user.isAdmin
 	};

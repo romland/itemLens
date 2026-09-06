@@ -524,6 +524,62 @@ export function findBestMatch(
     return bestMatch;
 }
 
+export function findRelatedItems(
+    item: any,
+    dbItems: any[],
+    idfMap?: Map<string, number>,
+    archetype: string = 'generic',
+    limit: number = 4
+) {
+    const actualIdfMap = idfMap || computeIdfMap(dbItems);
+    const scanCtx = buildScanContextFromDbItem(item, archetype);
+    const related = [];
+    const itemLocations = item.locations?.map((l: any) => l.containerId) || [];
+    const itemTags = item.tags?.map((t: any) => t.id) || [];
+    const itemCat = item.photos?.[0]?.categoryId;
+
+    for (const dbItem of dbItems) {
+        let score = 0;
+
+        // 1. Spatial Proximity (+2.5 points for sharing a container)
+        if (itemLocations.length > 0 && dbItem.locations?.length > 0) {
+            const sharedLocs = dbItem.locations.filter((l: any) => itemLocations.includes(l.containerId));
+            if (sharedLocs.length > 0) score += 2.5;
+        }
+
+        // 2. Tag Intersection (+2.0 points per shared tag)
+        if (itemTags.length > 0 && dbItem.tags?.length > 0) {
+            const sharedTags = dbItem.tags.filter((t: any) => itemTags.includes(t.id));
+            score += sharedTags.length * 2.0;
+        }
+
+        // 3. Category Overlap (+1.0 point - baseline context, but not enough to match alone)
+        const dbCat = dbItem.photos?.[0]?.categoryId;
+        if (itemCat && dbCat && itemCat === dbCat) score += 1.0;
+
+        // 4. Attribute Overlap (+1.5 point per exact KV match e.g. same Brand, Color, Material)
+        if (item.attributes && dbItem.attributes) {
+            for (const attr of item.attributes) {
+                const dbAttr = dbItem.attributes.find((a: any) => a.key === attr.key);
+                if (dbAttr && dbAttr.value === attr.value && !isUseless(attr.value)) score += 1.5;
+            }
+        }
+
+        // 5. Semantic Token Overlap (Up to +4.0 points for very strong physical/text overlap)
+        let dbTokens: string[] = [];
+        try { dbTokens = dbItem.semanticTokens ? JSON.parse(dbItem.semanticTokens) : []; } catch(e) {}
+        if (scanCtx.tokens.length > 0 && dbTokens.length > 0) {
+            score += calculateWeightedJaccard(scanCtx.tokens, dbTokens, actualIdfMap) * 4.0;
+        }
+
+        // Must meet at least 3.0 points (e.g. Same Category + Same Container, or Same Category + Brand Match + NLP)
+        if (score >= 3.0) { 
+            related.push({ item: dbItem, score });
+        }
+    }
+    return related.sort((a, b) => b.score - a.score).slice(0, limit).map(r => r.item);
+}
+
 export async function runDuplicateSweep(itemId: number, inventoryId: number) {
     const { db } = await import('$lib/server/database');
     const item = await db.item.findUnique({ where: { id: itemId }, include: { attributes: true, photos: { include: { category: true } } }});

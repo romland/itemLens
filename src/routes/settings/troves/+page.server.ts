@@ -18,7 +18,7 @@ export const load = (async ({ locals }) => {
             archiveSingleScans: true, trackQuantity: true, showExif: true,
             showColors: true, showOcr: true, enableAskAi: true, enableNotebook: true,
             showNoteContextUrl: true, enableDocuments: true, notebookCategories: true,
-            enableFuzzySearch: true, templateFields: true,
+            enableFuzzySearch: true, showRelatedItems: true, templateFields: true,
             _count: { select: { items: true, notes: true, containers: true } }
         } 
     });
@@ -239,7 +239,7 @@ export const actions = {
         const id = Number(data.get('id'));
         const field = data.get('field') as string;
         const value = data.get('value') === 'true';
-        if (['showExif', 'showColors', 'showOcr', 'enableAskAi', 'enableNotebook', 'enableDocuments', 'enableFuzzySearch', 'showNoteContextUrl'].includes(field)) {
+        if (['showExif', 'showColors', 'showOcr', 'enableAskAi', 'enableNotebook', 'enableDocuments', 'enableFuzzySearch', 'showNoteContextUrl', 'showRelatedItems'].includes(field)) {
             await db.inventory.update({ where: { id }, data: { [field]: value } });
         }
         return { success: true, message: "UI settings updated." };

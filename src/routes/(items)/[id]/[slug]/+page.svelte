@@ -343,6 +343,21 @@ $: if (data.duplicateItemDetails?.debugTrace) {
             <ItemAssistant itemId={data.item.id} hasPhotos={productPhotos.length > 0} />
         {/if}
 
+        {#if data.item?.inventory?.showRelatedItems && data.relatedItems?.length > 0}
+            <div class="border-b border-base-300 pb-3 mb-3">
+                <div class="title font-bold mb-3 flex items-center gap-2">
+                    <i class="bi bi-collection"></i> Related Items
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {#each data.relatedItems as related}
+                        <a href="/{related.id}/{related.slug}" class="block hover:scale-[1.02] transition-transform">
+                            <ItemMiniCard item={related} />
+                        </a>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+
         {#if data.item.documents?.length > 0}
             <div class="title font-bold mb-3 mt-6">Local archive</div>
             <DocumentArchive 

@@ -159,10 +159,15 @@
                         <div class="mt-3 p-3 bg-base-300 rounded-lg border border-base-200">
                             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Inventory Features & UI</div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableAskAi', 'Enable Ask Troves'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search']] as [field, label]}
+                                {#each [['showExif', 'Show EXIF Data'], ['showColors', 'Show Colors'], ['showOcr', 'Show Raw OCR Text'], ['enableAskAi', 'Enable Ask Troves'], ['enableNotebook', 'Enable Notebook'], ['showNoteContextUrl', 'Show Page Context on Quick Notes'], ['enableDocuments', 'Enable Documents'], ['enableFuzzySearch', 'Fuzzy Word Search'], ['showRelatedItems', 'Show Related Items']] as [field, label]}
                                     <SettingToggle enhanceFn={createEnhancer} id={v.id} action="?/toggleUiFlag" name={field} checked={v[field]} label={label} type="checkbox" payloadType="field" formClass="flex items-center gap-2" />
                                 {/each}
                             </div>
+                            {#if v.showRelatedItems && !v.allowAutoTaxonomy}
+                                <div class="mt-3 text-[10px] text-warning flex items-start gap-1.5 font-bold bg-warning/10 p-2 rounded-lg">
+                                    <i class="bi bi-exclamation-triangle-fill mt-0.5"></i> <span>Related items rely heavily on attributes and semantic tokens. Enable 'AI Taxonomy & Extractions' above for accurate results.</span>
+                                </div>
+                            {/if}
                             {#if v.enableNotebook}
                                 <div class="mt-3 pt-3 border-t border-base-200/50">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1 block">Notebook Tabs</span>
