@@ -113,8 +113,9 @@
             return;
         }
 
-        if(!addedContainers.includes(ev.detail) && !manualSelected.includes(ev.detail)) {
-            addedContainers = [...addedContainers, ev.detail];
+        if (!addedContainers.includes(ev.detail) || addedContainers.length !== 1 || manualSelected.length > 0) {
+            addedContainers = [ev.detail];
+            manualSelected = []; // Clear manual selections to cleanly switch the ambient box context
             dispatchUserChange();
             announce("Added to " + ev.detail);
         }

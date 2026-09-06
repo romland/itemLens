@@ -48,7 +48,7 @@
                 {#if formAction}
                     <form action={formAction} method="POST" use:enhance class="w-full m-0 p-0 block" on:submit>
                         <input type="hidden" {name} value={opt.value}>
-                        <button type="submit" class="flex w-full items-center justify-between py-2 px-3 text-[14px] font-medium rounded-lg transition-colors {String(opt.value) === String(value) ? 'bg-base-content/10 text-base-content' : 'text-base-content/80 hover:bg-base-content/5 hover:text-base-content'}">
+                        <button type="submit" class="flex w-full items-center justify-between py-3 sm:py-2 px-3 text-base sm:text-[14px] font-medium rounded-lg transition-colors {String(opt.value) === String(value) ? 'bg-base-content/10 text-base-content' : 'text-base-content/80 hover:bg-base-content/5 hover:text-base-content'}">
                             <span class="truncate">{opt.label}</span>
                             {#if String(opt.value) === String(value)}
                                 <i class="bi bi-check-lg shrink-0 text-base"></i>
@@ -56,7 +56,7 @@
                         </button>
                     </form>
                 {:else}
-                    <button type="button" class="flex w-full items-center justify-between py-2 px-3 text-[14px] font-medium rounded-lg transition-colors {String(opt.value) === String(value) ? 'bg-base-content/10 text-base-content' : 'text-base-content/80 hover:bg-base-content/5 hover:text-base-content'}" on:click={(e) => handleSelect(opt.value, e)}>
+                    <button type="button" class="flex w-full items-center justify-between py-3 sm:py-2 px-3 text-base sm:text-[14px] font-medium rounded-lg transition-colors {String(opt.value) === String(value) ? 'bg-base-content/10 text-base-content' : 'text-base-content/80 hover:bg-base-content/5 hover:text-base-content'}" on:click={(e) => handleSelect(opt.value, e)}>
                         <span class="truncate">{opt.label}</span>
                         {#if String(opt.value) === String(value)}
                             <i class="bi bi-check-lg shrink-0 text-base"></i>

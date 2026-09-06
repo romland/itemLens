@@ -21,7 +21,6 @@ const USER_ID = 2; // User ID to execute as
 const DELAY_BETWEEN_UPLOADS_MS = 5000; // 20 seconds to respect LLM quotas (adjust as needed)
 
 const CLOTHES_PATH = "/mnt/k/development/2024/inventory/USE_WSL_itemlens/static/images/tests/clothes";
-const CLOTHES_PATH2 = "/mnt/k/development/2024/inventory/USE_WSL_itemlens/static/images/tests/clothesbatch/";
 
 // Provide the absolute or relative paths to the images on your disk
 // Batch 1 - a mix 1
