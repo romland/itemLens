@@ -7,7 +7,7 @@ RUN echo "deb http://archive.debian.org/debian bullseye main" > /etc/apt/sources
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 # Install system dependencies for PaddleOCR
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     libgl1 \
     libgomp1 \
     libglib2.0-0 \
