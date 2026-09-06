@@ -8,7 +8,6 @@ COPY .env.example .env
 COPY prisma ./prisma/
 
 RUN echo "deb http://archive.debian.org/debian bullseye main" > /etc/apt/sources.list \
- && echo "deb http://archive.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list \
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
@@ -35,7 +34,6 @@ RUN npm run build
 FROM node:22-bullseye-slim AS runner
 
 RUN echo "deb http://archive.debian.org/debian bullseye main" > /etc/apt/sources.list \
- && echo "deb http://archive.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list \
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \

@@ -15,6 +15,7 @@
     let isRestoring = false;
     let step = 1; // 1: Admin, 2: Trove Prompt, 3: Done
     let createModal: CreateInventoryModal;
+    let setupMode: 'new' | 'restore' = 'new';
 
     // Cinematic Intro State
     let showIntro = true;
@@ -70,11 +71,10 @@
                 
                 {#if step === 1}
                     <div in:fade={{ duration: 400 }}>
-                        <p class="text-sm text-base-content/70 mb-8 font-medium leading-relaxed">
-                            A self-hosted, offline-first inventory system for your physical items. It automatically 
-                            builds a growing taxonomy, archives related media, and stays fully searchable, even 
-                            when you drop offline.
-                        </p>
+                        <div class="bg-base-200/50 p-1 rounded-2xl flex w-full mb-6 border border-base-200/60 shadow-inner">
+                            <button type="button" class="flex-1 btn btn-sm border-none {setupMode === 'new' ? 'bg-base-100 shadow-sm text-base-content font-bold' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => setupMode = 'new'}>New Install</button>
+                            <button type="button" class="flex-1 btn btn-sm border-none {setupMode === 'restore' ? 'bg-base-100 shadow-sm text-base-content font-bold' : 'btn-ghost text-gray-500 hover:text-base-content hover:bg-base-300'}" on:click={() => setupMode = 'restore'}>Restore Backup</button>
+                        </div>
 
                         {#if form?.error}
                             <div class="mb-6" in:fly={{ y: -10, duration: 300 }}>
@@ -84,7 +84,11 @@
                             </div>
                         {/if}
 
-                        <form method="post" class="flex flex-col gap-5" use:enhance={() => {
+                        {#if setupMode === 'new'}
+                            <p class="text-sm text-base-content/70 mb-6 font-medium leading-relaxed" in:fade={{ duration: 200 }}>
+                                A self-hosted, offline-first inventory system for your physical items. It automatically builds a growing taxonomy and stays fully searchable, even when offline.
+                            </p>
+                            <form method="post" class="flex flex-col gap-5" in:fade={{ duration: 200 }} use:enhance={() => {
                             isSubmitting = true;
                             return async ({ result, update }) => { 
                                 if (result.type === 'success') {
@@ -112,10 +116,11 @@
                                 {/if}
                             </button>
                         </form>
-
-                        <div class="divider text-[10px] uppercase tracking-widest text-base-content/30 font-bold my-6">Or</div>
-
-                        <form method="POST" action="?/restoreBackup" enctype="multipart/form-data" use:enhance={() => {
+                        {:else}
+                            <p class="text-sm text-base-content/70 mb-6 font-medium leading-relaxed" in:fade={{ duration: 200 }}>
+                                Overwrite this instance with a previously downloaded backup. All existing users, troves, and settings will be instantly restored.
+                            </p>
+                            <form method="POST" action="?/restoreBackup" enctype="multipart/form-data" in:fade={{ duration: 200 }} use:enhance={() => {
                             isRestoring = true;
                             return async ({ result, update }) => {
                                 if (result.type === 'redirect') {
@@ -127,8 +132,8 @@
                             };
                         }}>
                             <div class="form-control w-full mb-3">
-                                <label class="label pb-1"><span class="label-text text-xs font-semibold">Restore Database (.db / .sqlite)</span></label>
-                                <input type="file" name="backup" accept=".db,.sqlite" class="file-input file-input-bordered file-input-sm w-full bg-base-200/40 shadow-inner" required />
+                                    <label class="label pb-2"><span class="label-text font-bold uppercase tracking-wider text-[10px] text-base-content/40">Database File (.db / .sqlite)</span></label>
+                                    <input type="file" name="backup" accept=".db,.sqlite" class="file-input file-input-bordered file-input-md w-full bg-base-200/40 shadow-inner" required />
                             </div>
                             <button type="submit" class="btn btn-neutral w-full rounded-xl shadow-sm h-12 transition-all active:scale-[0.98]" disabled={isRestoring || isSubmitting}>
                                 {#if isRestoring}
@@ -138,6 +143,7 @@
                                 {/if}
                             </button>
                         </form>
+                        {/if}
                     </div>
 
                 {:else if step === 2}
