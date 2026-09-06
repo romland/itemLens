@@ -81,7 +81,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         }
 
         // [CORE INTENT ENGINE]
-        // Pass the raw text (either transcribed from voice or typed via debug) into the middleware
+        // Pass the raw text (either transcribed from voice (groq) or typed (local) via debug) into the middleware
         const { query: finalQuery, spokenReply, route } = await processVoiceQuery(rawTranscription, locals.activeInventoryId);
         const durationMs = performance.now() - t0;
 
