@@ -12,6 +12,7 @@
     export let form;
     
     let isSubmitting = false;
+    let isRestoring = false;
     let step = 1; // 1: Admin, 2: Trove Prompt, 3: Done
     let createModal: CreateInventoryModal;
 
@@ -108,6 +109,32 @@
                                     <span class="loading loading-spinner"></span> Securing...
                                 {:else}
                                     Create Account
+                                {/if}
+                            </button>
+                        </form>
+
+                        <div class="divider text-[10px] uppercase tracking-widest text-base-content/30 font-bold my-6">Or</div>
+
+                        <form method="POST" action="?/restoreBackup" enctype="multipart/form-data" use:enhance={() => {
+                            isRestoring = true;
+                            return async ({ result, update }) => {
+                                if (result.type === 'redirect') {
+                                    window.location.href = result.location;
+                                } else {
+                                    await update();
+                                }
+                                isRestoring = false;
+                            };
+                        }}>
+                            <div class="form-control w-full mb-3">
+                                <label class="label pb-1"><span class="label-text text-xs font-semibold">Restore Database (.db / .sqlite)</span></label>
+                                <input type="file" name="backup" accept=".db,.sqlite" class="file-input file-input-bordered file-input-sm w-full bg-base-200/40 shadow-inner" required />
+                            </div>
+                            <button type="submit" class="btn btn-neutral w-full rounded-xl shadow-sm h-12 transition-all active:scale-[0.98]" disabled={isRestoring || isSubmitting}>
+                                {#if isRestoring}
+                                    <span class="loading loading-spinner loading-sm"></span> Restoring...
+                                {:else}
+                                    <i class="bi bi-database-up"></i> Upload & Restore
                                 {/if}
                             </button>
                         </form>

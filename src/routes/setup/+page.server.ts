@@ -4,6 +4,8 @@ import { createSession, setSessionCookie } from '$lib/server/session';
 import bcrypt from 'bcryptjs';
 import type { PageServerLoad, Actions } from './$types';
 import { getSystemDiagnostics } from '$lib/server/diagnostics';
+import fs from 'fs';
+import path from 'path';
 
 export const load = (async () => {
     // Re-verify just in case the hook check was bypassed
@@ -47,5 +49,33 @@ export const actions = {
 
         // DO NOT REDIRECT! Return success so the UI stays on the page and advances to Step 2
         return { success: true };
+    },
+
+    restoreBackup: async ({ request }) => {
+        const data = await request.formData();
+        const file = data.get('backup') as File;
+        
+        if (!file || file.size === 0) {
+            return fail(400, { error: true, message: "No valid database file provided." });
+        }
+
+        try {
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const dbPath = path.resolve('prisma/dev.db');
+            
+            await db.$disconnect();
+            fs.writeFileSync(dbPath, buffer);
+            await db.$connect();
+            
+            const userCount = await db.user.count();
+            if (userCount > 0) {
+                redirect(303, '/login');
+            } else {
+                return fail(400, { error: true, message: "Restored database is empty. Please create an account." });
+            }
+        } catch (e) {
+            console.error("Database restore failed:", e);
+            return fail(500, { error: true, message: "Failed to overwrite the database file." });
+        }        
     }
 } satisfies Actions;
