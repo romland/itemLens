@@ -33,6 +33,7 @@
     import ActionCard from "$lib/components/ActionCard.svelte";
     import Modal from "$lib/components/Modal.svelte";
     import DropdownSelect from "$lib/components/DropdownSelect.svelte";
+    import Logo from "$lib/components/Logo.svelte";
     
     let mounted = false;    
     let confirmModal: ConfirmModal;
@@ -429,7 +430,7 @@
             
             <div class="hidden lg:flex items-center ml-1">
                 <a href="/" class="btn btn-ghost normal-case text-xl flex items-center gap-3 px-2 hover:bg-base-200 transition-colors rounded-xl">
-                    <img src="/troves512.webp" alt="Troves Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm" />
+                    <Logo size="sm" />
                     <span class="font-bold tracking-tight">Troves</span>
                 </a>
                 

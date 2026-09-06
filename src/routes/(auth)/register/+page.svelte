@@ -3,6 +3,7 @@
     import type { ActionData } from "./$types";
     import pageTitle from '$lib/stores';
     import FormInput from "$lib/components/FormInput.svelte";
+    import Logo from "$lib/components/Logo.svelte";
 
     export let form: ActionData;
     let isRegistering = false;
@@ -13,9 +14,7 @@
 <div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
     <div class="max-w-sm w-full bg-base-100/90 backdrop-blur-2xl border border-base-200 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 animate-fade-in">
         <div class="flex justify-center mb-6">
-            <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-sm border border-primary/20">
-                <i class="bi bi-person-plus-fill text-3xl"></i>
-            </div>
+            <Logo size="lg" />
         </div>
         
         <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-center text-base-content mb-2">Create an account</h1>

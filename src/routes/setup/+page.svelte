@@ -4,6 +4,7 @@
     import { fade, fly } from "svelte/transition";
     import FormInput from "$lib/components/FormInput.svelte";
     import SystemDiagnostics from "$lib/components/SystemDiagnostics.svelte";
+    import Logo from "$lib/components/Logo.svelte";
     import CreateInventoryModal from "$lib/components/CreateInventoryModal.svelte";
     import pageTitle from '$lib/stores';
 
@@ -61,9 +62,7 @@
                  in:fly={{ y: 40, duration: 1000, delay: 200 }}>
                 
                 <div class="flex justify-start mb-6">
-                    <img src="/troves512.png" 
-                        alt="Troves Logo" 
-                        class="w-48 h-48 rounded-2xl object-contain shadow-sm bg-base-100/50 p-2 border border-base-200/50" />
+                    <Logo size="lg" />
                 </div>
                 
                 <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-base-content mb-3">Troves</h1>

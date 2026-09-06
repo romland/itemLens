@@ -3,6 +3,7 @@
     import { fade, fly } from "svelte/transition";
     import type { ActionData } from "./$types";
     import FormInput from "$lib/components/FormInput.svelte";
+    import Logo from "$lib/components/Logo.svelte";
     import pageTitle from '$lib/stores';
 
     export let form: ActionData;
@@ -25,7 +26,7 @@
         
         <!-- Animated Logo -->
         <div class="flex justify-center mb-6" in:fly={{ y: 20, duration: 600, delay: 250 }}>
-            <img src="/troves512.webp" alt="Troves Logo" class="w-48 h-48 rounded-[1.5rem] object-contain shadow-lg shadow-base-content/5 bg-base-100/50 p-3 border border-base-200/50" />
+            <Logo size="lg" />
         </div>
         
         <!-- Animated Titles -->
