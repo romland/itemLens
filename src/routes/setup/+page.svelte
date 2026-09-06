@@ -88,7 +88,7 @@
                             <p class="text-sm text-base-content/70 mb-6 font-medium leading-relaxed" in:fade={{ duration: 200 }}>
                                 A self-hosted, offline-first inventory system for your physical items. It automatically builds a growing taxonomy and stays fully searchable, even when offline.
                             </p>
-                            <form method="post" class="flex flex-col gap-5" in:fade={{ duration: 200 }} use:enhance={() => {
+                            <form method="POST" action="?/setupAdmin" class="flex flex-col gap-5" in:fade={{ duration: 200 }} use:enhance={() => {
                             isSubmitting = true;
                             return async ({ result, update }) => { 
                                 if (result.type === 'success') {

@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import { db } from '$lib/server/database';
 import { createSession, setSessionCookie } from '$lib/server/session';
 import bcrypt from 'bcryptjs';
@@ -16,7 +16,7 @@ export const load = (async () => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-    default: async ({ request, cookies, getClientAddress }) => {
+    setupAdmin: async ({ request, cookies, getClientAddress }) => {
         const data = await request.formData();
         
         const username = data.get('username') as string;
@@ -74,6 +74,7 @@ export const actions = {
                 return fail(400, { error: true, message: "Restored database is empty. Please create an account." });
             }
         } catch (e) {
+            if (isRedirect(e)) throw e;
             console.error("Database restore failed:", e);
             return fail(500, { error: true, message: "Failed to overwrite the database file." });
         }        
