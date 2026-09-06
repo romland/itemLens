@@ -11,8 +11,8 @@ import { assertCanMutate } from '$lib/server/security';
 export const POST: RequestHandler = async ({ request, locals }) => {
     assertCanMutate(locals);
 
-    const { draftPath, noteId, containers, items, globalCategory, tagcsv } = await request.json();
     const payloadData = await request.json();
+    const { draftPath, noteId, containers, items, globalCategory, tagcsv } = payloadData;
     const userId = locals.user.id;
     const inventoryId = payloadData.inventoryId ? Number(payloadData.inventoryId) : locals.activeInventoryId;
     
@@ -76,7 +76,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
                 let cropWebPath = draftPath;
                 if (item.box) {
-                    const extracted = await extractBoundingBox(localDraftPath, item.box, item.title || 'item');
+                    const extracted = await extractBoundingBox(localDraftPath, item.box, slugify(item.title || 'item', { lower: true, strict: true }));
                     if (extracted) cropWebPath = extracted;
                 }
 
