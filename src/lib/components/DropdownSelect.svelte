@@ -46,9 +46,9 @@
         {#each options as opt}
             <li>
                 {#if formAction}
-                    <form action={formAction} method="POST" use:enhance data-sveltekit-reload={reload ? '' : null} class="w-full m-0 p-0 block" on:submit>
+                    <form action={formAction} method="POST" use:enhance class="w-full m-0 p-0 block" on:submit>
                         <input type="hidden" {name} value={opt.value}>
-                        <button type="submit" class="w-full justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}">
+                        <button type="submit" class="flex w-full items-center justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}">
                             <span class="truncate">{opt.label}</span>
                             {#if String(opt.value) === String(value)}
                                 <i class="bi bi-check-lg shrink-0"></i>
@@ -56,7 +56,7 @@
                         </button>
                     </form>
                 {:else}
-                    <button type="button" class="w-full justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}" on:click={(e) => handleSelect(opt.value, e)}>
+                    <button type="button" class="flex w-full items-center justify-between font-medium py-3 text-lg {String(opt.value) === String(value) ? 'text-primary bg-primary/10' : ''}" on:click={(e) => handleSelect(opt.value, e)}>
                         <span class="truncate">{opt.label}</span>
                         {#if String(opt.value) === String(value)}
                             <i class="bi bi-check-lg shrink-0"></i>

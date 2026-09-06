@@ -48,8 +48,27 @@
         let evtSource: EventSource | null = null;
         
         const safeInvalidate = () => {
-            console.log("🕵️‍♂️ [DEBUG-SYNC] Syncing UI instantly via invalidateAll().");
-            invalidateAll();
+            const activeTag = document.activeElement?.tagName;
+            const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+            const isDropdownOpen = !!document.querySelector('.dropdown-open') || !!document.activeElement?.closest('.dropdown');
+            
+            if (isTyping || isDropdownOpen) {
+                console.log("🕵️‍♂️ [DEBUG-SYNC] User is interacting. Deferring invalidateAll().");
+                const attemptSync = () => {
+                    const active = document.activeElement?.tagName;
+                    const dropdown = document.querySelector('.dropdown-open') || document.activeElement?.closest('.dropdown');
+                    if (active === 'INPUT' || active === 'TEXTAREA' || active === 'SELECT' || dropdown) {
+                        setTimeout(attemptSync, 1000);
+                    } else {
+                        console.log("🕵️‍♂️ [DEBUG-SYNC] Interaction complete. Syncing UI via invalidateAll().");
+                        invalidateAll();
+                    }
+                };
+                setTimeout(attemptSync, 1000);
+            } else {
+                console.log("🕵️‍♂️ [DEBUG-SYNC] Syncing UI instantly via invalidateAll().");
+                invalidateAll();
+            }
         };
         
         const connectSync = () => {

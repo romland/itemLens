@@ -48,11 +48,9 @@
         url.searchParams.set('sort', sortId);
         
         console.log(`[DEBUG-SORT] 2. Firing goto: ${url.toString()}`);
-        goto(url.toString(), { keepFocus: true, noScroll: true });
+        goto(url.toString(), { noScroll: true });
         console.log(`[DEBUG-SORT] 3. goto dispatched.`);
         
-        if (typeof document !== 'undefined') (document.activeElement as HTMLElement)?.blur();
-
 		try {
             console.log(`[DEBUG-SORT] 4. Parsing preferences...`);
 			const currentPrefs = JSON.parse($page.data.user?.preferences || '{}');

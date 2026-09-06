@@ -6,6 +6,9 @@ Inventory management (for at home). There are many like it, but this one is mine
 The primary use is:
 `Do I have that, where the heck is it?` and `What does it do and why did I buy it?` [1]
 
+### Privacy & Data Ownership
+**All your data is completely yours and sits securely on your own device.** Your entire database runs from a single, portable SQLite file, and all photos/documents are saved directly into your local upload folder. There is no cloud telemetry, no forced accounts, and no vendor lock-in.
+
 I am no fan of data-entry, so adding new products/items should be as automated as 
 possible (using any device). Most of the effort of making this app went into creating
 a pleasant and fast work-flow. To achieve this, Troves optionally uses various tools 
