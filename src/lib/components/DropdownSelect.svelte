@@ -6,7 +6,7 @@
     export let options: { value: string | number, label: string }[] = [];
     export let value: string | number | null = null;
     export let buttonClass: string = "btn-sm btn-ghost bg-base-200/40 hover:bg-base-200/80 font-medium tracking-tight rounded-lg gap-2 shadow-sm border border-base-content/5";
-    export let menuClass: string = "w-56 bg-base-100/80 backdrop-blur-2xl rounded-[1.25rem] border border-base-content/10 mt-2 p-1.5 gap-0.5 max-h-[60vh] overflow-y-auto flex-nowrap shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]";
+    export let menuClass: string = "w-56 bg-base-100/95 backdrop-blur-2xl rounded-[1.25rem] border border-base-content/10 mt-2 p-1.5 gap-0.5 max-h-[60vh] overflow-y-auto flex-nowrap shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]";
     export let dropdownClass: string = "dropdown-bottom";
     export let chevronClass: string = "bi-chevron-down text-[10px] opacity-50";
     export let labelPrefix: string = "";
@@ -37,7 +37,7 @@
 </script>
 
 <div class="dropdown {dropdownClass}">
-        <button type="button" tabindex="0" class="btn {buttonClass}" on:mousedown={handleInteraction} on:touchstart={handleInteraction}>
+    <button type="button" tabindex="0" class="btn {buttonClass}" on:mousedown={handleInteraction} on:touchstart={handleInteraction}>
         <span class="truncate">{labelPrefix}{selectedLabel}</span>
         <i class="bi {chevronClass} shrink-0"></i>
     </button>

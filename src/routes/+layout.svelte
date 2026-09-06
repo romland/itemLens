@@ -437,7 +437,11 @@
                 {#if $page.data.inventories && $page.data.inventories.length > 0}
                     <DropdownSelect
                         dropdownClass="dropdown-bottom ml-4"
-                        options={$page.data.inventories.slice().sort((a,b) => a.name.localeCompare(b.name)).map(inv => ({ value: inv.id, label: inv.name }))}
+                        options={
+                            $page.data.inventories.slice()
+                                .sort((a,b) => a.name.localeCompare(b.name))
+                                .map(inv => ({ value: inv.id, label: inv.name }))
+                        }
                         value={$page.data.activeInventoryId}
                         formAction="/?/switchVault"
                         name="inventoryId"
